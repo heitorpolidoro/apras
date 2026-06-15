@@ -205,11 +205,5 @@
       "none": "None",
       "emptyValue": "Empty"
     }
-  },
-  "roles": {
-    "ADMINISTRATOR": "Administrator",
-    "DIRECTOR": "Director",
-    "MANAGER": "Manager",
-    "GUEST": "Guest"
   }
 }
