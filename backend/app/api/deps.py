@@ -99,34 +99,42 @@ def get_current_active_admin(
 
 
 def assert_manager_can_see_task(current_user: User, task: Task) -> None:
-    """Raise TaskNotFoundError if MANAGER tries to access a task with manager_visible=False.
+    """Raise TaskNotFoundError for tasks the user is not allowed to see.
+
+    MANAGER may only access tasks with manager_visible=True.
+    GUEST may not access any task.
 
     Args:
         current_user: The authenticated user making the request.
         task: The task being accessed.
 
     Raises:
-        TaskNotFoundError: If a MANAGER attempts to access a task not visible to managers.
+        TaskNotFoundError: If the task is not visible to the user's role.
     """
     from app.core.exceptions import TaskNotFoundError
 
+    if current_user.role == UserRole.GUEST:
+        raise TaskNotFoundError(task.id)
     if current_user.role == UserRole.MANAGER and not task.manager_visible:
         raise TaskNotFoundError(task.id)
 
 
 def assert_can_edit_task(current_user: User, task: Task) -> None:
-    """Raise ForbiddenError if MANAGER tries to edit a task not assigned to them.
+    """Raise ForbiddenError if the user is not allowed to edit the task.
 
     ADMINISTRATOR and DIRECTOR may edit any task.
     MANAGER may only edit tasks that are unassigned or assigned to themselves.
+    GUEST may not edit any task.
 
     Args:
         current_user: The authenticated user making the request.
         task: The task being edited.
 
     Raises:
-        ForbiddenError: If a MANAGER attempts to edit a task assigned to another user.
+        ForbiddenError: If the user's role does not allow editing this task.
     """
+    if current_user.role == UserRole.GUEST:
+        raise ForbiddenError("Guests cannot edit tasks")
     if current_user.role == UserRole.MANAGER:
         if task.assigned_to_id is not None and task.assigned_to_id != current_user.id:
             raise ForbiddenError(

@@ -6,7 +6,11 @@ describe("UserRole", () => {
     expect(UserRole.MANAGER).toBe("MANAGER");
   });
 
-  it("has exactly three roles", () => {
-    expect(Object.keys(UserRole)).toHaveLength(3);
+  it("includes GUEST", () => {
+    expect(UserRole.GUEST).toBe("GUEST");
+  });
+
+  it("has exactly four roles", () => {
+    expect(Object.keys(UserRole)).toHaveLength(4);
   });
 });

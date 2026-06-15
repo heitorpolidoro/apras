@@ -25,7 +25,8 @@ def signup(
 ) -> User:
     """Create new user.
 
-    New users are created as inactive and with DIRECTOR role.
+    New users are created as inactive and with GUEST role; an administrator
+    must activate them and assign a proper role.
     """
     # Check if username exists
     statement = select(User).where(User.username == user_in.username)
@@ -49,7 +50,7 @@ def signup(
         full_name=user_in.full_name,
         hashed_password=security.get_password_hash(user_in.password),
         # Force role
-        role=UserRole.DIRECTOR,
+        role=UserRole.GUEST,
         is_active=False,  # Wait for approval
     )
     session.add(db_obj)

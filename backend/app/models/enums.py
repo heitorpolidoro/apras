@@ -28,3 +28,4 @@ class UserRole(StrEnum):
     ADMINISTRATOR = "ADMINISTRATOR"
     DIRECTOR = "DIRECTOR"
     MANAGER = "MANAGER"
+    GUEST = "GUEST"

@@ -338,6 +338,7 @@ const AdminUserDashboard: React.FC = () => {
                         <option value={UserRole.ADMINISTRATOR}>{t("roles.ADMINISTRATOR")}</option>
                         <option value={UserRole.DIRECTOR}>{t("roles.DIRECTOR")}</option>
                         <option value={UserRole.MANAGER}>{t("roles.MANAGER")}</option>
+                        <option value={UserRole.GUEST}>{t("roles.GUEST")}</option>
                       </Select>
                     </div>
                   </td>

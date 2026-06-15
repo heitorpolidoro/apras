@@ -25,7 +25,9 @@ def create_task(
     session: Annotated[Session, Depends(get_session)],
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> TaskRead:
-    """Create a new task. Any authenticated user can create tasks."""
+    """Create a new task. Any authenticated user except GUEST can create tasks."""
+    if current_user.role == UserRole.GUEST:
+        raise ForbiddenError("Guests cannot create tasks")
     db_task = TaskService.create_task(
         session=session,
         task_in=task_in,
@@ -44,7 +46,10 @@ def list_tasks(
     assigned_to_id: Annotated[UUID | None, Query()] = None,
     category_id: Annotated[UUID | None, Query()] = None,
 ) -> list[TaskRead]:
-    """List tasks with optional filters."""
+    """List tasks with optional filters. GUEST sees no tasks."""
+    if current_user.role == UserRole.GUEST:
+        return []
+
     from app.models.category import Category
     from sqlalchemy.orm import aliased
 

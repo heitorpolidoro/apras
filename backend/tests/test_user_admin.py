@@ -23,7 +23,7 @@ def test_signup(client: TestClient, session: Session):
     data = response.json()
     assert data["username"] == "newuser"
     assert data["is_active"] is False
-    assert data["role"] == UserRole.DIRECTOR
+    assert data["role"] == UserRole.GUEST
 
     # Verify in DB
     user = session.exec(select(User).where(User.username == "newuser")).first()

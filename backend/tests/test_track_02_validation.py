@@ -23,7 +23,7 @@ def test_inactive_user_login_fails(client: TestClient, session: Session):
     assert response.json()["detail"] == "Inactive user"
 
 
-def test_signup_creates_inactive_funcionario(client: TestClient, session: Session):
+def test_signup_creates_inactive_guest(client: TestClient, session: Session):
     signup_data = {
         "username": "new_guy",
         "email": "guy@test.com",
@@ -34,4 +34,4 @@ def test_signup_creates_inactive_funcionario(client: TestClient, session: Sessio
     assert response.status_code == 200
     data = response.json()
     assert data["is_active"] is False
-    assert data["role"] == UserRole.DIRECTOR
+    assert data["role"] == UserRole.GUEST

@@ -714,10 +714,11 @@ describe("AdminUserDashboard", () => {
 
     const roleSelects = screen.getAllByRole("combobox", { name: "Cargo" });
     const firstSelect = roleSelects[0] as HTMLSelectElement;
-    expect(firstSelect.options).toHaveLength(3);
+    expect(firstSelect.options).toHaveLength(4);
     expect(firstSelect.options[0].value).toBe(UserRole.ADMINISTRATOR);
     expect(firstSelect.options[1].value).toBe(UserRole.DIRECTOR);
     expect(firstSelect.options[2].value).toBe(UserRole.MANAGER);
+    expect(firstSelect.options[3].value).toBe(UserRole.GUEST);
   });
 
   it("pre-fills type_id when user has a type", async () => {
