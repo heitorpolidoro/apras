@@ -28,14 +28,6 @@ def signup(
     New users are created as inactive and with GUEST role; an administrator
     must activate them and assign a proper role.
     """
-    # Check if username exists
-    statement = select(User).where(User.username == user_in.username)
-    if session.exec(statement).first():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User with this username already exists",
-        )
-
     # Check if email exists
     statement = select(User).where(User.email == user_in.email)
     if session.exec(statement).first():
@@ -45,7 +37,6 @@ def signup(
         )
 
     db_obj = User(
-        username=user_in.username,
         email=user_in.email,
         full_name=user_in.full_name,
         hashed_password=security.get_password_hash(user_in.password),
@@ -89,7 +80,7 @@ def login_access_token(
     Raises:
         HTTPException: If credentials are incorrect or user is inactive.
     """
-    statement = select(User).where(User.username == form_data.username)
+    statement = select(User).where(User.email == form_data.username)
     user = session.exec(statement).first()
 
     if not user or not security.verify_password(
@@ -97,7 +88,7 @@ def login_access_token(
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Incorrect username or password",
+            detail="Incorrect email or password",
         )
     if not user.is_active:
         raise HTTPException(
@@ -134,7 +125,7 @@ def get_dev_users(
 @router.post("/dev-login", response_model=Token)
 def dev_login(
     session: Annotated[Session, Depends(get_session)],
-    username: str,
+    email: str,
     remember_me: Annotated[bool, Query()] = False,
 ) -> dict[str, str]:
     """Login without password for development purposes.
@@ -147,7 +138,7 @@ def dev_login(
             detail="Not found",
         )
 
-    statement = select(User).where(User.username == username)
+    statement = select(User).where(User.email == email)
     user = session.exec(statement).first()
 
     if not user:

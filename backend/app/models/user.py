@@ -14,7 +14,6 @@ if TYPE_CHECKING:
 
 class User(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    username: str = Field(index=True, unique=True)
     email: str = Field(index=True, unique=True)
     hashed_password: str
     full_name: str

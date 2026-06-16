@@ -10,7 +10,6 @@ import { Alert, AlertDescription } from "../../../components/ui/alert";
 
 const SignupPage: React.FC = () => {
   const [formData, setFormData] = useState({
-    username: "",
     email: "",
     full_name: "",
     password: "",
@@ -45,7 +44,6 @@ const SignupPage: React.FC = () => {
 
     try {
       await apiClient.post("/auth/signup", {
-        username: formData.username,
         email: formData.email,
         full_name: formData.full_name,
         password: formData.password,
@@ -114,20 +112,6 @@ const SignupPage: React.FC = () => {
                 onChange={handleChange}
                 required
                 placeholder="your@email.com"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="username">{t("signup.username")}</Label>
-              <Input
-                id="username"
-                name="username"
-                type="text"
-                value={formData.username}
-                onChange={handleChange}
-                required
-                autoComplete="username"
-                placeholder={t("signup.usernamePlaceholder")}
               />
             </div>
 

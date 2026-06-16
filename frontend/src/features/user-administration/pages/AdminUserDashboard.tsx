@@ -258,9 +258,6 @@ const AdminUserDashboard: React.FC = () => {
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">
                   {t("admin.colName")}
                 </th>
-                <th className="text-left px-4 py-3 font-semibold text-muted-foreground">
-                  {t("admin.colUsername")}
-                </th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden md:table-cell">
                   {t("admin.colEmail")}
                 </th>
@@ -286,9 +283,6 @@ const AdminUserDashboard: React.FC = () => {
                 >
                   <td className="px-4 py-3 font-medium text-foreground">
                     {user.full_name}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {user.username}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
                     {user.email}

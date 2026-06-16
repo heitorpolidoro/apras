@@ -80,13 +80,11 @@ def seed_db() -> None:
         diretores_data = [
             {
                 "id": uuid.UUID("11111111-1111-1111-1111-111111111111"),
-                "username": "diretor1",
                 "email": "diretor1@nexdom.com",
                 "full_name": "Diretor Comercial",
             },
             {
                 "id": uuid.UUID("22222222-2222-2222-2222-222222222222"),
-                "username": "diretor2",
                 "email": "diretor2@nexdom.com",
                 "full_name": "Diretor Financeiro",
             },
@@ -96,7 +94,6 @@ def seed_db() -> None:
         for d_data in diretores_data:
             user = User(
                 id=d_data["id"],
-                username=d_data["username"],
                 email=d_data["email"],
                 hashed_password=get_password_hash("test_user_password"),
                 full_name=d_data["full_name"],
@@ -109,7 +106,6 @@ def seed_db() -> None:
 
         manager = User(
             id=uuid.UUID("33333333-3333-3333-3333-333333333333"),
-            username="gerente1",
             email="gerente1@nexdom.com",
             hashed_password=get_password_hash("test_user_password"),
             full_name="Gerente Operacional",

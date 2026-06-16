@@ -11,7 +11,7 @@ import { Alert, AlertDescription } from "../../../components/ui/alert";
 import type { User } from "../../../types/auth";
 
 const LoginPage: React.FC = () => {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,12 +41,12 @@ const LoginPage: React.FC = () => {
   /**
    * Handle quick login for development environment
    */
-  const handleDevLogin = async (selectedUsername: string) => {
+  const handleDevLogin = async (selectedEmail: string) => {
     setError(null);
     setIsLoading(true);
     try {
       const response = await apiClient.post("/auth/dev-login", null, {
-        params: { username: selectedUsername, remember_me: rememberMe },
+        params: { email: selectedEmail, remember_me: rememberMe },
       });
       await login(response.data.access_token, rememberMe);
       navigate(from, { replace: true });
@@ -64,7 +64,7 @@ const LoginPage: React.FC = () => {
 
     try {
       const formData = new FormData();
-      formData.append("username", username);
+      formData.append("username", email);
       formData.append("password", password);
 
       const response = await apiClient.post(
@@ -122,15 +122,15 @@ const LoginPage: React.FC = () => {
 
           <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="username">{t("login.username")}</Label>
+              <Label htmlFor="email">{t("login.email")}</Label>
               <Input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
-                autoComplete="username"
-                placeholder={t("login.usernamePlaceholder")}
+                autoComplete="email"
+                placeholder="your@email.com"
               />
             </div>
 
@@ -173,11 +173,11 @@ const LoginPage: React.FC = () => {
                 {devUsers.map((u) => (
                   <button
                     key={u.id}
-                    onClick={() => handleDevLogin(u.username)}
+                    onClick={() => handleDevLogin(u.email)}
                     disabled={isLoading}
                     className="text-xs px-2.5 py-1.5 rounded-md bg-primary/5 hover:bg-primary/10 text-primary border border-primary/20 transition-colors"
                   >
-                    {u.username}
+                    {u.full_name}
                   </button>
                 ))}
               </div>
