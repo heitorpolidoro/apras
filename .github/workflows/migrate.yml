@@ -23,4 +23,9 @@ jobs:
 
     - run: cd backend && uv sync --all-groups
 
+    - name: Stamp squashed revision if needed
+      run: |
+        psql "$POSTGRES_URL" -c \
+          "UPDATE alembic_version SET version_num = '0001' WHERE version_num = '0005';"
+
     - run: cd backend && uv run alembic upgrade head
