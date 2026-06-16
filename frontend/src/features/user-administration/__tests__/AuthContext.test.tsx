@@ -22,7 +22,7 @@ const TestComponent = () => {
       <div data-testid="auth-status">
         {isAuthenticated ? "Authenticated" : "Not Authenticated"}
       </div>
-      {user && <div data-testid="username">{user.username}</div>}
+      {user && <div data-testid="username">{user.email}</div>}
       <button onClick={logout}>Logout</button>
     </div>
   );
@@ -51,7 +51,7 @@ describe("AuthContext", () => {
   it("fetches user if token exists in localStorage", async () => {
     const mockUser = {
       id: 1,
-      username: "testuser",
+      email: "testuser@example.com",
       role: "FUNCIONARIO",
       is_active: true,
     };
@@ -69,14 +69,14 @@ describe("AuthContext", () => {
         "Authenticated",
       ),
     );
-    expect(screen.getByTestId("username").textContent).toBe("testuser");
+    expect(screen.getByTestId("username").textContent).toBe("testuser@example.com");
     expect(apiClient.get).toHaveBeenCalledWith("/auth/me");
   });
 
   it("logs out and clears both storages", async () => {
     const mockUser = {
       id: 1,
-      username: "testuser",
+      email: "testuser@example.com",
       role: "FUNCIONARIO",
       is_active: true,
     };
@@ -127,7 +127,7 @@ describe("AuthContext", () => {
   it("sets token in sessionStorage if remember is false", async () => {
     const mockUser = {
       id: 1,
-      username: "testuser",
+      email: "testuser@example.com",
       role: "FUNCIONARIO",
       is_active: true,
     };
@@ -155,7 +155,7 @@ describe("AuthContext", () => {
   it("sets token in localStorage if remember is true", async () => {
     const mockUser = {
       id: 1,
-      username: "testuser",
+      email: "testuser@example.com",
       role: "FUNCIONARIO",
       is_active: true,
     };

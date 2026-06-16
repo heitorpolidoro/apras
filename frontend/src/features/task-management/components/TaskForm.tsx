@@ -254,7 +254,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSuccess, onCancel }) => {
             <option value="">{t("tasks.form.unassigned")}</option>
             {users?.map((user) => (
               <option key={user.id} value={user.id}>
-                {user.full_name || user.username}
+                {user.full_name || user.email}
               </option>
             ))}
           </Select>

@@ -30,7 +30,7 @@ describe("Navbar", () => {
       isLoading: false,
       user: {
         id: "1",
-        username: "testuser",
+
         email: "test@example.com",
         full_name: "Test User",
         role: UserRole.DIRECTOR,
@@ -59,7 +59,7 @@ describe("Navbar", () => {
       isLoading: false,
       user: {
         id: "1",
-        username: "adminuser",
+
         email: "admin@example.com",
         full_name: "Admin User",
         role: UserRole.ADMINISTRATOR,
@@ -84,7 +84,7 @@ describe("Navbar", () => {
       isLoading: false,
       user: {
         id: "1",
-        username: "testuser",
+
         email: "test@example.com",
         full_name: "Test User",
         role: UserRole.DIRECTOR,
@@ -110,7 +110,7 @@ describe("Navbar", () => {
       isLoading: false,
       user: {
         id: "1",
-        username: "adminuser",
+
         email: "admin@example.com",
         full_name: "Admin User",
         role: UserRole.ADMINISTRATOR,
@@ -137,7 +137,7 @@ describe("Navbar", () => {
       isLoading: false,
       user: {
         id: "1",
-        username: "testuser",
+
         email: "test@example.com",
         full_name: "Test User",
         role: UserRole.DIRECTOR,
@@ -163,7 +163,7 @@ describe("Navbar", () => {
       isLoading: false,
       user: {
         id: "1",
-        username: "testuser",
+
         email: "test@example.com",
         full_name: "Test User",
         role: UserRole.DIRECTOR,
@@ -189,7 +189,7 @@ describe("Navbar", () => {
       isLoading: false,
       user: {
         id: "1",
-        username: "testuser",
+
         email: "test@example.com",
         full_name: "Test User",
         role: UserRole.DIRECTOR,
@@ -215,7 +215,7 @@ describe("Navbar", () => {
       isLoading: false,
       user: {
         id: "1",
-        username: "testuser",
+
         email: "test@example.com",
         full_name: "Test User",
         role: UserRole.DIRECTOR,

@@ -181,7 +181,7 @@ const TaskDetailsView: React.FC<TaskDetailsViewProps> = ({
               <option value="">{t("tasks.details.unassigned")}</option>
               {assignableUsers?.map((u) => (
                 <option key={u.id} value={u.id}>
-                  {u.full_name || u.username}
+                  {u.full_name || u.email}
                 </option>
               ))}
             </select>
