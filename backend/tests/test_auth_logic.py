@@ -20,3 +20,17 @@ def test_create_access_token():
     payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
     assert payload["sub"] == str(user_id)
     assert "exp" in payload
+
+
+def test_password_reset_tokens():
+    email = "user@test.com"
+    token = security.create_password_reset_token(email)
+    payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+    assert payload["sub"] == email
+    assert payload["scope"] == "password-reset"
+    
+    verified_email = security.verify_password_reset_token(token)
+    assert verified_email == email
+    
+    invalid_verified = security.verify_password_reset_token("invalid_token")
+    assert invalid_verified is None

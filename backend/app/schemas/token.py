@@ -14,3 +14,16 @@ class TokenPayload(BaseModel):
     """Schema for JWT token payload content."""
 
     sub: str | None = None
+
+
+class ForgotPasswordRequest(BaseModel):
+    """Schema for requesting a password reset link."""
+
+    email: str
+
+
+class ResetPasswordRequest(BaseModel):
+    """Schema for resetting password using a token."""
+
+    token: str
+    new_password: str

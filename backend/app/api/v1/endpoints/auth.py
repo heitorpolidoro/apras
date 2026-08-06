@@ -174,3 +174,100 @@ def dev_login(
         ),
         "token_type": "bearer",
     }
+
+
+from app.schemas.token import ForgotPasswordRequest, ResetPasswordRequest
+import httpx
+import os
+
+@router.post("/forgot-password")
+async def forgot_password(
+    request: Request,
+    body: ForgotPasswordRequest,
+    session: Annotated[Session, Depends(get_session)],
+) -> dict[str, str]:
+    """Request password reset link.
+
+    Generates a JWT token for password reset and sends it via Resend API
+    (if RESEND_API_KEY is present) or logs it to stdout.
+    """
+    statement = select(User).where(User.email == body.email.strip())
+    user = session.exec(statement).first()
+
+    # Always return success response to prevent user enumeration
+    if not user:
+        return {"message": "If the email is registered, a password reset link has been sent."}
+
+    # Generate password reset token
+    token = security.create_password_reset_token(user.email)
+    
+    # We use the request origin or construct it from headers
+    origin = request.headers.get("origin") or "http://localhost:5173"
+    reset_url = f"{origin}/reset-password?token={token}"
+
+    resend_api_key = os.getenv("RESEND_API_KEY")
+    if resend_api_key:
+        try:
+            async with httpx.AsyncClient() as client:
+                email_payload = {
+                    "from": os.getenv("EMAIL_FROM", "onboarding@resend.dev"),
+                    "to": user.email,
+                    "subject": "Recuperação de Senha - APRAS",
+                    "html": f"""
+                    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+                      <h2 style="color: #059669; margin-top: 0;">APRAS</h2>
+                      <p>Olá, {user.full_name or 'usuário'}!</p>
+                      <p>Recebemos uma solicitação para redefinir sua senha. Clique no botão abaixo para escolher uma nova:</p>
+                      <div style="margin: 24px 0;">
+                        <a href="{reset_url}" style="background-color: #059669; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Redefinir Senha</a>
+                      </div>
+                      <p style="color: #6b7280; font-size: 14px;">Se você não solicitou isso, pode ignorar este e-mail com segurança.</p>
+                      <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
+                      <p style="color: #9ca3af; font-size: 12px;">Este link irá expirar em 15 minutos.</p>
+                    </div>
+                    """
+                }
+                headers = {
+                    "Authorization": f"Bearer {resend_api_key}",
+                    "Content-Type": "application/json",
+                }
+                response = await client.post("https://api.resend.com/emails", json=email_payload, headers=headers)
+                response.raise_for_status()
+        except Exception as e:
+            print(f"Failed to send email via Resend: {e}")
+            print(f"[AUTH] Password reset requested for user: {user.email}")
+            print(f"[AUTH] Reset URL: {reset_url}")
+    else:
+        print(f"[AUTH] Password reset requested for user: {user.email}")
+        print(f"[AUTH] Reset URL: {reset_url}")
+
+    return {"message": "If the email is registered, a password reset link has been sent."}
+
+
+@router.post("/reset-password")
+def reset_password(
+    body: ResetPasswordRequest,
+    session: Annotated[Session, Depends(get_session)],
+) -> dict[str, str]:
+    """Reset password using a JWT reset token."""
+    email = security.verify_password_reset_token(body.token)
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Token de redefinição de senha inválido ou expirado.",
+        )
+
+    statement = select(User).where(User.email == email)
+    user = session.exec(statement).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuário não encontrado.",
+        )
+
+    # Update password and hash it
+    user.hashed_password = security.get_password_hash(body.new_password)
+    session.add(user)
+    session.commit()
+
+    return {"message": "Senha redefinida com sucesso."}

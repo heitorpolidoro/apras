@@ -135,7 +135,12 @@ const LoginPage: React.FC = () => {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="password">{t("login.password")}</Label>
+              <div className="flex justify-between items-center">
+                <Label htmlFor="password">{t("login.password")}</Label>
+                <Link to="/forgot-password" className="text-xs text-primary hover:underline">
+                  Esqueceu a senha?
+                </Link>
+              </div>
               <Input
                 id="password"
                 type="password"

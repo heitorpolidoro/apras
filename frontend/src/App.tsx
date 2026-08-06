@@ -3,6 +3,8 @@ import TaskDashboard from "./features/task-management/components/TaskDashboard";
 import CategoriesPage from "./features/task-management/components/CategoriesPage";
 import LoginPage from "./features/user-administration/pages/LoginPage";
 import SignupPage from "./features/user-administration/pages/SignupPage";
+import ForgotPasswordPage from "./features/user-administration/pages/ForgotPasswordPage";
+import ResetPasswordPage from "./features/user-administration/pages/ResetPasswordPage";
 import AdminUserDashboard from "./features/user-administration/pages/AdminUserDashboard";
 import ProtectedRoute from "./features/user-administration/components/ProtectedRoute";
 import { AuthProvider } from "./features/user-administration/context/AuthContext";
@@ -19,6 +21,8 @@ function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
 
             <Route
               path="/dashboard"

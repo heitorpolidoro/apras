@@ -73,3 +73,24 @@ def get_password_hash(password: str) -> str:
         str: The hashed password.
     """
     return pwd_context.hash(password)
+
+
+def create_password_reset_token(email: str) -> str:
+    """Create a short-lived JWT token for password reset."""
+    now = datetime.now(UTC)
+    expire = now + timedelta(minutes=15)
+    to_encode = {"exp": expire, "sub": str(email), "iat": now, "scope": "password-reset"}
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+
+def verify_password_reset_token(token: str) -> str | None:
+    """Verify the password reset token and return the email if valid."""
+    try:
+        decoded_token = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
+        if decoded_token.get("scope") != "password-reset":
+            return None
+        return decoded_token.get("sub")
+    except jwt.PyJWTError:
+        return None
