@@ -1,48 +1,48 @@
-# NEXDOM — Sistema de Gestão de Condomínios e Associações
+# APRAS — Aplicativo de Planejamento e Resoluções para Associações e Síndicos
 
 <div>
 <!-- GitHub CI & Sponsors -->
-<a href="https://github.com/heitorpolidoro/nexdom/actions/workflows/ci.yml"><img src="https://github.com/heitorpolidoro/nexdom/actions/workflows/ci.yml/badge.svg" alt="CI Status"></a>
+<a href="https://github.com/heitorpolidoro/apras/actions/workflows/ci.yml"><img src="https://github.com/heitorpolidoro/apras/actions/workflows/ci.yml/badge.svg" alt="CI Status"></a>
 <a href="https://github.com/sponsors/heitorpolidoro"><img src="https://img.shields.io/github/sponsors/heitorpolidoro?color=ea4aaa" alt="GitHub Sponsors"></a>
 <br>
 
 <!-- GitHub Stats -->
 
-<a href="https://github.com/heitorpolidoro/nexdom/releases/latest"><img src="https://img.shields.io/github/v/release/heitorpolidoro/nexdom?label=Latest%20Version" alt="Latest Version"></a>
-<img src="https://img.shields.io/github/release-date/heitorpolidoro/nexdom" alt="GitHub Release Date">
-<img src="https://img.shields.io/github/commits-since/heitorpolidoro/nexdom/latest" alt="GitHub commits since latest release">
-<img src="https://img.shields.io/github/last-commit/heitorpolidoro/nexdom" alt="GitHub last commit">
+<a href="https://github.com/heitorpolidoro/apras/releases/latest"><img src="https://img.shields.io/github/v/release/heitorpolidoro/apras?label=Latest%20Version" alt="Latest Version"></a>
+<img src="https://img.shields.io/github/release-date/heitorpolidoro/apras" alt="GitHub Release Date">
+<img src="https://img.shields.io/github/commits-since/heitorpolidoro/apras/latest" alt="GitHub commits since latest release">
+<img src="https://img.shields.io/github/last-commit/heitorpolidoro/apras" alt="GitHub last commit">
 <br>
 
 <!-- GitHub Activity -->
 
-<a href="https://github.com/heitorpolidoro/nexdom/issues"><img src="https://img.shields.io/github/issues/heitorpolidoro/nexdom" alt="GitHub issues"></a>
-<a href="https://github.com/heitorpolidoro/nexdom/pulls"><img src="https://img.shields.io/github/issues-pr/heitorpolidoro/nexdom" alt="GitHub pull requests"></a>
+<a href="https://github.com/heitorpolidoro/apras/issues"><img src="https://img.shields.io/github/issues/heitorpolidoro/apras" alt="GitHub issues"></a>
+<a href="https://github.com/heitorpolidoro/apras/pulls"><img src="https://img.shields.io/github/issues-pr/heitorpolidoro/apras" alt="GitHub pull requests"></a>
 <br>
 
 <!-- DeepSource -->
 
-<a href="https://app.deepsource.com/gh/heitorpolidoro/nexdom/" target="_blank"><img alt="DeepSource" title="DeepSource" src="https://app.deepsource.com/gh/heitorpolidoro/nexdom.svg/?label=active+issues&show_trend=true"/></a>
-<a href="https://app.deepsource.io/gh/heitorpolidoro/nexdom/"><img src="https://app.deepsource.com/gh/heitorpolidoro/nexdom.svg/?label=coverage" alt="DeepSource Coverage"></a>
+<a href="https://app.deepsource.com/gh/heitorpolidoro/apras/" target="_blank"><img alt="DeepSource" title="DeepSource" src="https://app.deepsource.com/gh/heitorpolidoro/apras.svg/?label=active+issues&show_trend=true"/></a>
+<a href="https://app.deepsource.io/gh/heitorpolidoro/apras/"><img src="https://app.deepsource.com/gh/heitorpolidoro/apras.svg/?label=coverage" alt="DeepSource Coverage"></a>
 <br>
 
 <!-- SonarCloud -->
 
-<a href="https://sonarcloud.io/summary/new_code?id=heitorpolidoro_nexdom"><img src="https://sonarcloud.io/api/project_badges/measure?project=heitorpolidoro_nexdom&metric=alert_status" alt="SonarCloud Quality Gate"></a>
-<a href="https://sonarcloud.io/summary/new_code?id=heitorpolidoro_nexdom"><img src="https://sonarcloud.io/api/project_badges/measure?project=heitorpolidoro_nexdom&metric=coverage" alt="SonarCloud Coverage"></a>
-<a href="https://sonarcloud.io/summary/new_code?id=heitorpolidoro_nexdom"><img src="https://sonarcloud.io/api/project_badges/measure?project=heitorpolidoro_nexdom&metric=security_rating" alt="SonarCloud Security Rating"></a>
+<a href="https://sonarcloud.io/summary/new_code?id=heitorpolidoro_apras"><img src="https://sonarcloud.io/api/project_badges/measure?project=heitorpolidoro_apras&metric=alert_status" alt="SonarCloud Quality Gate"></a>
+<a href="https://sonarcloud.io/summary/new_code?id=heitorpolidoro_apras"><img src="https://sonarcloud.io/api/project_badges/measure?project=heitorpolidoro_apras&metric=coverage" alt="SonarCloud Coverage"></a>
+<a href="https://sonarcloud.io/summary/new_code?id=heitorpolidoro_apras"><img src="https://sonarcloud.io/api/project_badges/measure?project=heitorpolidoro_apras&metric=security_rating" alt="SonarCloud Security Rating"></a>
 <br>
-<a href="https://sonarcloud.io/summary/new_code?id=heitorpolidoro_nexdom"><img src="https://sonarcloud.io/api/project_badges/measure?project=heitorpolidoro_nexdom&metric=bugs" alt="SonarCloud Bugs"></a>
-<a href="https://sonarcloud.io/summary/new_code?id=heitorpolidoro_nexdom"><img src="https://sonarcloud.io/api/project_badges/measure?project=heitorpolidoro_nexdom&metric=vulnerabilities" alt="SonarCloud Vulnerabilities"></a>
-<a href="https://sonarcloud.io/summary/new_code?id=heitorpolidoro_nexdom"><img src="https://sonarcloud.io/api/project_badges/measure?project=heitorpolidoro_nexdom&metric=code_smells" alt="SonarCloud Code Smells"></a>
-<a href="https://sonarcloud.io/summary/new_code?id=heitorpolidoro_nexdom"><img src="https://sonarcloud.io/api/project_badges/measure?project=heitorpolidoro_nexdom&metric=sqale_rating" alt="SonarCloud Maintainability"></a>
+<a href="https://sonarcloud.io/summary/new_code?id=heitorpolidoro_apras"><img src="https://sonarcloud.io/api/project_badges/measure?project=heitorpolidoro_apras&metric=bugs" alt="SonarCloud Bugs"></a>
+<a href="https://sonarcloud.io/summary/new_code?id=heitorpolidoro_apras"><img src="https://sonarcloud.io/api/project_badges/measure?project=heitorpolidoro_apras&metric=vulnerabilities" alt="SonarCloud Vulnerabilities"></a>
+<a href="https://sonarcloud.io/summary/new_code?id=heitorpolidoro_apras"><img src="https://sonarcloud.io/api/project_badges/measure?project=heitorpolidoro_apras&metric=code_smells" alt="SonarCloud Code Smells"></a>
+<a href="https://sonarcloud.io/summary/new_code?id=heitorpolidoro_apras"><img src="https://sonarcloud.io/api/project_badges/measure?project=heitorpolidoro_apras&metric=sqale_rating" alt="SonarCloud Maintainability"></a>
 
 </div>
 
-O **Nexdom** é uma plataforma web para gestão de condomínios e associações. O módulo atual cobre a gestão de tarefas da administração: criação, atribuição, acompanhamento de status, comentários e auditoria completa de alterações, com controle de acesso por papéis.
+O **APRAS** é o Aplicativo de Planejamento e Resoluções para Associações e Síndicos. O módulo atual cobre a gestão de tarefas da administração: criação, atribuição, acompanhamento de status, comentários e auditoria completa de alterações, com controle de acesso por papéis.
 
-- **Frontend (produção):** https://nexdom-front.vercel.app
-- **Backend (produção):** https://nexdom-back.vercel.app
+- **Frontend (produção):** https://apras-front.vercel.app
+- **Backend (produção):** https://apras-back.vercel.app
 
 ## Funcionalidades
 
@@ -109,7 +109,7 @@ cd frontend && npm run test:coverage
 
 ## Deploy
 
-O deploy é feito na **Vercel** (projetos `nexdom-front` e `nexdom-back`). Todo merge na branch `master` dispara automaticamente o deploy de produção dos dois projetos via integração Git. As migrações de banco rodam no GitHub Actions (`migrate.yml`) a cada push na `master`.
+O deploy é feito na **Vercel** (projetos `apras-front` e `apras-back`). Todo merge na branch `master` dispara automaticamente o deploy de produção dos dois projetos via integração Git. As migrações de banco rodam no GitHub Actions (`migrate.yml`) a cada push na `master`.
 
 ## Contribuição e Fluxo de Trabalho
 

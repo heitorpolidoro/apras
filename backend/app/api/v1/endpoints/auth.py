@@ -80,7 +80,11 @@ def login_access_token(
     Raises:
         HTTPException: If credentials are incorrect or user is inactive.
     """
-    statement = select(User).where(User.email == form_data.username)
+    username = form_data.username
+    if "@" not in username:
+        statement = select(User).where(User.email.like(f"{username}@%"))
+    else:
+        statement = select(User).where(User.email == username)
     user = session.exec(statement).first()
 
     if not user or not security.verify_password(
@@ -125,7 +129,8 @@ def get_dev_users(
 @router.post("/dev-login", response_model=Token)
 def dev_login(
     session: Annotated[Session, Depends(get_session)],
-    email: str,
+    email: str | None = None,
+    username: str | None = None,
     remember_me: Annotated[bool, Query()] = False,
 ) -> dict[str, str]:
     """Login without password for development purposes.
@@ -138,7 +143,17 @@ def dev_login(
             detail="Not found",
         )
 
-    statement = select(User).where(User.email == email)
+    identifier = email or username
+    if not identifier:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="email or username is required",
+        )
+
+    if "@" not in identifier:
+        statement = select(User).where(User.email.like(f"{identifier}@%"))
+    else:
+        statement = select(User).where(User.email == identifier)
     user = session.exec(statement).first()
 
     if not user:

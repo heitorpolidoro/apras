@@ -390,8 +390,8 @@ describe("TaskForm", () => {
   it("renders user options correctly, including fallback to username", () => {
     vi.mocked(useAssignableUsers).mockReturnValue({
       data: [
-        { id: "user-1", full_name: "Full Name", username: "user1" },
-        { id: "user-2", full_name: "", username: "user2_only" },
+        { id: "user-1", full_name: "Full Name", email: "user1@test.com" },
+        { id: "user-2", full_name: "", email: "user2_only" },
       ],
       isLoading: false,
     } as any); // skipcq: JS-0323

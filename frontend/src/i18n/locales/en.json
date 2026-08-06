@@ -1,7 +1,7 @@
 {
   "common": {
-    "appName": "Nexdom",
-    "appSubtitle": "Management and Control System",
+    "appName": "APRAS",
+    "appSubtitle": "Planning and Resolutions Application for Associations and Syndics",
     "logout": "Sign out",
     "close": "Close"
   },

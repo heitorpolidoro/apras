@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "preview:front": "npx vercel@latest link --scope heitor-polidoros-projects --project nexdom-front --yes && npx vercel@latest deploy",
-    "preview:back": "npx vercel@latest link --scope heitor-polidoros-projects --project nexdom-back --yes && npx vercel@latest deploy"
+    "preview:front": "npx vercel@latest link --scope heitor-polidoros-projects --project apras-front --yes && npx vercel@latest deploy",
+    "preview:back": "npx vercel@latest link --scope heitor-polidoros-projects --project apras-back --yes && npx vercel@latest deploy"
   }
 }

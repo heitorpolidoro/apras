@@ -50,7 +50,7 @@ origins = get_origins()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_origin_regex=r"https://nexdom-(front|app)-.*\.vercel\.app|https://nexdom-app\.vercel\.app",
+    allow_origin_regex=r"https://(nexdom|apras)-(front|app)-.*\.vercel\.app|https://(nexdom|apras)-app\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -62,4 +62,4 @@ app.include_router(api_router, prefix="/api/v1")
 @app.get("/")
 def read_root() -> dict[str, str]:
     """Root endpoint."""
-    return {"message": "Welcome to NEXDOM API"}
+    return {"message": "Welcome to APRAS API"}

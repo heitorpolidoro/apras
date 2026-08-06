@@ -16,7 +16,7 @@ def _clean_db_url(url: str) -> str:
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "NEXDOM"
+    PROJECT_NAME: str = "APRAS"
     ENVIRONMENT: str = "production"
 
     # Database
@@ -43,6 +43,9 @@ class Settings(BaseSettings):
         "https://nexdom.vercel.app",
         "https://nexdom-front.vercel.app",
         "https://nexdom-app.vercel.app",
+        "https://apras.vercel.app",
+        "https://apras-front.vercel.app",
+        "https://apras-app.vercel.app",
         "http://localhost:3000",
         "http://localhost:3001",
         "http://localhost:5173",

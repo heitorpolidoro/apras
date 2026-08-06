@@ -7,7 +7,7 @@ def test_inactive_user_login_fails(client: TestClient, session: Session):
     # Create an inactive user
     signup_data = {
         "username": "inactive_test",
-        "email": "inactive@test.com",
+        "email": "inactive_test@test.com",
         "full_name": "Inactive Test",
         "password": "Password123!",
     }

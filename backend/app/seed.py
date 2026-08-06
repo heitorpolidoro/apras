@@ -69,7 +69,7 @@ def seed_db() -> None:
         admin = User(
             id=uuid.UUID("00000000-0000-0000-0000-000000000000"),
             username="admin",
-            email="admin@nexdom.com",
+            email="admin@apras.com",
             hashed_password=get_password_hash("test_admin_password"),
             full_name="Administrador do Sistema",
             role=UserRole.ADMINISTRATOR,
@@ -80,12 +80,12 @@ def seed_db() -> None:
         diretores_data = [
             {
                 "id": uuid.UUID("11111111-1111-1111-1111-111111111111"),
-                "email": "diretor1@nexdom.com",
+                "email": "diretor1@apras.com",
                 "full_name": "Diretor Comercial",
             },
             {
                 "id": uuid.UUID("22222222-2222-2222-2222-222222222222"),
-                "email": "diretor2@nexdom.com",
+                "email": "diretor2@apras.com",
                 "full_name": "Diretor Financeiro",
             },
         ]
@@ -106,7 +106,7 @@ def seed_db() -> None:
 
         manager = User(
             id=uuid.UUID("33333333-3333-3333-3333-333333333333"),
-            email="gerente1@nexdom.com",
+            email="gerente1@apras.com",
             hashed_password=get_password_hash("test_user_password"),
             full_name="Gerente Operacional",
             role=UserRole.MANAGER,
@@ -140,7 +140,7 @@ def seed_db() -> None:
             },
             {
                 "title": "Treinamento de Equipe",
-                "description": "Treinar novos funcionários no uso do Nexdom.",
+                "description": "Treinar novos funcionários no uso do APRAS.",
                 "status": TaskStatus.COMPLETED,
                 "priority": TaskPriority.LOW,
                 "assigned_to_id": diretores[0].id,

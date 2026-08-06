@@ -33,7 +33,7 @@ describe("LoginPage", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByLabelText(/Usuário/i)).toBeDefined();
+    expect(screen.getByLabelText(/E-mail/i)).toBeDefined();
     expect(screen.getByLabelText(/Senha/i)).toBeDefined();
     expect(screen.getByRole("button", { name: /Entrar/i })).toBeDefined();
   });
@@ -53,8 +53,8 @@ describe("LoginPage", () => {
       </MemoryRouter>,
     );
 
-    fireEvent.change(screen.getByLabelText(/Usuário/i), {
-      target: { value: "wronguser" },
+    fireEvent.change(screen.getByLabelText(/E-mail/i), {
+      target: { value: "wronguser@test.com" },
     });
     fireEvent.change(screen.getByLabelText(/Senha/i), {
       target: { value: "wrongpass" },
@@ -81,8 +81,8 @@ describe("LoginPage", () => {
       </MemoryRouter>,
     );
 
-    fireEvent.change(screen.getByLabelText(/Usuário/i), {
-      target: { value: "inactive" },
+    fireEvent.change(screen.getByLabelText(/E-mail/i), {
+      target: { value: "inactive@test.com" },
     });
     fireEvent.change(screen.getByLabelText(/Senha/i), {
       target: { value: "pass" },
@@ -100,7 +100,7 @@ describe("LoginPage", () => {
 
   it("renders dev users and handles dev login", async () => {
     const mockDevUsers = [
-      { id: "1", username: "devadmin", is_active: true, role: "ADMINISTRATOR" },
+      { id: "1", full_name: "devadmin", email: "devadmin@test.com", is_active: true, role: "ADMINISTRATOR" },
     ];
     (apiClient.get as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: mockDevUsers,
@@ -129,7 +129,7 @@ describe("LoginPage", () => {
         "/auth/dev-login",
         null,
         expect.objectContaining({
-          params: { username: "devadmin", remember_me: false },
+          params: { email: "devadmin@test.com", remember_me: false },
         }),
       );
     });
@@ -152,8 +152,8 @@ describe("LoginPage", () => {
       </MemoryRouter>,
     );
 
-    fireEvent.change(screen.getByLabelText(/Usuário/i), {
-      target: { value: "user" },
+    fireEvent.change(screen.getByLabelText(/E-mail/i), {
+      target: { value: "user@test.com" },
     });
     fireEvent.change(screen.getByLabelText(/Senha/i), {
       target: { value: "pass" },
@@ -180,8 +180,8 @@ describe("LoginPage", () => {
       </MemoryRouter>,
     );
 
-    fireEvent.change(screen.getByLabelText(/Usuário/i), {
-      target: { value: "user" },
+    fireEvent.change(screen.getByLabelText(/E-mail/i), {
+      target: { value: "user@test.com" },
     });
     fireEvent.change(screen.getByLabelText(/Senha/i), {
       target: { value: "pass" },
@@ -206,8 +206,8 @@ describe("LoginPage", () => {
       </MemoryRouter>,
     );
 
-    fireEvent.change(screen.getByLabelText(/Usuário/i), {
-      target: { value: "user" },
+    fireEvent.change(screen.getByLabelText(/E-mail/i), {
+      target: { value: "user@test.com" },
     });
     fireEvent.change(screen.getByLabelText(/Senha/i), {
       target: { value: "pass" },
@@ -223,7 +223,7 @@ describe("LoginPage", () => {
 
   it("handles dev login failure", async () => {
     const mockDevUsers = [
-      { id: "1", username: "devadmin", is_active: true, role: "ADMINISTRATOR" },
+      { id: "1", full_name: "devadmin", email: "devadmin@test.com", is_active: true, role: "ADMINISTRATOR" },
     ];
     (apiClient.get as any).mockResolvedValue({ data: mockDevUsers });
     (apiClient.post as any).mockRejectedValue(new Error("Dev login failed"));
@@ -291,8 +291,8 @@ describe("LoginPage", () => {
     fireEvent.click(rememberMe);
     expect(rememberMe).toBeChecked();
 
-    fireEvent.change(screen.getByLabelText(/Usuário/i), {
-      target: { value: "user" },
+    fireEvent.change(screen.getByLabelText(/E-mail/i), {
+      target: { value: "user@test.com" },
     });
     fireEvent.change(screen.getByLabelText(/Senha/i), {
       target: { value: "pass" },

@@ -8,8 +8,7 @@ from app.models.user import User
 def test_user_model_creation():
     """Test that a User model is created with correct field defaults."""
     user = User(
-        username="testuser",
-        email="test@test.com",
+        email="testuser@test.com",
         hashed_password="hash",
         full_name="Test User",
         role=UserRole.DIRECTOR,

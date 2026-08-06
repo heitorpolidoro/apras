@@ -1,7 +1,7 @@
 {
   "common": {
-    "appName": "Nexdom",
-    "appSubtitle": "Sistema de Gestão e Controle",
+    "appName": "APRAS",
+    "appSubtitle": "Aplicativo de Planejamento e Resoluções para Associações e Síndicos",
     "logout": "Sair",
     "close": "Fechar"
   },

@@ -488,13 +488,13 @@ describe("TaskDetailsView", () => {
     expect(screen.getByText("admin")).toBeInTheDocument();
   });
 
-  it("falls back to username when user has no full_name", () => {
+  it("falls back to email when user has no full_name", () => {
     vi.mocked(useAssignableUsers).mockReturnValue({
       data: [
         {
           id: "user3",
           full_name: "",
-          username: "charlie",
+          email: "charlie",
           role: "DIRECTOR",
           is_active: true,
           type: { id: "t1", name: "Analista" },

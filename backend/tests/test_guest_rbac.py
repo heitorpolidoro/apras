@@ -33,7 +33,7 @@ def guest_data_fixture(session: Session):
     director = User(
         id=uuid.uuid4(),
         username="director_guest_rbac",
-        email="dir_guest_rbac@test.com",
+        email="director_guest_rbac@test.com",
         full_name="Director Test",
         hashed_password=get_password_hash("pass"),
         role=UserRole.DIRECTOR,

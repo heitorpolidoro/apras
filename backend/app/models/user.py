@@ -21,6 +21,10 @@ class User(SQLModel, table=True):
     is_active: bool = Field(default=True)
     type_id: UUID | None = Field(default=None, foreign_key="user_type.id", index=True)
 
+    @property
+    def username(self) -> str:
+        return self.email.split("@")[0]
+
     # Relationships
     created_tasks: list["Task"] = Relationship(
         back_populates="creator",

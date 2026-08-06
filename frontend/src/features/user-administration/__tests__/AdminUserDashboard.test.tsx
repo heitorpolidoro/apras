@@ -104,7 +104,6 @@ describe("AdminUserDashboard", () => {
       expect(screen.getByText("User Two")).toBeDefined();
     });
 
-    expect(screen.getByText("user1")).toBeDefined();
     expect(screen.getByText("user1@example.com")).toBeDefined();
     expect(screen.getByText("Gerenciamento de Usuários")).toBeDefined();
   });

@@ -5,7 +5,7 @@ from uuid import UUID
 
 from app.models.enums import UserRole
 from app.schemas.user_type import UserTypeRead
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, computed_field
 
 
 class UserBase(BaseModel):
@@ -35,6 +35,11 @@ class UserRead(UserBase):
     type: UserTypeRead | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+    @computed_field
+    @property
+    def username(self) -> str:
+        return self.email.split("@")[0]
 
 
 class UserUpdate(BaseModel):

@@ -41,7 +41,6 @@ describe("SignupPage", () => {
 
     expect(screen.getByLabelText(/Nome Completo/i)).toBeDefined();
     expect(screen.getByLabelText(/E-mail/i)).toBeDefined();
-    expect(screen.getByLabelText(/Usuário/i)).toBeDefined();
     expect(screen.getByLabelText("Senha")).toBeDefined();
     expect(screen.getByLabelText(/Confirmar Senha/i)).toBeDefined();
     expect(screen.getByRole("button", { name: /Cadastrar/i })).toBeDefined();
@@ -59,9 +58,6 @@ describe("SignupPage", () => {
     });
     fireEvent.change(screen.getByLabelText(/E-mail/i), {
       target: { value: "test@test.com", name: "email" },
-    });
-    fireEvent.change(screen.getByLabelText(/Usuário/i), {
-      target: { value: "testuser", name: "username" },
     });
     fireEvent.change(screen.getByLabelText("Senha"), {
       target: { value: "password123!", name: "password" },
@@ -86,9 +82,6 @@ describe("SignupPage", () => {
     });
     fireEvent.change(screen.getByLabelText(/E-mail/i), {
       target: { value: "test@test.com", name: "email" },
-    });
-    fireEvent.change(screen.getByLabelText(/Usuário/i), {
-      target: { value: "testuser", name: "username" },
     });
     fireEvent.change(screen.getByLabelText("Senha"), {
       target: { value: "short", name: "password" },
@@ -117,9 +110,6 @@ describe("SignupPage", () => {
     });
     fireEvent.change(screen.getByLabelText(/E-mail/i), {
       target: { value: "test@test.com", name: "email" },
-    });
-    fireEvent.change(screen.getByLabelText(/Usuário/i), {
-      target: { value: "testuser", name: "username" },
     });
     fireEvent.change(screen.getByLabelText("Senha"), {
       target: { value: "validpassword1!", name: "password" },
@@ -153,9 +143,6 @@ describe("SignupPage", () => {
     fireEvent.change(screen.getByLabelText(/E-mail/i), {
       target: { value: "test@test.com", name: "email" },
     });
-    fireEvent.change(screen.getByLabelText(/Usuário/i), {
-      target: { value: "testuser", name: "username" },
-    });
     fireEvent.change(screen.getByLabelText("Senha"), {
       target: { value: "validpassword1!", name: "password" },
     });
@@ -187,9 +174,6 @@ describe("SignupPage", () => {
     });
     fireEvent.change(screen.getByLabelText(/E-mail/i), {
       target: { value: "test@test.com", name: "email" },
-    });
-    fireEvent.change(screen.getByLabelText(/Usuário/i), {
-      target: { value: "testuser", name: "username" },
     });
     fireEvent.change(screen.getByLabelText("Senha"), {
       target: { value: "validpassword1!", name: "password" },
@@ -223,9 +207,6 @@ describe("SignupPage", () => {
     fireEvent.change(screen.getByLabelText(/E-mail/i), {
       target: { value: "test@test.com", name: "email" },
     });
-    fireEvent.change(screen.getByLabelText(/Usuário/i), {
-      target: { value: "testuser", name: "username" },
-    });
     fireEvent.change(screen.getByLabelText("Senha"), {
       target: { value: "validpassword1!", name: "password" },
     });
@@ -255,9 +236,6 @@ describe("SignupPage", () => {
     });
     fireEvent.change(screen.getByLabelText(/E-mail/i), {
       target: { value: "test@test.com", name: "email" },
-    });
-    fireEvent.change(screen.getByLabelText(/Usuário/i), {
-      target: { value: "testuser", name: "username" },
     });
     fireEvent.change(screen.getByLabelText("Senha"), {
       target: { value: "validpassword1!", name: "password" },
@@ -294,9 +272,6 @@ describe("SignupPage", () => {
     });
     fireEvent.change(screen.getByLabelText(/E-mail/i), {
       target: { value: "test@test.com", name: "email" },
-    });
-    fireEvent.change(screen.getByLabelText(/Usuário/i), {
-      target: { value: "testuser", name: "username" },
     });
     fireEvent.change(screen.getByLabelText("Senha"), {
       target: { value: "validpassword1!", name: "password" },

@@ -29,7 +29,7 @@ def test_data_fixture(session: Session):
     director = User(
         id=uuid.uuid4(),
         username="director_rbac",
-        email="dir_rbac@test.com",
+        email="director_rbac@test.com",
         full_name="Director Test",
         hashed_password=get_password_hash("pass"),
         role=UserRole.DIRECTOR,

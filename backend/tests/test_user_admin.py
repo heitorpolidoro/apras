@@ -26,21 +26,20 @@ def test_signup(client: TestClient, session: Session):
     assert data["role"] == UserRole.GUEST
 
     # Verify in DB
-    user = session.exec(select(User).where(User.username == "newuser")).first()
+    user = session.exec(select(User).where(User.email == "newuser@test.com")).first()
     assert user is not None
     assert user.is_active is False
 
 
-def test_signup_duplicate_username(client: TestClient, normal_user):
+def test_signup_duplicate_email(client: TestClient, normal_user):
     signup_data = {
-        "username": normal_user.username,
-        "email": "another@test.com",
+        "email": normal_user.email,
         "full_name": "Duplicate User",
         "password": "Password123!",
     }
     response = client.post("/api/v1/auth/signup", json=signup_data)
     assert response.status_code == 400
-    assert "username already exists" in response.json()["detail"]
+    assert "email already exists" in response.json()["detail"]
 
 
 def test_me_endpoint(client: TestClient, admin_user):
