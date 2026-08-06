@@ -1,0 +1,10 @@
+{
+  "tasks": [
+    {
+      "id": "password-recovery",
+      "title": "Implement password recovery flow (forgot password / reset password) in frontend and backend",
+      "status": "completed",
+      "justification": "Implemented JWT password reset token mechanism, forgot/reset password API endpoints, forgot/reset frontend screens, and updated user table checks."
+    }
+  ]
+}
