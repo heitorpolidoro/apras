@@ -117,3 +117,4 @@ test-results.xml
 gha-creds-*.json
 .vercel
 .worktrees/
+.env*
