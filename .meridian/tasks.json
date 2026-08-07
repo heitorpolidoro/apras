@@ -5,6 +5,12 @@
       "title": "Implement password recovery flow (forgot password / reset password) in frontend and backend",
       "status": "completed",
       "justification": "Implemented JWT password reset token mechanism, forgot/reset password API endpoints, forgot/reset frontend screens, and updated user table checks."
+    },
+    {
+      "id": "dynamic-visibility",
+      "title": "Refactor task visibility from boolean flag to dynamic UserType-based targeting",
+      "status": "pending",
+      "justification": "Will implement many-to-many user-types, replace manager_visible with visible_to_id on Task, create database migrations, update RBAC guards, and adjust frontend edit/creation forms."
     }
   ]
 }
