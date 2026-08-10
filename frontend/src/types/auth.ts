@@ -21,4 +21,7 @@ export interface User {
   user_types?: UserType[];
   user_type_ids?: string[] | null;
   cpf?: string;
+  phone?: string;
+  address?: string;
+  block_lot?: string;
 }

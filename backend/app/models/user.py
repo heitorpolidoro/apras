@@ -21,6 +21,9 @@ class User(SQLModel, table=True):
     role: UserRole = Field(default=UserRole.DIRECTOR)
     is_active: bool = Field(default=True)
     cpf: str = Field(unique=True, index=True)
+    phone: str | None = Field(default=None)
+    address: str | None = Field(default=None)
+    block_lot: str | None = Field(default=None)
 
     @property
     def username(self) -> str:
