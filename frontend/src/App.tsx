@@ -8,53 +8,64 @@ import ResetPasswordPage from "./features/user-administration/pages/ResetPasswor
 import AdminUserDashboard from "./features/user-administration/pages/AdminUserDashboard";
 import ProtectedRoute from "./features/user-administration/components/ProtectedRoute";
 import { AuthProvider } from "./features/user-administration/context/AuthContext";
+import { SimulationProvider } from "./features/user-administration/context/SimulationContext";
 import Navbar from "./features/user-administration/components/Navbar";
+import SimulationBanner from "./features/user-administration/components/SimulationBanner";
 import { UserRole } from "./types/auth";
 import "./App.css";
 
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <div className="App">
-          <Navbar />
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/signup" element={<SignupPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <SimulationProvider>
+        <BrowserRouter>
+          <div className="App">
+            <Navbar />
+            <SimulationBanner />
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/signup" element={<SignupPage />} />
+              <Route
+                path="/forgot-password"
+                element={<ForgotPasswordPage />}
+              />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <TaskDashboard />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <TaskDashboard />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/categories"
-              element={
-                <ProtectedRoute>
-                  <CategoriesPage />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/categories"
+                element={
+                  <ProtectedRoute>
+                    <CategoriesPage />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/admin/users"
-              element={
-                <ProtectedRoute requiredRole={UserRole.ADMINISTRATOR}>
-                  <AdminUserDashboard />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/admin/users"
+                element={
+                  <ProtectedRoute requiredRole={UserRole.ADMINISTRATOR}>
+                    <AdminUserDashboard />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
-        </div>
-      </BrowserRouter>
+              <Route
+                path="/"
+                element={<Navigate to="/dashboard" replace />}
+              />
+            </Routes>
+          </div>
+        </BrowserRouter>
+      </SimulationProvider>
     </AuthProvider>
   );
 }

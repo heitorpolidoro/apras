@@ -177,6 +177,18 @@ describe("TaskCard", () => {
     expect(screen.queryByText("General")).not.toBeInTheDocument();
   });
 
+  it("does not render the read-only indicator by default", () => {
+    render(<TaskCard task={mockTask} />);
+    expect(
+      screen.queryByTestId("task-readonly-indicator"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("renders the read-only indicator when readOnly is true", () => {
+    render(<TaskCard task={mockTask} readOnly />);
+    expect(screen.getByTestId("task-readonly-indicator")).toBeInTheDocument();
+  });
+
   it("renders category color dot with fallback when category_color is null", () => {
     const taskWithoutColor = {
       ...mockTask,

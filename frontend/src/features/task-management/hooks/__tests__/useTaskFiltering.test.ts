@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import { useTaskFiltering } from "../useTaskFiltering";
 import { TaskStatus, TaskPriority } from "../../types";
 import type { TaskRead } from "../../types";
+import { UserRole } from "../../../../types/auth";
 
 const mockTasks: TaskRead[] = [
   {
@@ -90,6 +91,87 @@ describe("useTaskFiltering", () => {
       useTaskFiltering(mockTasks, { status: TaskStatus.CANCELED }),
     );
     expect(result.current).toHaveLength(0);
+  });
+
+  describe("admin role simulation filtering", () => {
+    const simulationTasks: TaskRead[] = [
+      { ...mockTasks[0], id: "pub", visible_to_id: null },
+      { ...mockTasks[1], id: "typed", visible_to_id: "type-1" },
+      { ...mockTasks[2], id: "other-typed", visible_to_id: "type-2" },
+    ];
+
+    it("is a no-op when no simulation option is passed", () => {
+      const { result } = renderHook(() =>
+        useTaskFiltering(simulationTasks, {}),
+      );
+      expect(result.current).toHaveLength(3);
+    });
+
+    it("is a no-op when isSimulating is false", () => {
+      const { result } = renderHook(() =>
+        useTaskFiltering(simulationTasks, {}, {
+          isSimulating: false,
+          role: UserRole.MANAGER,
+          userTypeIds: [],
+        }),
+      );
+      expect(result.current).toHaveLength(3);
+    });
+
+    it("hides every task when simulating GUEST", () => {
+      const { result } = renderHook(() =>
+        useTaskFiltering(simulationTasks, {}, {
+          isSimulating: true,
+          role: UserRole.GUEST,
+          userTypeIds: [],
+        }),
+      );
+      expect(result.current).toHaveLength(0);
+    });
+
+    it("shows only public and matching-UserType tasks when simulating MANAGER", () => {
+      const { result } = renderHook(() =>
+        useTaskFiltering(simulationTasks, {}, {
+          isSimulating: true,
+          role: UserRole.MANAGER,
+          userTypeIds: ["type-1"],
+        }),
+      );
+      expect(result.current.map((t) => t.id)).toEqual(["pub", "typed"]);
+    });
+
+    it("shows every task when simulating DIRECTOR or ADMINISTRATOR", () => {
+      const { result: directorResult } = renderHook(() =>
+        useTaskFiltering(simulationTasks, {}, {
+          isSimulating: true,
+          role: UserRole.DIRECTOR,
+          userTypeIds: [],
+        }),
+      );
+      expect(directorResult.current).toHaveLength(3);
+
+      const { result: adminResult } = renderHook(() =>
+        useTaskFiltering(simulationTasks, {}, {
+          isSimulating: true,
+          role: UserRole.ADMINISTRATOR,
+          userTypeIds: [],
+        }),
+      );
+      expect(adminResult.current).toHaveLength(3);
+    });
+
+    it("combines simulated visibility filtering with the explicit status/priority/assignee filters", () => {
+      const { result } = renderHook(() =>
+        useTaskFiltering(
+          simulationTasks,
+          { status: TaskStatus.PENDING },
+          { isSimulating: true, role: UserRole.MANAGER, userTypeIds: [] },
+        ),
+      );
+      // Only "pub" (visible_to_id null) is visible to this manager, and it
+      // must also match the PENDING status filter.
+      expect(result.current.map((t) => t.id)).toEqual(["pub"]);
+    });
   });
 
   it("memoizes the result", () => {

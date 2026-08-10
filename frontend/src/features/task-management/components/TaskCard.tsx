@@ -1,5 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { Lock } from "lucide-react";
 import type { TaskRead } from "../types";
 import { Badge } from "../../../components/ui/badge";
 import { cn } from "../../../lib/utils";
@@ -8,9 +9,11 @@ import { getStatusLabel, getPriorityLabel, statusVariant, priorityVariant } from
 interface TaskCardProps {
   task: TaskRead;
   onClick?: () => void;
+  /** When true, shows a lock indicator: the task is not editable in the current simulated view. */
+  readOnly?: boolean;
 }
 
-const TaskCard: React.FC<TaskCardProps> = ({ task, onClick }) => {
+const TaskCard: React.FC<TaskCardProps> = ({ task, onClick, readOnly = false }) => {
   const { t, i18n } = useTranslation();
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -23,13 +26,23 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onClick }) => {
   return (
     <button
       className={cn(
-        "w-full text-left rounded-xl border border-border/40 bg-card text-card-foreground shadow-sm p-5 transition-all duration-200 cursor-pointer",
+        "relative w-full text-left rounded-xl border border-border/40 bg-card text-card-foreground shadow-sm p-5 transition-all duration-200 cursor-pointer",
         "hover:shadow-md hover:border-primary/30 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
       )}
       onClick={onClick}
       onKeyDown={handleKeyDown}
     >
-      <h3 className="font-semibold text-base mb-1 text-foreground leading-snug">
+      {readOnly && (
+        <span
+          data-testid="task-readonly-indicator"
+          title={t("simulation.readOnlyTask")}
+          aria-label={t("simulation.readOnlyTask")}
+          className="absolute top-3 right-3 text-muted-foreground"
+        >
+          <Lock className="size-3.5" />
+        </span>
+      )}
+      <h3 className="font-semibold text-base mb-1 pr-5 text-foreground leading-snug">
         {task.title}
       </h3>
       {task.category_name && (

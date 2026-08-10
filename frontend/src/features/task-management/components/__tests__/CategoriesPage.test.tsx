@@ -31,6 +31,21 @@ vi.mock(
   },
 );
 
+// CategoriesPage now reads its effective role via useEffectiveIdentity, which
+// combines useAuth (mocked above, varies per test) with useSimulation. Keep
+// simulation permanently inactive here so canWrite continues to reflect the
+// real user's role exactly like before this hook existed.
+vi.mock("../../../user-administration/context/SimulationContext", () => ({
+  useSimulation: vi.fn(() => ({
+    simulatedRole: null,
+    simulatedUserTypeIds: [],
+    isSimulating: false,
+    setSimulatedRole: vi.fn(),
+    setSimulatedUserTypeIds: vi.fn(),
+    stopSimulation: vi.fn(),
+  })),
+}));
+
 const mockCategories = [
   { id: "cat-1", name: "General", color: "#808080", is_active: true },
   { id: "cat-2", name: "Jurídico", color: "#6366f1", is_active: true },

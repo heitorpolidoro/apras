@@ -2,6 +2,7 @@ import { render, waitFor, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import apiClient from "../../../api/client";
+import { registerSimulationReset } from "../context/simulationState";
 
 vi.mock("../../../api/client", () => ({
   default: {
@@ -105,6 +106,37 @@ describe("AuthContext", () => {
     );
     expect(localStorage.getItem("accessToken")).toBeNull();
     expect(sessionStorage.getItem("accessToken")).toBeNull();
+  });
+
+  it("clears an in-progress simulation on logout via the registered reset handler", async () => {
+    const mockUser = {
+      id: 1,
+      email: "testuser@example.com",
+      role: "FUNCIONARIO",
+      is_active: true,
+    };
+    localStorage.setItem("accessToken", "fake-token");
+    (apiClient.get as any).mockResolvedValue({ data: mockUser }); // skipcq: JS-0323
+
+    const resetHandler = vi.fn();
+    registerSimulationReset(resetHandler);
+
+    render(
+      <AuthProvider>
+        <TestComponent />
+      </AuthProvider>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId("auth-status").textContent).toBe(
+        "Authenticated",
+      ),
+    );
+
+    fireEvent.click(screen.getByText("Logout"));
+
+    expect(resetHandler).toHaveBeenCalledOnce();
+    registerSimulationReset(null);
   });
 
   it("clears storage if fetchUser fails", async () => {

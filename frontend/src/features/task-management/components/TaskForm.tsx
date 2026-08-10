@@ -3,10 +3,8 @@ import { useTranslation } from "react-i18next";
 import { useUserTypes } from "../../../hooks/useUserTypes";
 import { TaskPriority, TaskStatus } from "../types";
 import type { TaskRead, TaskCreate, TaskUpdate } from "../types";
-import {
-  useAuth,
-  UserRole,
-} from "../../user-administration/context/AuthContext";
+import { UserRole } from "../../../types/auth";
+import { useEffectiveIdentity } from "../../user-administration/context/useEffectiveIdentity";
 import { useCreateTask, useUpdateTask } from "../hooks/useTasks";
 import { useCategories } from "../hooks/useCategories";
 import { useAssignableUsers } from "../../../hooks/useUsers";
@@ -26,7 +24,7 @@ interface TaskFormProps {
 
 const TaskForm: React.FC<TaskFormProps> = ({ task, onSuccess, onCancel }) => {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { role, isSimulating } = useEffectiveIdentity();
   const isEditing = !!task;
   const createTaskMutation = useCreateTask();
   const updateTaskMutation = useUpdateTask();
@@ -284,7 +282,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSuccess, onCancel }) => {
           />
         </div>
 
-        {user?.role !== UserRole.MANAGER && (
+        {role !== UserRole.MANAGER && (
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="visible_to_id">{t("tasks.form.visibleToLabel")}</Label>
             <Select
@@ -316,7 +314,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSuccess, onCancel }) => {
           >
             {t("tasks.form.cancel")}
           </Button>
-          <Button type="submit" disabled={isLoading}>
+          <Button type="submit" disabled={isLoading || isSimulating}>
             {submitText}
           </Button>
         </div>

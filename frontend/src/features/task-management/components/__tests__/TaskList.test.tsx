@@ -3,6 +3,33 @@ import { describe, it, expect, vi } from "vitest";
 import { useTranslation } from "react-i18next";
 import TaskList from "../TaskList";
 import { TaskStatus, TaskPriority } from "../../types";
+import { UserRole } from "../../../../types/auth";
+import { useSimulation } from "../../../user-administration/context/SimulationContext";
+
+// TaskList reads its effective identity via useEffectiveIdentity, which
+// combines useAuth with useSimulation. Default both to a non-simulating,
+// roleless state so existing assertions are unaffected; simulation-specific
+// tests below override these mocks.
+vi.mock("../../../user-administration/context/AuthContext", () => ({
+  useAuth: vi.fn(() => ({
+    user: null,
+    isAuthenticated: false,
+    isLoading: false,
+    login: vi.fn(),
+    logout: vi.fn(),
+  })),
+}));
+
+vi.mock("../../../user-administration/context/SimulationContext", () => ({
+  useSimulation: vi.fn(() => ({
+    simulatedRole: null,
+    simulatedUserTypeIds: [],
+    isSimulating: false,
+    setSimulatedRole: vi.fn(),
+    setSimulatedUserTypeIds: vi.fn(),
+    stopSimulation: vi.fn(),
+  })),
+}));
 
 const mockTasks = [
   {
@@ -290,5 +317,104 @@ describe("TaskList", () => {
       />,
     );
     expect(() => fireEvent.click(screen.getByText("Task 1"))).not.toThrow();
+  });
+
+  describe("admin role simulation", () => {
+    it("hides tasks not visible to the simulated MANAGER + UserType combination", () => {
+      vi.mocked(useSimulation).mockReturnValue({
+        simulatedRole: UserRole.MANAGER,
+        simulatedUserTypeIds: ["type-1"],
+        isSimulating: true,
+        setSimulatedRole: vi.fn(),
+        setSimulatedUserTypeIds: vi.fn(),
+        stopSimulation: vi.fn(),
+      });
+      const tasksWithVisibility = [
+        { ...mockTasks[0], visible_to_id: "type-1" },
+        { ...mockTasks[1], visible_to_id: "type-2" },
+      ];
+      render(
+        <TaskList
+          tasks={tasksWithVisibility as any} // skipcq: JS-0323
+          isLoading={false}
+          isError={false}
+          error={null}
+          filters={defaultFilters}
+        />,
+      );
+      expect(screen.getByText("Task 1")).toBeInTheDocument();
+      expect(screen.queryByText("Task 2")).not.toBeInTheDocument();
+    });
+
+    it("shows a read-only indicator on assigned tasks when simulating MANAGER", () => {
+      vi.mocked(useSimulation).mockReturnValue({
+        simulatedRole: UserRole.MANAGER,
+        simulatedUserTypeIds: [],
+        isSimulating: true,
+        setSimulatedRole: vi.fn(),
+        setSimulatedUserTypeIds: vi.fn(),
+        stopSimulation: vi.fn(),
+      });
+      render(
+        <TaskList
+          tasks={mockTasks}
+          isLoading={false}
+          isError={false}
+          error={null}
+          filters={defaultFilters}
+        />,
+      );
+      // Both mock tasks have an assigned_to_id, so both are read-only for a
+      // simulated MANAGER (no self-assignment concept in simulation).
+      expect(screen.getAllByTestId("task-readonly-indicator")).toHaveLength(2);
+    });
+
+    it("does not show a read-only indicator when not simulating", () => {
+      vi.mocked(useSimulation).mockReturnValue({
+        simulatedRole: null,
+        simulatedUserTypeIds: [],
+        isSimulating: false,
+        setSimulatedRole: vi.fn(),
+        setSimulatedUserTypeIds: vi.fn(),
+        stopSimulation: vi.fn(),
+      });
+      render(
+        <TaskList
+          tasks={mockTasks}
+          isLoading={false}
+          isError={false}
+          error={null}
+          filters={defaultFilters}
+        />,
+      );
+      expect(
+        screen.queryByTestId("task-readonly-indicator"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("shows all tasks and no read-only indicator when simulating ADMINISTRATOR", () => {
+      vi.mocked(useSimulation).mockReturnValue({
+        simulatedRole: UserRole.ADMINISTRATOR,
+        simulatedUserTypeIds: [],
+        isSimulating: true,
+        setSimulatedRole: vi.fn(),
+        setSimulatedUserTypeIds: vi.fn(),
+        stopSimulation: vi.fn(),
+      });
+      render(
+        <TaskList
+          tasks={mockTasks}
+          isLoading={false}
+          isError={false}
+          error={null}
+          filters={defaultFilters}
+        />,
+      );
+      expect(screen.getByText("Task 1")).toBeInTheDocument();
+      expect(screen.getByText("Task 2")).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("task-readonly-indicator"),
+      ).not.toBeInTheDocument();
+    });
   });
 });

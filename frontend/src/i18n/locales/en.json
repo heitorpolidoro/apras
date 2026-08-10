@@ -207,5 +207,18 @@
       "none": "None",
       "emptyValue": "Empty"
     }
+  },
+  "simulation": {
+    "toggleButton": "Simulate",
+    "roleLabel": "Role",
+    "roleSelectPlaceholder": "Select a role",
+    "userTypesLabel": "User Types",
+    "userTypesPlaceholder": "Select user types",
+    "noUserTypesAvailable": "No user types available.",
+    "stopButton": "End simulation",
+    "bannerLabel": "Viewing as: {{role}} ({{userTypes}})",
+    "noUserTypes": "no user type",
+    "readOnlyTask": "Read-only in this simulated view",
+    "mutationBlocked": "Action blocked: you are in simulation mode."
   }
 }

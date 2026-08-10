@@ -11,7 +11,8 @@ import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { AlertModal } from "../../../components/ui/alert-modal";
 import type { CategoryRead } from "../types";
-import { useAuth, UserRole } from "../../user-administration/context/AuthContext";
+import { UserRole } from "../../../types/auth";
+import { useEffectiveIdentity } from "../../user-administration/context/useEffectiveIdentity";
 
 interface ApiError extends Error {
   response?: { data?: { detail?: string } };
@@ -66,8 +67,8 @@ const CategoriesPage: React.FC = () => {
   const updateMutation = useUpdateCategory();
   const deleteMutation = useDeleteCategory();
 
-  const { user } = useAuth();
-  const canWrite = user?.role === UserRole.ADMINISTRATOR || user?.role === UserRole.DIRECTOR;
+  const { role } = useEffectiveIdentity();
+  const canWrite = role === UserRole.ADMINISTRATOR || role === UserRole.DIRECTOR;
 
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState("#6366f1");
