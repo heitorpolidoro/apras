@@ -5,6 +5,28 @@ import Navbar from "../components/Navbar";
 import * as AuthHook from "../context/AuthContext";
 import { UserRole } from "../context/AuthContext";
 
+// Navbar reads the effective (possibly simulated) role via
+// useEffectiveIdentity, which combines useAuth (spied on per-test below) with
+// useSimulation. Keep simulation permanently inactive so the admin-link
+// visibility assertions keep reflecting the real user's role exactly like
+// before this hook existed.
+vi.mock("../context/SimulationContext", () => ({
+  useSimulation: vi.fn(() => ({
+    simulatedRole: null,
+    simulatedUserTypeIds: [],
+    isSimulating: false,
+    setSimulatedRole: vi.fn(),
+    setSimulatedUserTypeIds: vi.fn(),
+    stopSimulation: vi.fn(),
+  })),
+}));
+
+// SimulationControls (rendered only for a real ADMINISTRATOR) fetches
+// UserTypes; avoid a real network call in tests.
+vi.mock("../../../hooks/useUserTypes", () => ({
+  useUserTypes: vi.fn(() => ({ data: [] })),
+}));
+
 describe("Navbar", () => {
   it("renders nothing when not authenticated", () => {
     vi.spyOn(AuthHook, "useAuth").mockReturnValue({
@@ -207,6 +229,54 @@ describe("Navbar", () => {
     );
 
     expect(screen.getByText("Gerente")).toBeInTheDocument();
+  });
+
+  it("renders the simulation toggle for a real ADMINISTRATOR", () => {
+    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      user: {
+        id: "1",
+        email: "admin@example.com",
+        full_name: "Admin User",
+        role: UserRole.ADMINISTRATOR,
+        is_active: true,
+      },
+      login: vi.fn() as any,
+      logout: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <Navbar />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Simular")).toBeInTheDocument();
+  });
+
+  it("does not render the simulation toggle for a non-administrator", () => {
+    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      user: {
+        id: "1",
+        email: "director@example.com",
+        full_name: "Director User",
+        role: UserRole.DIRECTOR,
+        is_active: true,
+      },
+      login: vi.fn() as any,
+      logout: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <Navbar />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByText("Simular")).not.toBeInTheDocument();
   });
 
   it("fires language change when a language button is clicked", () => {

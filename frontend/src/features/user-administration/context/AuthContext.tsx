@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import apiClient from "../../../api/client";
 import { type User } from "../../../types/auth";
+import { triggerSimulationReset } from "./simulationState";
 export { UserRole } from "../../../types/auth";
 
 interface AuthContextType {
@@ -68,6 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.removeItem("accessToken");
     sessionStorage.removeItem("accessToken");
     setUser(null);
+    triggerSimulationReset();
   }, []);
 
   const value = React.useMemo(

@@ -2,7 +2,9 @@ import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth, UserRole } from "../context/AuthContext";
+import { useEffectiveIdentity } from "../context/useEffectiveIdentity";
 import { cn } from "../../../lib/utils";
+import SimulationControls from "./SimulationControls";
 
 const LANGUAGES = [
   { code: "pt", label: "PT" },
@@ -11,6 +13,7 @@ const LANGUAGES = [
 
 const Navbar: React.FC = () => {
   const { user, logout, isAuthenticated } = useAuth();
+  const { role: effectiveRole } = useEffectiveIdentity();
   const location = useLocation();
   const { t, i18n } = useTranslation();
   const currentLang = i18n.resolvedLanguage ?? i18n.language;
@@ -54,7 +57,7 @@ const Navbar: React.FC = () => {
           {t("nav.categories")}
         </Link>
 
-        {user?.role === UserRole.ADMINISTRATOR && (
+        {effectiveRole === UserRole.ADMINISTRATOR && (
           <Link
             to="/admin/users"
             className={cn(
@@ -70,6 +73,7 @@ const Navbar: React.FC = () => {
       </div>
 
       <div className="flex items-center gap-5">
+        {user?.role === UserRole.ADMINISTRATOR && <SimulationControls />}
         <div className="flex items-center gap-1 border border-border/50 rounded-md overflow-hidden">
           {LANGUAGES.map((lang) => (
             <button

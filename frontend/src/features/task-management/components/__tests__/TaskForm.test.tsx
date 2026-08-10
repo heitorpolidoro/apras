@@ -10,6 +10,7 @@ import {
   useAuth,
   UserRole,
 } from "../../../user-administration/context/AuthContext";
+import { useSimulation } from "../../../user-administration/context/SimulationContext";
 
 // Mock the hooks
 vi.mock("../../hooks/useTasks", () => ({
@@ -45,6 +46,22 @@ vi.mock(
     };
   },
 );
+
+// TaskForm now reads its effective role via useEffectiveIdentity, which
+// combines useAuth (mocked above, varies per test) with useSimulation. Keep
+// simulation permanently inactive by default so existing role-based
+// assertions keep reflecting the real user's role; individual tests below
+// override this to exercise the simulation-specific behavior.
+vi.mock("../../../user-administration/context/SimulationContext", () => ({
+  useSimulation: vi.fn(() => ({
+    simulatedRole: null,
+    simulatedUserTypeIds: [],
+    isSimulating: false,
+    setSimulatedRole: vi.fn(),
+    setSimulatedUserTypeIds: vi.fn(),
+    stopSimulation: vi.fn(),
+  })),
+}));
 
 describe("TaskForm", () => {
   const mockOnSuccess = vi.fn();
@@ -726,5 +743,65 @@ describe("TaskForm", () => {
       },
       expect.any(Object),
     );
+  });
+
+  describe("admin role simulation", () => {
+    it("hides the visible_to_id field when simulating MANAGER, even for a real ADMINISTRATOR", () => {
+      vi.mocked(useAuth).mockReturnValue({
+        user: { id: "admin-1", role: UserRole.ADMINISTRATOR },
+      } as any); // skipcq: JS-0323
+      vi.mocked(useSimulation).mockReturnValue({
+        simulatedRole: UserRole.MANAGER,
+        simulatedUserTypeIds: [],
+        isSimulating: true,
+        setSimulatedRole: vi.fn(),
+        setSimulatedUserTypeIds: vi.fn(),
+        stopSimulation: vi.fn(),
+      });
+
+      render(<TaskForm onSuccess={mockOnSuccess} onCancel={mockOnCancel} />);
+
+      expect(screen.queryByLabelText(/visibilidade/i)).not.toBeInTheDocument();
+    });
+
+    it("disables the submit button while simulating, even though the form is not otherwise loading", () => {
+      vi.mocked(useAuth).mockReturnValue({
+        user: { id: "admin-1", role: UserRole.ADMINISTRATOR },
+      } as any); // skipcq: JS-0323
+      vi.mocked(useSimulation).mockReturnValue({
+        simulatedRole: UserRole.GUEST,
+        simulatedUserTypeIds: [],
+        isSimulating: true,
+        setSimulatedRole: vi.fn(),
+        setSimulatedUserTypeIds: vi.fn(),
+        stopSimulation: vi.fn(),
+      });
+
+      render(<TaskForm onSuccess={mockOnSuccess} onCancel={mockOnCancel} />);
+
+      expect(
+        screen.getByRole("button", { name: /Criar tarefa/i }),
+      ).toBeDisabled();
+    });
+
+    it("keeps the submit button enabled when not simulating", () => {
+      vi.mocked(useAuth).mockReturnValue({
+        user: { id: "admin-1", role: UserRole.ADMINISTRATOR },
+      } as any); // skipcq: JS-0323
+      vi.mocked(useSimulation).mockReturnValue({
+        simulatedRole: null,
+        simulatedUserTypeIds: [],
+        isSimulating: false,
+        setSimulatedRole: vi.fn(),
+        setSimulatedUserTypeIds: vi.fn(),
+        stopSimulation: vi.fn(),
+      });
+
+      render(<TaskForm onSuccess={mockOnSuccess} onCancel={mockOnCancel} />);
+
+      expect(
+        screen.getByRole("button", { name: /Criar tarefa/i }),
+      ).not.toBeDisabled();
+    });
   });
 });

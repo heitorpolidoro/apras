@@ -1,5 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { Lock } from "lucide-react";
 import type { TaskRead } from "../types";
 import { Badge } from "../../../components/ui/badge";
 import { useTaskFiltering, type TaskFilters } from "../hooks/useTaskFiltering";
@@ -9,6 +10,8 @@ import {
   statusVariant,
   priorityVariant,
 } from "../utils/taskUtils";
+import { useEffectiveIdentity } from "../../user-administration/context/useEffectiveIdentity";
+import { canEditSimulatedTask } from "../utils/simulatedPermissions";
 
 interface TaskListProps {
   tasks: TaskRead[];
@@ -28,7 +31,12 @@ const TaskList: React.FC<TaskListProps> = ({
   onTaskClick,
 }) => {
   const { t, i18n } = useTranslation();
-  const filteredTasks = useTaskFiltering(tasks, filters);
+  const { role, userTypeIds, isSimulating } = useEffectiveIdentity();
+  const filteredTasks = useTaskFiltering(tasks, filters, {
+    isSimulating,
+    role,
+    userTypeIds,
+  });
 
   if (isLoading) {
     return (
@@ -96,8 +104,20 @@ const TaskList: React.FC<TaskListProps> = ({
             >
               <td className="px-6 py-4">
                 <div className="flex flex-col">
-                  <span className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                  <span className="font-semibold text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
                     {task.title}
+                    {isSimulating &&
+                      role &&
+                      !canEditSimulatedTask(task, role, userTypeIds) && (
+                        <span
+                          data-testid="task-readonly-indicator"
+                          title={t("simulation.readOnlyTask")}
+                          aria-label={t("simulation.readOnlyTask")}
+                          className="text-muted-foreground shrink-0 inline-flex"
+                        >
+                          <Lock className="size-3" />
+                        </span>
+                      )}
                   </span>
                   {task.description && (
                     <span className="text-xs text-muted-foreground line-clamp-1 mt-0.5">

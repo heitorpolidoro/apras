@@ -207,5 +207,18 @@
       "none": "Nenhum",
       "emptyValue": "Vazio"
     }
+  },
+  "simulation": {
+    "toggleButton": "Simular",
+    "roleLabel": "Papel",
+    "roleSelectPlaceholder": "Selecione um papel",
+    "userTypesLabel": "Tipos de Usuário",
+    "userTypesPlaceholder": "Selecionar tipos de usuário",
+    "noUserTypesAvailable": "Nenhum tipo de usuário disponível.",
+    "stopButton": "Encerrar simulação",
+    "bannerLabel": "Visualizando como: {{role}} ({{userTypes}})",
+    "noUserTypes": "nenhum tipo de usuário",
+    "readOnlyTask": "Somente leitura nesta visualização simulada",
+    "mutationBlocked": "Ação bloqueada: você está em modo de simulação."
   }
 }

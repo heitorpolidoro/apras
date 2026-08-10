@@ -1,11 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import apiClient from "../client";
+import {
+  setSimulationState,
+  getSimulationState,
+} from "../../features/user-administration/context/simulationState";
 
 describe("apiClient", () => {
   beforeEach(() => {
     localStorage.clear();
     sessionStorage.clear();
     vi.clearAllMocks();
+    setSimulationState({ isSimulating: false });
   });
 
   it("adds Authorization header if token exists in localStorage", async () => {
@@ -99,5 +104,65 @@ describe("apiClient", () => {
 
     vi.unstubAllEnvs();
     vi.resetModules();
+  });
+
+  describe("simulation mutation guard", () => {
+    const getRequestInterceptor = () =>
+      (
+        apiClient.interceptors.request as unknown as {
+          handlers: {
+            fulfilled: (...args: unknown[]) => unknown;
+            rejected: (...args: unknown[]) => unknown;
+          }[];
+        }
+      ).handlers[0];
+
+    it.each(["post", "put", "patch", "delete"])(
+      "rejects %s requests while simulating, with a parseApiError-shaped error",
+      async (method) => {
+        setSimulationState({ isSimulating: true });
+        const requestInterceptor = getRequestInterceptor();
+        const config = { method, headers: {} };
+
+        await expect(
+          requestInterceptor.fulfilled(config),
+        ).rejects.toMatchObject({
+          response: { data: { detail: expect.any(String) } },
+        });
+      },
+    );
+
+    it("does not block GET requests while simulating", async () => {
+      setSimulationState({ isSimulating: true });
+      const requestInterceptor = getRequestInterceptor();
+      const config = { method: "get", headers: {} };
+
+      const result = await requestInterceptor.fulfilled(config);
+      expect(result).toBe(config);
+    });
+
+    it("does not block mutating requests when not simulating", async () => {
+      setSimulationState({ isSimulating: false });
+      const requestInterceptor = getRequestInterceptor();
+      const config = { method: "post", headers: {} };
+
+      const result = await requestInterceptor.fulfilled(config);
+      expect(result).toBe(config);
+    });
+
+    it("is case-insensitive about the HTTP method", async () => {
+      setSimulationState({ isSimulating: true });
+      const requestInterceptor = getRequestInterceptor();
+      const config = { method: "POST", headers: {} };
+
+      await expect(requestInterceptor.fulfilled(config)).rejects.toBeTruthy();
+    });
+
+    it("reads the current simulation state via getSimulationState", () => {
+      setSimulationState({ isSimulating: true });
+      expect(getSimulationState().isSimulating).toBe(true);
+      setSimulationState({ isSimulating: false });
+      expect(getSimulationState().isSimulating).toBe(false);
+    });
   });
 });

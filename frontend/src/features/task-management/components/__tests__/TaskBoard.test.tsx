@@ -2,6 +2,33 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import TaskBoard from "../TaskBoard";
 import { TaskStatus, TaskPriority } from "../../types";
+import { UserRole } from "../../../../types/auth";
+import { useSimulation } from "../../../user-administration/context/SimulationContext";
+
+// TaskBoard reads its effective identity via useEffectiveIdentity, which
+// combines useAuth with useSimulation. Default both to a non-simulating,
+// roleless state so existing assertions are unaffected; simulation-specific
+// tests below override these mocks.
+vi.mock("../../../user-administration/context/AuthContext", () => ({
+  useAuth: vi.fn(() => ({
+    user: null,
+    isAuthenticated: false,
+    isLoading: false,
+    login: vi.fn(),
+    logout: vi.fn(),
+  })),
+}));
+
+vi.mock("../../../user-administration/context/SimulationContext", () => ({
+  useSimulation: vi.fn(() => ({
+    simulatedRole: null,
+    simulatedUserTypeIds: [],
+    isSimulating: false,
+    setSimulatedRole: vi.fn(),
+    setSimulatedUserTypeIds: vi.fn(),
+    stopSimulation: vi.fn(),
+  })),
+}));
 
 const mockTasks = [
   {
@@ -155,5 +182,78 @@ describe("TaskBoard", () => {
     expect(
       screen.getByText("Erro ao carregar tarefas: Test Error"),
     ).toBeInTheDocument();
+  });
+
+  describe("admin role simulation", () => {
+    it("hides tasks not visible to the simulated MANAGER + UserType combination", () => {
+      vi.mocked(useSimulation).mockReturnValue({
+        simulatedRole: UserRole.MANAGER,
+        simulatedUserTypeIds: ["type-1"],
+        isSimulating: true,
+        setSimulatedRole: vi.fn(),
+        setSimulatedUserTypeIds: vi.fn(),
+        stopSimulation: vi.fn(),
+      });
+      const tasksWithVisibility = [
+        { ...mockTasks[0], visible_to_id: "type-1" },
+        { ...mockTasks[1], visible_to_id: "type-2" },
+      ];
+      render(
+        <TaskBoard
+          tasks={tasksWithVisibility as any} // skipcq: JS-0323
+          isLoading={false}
+          isError={false}
+          error={null}
+          filters={{}}
+        />,
+      );
+      expect(screen.getByText("Task 1")).toBeInTheDocument();
+      expect(screen.queryByText("Task 2")).not.toBeInTheDocument();
+    });
+
+    it("marks assigned task cards read-only when simulating MANAGER", () => {
+      vi.mocked(useSimulation).mockReturnValue({
+        simulatedRole: UserRole.MANAGER,
+        simulatedUserTypeIds: [],
+        isSimulating: true,
+        setSimulatedRole: vi.fn(),
+        setSimulatedUserTypeIds: vi.fn(),
+        stopSimulation: vi.fn(),
+      });
+      render(
+        <TaskBoard
+          tasks={mockTasks}
+          isLoading={false}
+          isError={false}
+          error={null}
+          filters={{}}
+        />,
+      );
+      // Both mock tasks have an assigned_to_id, so both cards are read-only.
+      expect(screen.getAllByTestId("task-readonly-indicator")).toHaveLength(2);
+    });
+
+    it("does not mark cards read-only when not simulating", () => {
+      vi.mocked(useSimulation).mockReturnValue({
+        simulatedRole: null,
+        simulatedUserTypeIds: [],
+        isSimulating: false,
+        setSimulatedRole: vi.fn(),
+        setSimulatedUserTypeIds: vi.fn(),
+        stopSimulation: vi.fn(),
+      });
+      render(
+        <TaskBoard
+          tasks={mockTasks}
+          isLoading={false}
+          isError={false}
+          error={null}
+          filters={{}}
+        />,
+      );
+      expect(
+        screen.queryByTestId("task-readonly-indicator"),
+      ).not.toBeInTheDocument();
+    });
   });
 });

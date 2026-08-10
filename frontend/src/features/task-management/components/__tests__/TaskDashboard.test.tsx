@@ -38,6 +38,31 @@ vi.mock("../../../../hooks/useUserTypes", () => ({
   useUserTypes: vi.fn(),
 }));
 
+// TaskDashboard renders TaskList/TaskBoard/TaskForm, which read their
+// effective identity via useEffectiveIdentity (useAuth + useSimulation).
+// Default both to a non-simulating, roleless state so this suite's
+// assertions (about filters/modal behavior, not permissions) are unaffected.
+vi.mock("../../../user-administration/context/AuthContext", () => ({
+  useAuth: vi.fn(() => ({
+    user: null,
+    isAuthenticated: false,
+    isLoading: false,
+    login: vi.fn(),
+    logout: vi.fn(),
+  })),
+}));
+
+vi.mock("../../../user-administration/context/SimulationContext", () => ({
+  useSimulation: vi.fn(() => ({
+    simulatedRole: null,
+    simulatedUserTypeIds: [],
+    isSimulating: false,
+    setSimulatedRole: vi.fn(),
+    setSimulatedUserTypeIds: vi.fn(),
+    stopSimulation: vi.fn(),
+  })),
+}));
+
 vi.mock(
   "../../../user-administration/context/AuthContext",
   async (importOriginal) => {
