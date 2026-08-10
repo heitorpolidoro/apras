@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import apiClient from "../../../api/client";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
