@@ -3,14 +3,26 @@
     {
       "id": "password-recovery",
       "title": "Implement password recovery flow (forgot password / reset password) in frontend and backend",
-      "status": "completed",
+      "status": "done",
       "justification": "Implemented JWT password reset token mechanism, forgot/reset password API endpoints, forgot/reset frontend screens, and updated user table checks."
     },
     {
       "id": "dynamic-visibility",
       "title": "Refactor task visibility from boolean flag to dynamic UserType-based targeting",
-      "status": "completed",
+      "status": "done",
       "justification": "Successfully implemented many-to-many User-UserType relationships, replaced manager_visible with visible_to_id in Task, created and ran Alembic migrations on prod database, updated backend RBAC checks/endpoints, and refactored the frontend dashboard checklist and task creation/edit select dropdown. Fully tested and deployed."
+    },
+    {
+      "id": "alerts-to-modals",
+      "title": "Replace all inline Alerts with modal dialogs on the frontend",
+      "status": "in_progress",
+      "justification": "Subagent spawned to handle creating AlertModal and refactoring all app pages to use it."
+    },
+    {
+      "id": "cpf-validation",
+      "title": "Add mandatory CPF field on user signup with mathematical validation",
+      "status": "in_progress",
+      "justification": "Subagent spawned to handle backend model/migration/validation and frontend registration/display fields."
     }
   ]
 }
