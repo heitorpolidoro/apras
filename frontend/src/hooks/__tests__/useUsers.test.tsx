@@ -49,14 +49,14 @@ describe("useAssignableUsers", () => {
         username: "user1",
         role: "DIRECTOR",
         is_active: true,
-        type: mockType,
+        user_types: [mockType],
       },
       {
         id: "2",
         username: "admin",
         role: "ADMINISTRATOR",
         is_active: true,
-        type: mockType,
+        user_types: [mockType],
       },
     ];
     vi.mocked(apiClient.get).mockResolvedValueOnce({ data: mockUsers });
@@ -73,7 +73,7 @@ describe("useAssignableUsers", () => {
         username: "user1",
         role: "DIRECTOR",
         is_active: true,
-        type: mockType,
+        user_types: [mockType],
       },
     ]);
   });
@@ -85,16 +85,16 @@ describe("useAssignableUsers", () => {
         username: "with-type",
         role: "DIRECTOR",
         is_active: true,
-        type: mockType,
+        user_types: [mockType],
       },
       {
         id: "2",
         username: "no-type",
         role: "DIRECTOR",
         is_active: true,
-        type: null,
+        user_types: [],
       },
-      { id: "3", username: "no-type-undef", role: "MANAGER", is_active: true },
+      { id: "3", username: "no-type-undef", role: "MANAGER", is_active: true, user_types: [] },
     ];
     vi.mocked(apiClient.get).mockResolvedValueOnce({ data: mockUsers });
 
@@ -110,7 +110,7 @@ describe("useAssignableUsers", () => {
         username: "with-type",
         role: "DIRECTOR",
         is_active: true,
-        type: mockType,
+        user_types: [mockType],
       },
     ]);
   });

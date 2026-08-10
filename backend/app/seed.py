@@ -99,7 +99,7 @@ def seed_db() -> None:
                 full_name=d_data["full_name"],
                 role=UserRole.DIRECTOR,
                 is_active=True,
-                type_id=user_types[d_data["full_name"]].id,
+                user_types=[user_types[d_data["full_name"]]],
             )
             session.add(user)
             diretores.append(user)
@@ -110,7 +110,7 @@ def seed_db() -> None:
             hashed_password=get_password_hash("test_user_password"),
             full_name="Gerente Operacional",
             role=UserRole.MANAGER,
-            type_id=user_types["Gerente Operacional"].id,
+            user_types=[user_types["Gerente Operacional"]],
             is_active=True,
         )
         session.add(manager)

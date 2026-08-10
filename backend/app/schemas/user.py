@@ -32,7 +32,7 @@ class UserCreate(UserBase):
 class UserRead(UserBase):
     id: UUID
     is_active: bool
-    type: UserTypeRead | None = None
+    user_types: list[UserTypeRead] = []
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -45,5 +45,5 @@ class UserRead(UserBase):
 class UserUpdate(BaseModel):
     role: UserRole | None = None
     is_active: bool | None = None
-    type_id: UUID | None = None
+    user_type_ids: list[UUID] | None = None
     full_name: str | None = None

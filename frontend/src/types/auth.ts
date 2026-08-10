@@ -18,6 +18,6 @@ export interface User {
   full_name: string;
   role: UserRole;
   is_active: boolean;
-  type?: UserType | null;
-  type_id?: string | null;
+  user_types?: UserType[];
+  user_type_ids?: string[] | null;
 }

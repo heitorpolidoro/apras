@@ -32,7 +32,7 @@ def create_task(
         session=session,
         task_in=task_in,
         created_by_id=current_user.id,
-        manager_visible=(current_user.role == UserRole.MANAGER),
+        current_user=current_user,
     )
     return TaskService.get_task_with_names(session=session, db_task=db_task)
 
@@ -51,6 +51,7 @@ def list_tasks(
         return []
 
     from app.models.category import Category
+    from app.models.user_type import UserType
     from sqlalchemy.orm import aliased
 
     creator_alias = aliased(User)
@@ -63,11 +64,13 @@ def list_tasks(
             assignee_alias.full_name,
             Category.name,
             Category.color,
+            UserType.name,
         )
         .where(Task.is_deleted.is_(False))
         .join(creator_alias, Task.created_by_id == creator_alias.id, isouter=True)
         .join(assignee_alias, Task.assigned_to_id == assignee_alias.id, isouter=True)
         .join(Category, Task.category_id == Category.id, isouter=True)
+        .join(UserType, Task.visible_to_id == UserType.id, isouter=True)
     )
 
     if assigned_to_id:
@@ -79,16 +82,22 @@ def list_tasks(
     if category_id:
         statement = statement.where(Task.category_id == category_id)
     if current_user.role == UserRole.MANAGER:
-        statement = statement.where(Task.manager_visible.is_(True))
+        from sqlalchemy import or_
+
+        user_type_ids = [ut.id for ut in current_user.user_types]
+        statement = statement.where(
+            or_(Task.visible_to_id.is_(None), Task.visible_to_id.in_(user_type_ids))
+        )
 
     results = session.exec(statement).all()
     tasks = []
-    for db_task, creator_name, assignee_name, category_name, category_color in results:
+    for db_task, creator_name, assignee_name, category_name, category_color, visible_to_name in results:
         task_data = db_task.model_dump()
         task_data["created_by_name"] = creator_name
         task_data["assigned_to_name"] = assignee_name
         task_data["category_name"] = category_name
         task_data["category_color"] = category_color
+        task_data["visible_to_name"] = visible_to_name
         tasks.append(TaskRead.model_validate(task_data))
     return tasks
 

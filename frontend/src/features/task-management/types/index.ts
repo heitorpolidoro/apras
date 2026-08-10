@@ -62,6 +62,8 @@ export interface TaskBase {
   assigned_to_id?: string | null;
   /** The UUID of the category this task belongs to. */
   category_id: string;
+  /** The UUID of the user type this task is targeted to. */
+  visible_to_id?: string | null;
 }
 
 /**
@@ -85,7 +87,7 @@ export interface TaskCreate extends Omit<
 export interface TaskUpdate extends Partial<TaskBase> {
   status?: TaskStatus;
   priority?: TaskPriority;
-  manager_visible?: boolean;
+  visible_to_id?: string | null;
 }
 
 /**
@@ -108,8 +110,8 @@ export interface TaskRead extends TaskBase {
   category_name?: string | null;
   /** The hex color of the category. */
   category_color?: string | null;
-  /** Whether this task is visible to managers. */
-  manager_visible: boolean;
+  /** The name of the target user type. */
+  visible_to_name?: string | null;
 }
 
 /**

@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useUserTypes } from "../../../hooks/useUserTypes";
+import type { UserType } from "../../../types/auth";
 import { TaskPriority, TaskStatus } from "../types";
 import type { TaskRead, TaskCreate, TaskUpdate } from "../types";
 import {
@@ -32,6 +34,8 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSuccess, onCancel }) => {
   const { data: users } = useAssignableUsers();
   const { data: categories } = useCategories();
 
+  const { data: userTypes } = useUserTypes();
+
   const isLoading =
     createTaskMutation.isPending || updateTaskMutation.isPending;
   const serverError = createTaskMutation.error || updateTaskMutation.error;
@@ -44,7 +48,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSuccess, onCancel }) => {
     due_date: "",
     status: TaskStatus.PENDING,
     category_id: "",
-    manager_visible: false,
+    visible_to_id: "",
   };
 
   const transforms: Record<string, (value: unknown) => unknown> = {
@@ -56,7 +60,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSuccess, onCancel }) => {
       v ? new Date(v as string).toISOString().split("T")[0] : "",
     status: (v) => v,
     category_id: (v) => v || "",
-    manager_visible: (v) => Boolean(v),
+    visible_to_id: (v) => v || "",
   };
 
   const getInitialState = () => {
@@ -112,13 +116,14 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSuccess, onCancel }) => {
         : null,
       assigned_to_id: (formData.assigned_to_id as string) || null,
       category_id: formData.category_id as string,
+      visible_to_id: (formData.visible_to_id as string) || null,
     };
 
     if (isEditing && task) {
       const updatePayload: TaskUpdate = {
         ...commonData,
         status: formData.status as TaskStatus,
-        manager_visible: formData.manager_visible as boolean,
+        visible_to_id: (formData.visible_to_id as string) || null,
       };
       updateTaskMutation.mutate(
         { id: task.id, data: updatePayload },
@@ -275,24 +280,26 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSuccess, onCancel }) => {
           />
         </div>
 
-        {isEditing && user?.role !== UserRole.MANAGER && (
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="manager_visible"
-              checked={Boolean(formData.manager_visible)}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  manager_visible: e.target.checked,
-                }))
-              }
+        {user?.role !== UserRole.MANAGER && (
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="visible_to_id">{t("tasks.form.visibleToLabel")}</Label>
+            <Select
+              id="visible_to_id"
+              name="visible_to_id"
+              value={formData.visible_to_id as string}
+              onChange={handleChange}
               disabled={isLoading}
-              className="h-4 w-4 rounded border-input"
-            />
-            <Label htmlFor="manager_visible">
-              {t("tasks.form.managerVisible")}
-            </Label>
+            >
+              <option value="">{t("tasks.form.visibleToAll")}</option>
+              {userTypes?.map((ut) => (
+                <option key={ut.id} value={ut.id}>
+                  {ut.name}
+                </option>
+              ))}
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {t("tasks.form.visibleToHelper")}
+            </p>
           </div>
         )}
 

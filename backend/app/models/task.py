@@ -12,6 +12,7 @@ from .enums import TaskPriority, TaskStatus
 if TYPE_CHECKING:
     from .category import Category
     from .user import User
+    from .user_type import UserType
 
 
 def get_utc_now() -> datetime:
@@ -52,7 +53,6 @@ class Task(SQLModel, table=True):
     created_at: datetime = Field(default_factory=get_utc_now)
     updated_at: datetime = Field(default_factory=get_utc_now)
     is_deleted: bool = Field(default=False, index=True)
-    manager_visible: bool = Field(default=False)
 
     USER_ID_FK: ClassVar[str] = "user.id"
     CATEGORY_ID_FK: ClassVar[str] = "category.id"
@@ -65,6 +65,9 @@ class Task(SQLModel, table=True):
     category_id: UUID | None = Field(
         default=None, foreign_key=CATEGORY_ID_FK, index=True
     )
+    visible_to_id: UUID | None = Field(
+        default=None, foreign_key="user_type.id", index=True
+    )
 
     # Relationships
     creator: "User" = Relationship(
@@ -76,6 +79,7 @@ class Task(SQLModel, table=True):
         sa_relationship_kwargs={"foreign_keys": "Task.assigned_to_id"},
     )
     category: "Category" = Relationship(back_populates="tasks")
+    visible_to: Optional["UserType"] = Relationship()
     history: list["TaskHistory"] = Relationship(
         back_populates="task", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )

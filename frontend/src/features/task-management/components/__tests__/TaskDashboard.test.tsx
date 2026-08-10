@@ -9,6 +9,7 @@ import {
   useDeleteTask,
 } from "../../hooks/useTasks";
 import { useCategories } from "../../hooks/useCategories";
+import { useUserTypes } from "../../../../hooks/useUserTypes";
 import { TaskStatus, TaskPriority } from "../../types";
 import * as useUsersHook from "../../../../hooks/useUsers";
 
@@ -31,6 +32,10 @@ vi.mock("../../../../hooks/useUsers", () => ({
 
 vi.mock("../../hooks/useCategories", () => ({
   useCategories: vi.fn(),
+}));
+
+vi.mock("../../../../hooks/useUserTypes", () => ({
+  useUserTypes: vi.fn(),
 }));
 
 vi.mock(
@@ -108,6 +113,11 @@ describe("TaskDashboard", () => {
       data: [{ id: "cat-1", name: "Geral", color: "#808080", is_active: true }],
       isLoading: false,
     } as any); // skipcq: JS-0323
+
+    vi.mocked(useUserTypes).mockReturnValue({
+      data: [{ id: "type-1", name: "Gerente" }],
+      isLoading: false,
+    } as any);
   });
 
   it("renders the dashboard header and filters", () => {

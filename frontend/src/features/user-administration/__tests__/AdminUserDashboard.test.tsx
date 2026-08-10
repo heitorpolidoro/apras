@@ -370,7 +370,7 @@ describe("AdminUserDashboard", () => {
   // ── User type badge & empty list ────────────────────────────────────────
 
   it("renders user type badge when user has a type", async () => {
-    const usersWithType = [{ ...mockUsers[0], type: { id: "type-1", name: "Manager" } }];
+    const usersWithType = [{ ...mockUsers[0], user_types: [{ id: "type-1", name: "Manager" }] }];
     (apiClient.get as any).mockResolvedValue({ data: usersWithType });
 
     render(<AdminUserDashboard />, { wrapper: createWrapper() });
@@ -626,7 +626,7 @@ describe("AdminUserDashboard", () => {
     expect((nameInput as HTMLInputElement).value).toBe("User One Updated");
   });
 
-  it("changes type in modal select", async () => {
+  it("changes user types in modal checklist", async () => {
     (apiClient.get as any).mockImplementation((url: string) => {
       if (url === "/user-types/") return Promise.resolve({ data: mockUserTypes });
       return Promise.resolve({ data: mockUsers });
@@ -638,15 +638,10 @@ describe("AdminUserDashboard", () => {
 
     fireEvent.click(screen.getAllByText("Editar")[0]);
 
-    // The type select inside the modal does not have an aria-label="Cargo", so
-    // we grab the last combobox that is NOT a role select (aria-label Cargo)
-    const selects = screen.getAllByRole("combobox");
-    const nonRoleSelects = selects.filter(
-      (s) => (s as HTMLSelectElement).getAttribute("aria-label") !== "Cargo",
-    );
-    const typeSelect = nonRoleSelects[nonRoleSelects.length - 1];
-    fireEvent.change(typeSelect, { target: { value: "type-1" } });
-    expect((typeSelect as HTMLSelectElement).value).toBe("type-1");
+    const checkbox = screen.getByLabelText("Manager") as HTMLInputElement;
+    expect(checkbox.checked).toBe(false);
+    fireEvent.click(checkbox);
+    expect(checkbox.checked).toBe(true);
   });
 
   it("saves edit with updated full name", async () => {
@@ -686,7 +681,7 @@ describe("AdminUserDashboard", () => {
     await waitFor(() => {
       expect(apiClient.patch).toHaveBeenCalledWith(
         "/users/user-1",
-        expect.objectContaining({ full_name: undefined, type_id: null }),
+        expect.objectContaining({ full_name: undefined, user_type_ids: [] }),
       );
     });
   });
@@ -720,8 +715,8 @@ describe("AdminUserDashboard", () => {
     expect(firstSelect.options[3].value).toBe(UserRole.GUEST);
   });
 
-  it("pre-fills type_id when user has a type", async () => {
-    const userWithType = { ...mockUsers[0], type: { id: "type-1", name: "Manager" } };
+  it("pre-fills type checkboxes when user has types", async () => {
+    const userWithType = { ...mockUsers[0], user_types: [{ id: "type-1", name: "Manager" }] };
     (apiClient.get as any).mockImplementation((url: string) => {
       if (url === "/user-types/") return Promise.resolve({ data: mockUserTypes });
       return Promise.resolve({ data: [userWithType, mockUsers[1]] });
@@ -733,11 +728,7 @@ describe("AdminUserDashboard", () => {
 
     fireEvent.click(screen.getAllByText("Editar")[0]);
 
-    const selects = screen.getAllByRole("combobox");
-    const nonRoleSelects = selects.filter(
-      (s) => (s as HTMLSelectElement).getAttribute("aria-label") !== "Cargo",
-    );
-    const typeSelect = nonRoleSelects[nonRoleSelects.length - 1];
-    expect((typeSelect as HTMLSelectElement).value).toBe("type-1");
+    const checkbox = screen.getByLabelText("Manager") as HTMLInputElement;
+    expect(checkbox.checked).toBe(true);
   });
 });

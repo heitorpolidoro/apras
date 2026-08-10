@@ -101,7 +101,7 @@ def get_current_active_admin(
 def assert_manager_can_see_task(current_user: User, task: Task) -> None:
     """Raise TaskNotFoundError for tasks the user is not allowed to see.
 
-    MANAGER may only access tasks with manager_visible=True.
+    MANAGER may only access tasks with visible_to_id = None OR visible_to_id in their user_types list.
     GUEST may not access any task.
 
     Args:
@@ -115,8 +115,11 @@ def assert_manager_can_see_task(current_user: User, task: Task) -> None:
 
     if current_user.role == UserRole.GUEST:
         raise TaskNotFoundError(task.id)
-    if current_user.role == UserRole.MANAGER and not task.manager_visible:
-        raise TaskNotFoundError(task.id)
+    if current_user.role == UserRole.MANAGER:
+        if task.visible_to_id is not None:
+            user_type_ids = [ut.id for ut in current_user.user_types]
+            if task.visible_to_id not in user_type_ids:
+                raise TaskNotFoundError(task.id)
 
 
 def assert_can_edit_task(current_user: User, task: Task) -> None:

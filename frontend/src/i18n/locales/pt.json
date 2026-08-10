@@ -158,7 +158,10 @@
       "submitCreate": "Criar tarefa",
       "categoryLabel": "Categoria",
       "categoryRequired": "Categoria é obrigatória",
-      "managerVisible": "Visível para gerentes"
+      "managerVisible": "Visível para gerentes",
+      "visibleToLabel": "Visibilidade",
+      "visibleToAll": "Público (Todos)",
+      "visibleToHelper": "Restringir a visibilidade desta tarefa a um tipo de usuário específico."
     },
     "details": {
       "description": "Descrição",

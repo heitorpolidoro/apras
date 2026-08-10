@@ -18,7 +18,7 @@ const AdminUserDashboard: React.FC = () => {
   const [actionError, setActionError] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editFullName, setEditFullName] = useState("");
-  const [editTypeId, setEditTypeId] = useState<string>("");
+  const [editTypeIds, setEditTypeIds] = useState<string[]>([]);
   const [newTypeName, setNewTypeName] = useState("");
   const queryClient = useQueryClient();
   const { user: currentUser, logout } = useAuth();
@@ -53,7 +53,7 @@ const AdminUserDashboard: React.FC = () => {
       data,
     }: {
       userId: string;
-      data: Partial<User> & { type_id?: string | null };
+      data: Partial<User> & { user_type_ids?: string[] | null };
     }) => {
       const response = await apiClient.patch<User>(`/users/${userId}`, data);
       return response.data;
@@ -123,7 +123,7 @@ const AdminUserDashboard: React.FC = () => {
   const openEditModal = (user: User) => {
     setEditingUser(user);
     setEditFullName(user.full_name);
-    setEditTypeId(user.type?.id ?? "");
+    setEditTypeIds(user.user_types?.map((ut) => ut.id) ?? []);
   };
 
   const handleSaveEdit = () => {
@@ -133,7 +133,7 @@ const AdminUserDashboard: React.FC = () => {
       userId: editingUser.id,
       data: {
         full_name: editFullName || undefined,
-        type_id: editTypeId || null,
+        user_type_ids: editTypeIds,
       },
     });
   };
@@ -291,8 +291,12 @@ const AdminUserDashboard: React.FC = () => {
                     <Badge variant="secondary">{user.role}</Badge>
                   </td>
                   <td className="px-4 py-3">
-                    {user.type ? (
-                      <Badge variant="secondary">{user.type.name}</Badge>
+                    {user.user_types && user.user_types.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {user.user_types.map((ut) => (
+                          <Badge key={ut.id} variant="secondary">{ut.name}</Badge>
+                        ))}
+                      </div>
                     ) : (
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
@@ -378,18 +382,33 @@ const AdminUserDashboard: React.FC = () => {
                 <label className="text-sm font-medium text-muted-foreground block mb-1">
                   {t("admin.editType")}
                 </label>
-                <Select
-                  value={editTypeId}
-                  onChange={(e) => setEditTypeId(e.target.value)}
-                  className="w-full"
-                >
-                  <option value="">{t("admin.noType")}</option>
-                  {userTypes?.map((ut) => (
-                    <option key={ut.id} value={ut.id}>
-                      {ut.name}
-                    </option>
-                  ))}
-                </Select>
+                <div className="max-h-40 overflow-y-auto border rounded-md p-2 space-y-2">
+                  {userTypes?.length === 0 && (
+                    <span className="text-xs text-muted-foreground block">
+                      {t("admin.noTypesYet")}
+                    </span>
+                  )}
+                  {userTypes?.map((ut) => {
+                    const isChecked = editTypeIds.includes(ut.id);
+                    return (
+                      <label key={ut.id} className="flex items-center gap-2 text-sm cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setEditTypeIds((prev) => [...prev, ut.id]);
+                            } else {
+                              setEditTypeIds((prev) => prev.filter((id) => id !== ut.id));
+                            }
+                          }}
+                          className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4"
+                        />
+                        <span>{ut.name}</span>
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
             </div>
             <div className="flex gap-3 mt-6 justify-end">

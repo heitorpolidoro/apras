@@ -17,6 +17,7 @@ class TaskBase(BaseModel):
     due_date: datetime | None = None
     assigned_to_id: UUID | None = None
     category_id: UUID | None = None
+    visible_to_id: UUID | None = None
 
 
 class TaskCreate(TaskBase):
@@ -33,7 +34,7 @@ class TaskUpdate(BaseModel):
     due_date: datetime | None = None
     assigned_to_id: UUID | None = None
     category_id: UUID | None = None
-    manager_visible: bool | None = None
+    visible_to_id: UUID | None = None
 
 
 class TaskRead(TaskBase):
@@ -47,7 +48,7 @@ class TaskRead(TaskBase):
     assigned_to_name: str | None = None
     category_name: str | None = None
     category_color: str | None = None
-    manager_visible: bool = False
+    visible_to_name: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

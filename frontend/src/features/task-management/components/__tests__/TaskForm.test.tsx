@@ -5,6 +5,7 @@ import { TaskPriority, TaskStatus } from "../../types";
 import { useCreateTask, useUpdateTask } from "../../hooks/useTasks";
 import { useAssignableUsers } from "../../../../hooks/useUsers";
 import { useCategories } from "../../hooks/useCategories";
+import { useUserTypes } from "../../../../hooks/useUserTypes";
 import {
   useAuth,
   UserRole,
@@ -23,6 +24,10 @@ vi.mock("../../../../hooks/useUsers", () => ({
 
 vi.mock("../../hooks/useCategories", () => ({
   useCategories: vi.fn(),
+}));
+
+vi.mock("../../../../hooks/useUserTypes", () => ({
+  useUserTypes: vi.fn(),
 }));
 
 vi.mock(
@@ -74,6 +79,11 @@ describe("TaskForm", () => {
       data: [{ id: "cat-1", name: "Geral", color: "#808080", is_active: true }],
       isLoading: false,
     } as any); // skipcq: JS-0323
+
+    vi.mocked(useUserTypes).mockReturnValue({
+      data: [{ id: "type-1", name: "Gerente" }],
+      isLoading: false,
+    } as any);
   });
 
   it("renders correctly in creation mode", () => {
@@ -566,14 +576,14 @@ describe("TaskForm", () => {
           assigned_to_id: "user-1",
           category_id: "cat-1",
           status: TaskStatus.PENDING,
-          manager_visible: false,
+          visible_to_id: null,
         },
       },
       expect.any(Object),
     );
   });
 
-  describe("manager_visible toggle", () => {
+  describe("visible_to_id field", () => {
     const existingTask = {
       id: "1",
       title: "Existing Task",
@@ -585,10 +595,10 @@ describe("TaskForm", () => {
       created_at: new Date(),
       updated_at: new Date(),
       category_id: "cat-1",
-      manager_visible: false,
+      visible_to_id: "",
     };
 
-    it("shows manager_visible toggle for ADMINISTRATOR in edit mode", () => {
+    it("shows visible_to_id select for ADMINISTRATOR in edit mode", () => {
       vi.mocked(useAuth).mockReturnValue({
         user: { id: "admin-1", role: UserRole.ADMINISTRATOR },
       } as any); // skipcq: JS-0323
@@ -602,11 +612,11 @@ describe("TaskForm", () => {
       );
 
       expect(
-        screen.getByLabelText(/visível para gerentes/i),
+        screen.getByLabelText(/visibilidade/i),
       ).toBeInTheDocument();
     });
 
-    it("shows manager_visible toggle for DIRECTOR in edit mode", () => {
+    it("shows visible_to_id select for DIRECTOR in edit mode", () => {
       vi.mocked(useAuth).mockReturnValue({
         user: { id: "director-1", role: UserRole.DIRECTOR },
       } as any); // skipcq: JS-0323
@@ -620,11 +630,11 @@ describe("TaskForm", () => {
       );
 
       expect(
-        screen.getByLabelText(/visível para gerentes/i),
+        screen.getByLabelText(/visibilidade/i),
       ).toBeInTheDocument();
     });
 
-    it("does NOT show manager_visible toggle for MANAGER", () => {
+    it("does NOT show visible_to_id select for MANAGER", () => {
       vi.mocked(useAuth).mockReturnValue({
         user: { id: "manager-1", role: UserRole.MANAGER },
       } as any); // skipcq: JS-0323
@@ -638,11 +648,11 @@ describe("TaskForm", () => {
       );
 
       expect(
-        screen.queryByLabelText(/visível para gerentes/i),
+        screen.queryByLabelText(/visibilidade/i),
       ).not.toBeInTheDocument();
     });
 
-    it("does NOT show manager_visible toggle in create mode even for ADMIN", () => {
+    it("shows visible_to_id select in create mode for ADMIN", () => {
       vi.mocked(useAuth).mockReturnValue({
         user: { id: "admin-1", role: UserRole.ADMINISTRATOR },
       } as any); // skipcq: JS-0323
@@ -650,11 +660,11 @@ describe("TaskForm", () => {
       render(<TaskForm onSuccess={mockOnSuccess} onCancel={mockOnCancel} />);
 
       expect(
-        screen.queryByLabelText(/visível para gerentes/i),
-      ).not.toBeInTheDocument();
+        screen.getByLabelText(/visibilidade/i),
+      ).toBeInTheDocument();
     });
 
-    it("toggling the checkbox updates manager_visible in form state", () => {
+    it("selecting a user type in the select updates visible_to_id in form state", () => {
       vi.mocked(useAuth).mockReturnValue({
         user: { id: "admin-1", role: UserRole.ADMINISTRATOR },
       } as any); // skipcq: JS-0323
@@ -667,10 +677,10 @@ describe("TaskForm", () => {
         />,
       );
 
-      const checkbox = screen.getByLabelText(/visível para gerentes/i);
-      expect(checkbox).not.toBeChecked();
-      fireEvent.click(checkbox);
-      expect(checkbox).toBeChecked();
+      const select = screen.getByLabelText(/visibilidade/i) as HTMLSelectElement;
+      expect(select.value).toBe("");
+      fireEvent.change(select, { target: { value: "type-1" } });
+      expect(select.value).toBe("type-1");
     });
   });
 

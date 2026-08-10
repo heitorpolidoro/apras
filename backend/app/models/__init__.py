@@ -5,6 +5,7 @@ from .enums import TaskPriority, TaskStatus, UserRole
 from .task import Task, TaskHistory
 from .user import User
 from .user_type import UserType
+from .user_type_link import UserUserTypeLink
 
 __all__ = [
     "Category",
@@ -15,4 +16,5 @@ __all__ = [
     "User",
     "UserRole",
     "UserType",
+    "UserUserTypeLink",
 ]

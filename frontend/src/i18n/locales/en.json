@@ -158,7 +158,10 @@
       "submitCreate": "Create task",
       "categoryLabel": "Category",
       "categoryRequired": "Category is required",
-      "managerVisible": "Visible to managers"
+      "managerVisible": "Visible to managers",
+      "visibleToLabel": "Visibility",
+      "visibleToAll": "Public (All)",
+      "visibleToHelper": "Restrict visibility of this task to a specific user type."
     },
     "details": {
       "description": "Description",

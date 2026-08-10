@@ -7,6 +7,7 @@ from sqlmodel import Field, Relationship, SQLModel
 
 from .enums import UserRole
 from .user_type import UserType
+from .user_type_link import UserUserTypeLink
 
 if TYPE_CHECKING:
     from .task import Task
@@ -19,7 +20,6 @@ class User(SQLModel, table=True):
     full_name: str
     role: UserRole = Field(default=UserRole.DIRECTOR)
     is_active: bool = Field(default=True)
-    type_id: UUID | None = Field(default=None, foreign_key="user_type.id", index=True)
 
     @property
     def username(self) -> str:
@@ -34,4 +34,6 @@ class User(SQLModel, table=True):
         back_populates="assignee",
         sa_relationship_kwargs={"foreign_keys": "Task.assigned_to_id"},
     )
-    type: Optional[UserType] = Relationship(back_populates="users")
+    user_types: list[UserType] = Relationship(
+        back_populates="users", link_model=UserUserTypeLink
+    )

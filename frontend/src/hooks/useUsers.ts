@@ -17,7 +17,10 @@ export const useAssignableUsers = () => {
   return {
     ...query,
     data: query.data?.filter(
-      (u) => u.role !== UserRole.ADMINISTRATOR && u.type != null,
+      (u) =>
+        u.role !== UserRole.ADMINISTRATOR &&
+        u.user_types &&
+        u.user_types.length > 0,
     ),
   };
 };

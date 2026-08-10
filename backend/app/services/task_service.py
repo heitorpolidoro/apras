@@ -19,13 +19,21 @@ class TaskService:
         session: Session,
         task_in: TaskCreate,
         created_by_id: UUID,
-        manager_visible: bool = False,
+        current_user: "User",
     ) -> Task:
         """Create a new task in the database."""
+        from app.models.enums import UserRole
+
         db_task = Task.model_validate(
             task_in,
-            update={"created_by_id": created_by_id, "manager_visible": manager_visible},
+            update={"created_by_id": created_by_id},
         )
+        # If MANAGER is creating a task and hasn't specified visible_to_id,
+        # default it to the manager's first user type.
+        if current_user.role == UserRole.MANAGER and not db_task.visible_to_id:
+            if current_user.user_types:
+                db_task.visible_to_id = current_user.user_types[0].id
+
         session.add(db_task)
         session.commit()
         session.refresh(db_task)
@@ -40,9 +48,13 @@ class TaskService:
 
         update_data = task_in.model_dump(exclude_unset=True)
 
-        # MANAGER cannot change visibility flag — strip it silently
-        if current_user.role == UserRole.MANAGER:
-            update_data.pop("manager_visible", None)
+        # MANAGER cannot change visible_to_id to something they don't possess
+        if current_user.role == UserRole.MANAGER and "visible_to_id" in update_data:
+            new_visible_to = update_data["visible_to_id"]
+            if new_visible_to is not None:
+                user_type_ids = [ut.id for ut in current_user.user_types]
+                if new_visible_to not in user_type_ids:
+                    update_data.pop("visible_to_id", None)
 
         for key, value in update_data.items():
             old_value = getattr(db_task, key)
@@ -145,12 +157,19 @@ class TaskService:
             else None
         )
         category = session.get(Category, db_task.category_id)
+        from app.models.user_type import UserType
+        visible_to = (
+            session.get(UserType, db_task.visible_to_id)
+            if db_task.visible_to_id
+            else None
+        )
 
         task_data = db_task.model_dump()
         task_data["created_by_name"] = creator.full_name if creator else None
         task_data["assigned_to_name"] = assignee.full_name if assignee else None
         task_data["category_name"] = category.name if category else None
         task_data["category_color"] = category.color if category else None
+        task_data["visible_to_name"] = visible_to.name if visible_to else None
 
         return TaskRead.model_validate(task_data)
 

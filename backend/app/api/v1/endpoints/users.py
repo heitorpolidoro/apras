@@ -62,6 +62,16 @@ def update_user(
             )
 
     update_data = user_in.model_dump(exclude_unset=True)
+
+    if "user_type_ids" in update_data:
+        user_type_ids = update_data.pop("user_type_ids")
+        if user_type_ids is not None:
+            db_user.user_types = []
+            if user_type_ids:
+                from app.models.user_type import UserType
+                statement = select(UserType).where(UserType.id.in_(user_type_ids))
+                db_user.user_types = session.exec(statement).all()
+
     for key, value in update_data.items():
         setattr(db_user, key, value)
 
