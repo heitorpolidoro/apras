@@ -36,10 +36,19 @@ def signup(
             detail="User with this email already exists",
         )
 
+    # Check if CPF exists
+    cpf_statement = select(User).where(User.cpf == user_in.cpf)
+    if session.exec(cpf_statement).first():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User with this CPF already exists",
+        )
+
     db_obj = User(
         email=user_in.email,
         full_name=user_in.full_name,
         hashed_password=security.get_password_hash(user_in.password),
+        cpf=user_in.cpf,
         # Force role
         role=UserRole.GUEST,
         is_active=False,  # Wait for approval

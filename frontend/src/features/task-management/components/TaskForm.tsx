@@ -15,7 +15,7 @@ import { Input } from "../../../components/ui/input";
 import { Textarea } from "../../../components/ui/textarea";
 import { Select } from "../../../components/ui/select";
 import { Label } from "../../../components/ui/label";
-import { Alert, AlertDescription } from "../../../components/ui/alert";
+import { AlertModal } from "../../../components/ui/alert-modal";
 import { getStatusLabel } from "../utils/taskUtils";
 
 interface TaskFormProps {
@@ -146,14 +146,19 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSuccess, onCancel }) => {
         {isEditing ? t("tasks.form.editTitle") : t("tasks.form.newTitle")}
       </h2>
 
-      {serverError && (
-        <Alert variant="destructive" className="mb-4">
-          <AlertDescription>
-            {(serverError as { response?: { data?: { detail?: string } } })
-              .response?.data?.detail || t("tasks.form.errorSaving")}
-          </AlertDescription>
-        </Alert>
-      )}
+      <AlertModal
+        open={!!serverError}
+        onClose={() => {
+          createTaskMutation.reset();
+          updateTaskMutation.reset();
+        }}
+        variant="destructive"
+        title="Erro ao salvar"
+        message={
+          (serverError as { response?: { data?: { detail?: string } } })
+            ?.response?.data?.detail || t("tasks.form.errorSaving")
+        }
+      />
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">

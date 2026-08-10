@@ -7,7 +7,7 @@ import { parseApiError } from "../../../api/errors";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
-import { Alert, AlertDescription } from "../../../components/ui/alert";
+import { AlertModal } from "../../../components/ui/alert-modal";
 import type { User } from "../../../types/auth";
 
 const LoginPage: React.FC = () => {
@@ -108,17 +108,21 @@ const LoginPage: React.FC = () => {
             {t("login.heading")}
           </h2>
 
-          {successMessage && (
-            <Alert variant="success" className="mb-4">
-              <AlertDescription>{successMessage}</AlertDescription>
-            </Alert>
-          )}
+          <AlertModal
+            open={!!successMessage}
+            onClose={() => {}}
+            variant="success"
+            title="Sucesso"
+            message={successMessage ?? ""}
+          />
 
-          {error && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
+          <AlertModal
+            open={!!error}
+            onClose={() => setError(null)}
+            variant="destructive"
+            title="Erro"
+            message={error ?? ""}
+          />
 
           <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
             <div className="flex flex-col gap-1.5">

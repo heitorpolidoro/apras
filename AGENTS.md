@@ -328,9 +328,20 @@ All user-facing strings are externalised into JSON locale files (`en.json`, `pt.
 The backend issues HS256-signed JWTs on login. Tokens encode the user's UUID as the `sub` claim and include `iat` (issued at) and `exp` (expiration) claims. The system supports **key rotation** by accepting tokens signed with any key in the `SECRET_KEYS` list (tried in order). The "remember me" option extends token life from the default 30 minutes to 7 days.
 
 
+
+
 <!-- MERIDIAN_INSTRUCTIONS_START -->
 # Meridian Instructions
 
 > **AI Task Management**: If an AI agent needs to create, update, or read project tasks, they MUST directly parse and modify the `.meridian/tasks.json` file (A JSON object with a `tasks` array containing tasks with id, title, status, justification).
+> **Allowed Statuses**: When assigning a status to a task, you MUST use EXACTLY one of the following lowercase strings. DO NOT invent new statuses or use synonyms like 'pending', 'todo', or 'completed'.
+  - `backlog`: Task is planned but not ready to be worked on yet.
+  - `specreview`: Task needs specification or design review.
+  - `readytodo`: Task is fully specified and ready to be picked up.
+  - `inprogress`: Task is currently being worked on.
+  - `qareview`: Task is done and waiting for QA or code review.
+  - `blocked`: Task cannot proceed due to external dependencies.
+  - `done`: Task is fully completed.
+  - `nope`: Task was cancelled or won't be done.
 > **Implementation Rule**: Before starting any implementation work, ask the user if they want to create a task for it in the Meridian system.
 <!-- MERIDIAN_INSTRUCTIONS_END -->

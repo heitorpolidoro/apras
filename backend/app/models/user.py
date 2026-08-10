@@ -20,6 +20,7 @@ class User(SQLModel, table=True):
     full_name: str
     role: UserRole = Field(default=UserRole.DIRECTOR)
     is_active: bool = Field(default=True)
+    cpf: str = Field(unique=True, index=True)
 
     @property
     def username(self) -> str:

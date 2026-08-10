@@ -4,7 +4,7 @@ import apiClient from "../../../api/client";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
-import { Alert, AlertDescription } from "../../../components/ui/alert";
+import { AlertModal } from "../../../components/ui/alert-modal";
 
 const ResetPasswordPage: React.FC = () => {
   const navigate = useNavigate();
@@ -82,34 +82,32 @@ const ResetPasswordPage: React.FC = () => {
             Nova Senha
           </h2>
 
-          {isTokenMissing ? (
-            <div className="space-y-4">
-              <Alert variant="destructive">
-                <AlertDescription>
-                  O link de redefinição de senha está incompleto ou inválido.
-                  Por favor, solicite um novo link.
-                </AlertDescription>
-              </Alert>
-              <Link to="/forgot-password" className="w-full block">
-                <Button className="w-full bg-emerald-600 hover:bg-emerald-700">
-                  Solicitar Novo Link
-                </Button>
-              </Link>
-              <Link to="/login" className="w-full block">
-                <Button variant="outline" className="w-full">
-                  Voltar para o Login
-                </Button>
-              </Link>
-            </div>
-          ) : success ? (
-            <div className="space-y-4">
-              <Alert className="bg-emerald-50 border-emerald-100 text-emerald-800">
-                <AlertDescription>
-                  Sua senha foi redefinida com sucesso! Redirecionando para a página de login...
-                </AlertDescription>
-              </Alert>
-            </div>
-          ) : (
+          <AlertModal
+            open={isTokenMissing}
+            onClose={() => navigate("/login")}
+            variant="destructive"
+            title="Link inválido"
+            message="O link de redefinição de senha está incompleto ou inválido. Por favor, solicite um novo link."
+            confirmLabel="Solicitar novo link"
+          />
+
+          <AlertModal
+            open={success}
+            onClose={() => navigate("/login")}
+            variant="success"
+            title="Senha redefinida!"
+            message="Sua senha foi redefinida com sucesso! Você será redirecionado para o login."
+            confirmLabel="Ir para o login"
+          />
+
+          <AlertModal
+            open={!!error}
+            onClose={() => setError(null)}
+            variant="destructive"
+            title="Erro"
+            message={error ?? ""}
+          />
+          {!isTokenMissing && !success && (
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="newPassword">Nova Senha</Label>
@@ -136,12 +134,6 @@ const ResetPasswordPage: React.FC = () => {
                   disabled={isLoading}
                 />
               </div>
-
-              {error && (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
 
               <Button type="submit" disabled={isLoading} className="w-full mt-1">
                 {isLoading ? "Salvando..." : "Redefinir Senha"}

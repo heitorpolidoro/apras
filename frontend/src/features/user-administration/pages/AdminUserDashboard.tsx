@@ -9,7 +9,7 @@ import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Select } from "../../../components/ui/select";
-import { Alert, AlertDescription } from "../../../components/ui/alert";
+import { AlertModal } from "../../../components/ui/alert-modal";
 
 const AdminUserDashboard: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<
@@ -169,20 +169,13 @@ const AdminUserDashboard: React.FC = () => {
         </div>
       </div>
 
-      {actionError && (
-        <Alert variant="destructive" className="mb-4">
-          <AlertDescription className="flex items-center justify-between">
-            {actionError}
-            <button
-              onClick={() => setActionError(null)}
-              className="ml-4 text-xs hover:underline"
-              aria-label={t("common.close")}
-            >
-              {t("common.close").toLowerCase()}
-            </button>
-          </AlertDescription>
-        </Alert>
-      )}
+      <AlertModal
+        open={!!actionError}
+        onClose={() => setActionError(null)}
+        variant="destructive"
+        title="Erro"
+        message={actionError ?? ""}
+      />
 
       {/* User Types Section */}
       <div className="rounded-xl border bg-card p-4 mb-6">

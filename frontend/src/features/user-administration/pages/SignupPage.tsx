@@ -6,7 +6,7 @@ import { parseApiError } from "../../../api/errors";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
-import { Alert, AlertDescription } from "../../../components/ui/alert";
+import { AlertModal } from "../../../components/ui/alert-modal";
 
 const SignupPage: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -82,11 +82,13 @@ const SignupPage: React.FC = () => {
             {t("signup.passwordHint")}
           </p>
 
-          {error && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
+          <AlertModal
+            open={!!error}
+            onClose={() => setError(null)}
+            variant="destructive"
+            title="Erro"
+            message={error ?? ""}
+          />
 
           <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
             <div className="flex flex-col gap-1.5">

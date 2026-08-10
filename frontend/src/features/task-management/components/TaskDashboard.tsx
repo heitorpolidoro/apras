@@ -11,8 +11,8 @@ import { useCategories } from "../hooks/useCategories";
 import { useAssignableUsers } from "../../../hooks/useUsers";
 import { Button } from "../../../components/ui/button";
 import { Select } from "../../../components/ui/select";
-import { Alert, AlertDescription } from "../../../components/ui/alert";
-import { Plus, LayoutGrid, List, AlertCircle } from "lucide-react";
+import { AlertModal } from "../../../components/ui/alert-modal";
+import { Plus, LayoutGrid, List } from "lucide-react";
 import { getStatusLabel } from "../utils/taskUtils";
 
 const TaskDashboard: React.FC = () => {
@@ -90,16 +90,13 @@ const TaskDashboard: React.FC = () => {
       </div>
 
       {/* Error Message */}
-      {isError && (
-        <Alert variant="destructive" className="mb-6">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="size-4" />
-            <AlertDescription className="font-medium">
-              {t("tasks.dashboard.connectionError")}
-            </AlertDescription>
-          </div>
-        </Alert>
-      )}
+      <AlertModal
+        open={isError}
+        onClose={() => {}}
+        variant="destructive"
+        title="Erro de conexão"
+        message={t("tasks.dashboard.connectionError")}
+      />
 
       {/* Filters & View Toggle */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6 p-4 rounded-lg border bg-muted/30">

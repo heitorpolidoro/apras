@@ -4,7 +4,7 @@ import apiClient from "../../../api/client";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
-import { Alert, AlertDescription } from "../../../components/ui/alert";
+import { AlertModal } from "../../../components/ui/alert-modal";
 
 const ForgotPasswordPage: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -46,21 +46,23 @@ const ForgotPasswordPage: React.FC = () => {
             Recuperar Senha
           </h2>
 
-          {success ? (
-            <div className="space-y-4">
-              <Alert className="bg-emerald-50 border-emerald-100 text-emerald-800">
-                <AlertDescription>
-                  Se o e-mail estiver cadastrado, um link de redefinição foi enviado.
-                  Verifique sua caixa de entrada e siga as instruções.
-                </AlertDescription>
-              </Alert>
-              <Link to="/login" className="w-full block">
-                <Button variant="outline" className="w-full">
-                  Voltar para o Login
-                </Button>
-              </Link>
-            </div>
-          ) : (
+          <AlertModal
+            open={success}
+            onClose={() => setSuccess(false)}
+            variant="success"
+            title="E-mail enviado"
+            message="Se o e-mail estiver cadastrado, um link de redefinição foi enviado. Verifique sua caixa de entrada e siga as instruções."
+          />
+
+          <AlertModal
+            open={!!error}
+            onClose={() => setError(null)}
+            variant="destructive"
+            title="Erro"
+            message={error ?? ""}
+          />
+
+          {!success && (
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               <p className="text-sm text-muted-foreground">
                 Digite seu e-mail e enviaremos um link para você redefinir sua senha.
@@ -78,12 +80,6 @@ const ForgotPasswordPage: React.FC = () => {
                   disabled={isLoading}
                 />
               </div>
-
-              {error && (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
 
               <Button type="submit" disabled={isLoading} className="w-full mt-1">
                 {isLoading ? "Enviando..." : "Enviar link de recuperação"}

@@ -9,7 +9,7 @@ import {
 } from "../hooks/useCategories";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
-import { Alert, AlertDescription } from "../../../components/ui/alert";
+import { AlertModal } from "../../../components/ui/alert-modal";
 import type { CategoryRead } from "../types";
 import { useAuth, UserRole } from "../../user-administration/context/AuthContext";
 
@@ -259,11 +259,13 @@ const CategoriesPage: React.FC = () => {
         )}
       </div>
 
-      {error && (
-        <Alert variant="destructive" className="mb-4">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+      <AlertModal
+        open={!!error}
+        onClose={() => setError(null)}
+        variant="destructive"
+        title="Erro"
+        message={error ?? ""}
+      />
 
       {canWrite && showForm && (
         <form

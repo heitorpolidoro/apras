@@ -358,9 +358,9 @@ describe("AdminUserDashboard", () => {
       ).toBeDefined();
     });
 
-    // Click close
-    const closeButton = screen.getByLabelText("Fechar");
-    fireEvent.click(closeButton);
+    // Click OK button on the AlertModal to close it
+    const okButton = screen.getByRole("button", { name: "OK" });
+    fireEvent.click(okButton);
 
     expect(
       screen.queryByText("Você não pode desativar sua própria conta."),
