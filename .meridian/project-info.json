@@ -1,5 +1,0 @@
-{
-  "name": "APRAS",
-  "stack": ["Python", "FastAPI", "TypeScript", "React"],
-  "description": "A full-stack task management platform for residential associations and building managers (síndicos) featuring role-based access control, audit trails, comments, and internationalization, built with a FastAPI/PostgreSQL backend and a React/TypeScript frontend."
-}
