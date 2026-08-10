@@ -9,8 +9,8 @@
     {
       "id": "dynamic-visibility",
       "title": "Refactor task visibility from boolean flag to dynamic UserType-based targeting",
-      "status": "pending",
-      "justification": "Will implement many-to-many user-types, replace manager_visible with visible_to_id on Task, create database migrations, update RBAC guards, and adjust frontend edit/creation forms."
+      "status": "completed",
+      "justification": "Successfully implemented many-to-many User-UserType relationships, replaced manager_visible with visible_to_id in Task, created and ran Alembic migrations on prod database, updated backend RBAC checks/endpoints, and refactored the frontend dashboard checklist and task creation/edit select dropdown. Fully tested and deployed."
     }
   ]
 }
