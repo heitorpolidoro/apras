@@ -194,7 +194,7 @@ describe("Navbar", () => {
         full_name: "Test User",
         role: UserRole.DIRECTOR,
         is_active: true,
-        type: { name: "Gerente" },
+        user_types: [{ name: "Gerente" }],
       } as any,
       login: vi.fn() as any,
       logout: vi.fn(),

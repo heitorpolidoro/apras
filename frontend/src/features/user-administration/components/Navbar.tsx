@@ -90,9 +90,9 @@ const Navbar: React.FC = () => {
           <span className="text-sm font-semibold text-foreground leading-tight">
             {user?.full_name}
           </span>
-          {user?.type?.name && (
+          {user?.user_types && user.user_types.length > 0 && (
             <span className="text-xs text-primary/80 font-medium leading-tight">
-              {user.type.name}
+              {user.user_types.map((ut) => ut.name).join(", ")}
             </span>
           )}
         </div>
