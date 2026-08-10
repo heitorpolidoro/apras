@@ -267,11 +267,11 @@ def test_manager_cannot_create_category(client: TestClient, session: Session, ad
     from app.models.user import User
     manager = User(
         id=_uuid.uuid4(),
-        username="mgr_cat_test",
         email="mgr_cat_test@test.com",
         full_name="Manager Cat",
         hashed_password=get_password_hash("pass"),
         role=UserRole.MANAGER,
+        cpf="08050681057",
     )
     session.add(manager)
     session.commit()
@@ -297,11 +297,11 @@ def test_manager_cannot_update_category(client: TestClient, session: Session, ad
     from app.models.user import User
     manager = User(
         id=_uuid.uuid4(),
-        username="mgr_cat_upd",
         email="mgr_cat_upd@test.com",
         full_name="Manager Cat Upd",
         hashed_password=get_password_hash("pass"),
         role=UserRole.MANAGER,
+        cpf="07491723040",
     )
     session.add(manager)
     session.commit()

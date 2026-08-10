@@ -12,6 +12,7 @@ const SignupPage: React.FC = () => {
   const [formData, setFormData] = useState({
     email: "",
     full_name: "",
+    cpf: "",
     password: "",
     confirm_password: "",
   });
@@ -21,14 +22,49 @@ const SignupPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
+  const formatCPF = (val: string) => {
+    const digits = val.replace(/\D/g, "").slice(0, 11);
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+    if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (name === "cpf") {
+      setFormData((prev) => ({ ...prev, cpf: formatCPF(value) }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const validateCPF = (cpf: string) => {
+    const digits = cpf.replace(/\D/g, "");
+    if (digits.length !== 11) return false;
+    if (/^(\d)\1{10}$/.test(digits)) return false;
+    let sum = 0;
+    for (let i = 0; i < 9; i++) sum += parseInt(digits[i]) * (10 - i);
+    let rev = (sum * 10) % 11;
+    if (rev === 10 || rev === 11) rev = 0;
+    if (rev !== parseInt(digits[9])) return false;
+    sum = 0;
+    for (let i = 0; i < 10; i++) sum += parseInt(digits[i]) * (11 - i);
+    rev = (sum * 10) % 11;
+    if (rev === 10 || rev === 11) rev = 0;
+    if (rev !== parseInt(digits[10])) return false;
+    return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    const rawCpf = formData.cpf.replace(/\D/g, "");
+    if (!validateCPF(rawCpf)) {
+      setError(t("signup.cpfInvalid"));
+      return;
+    }
 
     if (formData.password !== formData.confirm_password) {
       setError(t("signup.passwordMismatch"));
@@ -46,6 +82,7 @@ const SignupPage: React.FC = () => {
       await apiClient.post("/auth/signup", {
         email: formData.email,
         full_name: formData.full_name,
+        cpf: rawCpf,
         password: formData.password,
       });
 
@@ -101,6 +138,19 @@ const SignupPage: React.FC = () => {
                 onChange={handleChange}
                 required
                 placeholder={t("signup.fullNamePlaceholder")}
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="cpf">{t("signup.cpfLabel")}</Label>
+              <Input
+                id="cpf"
+                name="cpf"
+                type="text"
+                value={formData.cpf}
+                onChange={handleChange}
+                required
+                placeholder={t("signup.cpfPlaceholder")}
               />
             </div>
 

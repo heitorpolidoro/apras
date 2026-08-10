@@ -12,6 +12,7 @@ def test_user_model_creation():
         hashed_password="hash",
         full_name="Test User",
         role=UserRole.DIRECTOR,
+        cpf="98715891000",
     )
     assert user.username == "testuser"
     assert user.role == UserRole.DIRECTOR

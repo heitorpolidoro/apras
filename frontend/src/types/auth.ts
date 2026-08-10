@@ -20,4 +20,5 @@ export interface User {
   is_active: boolean;
   user_types?: UserType[];
   user_type_ids?: string[] | null;
+  cpf?: string;
 }

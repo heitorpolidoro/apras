@@ -13,15 +13,15 @@ def get_token(client, username, password):
 
 def test_signup(client: TestClient, session: Session):
     signup_data = {
-        "username": "newuser",
         "email": "newuser@test.com",
         "full_name": "New User",
         "password": "Password123!",
+        "cpf": "22233344405",
     }
     response = client.post("/api/v1/auth/signup", json=signup_data)
     assert response.status_code == 200
     data = response.json()
-    assert data["username"] == "newuser"
+    assert data["email"] == "newuser@test.com"
     assert data["is_active"] is False
     assert data["role"] == UserRole.GUEST
 
@@ -36,6 +36,7 @@ def test_signup_duplicate_email(client: TestClient, normal_user):
         "email": normal_user.email,
         "full_name": "Duplicate User",
         "password": "Password123!",
+        "cpf": "99988877714",
     }
     response = client.post("/api/v1/auth/signup", json=signup_data)
     assert response.status_code == 400
@@ -76,12 +77,12 @@ def test_list_users_accessible_to_all_authenticated(
 def test_update_user_status_and_role(client: TestClient, admin_user, session: Session):
     # Create an inactive user
     new_user = User(
-        username="pending",
         email="pending@test.com",
         full_name="Pending User",
         hashed_password="...",
         is_active=False,
         role=UserRole.DIRECTOR,
+        cpf="12345678909",
     )
     session.add(new_user)
     session.commit()

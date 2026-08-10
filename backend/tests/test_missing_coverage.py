@@ -13,12 +13,12 @@ def test_signup_duplicate_email(client, session):
     """Test signup with an email that already exists."""
     # Create a user first
     existing_user = User(
-        username="existing_user",
         email="duplicate@example.com",
         full_name="Existing User",
         hashed_password="...",
         role=UserRole.DIRECTOR,
         is_active=True,
+        cpf="52998224725",
     )
     session.add(existing_user)
     session.commit()
@@ -27,14 +27,15 @@ def test_signup_duplicate_email(client, session):
     response = client.post(
         "/api/v1/auth/signup",
         json={
-            "username": "new_user",
             "email": "duplicate@example.com",
             "full_name": "New User",
             "password": "Password123!",
+            "cpf": "11144477735",
         },
     )
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert "email already exists" in response.json()["detail"]
+
 
 
 def test_dev_users_success(client, session):
@@ -86,12 +87,12 @@ def test_dev_login_user_not_found(client):
 def test_dev_login_inactive_user(client, session):
     """Test dev_login with inactive user."""
     inactive_user = User(
-        username="inactive_dev",
         email="inactive_dev@example.com",
         full_name="Inactive Dev",
         hashed_password="...",
         role=UserRole.DIRECTOR,
         is_active=False,
+        cpf="53412530006",
     )
     session.add(inactive_user)
     session.commit()

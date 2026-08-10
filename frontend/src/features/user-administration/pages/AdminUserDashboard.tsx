@@ -251,6 +251,9 @@ const AdminUserDashboard: React.FC = () => {
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">
                   {t("admin.colName")}
                 </th>
+                <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden lg:table-cell">
+                  CPF
+                </th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden md:table-cell">
                   {t("admin.colEmail")}
                 </th>
@@ -276,6 +279,11 @@ const AdminUserDashboard: React.FC = () => {
                 >
                   <td className="px-4 py-3 font-medium text-foreground">
                     {user.full_name}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">
+                    {user.cpf
+                      ? user.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")
+                      : "—"}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
                     {user.email}
@@ -369,6 +377,20 @@ const AdminUserDashboard: React.FC = () => {
                 <Input
                   value={editFullName}
                   onChange={(e) => setEditFullName(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground block mb-1">
+                  CPF
+                </label>
+                <Input
+                  value={
+                    editingUser?.cpf
+                      ? editingUser.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")
+                      : ""
+                  }
+                  disabled
+                  className="bg-muted text-muted-foreground cursor-not-allowed"
                 />
               </div>
               <div>

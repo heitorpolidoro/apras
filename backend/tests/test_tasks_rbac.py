@@ -20,19 +20,19 @@ def test_manager_role_value_exists():
 def test_data_fixture(session: Session):
     admin = User(
         id=uuid.uuid4(),
-        username="admin_rbac",
         email="admin_rbac@test.com",
         full_name="Admin Test",
         hashed_password=get_password_hash("pass"),
         role=UserRole.ADMINISTRATOR,
+        cpf="52998224725",
     )
     director = User(
         id=uuid.uuid4(),
-        username="director_rbac",
         email="director_rbac@test.com",
         full_name="Director Test",
         hashed_password=get_password_hash("pass"),
         role=UserRole.DIRECTOR,
+        cpf="11144477735",
     )
     category = Category(id=uuid.uuid4(), name="Test Category", color="#FFFFFF")
     session.add(admin)
@@ -128,11 +128,11 @@ def test_assert_can_edit_task_manager_unassigned(session: Session, test_data):
 
     manager = User(
         id=_uuid.uuid4(),
-        username="mgr_tmp",
         email="mgr_tmp@test.com",
         full_name="Manager Tmp",
         hashed_password=get_password_hash("pass"),
         role=UserRole.MANAGER,
+        cpf="08050681057",
     )
     session.add(manager)
     session.commit()
@@ -161,11 +161,11 @@ def test_assert_can_edit_task_manager_other_user_raises(session: Session, test_d
 
     manager = User(
         id=_uuid.uuid4(),
-        username="mgr_tmp2",
         email="mgr_tmp2@test.com",
         full_name="Manager Tmp2",
         hashed_password=get_password_hash("pass"),
         role=UserRole.MANAGER,
+        cpf="07491723040",
     )
     session.add(manager)
     session.commit()
@@ -200,12 +200,12 @@ def manager_user_fixture(session: Session, manager_type):
 
     manager = User(
         id=_uuid.uuid4(),
-        username="manager_rbac",
         email="manager_rbac@test.com",
         full_name="Manager Test",
         hashed_password=get_password_hash("pass"),
         role=UserRole.MANAGER,
         user_types=[manager_type],
+        cpf="70323955008",
     )
     session.add(manager)
     session.commit()

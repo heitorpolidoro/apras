@@ -6,10 +6,10 @@ from sqlmodel import Session
 def test_inactive_user_login_fails(client: TestClient, session: Session):
     # Create an inactive user
     signup_data = {
-        "username": "inactive_test",
         "email": "inactive_test@test.com",
         "full_name": "Inactive Test",
         "password": "Password123!",
+        "cpf": "52998224725",
     }
     client.post("/api/v1/auth/signup", json=signup_data)
 
@@ -25,10 +25,10 @@ def test_inactive_user_login_fails(client: TestClient, session: Session):
 
 def test_signup_creates_inactive_guest(client: TestClient, session: Session):
     signup_data = {
-        "username": "new_guy",
         "email": "guy@test.com",
         "full_name": "New Guy",
         "password": "Password123!",
+        "cpf": "11144477735",
     }
     response = client.post("/api/v1/auth/signup", json=signup_data)
     assert response.status_code == 200

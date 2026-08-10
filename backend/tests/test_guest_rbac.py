@@ -24,19 +24,19 @@ def test_guest_role_value_exists():
 def guest_data_fixture(session: Session):
     guest = User(
         id=uuid.uuid4(),
-        username="guest_rbac",
         email="guest_rbac@test.com",
         full_name="Guest Test",
         hashed_password=get_password_hash("pass"),
         role=UserRole.GUEST,
+        cpf="32464177002",
     )
     director = User(
         id=uuid.uuid4(),
-        username="director_guest_rbac",
         email="director_guest_rbac@test.com",
         full_name="Director Test",
         hashed_password=get_password_hash("pass"),
         role=UserRole.DIRECTOR,
+        cpf="14555816045",
     )
     category = Category(id=uuid.uuid4(), name="Guest Test Category", color="#FFFFFF")
     session.add(guest)

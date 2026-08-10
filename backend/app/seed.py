@@ -68,12 +68,12 @@ def seed_db() -> None:
         # 4. Usuários
         admin = User(
             id=uuid.UUID("00000000-0000-0000-0000-000000000000"),
-            username="admin",
             email="admin@apras.com",
             hashed_password=get_password_hash("test_admin_password"),
             full_name="Administrador do Sistema",
             role=UserRole.ADMINISTRATOR,
             is_active=True,
+            cpf="52998224725",
         )
         session.add(admin)
 
@@ -82,11 +82,13 @@ def seed_db() -> None:
                 "id": uuid.UUID("11111111-1111-1111-1111-111111111111"),
                 "email": "diretor1@apras.com",
                 "full_name": "Diretor Comercial",
+                "cpf": "11144477735",
             },
             {
                 "id": uuid.UUID("22222222-2222-2222-2222-222222222222"),
                 "email": "diretor2@apras.com",
                 "full_name": "Diretor Financeiro",
+                "cpf": "08050681057",
             },
         ]
 
@@ -99,6 +101,7 @@ def seed_db() -> None:
                 full_name=d_data["full_name"],
                 role=UserRole.DIRECTOR,
                 is_active=True,
+                cpf=d_data["cpf"],
                 user_types=[user_types[d_data["full_name"]]],
             )
             session.add(user)
@@ -112,6 +115,7 @@ def seed_db() -> None:
             role=UserRole.MANAGER,
             user_types=[user_types["Gerente Operacional"]],
             is_active=True,
+            cpf="07491723040",
         )
         session.add(manager)
         session.commit()

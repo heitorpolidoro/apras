@@ -58,12 +58,12 @@ def test_get_current_user_not_found(client, session):
 def test_get_current_user_inactive(client, session):
     """Test get_current_user with an inactive user."""
     inactive_user = User(
-        username="inactive",
         email="inactive@example.com",
         full_name="Inactive User",
         hashed_password="...",
         role=UserRole.DIRECTOR,
         is_active=False,
+        cpf="70323955008",
     )
     session.add(inactive_user)
     session.commit()
@@ -80,12 +80,12 @@ def test_login_inactive_user(client, session):
     """Test login with an inactive user."""
     password = "testpassword"
     inactive_user = User(
-        username="inactive_login",
         email="inactive_login@example.com",
         full_name="Inactive Login",
         hashed_password=security.get_password_hash(password),
         role=UserRole.DIRECTOR,
         is_active=False,
+        cpf="27943501062",
     )
     session.add(inactive_user)
     session.commit()

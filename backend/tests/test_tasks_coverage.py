@@ -21,27 +21,27 @@ def get_token(client, username, password):
 def setup_data_fixture(session: Session):
     admin = User(
         id=uuid.uuid4(),
-        username="admin_cov",
         email="admin_cov@test.com",
         full_name="Admin Cov",
         hashed_password=get_password_hash("pass"),
         role=UserRole.ADMINISTRATOR,
+        cpf="11144477735",
     )
     director1 = User(
         id=uuid.uuid4(),
-        username="dir1_cov",
         email="dir1_cov@test.com",
         full_name="Director 1",
         hashed_password=get_password_hash("pass"),
         role=UserRole.DIRECTOR,
+        cpf="08050681057",
     )
     director2 = User(
         id=uuid.uuid4(),
-        username="dir2_cov",
         email="dir2_cov@test.com",
         full_name="Director 2",
         hashed_password=get_password_hash("pass"),
         role=UserRole.DIRECTOR,
+        cpf="07491723040",
     )
     category = Category(
         id=uuid.uuid4(),

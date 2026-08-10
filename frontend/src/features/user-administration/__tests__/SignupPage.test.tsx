@@ -40,6 +40,7 @@ describe("SignupPage", () => {
     );
 
     expect(screen.getByLabelText(/Nome Completo/i)).toBeDefined();
+    expect(screen.getByLabelText(/CPF/i)).toBeDefined();
     expect(screen.getByLabelText(/E-mail/i)).toBeDefined();
     expect(screen.getByLabelText("Senha")).toBeDefined();
     expect(screen.getByLabelText(/Confirmar Senha/i)).toBeDefined();
@@ -55,6 +56,9 @@ describe("SignupPage", () => {
 
     fireEvent.change(screen.getByLabelText(/Nome Completo/i), {
       target: { value: "Test User", name: "full_name" },
+    });
+    fireEvent.change(screen.getByLabelText(/CPF/i), {
+      target: { value: "529.982.247-25", name: "cpf" },
     });
     fireEvent.change(screen.getByLabelText(/E-mail/i), {
       target: { value: "test@test.com", name: "email" },
@@ -79,6 +83,9 @@ describe("SignupPage", () => {
 
     fireEvent.change(screen.getByLabelText(/Nome Completo/i), {
       target: { value: "Test User", name: "full_name" },
+    });
+    fireEvent.change(screen.getByLabelText(/CPF/i), {
+      target: { value: "529.982.247-25", name: "cpf" },
     });
     fireEvent.change(screen.getByLabelText(/E-mail/i), {
       target: { value: "test@test.com", name: "email" },
@@ -107,6 +114,9 @@ describe("SignupPage", () => {
 
     fireEvent.change(screen.getByLabelText(/Nome Completo/i), {
       target: { value: "Test User", name: "full_name" },
+    });
+    fireEvent.change(screen.getByLabelText(/CPF/i), {
+      target: { value: "529.982.247-25", name: "cpf" },
     });
     fireEvent.change(screen.getByLabelText(/E-mail/i), {
       target: { value: "test@test.com", name: "email" },
@@ -140,6 +150,9 @@ describe("SignupPage", () => {
     fireEvent.change(screen.getByLabelText(/Nome Completo/i), {
       target: { value: "Test User", name: "full_name" },
     });
+    fireEvent.change(screen.getByLabelText(/CPF/i), {
+      target: { value: "529.982.247-25", name: "cpf" },
+    });
     fireEvent.change(screen.getByLabelText(/E-mail/i), {
       target: { value: "test@test.com", name: "email" },
     });
@@ -171,6 +184,9 @@ describe("SignupPage", () => {
 
     fireEvent.change(screen.getByLabelText(/Nome Completo/i), {
       target: { value: "Test User", name: "full_name" },
+    });
+    fireEvent.change(screen.getByLabelText(/CPF/i), {
+      target: { value: "529.982.247-25", name: "cpf" },
     });
     fireEvent.change(screen.getByLabelText(/E-mail/i), {
       target: { value: "test@test.com", name: "email" },
@@ -204,6 +220,9 @@ describe("SignupPage", () => {
     fireEvent.change(screen.getByLabelText(/Nome Completo/i), {
       target: { value: "Test User", name: "full_name" },
     });
+    fireEvent.change(screen.getByLabelText(/CPF/i), {
+      target: { value: "529.982.247-25", name: "cpf" },
+    });
     fireEvent.change(screen.getByLabelText(/E-mail/i), {
       target: { value: "test@test.com", name: "email" },
     });
@@ -233,6 +252,9 @@ describe("SignupPage", () => {
 
     fireEvent.change(screen.getByLabelText(/Nome Completo/i), {
       target: { value: "Test User", name: "full_name" },
+    });
+    fireEvent.change(screen.getByLabelText(/CPF/i), {
+      target: { value: "529.982.247-25", name: "cpf" },
     });
     fireEvent.change(screen.getByLabelText(/E-mail/i), {
       target: { value: "test@test.com", name: "email" },
@@ -269,6 +291,9 @@ describe("SignupPage", () => {
 
     fireEvent.change(screen.getByLabelText(/Nome Completo/i), {
       target: { value: "Test User", name: "full_name" },
+    });
+    fireEvent.change(screen.getByLabelText(/CPF/i), {
+      target: { value: "529.982.247-25", name: "cpf" },
     });
     fireEvent.change(screen.getByLabelText(/E-mail/i), {
       target: { value: "test@test.com", name: "email" },
