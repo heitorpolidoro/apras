@@ -31,6 +31,9 @@ class UserBase(BaseModel):
     full_name: str
     role: UserRole = UserRole.DIRECTOR
     cpf: str
+    phone: str | None = None
+    address: str | None = None
+    block_lot: str | None = None
 
     @field_validator("cpf")
     @classmethod
@@ -77,6 +80,9 @@ class UserUpdate(BaseModel):
     user_type_ids: list[UUID] | None = None
     full_name: str | None = None
     cpf: str | None = None
+    phone: str | None = None
+    address: str | None = None
+    block_lot: str | None = None
 
     @field_validator("cpf")
     @classmethod
