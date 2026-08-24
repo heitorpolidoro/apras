@@ -10,6 +10,7 @@ from .user_type import UserType
 from .user_type_link import UserUserTypeLink
 
 if TYPE_CHECKING:
+    from .lot import UserLotLink
     from .task import Task
 
 
@@ -41,3 +42,8 @@ class User(SQLModel, table=True):
     user_types: list[UserType] = Relationship(
         back_populates="users", link_model=UserUserTypeLink
     )
+    lot_links: list["UserLotLink"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+    )
+

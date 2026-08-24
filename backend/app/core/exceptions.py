@@ -23,3 +23,32 @@ class ForbiddenError(DomainError):
 
     def __init__(self, message: str = "Not enough privileges") -> None:
         super().__init__(message)
+
+
+class LotNotFoundError(DomainError):
+    """Raised when a lot is not found."""
+
+    def __init__(self, lot_id: UUID) -> None:
+        super().__init__(f"Lot with ID {lot_id} not found")
+
+
+class LotAlreadyExistsError(DomainError):
+    """Raised when a lot with given block and lot_number already exists."""
+
+    def __init__(self, block: str, lot_number: str) -> None:
+        super().__init__(f"Lot with block '{block}' and lot number '{lot_number}' already exists")
+
+
+class UserLotLinkAlreadyExistsError(DomainError):
+    """Raised when a user is already linked to a lot."""
+
+    def __init__(self, user_id: UUID, lot_id: UUID) -> None:
+        super().__init__(f"User {user_id} is already linked to lot {lot_id}")
+
+
+class UserLotLinkNotFoundError(DomainError):
+    """Raised when a user lot link is not found."""
+
+    def __init__(self, user_id: UUID, lot_id: UUID) -> None:
+        super().__init__(f"Link between user {user_id} and lot {lot_id} not found")
+

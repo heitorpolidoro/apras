@@ -57,6 +57,20 @@ const Navbar: React.FC = () => {
           {t("nav.categories")}
         </Link>
 
+        {effectiveRole !== UserRole.GUEST && (
+          <Link
+            to="/lots"
+            className={cn(
+              "text-sm font-semibold transition-all hover:text-primary relative py-1",
+              location.pathname === "/lots"
+                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
+                : "text-muted-foreground",
+            )}
+          >
+            {t("nav.lots")}
+          </Link>
+        )}
+
         {effectiveRole === UserRole.ADMINISTRATOR && (
           <Link
             to="/admin/users"

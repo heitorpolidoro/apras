@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import TaskDashboard from "./features/task-management/components/TaskDashboard";
 import CategoriesPage from "./features/task-management/components/CategoriesPage";
+import { LotsPage } from "./features/lot-management/components/LotsPage";
 import LoginPage from "./features/user-administration/pages/LoginPage";
 import SignupPage from "./features/user-administration/pages/SignupPage";
 import ForgotPasswordPage from "./features/user-administration/pages/ForgotPasswordPage";
@@ -45,6 +46,15 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <CategoriesPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/lots"
+                element={
+                  <ProtectedRoute>
+                    <LotsPage />
                   </ProtectedRoute>
                 }
               />

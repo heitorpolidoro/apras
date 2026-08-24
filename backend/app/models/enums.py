@@ -29,3 +29,21 @@ class UserRole(StrEnum):
     DIRECTOR = "DIRECTOR"
     MANAGER = "MANAGER"
     GUEST = "GUEST"
+
+
+class LotStatus(StrEnum):
+    """Enumeration for lot status."""
+
+    VACANT = "VACANT"
+    OCCUPIED = "OCCUPIED"
+    UNDER_CONSTRUCTION = "UNDER_CONSTRUCTION"
+
+
+class LotAssociationType(StrEnum):
+    """Enumeration for user to lot association type."""
+
+    PROPRIETARIO = "PROPRIETARIO"
+    INQUILINO = "INQUILINO"
+    RESPONSAVEL_FINANCEIRO = "RESPONSAVEL_FINANCEIRO"
+    OUTRO = "OUTRO"
+
