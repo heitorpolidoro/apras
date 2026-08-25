@@ -78,6 +78,15 @@ venv.bak/
 *.sqlite3
 *.db
 
+# Uploaded Media (runtime-generated)
+backend/static/uploads/
+static/uploads/
+
+# Python standalone builds (symlinks)
+cpython-*
+poetry_python
+python*_standalone
+
 # =========================
 # Node.js / Frontend (React, Vite)
 # =========================
