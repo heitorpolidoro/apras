@@ -52,3 +52,25 @@ class UserLotLinkNotFoundError(DomainError):
     def __init__(self, user_id: UUID, lot_id: UUID) -> None:
         super().__init__(f"Link between user {user_id} and lot {lot_id} not found")
 
+
+class ResidentNotFoundError(DomainError):
+    """Raised when a resident is not found."""
+
+    def __init__(self, resident_id: UUID) -> None:
+        super().__init__(f"Resident with ID {resident_id} not found")
+
+
+class ResidentAlreadyLinkedError(DomainError):
+    """Raised when a resident is already linked to a user account."""
+
+    def __init__(self, message: str = "Resident is already linked to a user account") -> None:
+        super().__init__(message)
+
+
+class ResidentCPFConflictError(DomainError):
+    """Raised when an active resident with given CPF already exists in lot."""
+
+    def __init__(self, cpf: str) -> None:
+        super().__init__(f"Active resident with CPF '{cpf}' already exists in this lot")
+
+

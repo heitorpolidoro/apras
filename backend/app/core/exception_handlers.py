@@ -5,6 +5,9 @@ from app.core.exceptions import (
     ForbiddenError,
     LotAlreadyExistsError,
     LotNotFoundError,
+    ResidentAlreadyLinkedError,
+    ResidentCPFConflictError,
+    ResidentNotFoundError,
     TaskNotFoundError,
     UserLotLinkAlreadyExistsError,
     UserLotLinkNotFoundError,
@@ -27,13 +30,18 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
     """
     status_code = status.HTTP_400_BAD_REQUEST
 
-    if isinstance(exc, (TaskNotFoundError, LotNotFoundError, UserLotLinkNotFoundError)):
+    if isinstance(
+        exc, (TaskNotFoundError, LotNotFoundError, UserLotLinkNotFoundError, ResidentNotFoundError)
+    ):
         status_code = status.HTTP_404_NOT_FOUND
     elif isinstance(exc, ForbiddenError):
         status_code = status.HTTP_403_FORBIDDEN
-
+    elif isinstance(exc, ResidentCPFConflictError):
+        status_code = status.HTTP_409_CONFLICT
 
     return JSONResponse(
         status_code=status_code,
         content={"detail": exc.message},
     )
+
+

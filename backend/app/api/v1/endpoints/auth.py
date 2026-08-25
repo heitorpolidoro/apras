@@ -56,7 +56,12 @@ def signup(
     session.add(db_obj)
     session.commit()
     session.refresh(db_obj)
+
+    from app.services.resident_service import ResidentService
+    ResidentService.auto_link_user(session, db_obj)
+
     return db_obj
+
 
 
 @router.get("/me", response_model=UserRead)

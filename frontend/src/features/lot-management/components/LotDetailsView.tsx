@@ -4,6 +4,7 @@ import { ArrowLeft, UserPlus, Trash2, User as UserIcon, Shield, Mail } from "luc
 import { useLotDetail, useUnlinkUserLot } from "../hooks/useLots";
 import { LotAssociationType, LotStatus } from "../../../types/lot";
 import { Button } from "../../../components/ui/button";
+import { ResidentsTab } from "./ResidentsTab";
 
 interface LotDetailsViewProps {
   lotId: string;
@@ -22,7 +23,9 @@ export const LotDetailsView: React.FC<LotDetailsViewProps> = ({
   const { data: lot, isLoading, isError } = useLotDetail(lotId);
   const unlinkMutation = useUnlinkUserLot();
 
+  const [activeTab, setActiveTab] = useState<"users" | "residents">("users");
   const [userToUnlink, setUserToUnlink] = useState<{ id: string; name: string } | null>(null);
+
 
   if (isLoading) {
     return (
@@ -151,17 +154,49 @@ export const LotDetailsView: React.FC<LotDetailsViewProps> = ({
         </div>
       </div>
 
-      {/* Linked Users Table */}
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
-          {t("lots.linkedUsers")} ({lot.users.length})
-        </h3>
+      {/* Tabs Navigation */}
+      <div className="border-b border-slate-200 dark:border-slate-800">
+        <nav className="-mb-px flex space-x-6" aria-label="Tabs">
+          <button
+            type="button"
+            onClick={() => setActiveTab("users")}
+            className={`whitespace-nowrap pb-4 text-sm font-semibold border-b-2 transition-colors ${
+              activeTab === "users"
+                ? "border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400"
+                : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
+            }`}
+          >
+            {t("lots.linkedUsersTab")} ({lot.users.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("residents")}
+            className={`whitespace-nowrap pb-4 text-sm font-semibold border-b-2 transition-colors ${
+              activeTab === "residents"
+                ? "border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400"
+                : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
+            }`}
+          >
+            {t("residents.residentsTab")}
+          </button>
+        </nav>
+      </div>
 
-        {lot.users.length === 0 ? (
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            {t("lots.noLinkedUsers")}
-          </p>
-        ) : (
+      {activeTab === "residents" ? (
+        <ResidentsTab lotId={lotId} canManage={canManage} />
+      ) : (
+        /* Linked Users Table */
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
+            {t("lots.linkedUsers")} ({lot.users.length})
+          </h3>
+
+          {lot.users.length === 0 ? (
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              {t("lots.noLinkedUsers")}
+            </p>
+          ) : (
+
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm text-slate-600 dark:text-slate-300">
               <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400">
@@ -234,8 +269,10 @@ export const LotDetailsView: React.FC<LotDetailsViewProps> = ({
           </div>
         )}
       </div>
+      )}
 
       {userToUnlink && (
+
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="w-full max-w-sm rounded-xl border border-red-200 bg-white p-6 shadow-xl dark:border-red-900/50 dark:bg-slate-900">
             <h3 className="text-base font-semibold text-red-600 dark:text-red-400">

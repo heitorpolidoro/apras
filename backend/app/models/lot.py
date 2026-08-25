@@ -10,6 +10,7 @@ from sqlmodel import Field, Relationship, SQLModel
 from .enums import LotAssociationType, LotStatus
 
 if TYPE_CHECKING:
+    from .resident import Resident
     from .user import User
 
 
@@ -62,3 +63,7 @@ class Lot(SQLModel, table=True):
     user_links: list[UserLotLink] = Relationship(
         back_populates="lot", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
+    residents: list["Resident"] = Relationship(
+        back_populates="lot", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
+

@@ -47,3 +47,15 @@ class LotAssociationType(StrEnum):
     RESPONSAVEL_FINANCEIRO = "RESPONSAVEL_FINANCEIRO"
     OUTRO = "OUTRO"
 
+
+class ResidentRelationship(StrEnum):
+    """Enumeration for resident relationship to lot owner/head."""
+
+    TITULAR = "TITULAR"
+    CONJUGE = "CONJUGE"
+    FILHO_DEPENDENTE = "FILHO_DEPENDENTE"
+    INQUILINO = "INQUILINO"
+    PARENTE = "PARENTE"
+    OUTRO = "OUTRO"
+
+

@@ -11,6 +11,7 @@ from .user_type_link import UserUserTypeLink
 
 if TYPE_CHECKING:
     from .lot import UserLotLink
+    from .resident import Resident
     from .task import Task
 
 
@@ -46,4 +47,8 @@ class User(SQLModel, table=True):
         back_populates="user",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
+    residents: list["Resident"] = Relationship(
+        back_populates="user",
+    )
+
 
