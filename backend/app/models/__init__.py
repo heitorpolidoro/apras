@@ -7,6 +7,9 @@ from .enums import (
     DayOfWeek,
     LotAssociationType,
     LotStatus,
+    OccurrenceCategory,
+    OccurrencePriority,
+    OccurrenceStatus,
     ResidentRelationship,
     ShiftType,
     TaskPriority,
@@ -14,6 +17,7 @@ from .enums import (
     UserRole,
 )
 from .lot import Lot, UserLotLink
+from .occurrence import Occurrence, OccurrenceTimeline
 from .resident import Resident
 from .task import Task, TaskHistory
 from .user import User
@@ -30,6 +34,11 @@ __all__ = [
     "Lot",
     "LotAssociationType",
     "LotStatus",
+    "Occurrence",
+    "OccurrenceCategory",
+    "OccurrencePriority",
+    "OccurrenceStatus",
+    "OccurrenceTimeline",
     "Resident",
     "ResidentRelationship",
     "ShiftType",

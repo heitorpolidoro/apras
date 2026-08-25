@@ -11,6 +11,7 @@
     "lots": "Lotes",
     "authorizations": "Autorizações",
     "gate": "Portaria",
+    "occurrences": "Livro de Ocorrências",
     "administration": "Administração"
   },
 
@@ -404,5 +405,85 @@
     "filterLot": "Filtrar por Lote",
     "loading": "Carregando histórico de acessos...",
     "empty": "Nenhum registro de acesso encontrado."
+  },
+  "occurrences": {
+    "page_title": "Livro de Ocorrências e Reclamações",
+    "page_subtitle": "Registre, acompanhe e resolva chamados e incidentes da associação.",
+    "new_occurrence_btn": "Nova Ocorrência",
+    "new_occurrence": "Nova Ocorrência / Reclamação",
+    "anonymous": "Anônimo",
+    "public": "Pública",
+    "private": "Privada",
+    "reporter": "Relator",
+    "lot": "Lote Referência",
+    "created_at": "Data de Registro",
+    "description": "Descrição do ocorrido",
+    "photos": "Fotos / Evidências",
+    "resolution_notes": "Parecer de Resolução",
+    "manage_ticket": "Gestão do Chamado (Administração)",
+    "change_status": "Alterar Status",
+    "change_priority": "Alterar Prioridade",
+    "resolution_notes_input": "Parecer de Resolução / Justificativa",
+    "resolution_placeholder": "Descreva o parecer de conclusão...",
+    "view_details": "Ver Detalhes",
+    "no_records": "Nenhuma ocorrência encontrada",
+    "no_records_hint": "Tente ajustar os filtros ou criar uma nova ocorrência.",
+    "category": "Categoria",
+    "title": "Título da Ocorrência",
+    "title_placeholder": "Ex: Barulho de som após 22h na quadra B",
+    "description_placeholder": "Descreva detalhadamente o ocorrido...",
+    "photo_urls": "Links de Fotos / Evidências (separados por vírgula)",
+    "anonymous_toggle": "Anonimato",
+    "anonymous_hint": "Ocultar seu nome para outros moradores.",
+    "public_toggle": "Visibilidade Pública",
+    "public_hint": "Permitir que outros moradores vejam esta ocorrência.",
+    "submit": "Registrar Ocorrência",
+    "category_labels": {
+      "NOISE": "Barulho / Perturbação",
+      "MAINTENANCE": "Manutenção / Infraestrutura",
+      "SECURITY": "Segurança",
+      "PARKING": "Estacionamento / Vagas",
+      "RULES_VIOLATION": "Infração ao Regulamento",
+      "OTHER": "Outros"
+    },
+    "status": {
+      "OPEN": "Aberto",
+      "UNDER_REVIEW": "Em Análise",
+      "IN_PROGRESS": "Em Andamento",
+      "RESOLVED": "Resolvido",
+      "REJECTED": "Rejeitado"
+    },
+    "priority": {
+      "LOW": "Baixa",
+      "MEDIUM": "Média",
+      "HIGH": "Alta",
+      "URGENT": "Urgente"
+    },
+    "filters": {
+      "title": "Filtros de Busca",
+      "search_placeholder": "Buscar protocolo ou título...",
+      "all_categories": "Todas as Categorias",
+      "all_statuses": "Todos os Status",
+      "all_visibility": "Todas as Visibilidades"
+    },
+    "table": {
+      "protocol": "Protocolo",
+      "category": "Categoria",
+      "title": "Título",
+      "status": "Status",
+      "priority": "Prioridade",
+      "reporter": "Relator",
+      "date": "Data",
+      "actions": "Ações"
+    },
+    "timeline": {
+      "title": "Histórico e Trâmite",
+      "internal_note": "Nota Interna",
+      "add_note": "Adicionar observação ou atualização",
+      "note_placeholder": "Escreva aqui a observação...",
+      "internal_only_label": "Apenas interno (Administração)",
+      "select_status": "Manter status atual",
+      "send": "Enviar"
+    }
   }
 }

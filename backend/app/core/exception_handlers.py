@@ -7,6 +7,8 @@ from app.core.exceptions import (
     ForbiddenError,
     LotAlreadyExistsError,
     LotNotFoundError,
+    OccurrenceAccessForbiddenError,
+    OccurrenceNotFoundError,
     ResidentAlreadyLinkedError,
     ResidentCPFConflictError,
     ResidentNotFoundError,
@@ -43,10 +45,11 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             VisitorNotFoundError,
             AuthorizationNotFoundError,
             AccessLogNotFoundError,
+            OccurrenceNotFoundError,
         ),
     ):
         status_code = status.HTTP_404_NOT_FOUND
-    elif isinstance(exc, ForbiddenError):
+    elif isinstance(exc, (ForbiddenError, OccurrenceAccessForbiddenError)):
         status_code = status.HTTP_403_FORBIDDEN
     elif isinstance(exc, ResidentCPFConflictError):
         status_code = status.HTTP_409_CONFLICT

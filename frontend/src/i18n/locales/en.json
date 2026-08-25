@@ -11,6 +11,7 @@
     "lots": "Lots",
     "authorizations": "Authorizations",
     "gate": "Gatekeeper",
+    "occurrences": "Occurrence Book",
     "administration": "Administration"
   },
 
@@ -404,5 +405,85 @@
     "filterLot": "Filter by Lot",
     "loading": "Loading access logs...",
     "empty": "No access log records found."
+  },
+  "occurrences": {
+    "page_title": "Occurrence & Complaints Book",
+    "page_subtitle": "Record, track, and resolve community tickets and complaints.",
+    "new_occurrence_btn": "New Occurrence",
+    "new_occurrence": "New Occurrence / Complaint",
+    "anonymous": "Anonymous",
+    "public": "Public",
+    "private": "Private",
+    "reporter": "Reporter",
+    "lot": "Lot Reference",
+    "created_at": "Registration Date",
+    "description": "Incident Description",
+    "photos": "Photos / Evidence",
+    "resolution_notes": "Resolution Notes",
+    "manage_ticket": "Ticket Management (Admin)",
+    "change_status": "Change Status",
+    "change_priority": "Change Priority",
+    "resolution_notes_input": "Resolution Notes / Reason",
+    "resolution_placeholder": "Describe the resolution summary...",
+    "view_details": "View Details",
+    "no_records": "No occurrences found",
+    "no_records_hint": "Try adjusting search filters or create a new ticket.",
+    "category": "Category",
+    "title": "Occurrence Title",
+    "title_placeholder": "E.g. Loud music after 10pm in Block B",
+    "description_placeholder": "Provide detailed description...",
+    "photo_urls": "Photo / Evidence Links (comma separated)",
+    "anonymous_toggle": "Anonymity",
+    "anonymous_hint": "Hide your name from other residents.",
+    "public_toggle": "Public Visibility",
+    "public_hint": "Allow other residents to view this ticket.",
+    "submit": "Submit Ticket",
+    "category_labels": {
+      "NOISE": "Noise / Nuisance",
+      "MAINTENANCE": "Maintenance / Infrastructure",
+      "SECURITY": "Security",
+      "PARKING": "Parking / Parking Spot",
+      "RULES_VIOLATION": "Bylaw Infraction",
+      "OTHER": "Other"
+    },
+    "status": {
+      "OPEN": "Open",
+      "UNDER_REVIEW": "Under Review",
+      "IN_PROGRESS": "In Progress",
+      "RESOLVED": "Resolved",
+      "REJECTED": "Rejected"
+    },
+    "priority": {
+      "LOW": "Low",
+      "MEDIUM": "Medium",
+      "HIGH": "High",
+      "URGENT": "Urgent"
+    },
+    "filters": {
+      "title": "Search Filters",
+      "search_placeholder": "Search protocol or title...",
+      "all_categories": "All Categories",
+      "all_statuses": "All Statuses",
+      "all_visibility": "All Visibilities"
+    },
+    "table": {
+      "protocol": "Protocol",
+      "category": "Category",
+      "title": "Title",
+      "status": "Status",
+      "priority": "Priority",
+      "reporter": "Reporter",
+      "date": "Date",
+      "actions": "Actions"
+    },
+    "timeline": {
+      "title": "History & Timeline",
+      "internal_note": "Internal Note",
+      "add_note": "Add note or status update",
+      "note_placeholder": "Write your note here...",
+      "internal_only_label": "Internal only (Management)",
+      "select_status": "Keep current status",
+      "send": "Send"
+    }
   }
 }

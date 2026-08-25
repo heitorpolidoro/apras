@@ -95,4 +95,35 @@ class ShiftType(StrEnum):
     FULL_DAY = "FULL_DAY"
 
 
+class OccurrenceCategory(StrEnum):
+    """Enumeration for occurrence categories."""
+
+    NOISE = "NOISE"
+    MAINTENANCE = "MAINTENANCE"
+    SECURITY = "SECURITY"
+    PARKING = "PARKING"
+    RULES_VIOLATION = "RULES_VIOLATION"
+    OTHER = "OTHER"
+
+
+class OccurrenceStatus(StrEnum):
+    """Enumeration for occurrence status workflow."""
+
+    OPEN = "OPEN"
+    UNDER_REVIEW = "UNDER_REVIEW"
+    IN_PROGRESS = "IN_PROGRESS"
+    RESOLVED = "RESOLVED"
+    REJECTED = "REJECTED"
+
+
+class OccurrencePriority(StrEnum):
+    """Enumeration for occurrence priority levels."""
+
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+    URGENT = "URGENT"
+
+
+
 

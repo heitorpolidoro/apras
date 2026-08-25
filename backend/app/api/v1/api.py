@@ -6,6 +6,7 @@ from app.api.v1.endpoints import (
     authorizations,
     categories,
     lots,
+    occurrences,
     residents,
     tasks,
     user_types,
@@ -33,6 +34,8 @@ api_router.include_router(residents.router, tags=["residents"])
 api_router.include_router(visitors.router, prefix="/visitors", tags=["visitors"])
 api_router.include_router(authorizations.router, tags=["authorizations"])
 api_router.include_router(access_logs.router, prefix="/access-logs", tags=["access-logs"])
+api_router.include_router(occurrences.router, prefix="/occurrences", tags=["occurrences"])
+
 
 
 

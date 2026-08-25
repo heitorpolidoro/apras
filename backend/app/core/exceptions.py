@@ -142,4 +142,22 @@ class OpenEntryExistsError(DomainError):
 VisitorAlreadyCheckedInError = OpenEntryExistsError
 
 
+class OccurrenceNotFoundError(DomainError):
+    """Raised when an occurrence is not found."""
+
+    def __init__(self, occurrence_id: UUID | str) -> None:
+        super().__init__(f"Occurrence with ID {occurrence_id} not found")
+
+
+class OccurrenceAccessForbiddenError(DomainError):
+    """Raised when access to an occurrence is forbidden."""
+
+    def __init__(self, message: str = "Access to occurrence forbidden") -> None:
+        super().__init__(message)
+
+
+OccurrencePermissionError = OccurrenceAccessForbiddenError
+
+
+
 
