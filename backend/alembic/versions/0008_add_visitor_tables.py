@@ -1,6 +1,6 @@
-"""add_visitor_and_authorization_tables
+"""add_visitor_tables
 
-Revision ID: 0008_add_visitor_and_authorization_tables
+Revision ID: 0008_add_visitor_tables
 Revises: 0007_add_resident_table
 Create Date: 2026-08-25 15:10:00.000000
 
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = "0008_add_visitor_and_authorization_tables"
+revision: str = "0008_add_visitor_tables"
 down_revision: Union[str, Sequence[str], None] = "0007_add_resident_table"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
