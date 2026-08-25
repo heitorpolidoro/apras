@@ -59,3 +59,40 @@ class ResidentRelationship(StrEnum):
     OUTRO = "OUTRO"
 
 
+class AuthorizationType(StrEnum):
+    """Enumeration for authorization type."""
+
+    SINGLE = "SINGLE"
+    PERMANENT = "PERMANENT"
+
+
+class AuthorizationStatus(StrEnum):
+    """Enumeration for authorization status."""
+
+    ACTIVE = "ACTIVE"
+    EXPIRED = "EXPIRED"
+    REVOKED = "REVOKED"
+
+
+class DayOfWeek(StrEnum):
+    """Enumeration for days of week."""
+
+    MON = "MON"
+    TUE = "TUE"
+    WED = "WED"
+    THU = "THU"
+    FRI = "FRI"
+    SAT = "SAT"
+    SUN = "SUN"
+
+
+class ShiftType(StrEnum):
+    """Enumeration for shift types."""
+
+    MORNING = "MORNING"
+    AFTERNOON = "AFTERNOON"
+    NIGHT = "NIGHT"
+    FULL_DAY = "FULL_DAY"
+
+
+

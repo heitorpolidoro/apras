@@ -1,0 +1,309 @@
+{
+  "tasks": [
+    {
+      "id": "password-recovery",
+      "title": "Implement password recovery flow (forgot password / reset password) in frontend and backend",
+      "status": "done",
+      "justification": "Implemented JWT password reset token mechanism, forgot/reset password API endpoints, forgot/reset frontend screens, and updated user table checks."
+    },
+    {
+      "id": "dynamic-visibility",
+      "title": "Refactor task visibility from boolean flag to dynamic UserType-based targeting",
+      "status": "done",
+      "justification": "Successfully implemented many-to-many User-UserType relationships, replaced manager_visible with visible_to_id in Task, created and ran Alembic migrations on prod database, updated backend RBAC checks/endpoints, and refactored the frontend dashboard checklist and task creation/edit select dropdown. Fully tested and deployed."
+    },
+    {
+      "id": "alerts-to-modals",
+      "title": "Replace all inline Alerts with modal dialogs on the frontend",
+      "status": "done",
+      "justification": "Created premium reusable AlertModal component with backdrop blur and animations. Replaced all inline Alert banners across 8 pages and verified 100% passing tests."
+    },
+    {
+      "id": "cpf-validation",
+      "title": "Add mandatory CPF field on user signup with mathematical validation",
+      "status": "done",
+      "justification": "Added mandatory CPF field to User SQLModel, implemented Pydantic check-digit validation, generated Alembic migration with automatic valid placeholder CPFs for existing database rows, added masked CPF input to SignupPage and read-only CPF display in AdminUserDashboard, and verified 100% test coverage."
+    },
+    {
+      "id": "admin-role-simulation",
+      "title": "Allow administrators to simulate/impersonate other roles and user types in frontend",
+      "status": "done",
+      "justification": "Implemented frontend-only role/UserType simulation per docs/superpowers/specs/2026-08-10-admin-role-simulation-design.md: SimulationContext, useEffectiveIdentity hook, permission-mirroring functions for task visibility/edit gating, an Axios interceptor blocking all mutations while simulating, and Navbar controls + persistent banner. 366 frontend tests passing. Merged to master (e0582d4) and pushed."
+    },
+    {
+      "id": "user-profile-fields",
+      "title": "Add address, block/lot, and phone fields to user registration and administration",
+      "status": "done",
+      "justification": "Scope reduced during brainstorming to data-layer-only (SQLModel, Alembic migration 0005_add_profile_fields_to_user, Pydantic schemas, frontend TS type) per docs/superpowers/specs/2026-08-10-user-profile-fields-design.md. UI work split into user-profile-fields-ui (backlog). 165 backend tests passing (96.23% coverage), 366 frontend tests passing. Merged to master (b003f6e) and pushed."
+    },
+    {
+      "id": "user-profile-fields-ui",
+      "title": "Build UI to view/edit user address, block/lot, and phone (signup form, admin dashboard, possible self-service profile page)",
+      "status": "backlog",
+      "justification": "Split off from user-profile-fields during brainstorming: that task was descoped to data-layer-only (model/schema/migration), since these fields' required-ness, formatting/masking, and who can edit them (admin-only today, or a new self-service profile page) still need their own design pass."
+    },
+    {
+      "id": "menu-access-by-type",
+      "title": "Restrict access to Tarefas and Categorias navigation menus to specific UserTypes",
+      "status": "backlog",
+      "justification": "Limit navigation and access to Tarefas and Categorias pages based on user types."
+    },
+    {
+      "id": "role-as-usertype-permission",
+      "title": "Treat UserRole as a UserType for permission evaluation",
+      "status": "backlog",
+      "justification": "Include UserRole in permission evaluations alongside UserTypes."
+    },
+    {
+      "id": "guest-landing-page",
+      "title": "Create dedicated landing/welcome page for Guest users",
+      "status": "backlog",
+      "justification": "Add a dedicated initial page for users with GUEST role awaiting approval or guest access."
+    },
+    {
+      "id": "task-visibility-types",
+      "title": "Add UserTypes to task visibility configuration",
+      "status": "backlog",
+      "justification": "Include user types in task visibility configuration and filtering."
+    },
+    {
+      "id": "gatekeeper-user-role",
+      "title": "Create PORTEIRO (Gatekeeper) user role and dedicated Portaria dashboard",
+      "status": "backlog",
+      "justification": "Dedicated role and interface for gatekeepers to check-in/check-out visitors and contractors."
+    },
+    {
+      "id": "whatsapp-integration",
+      "title": "Integrate WhatsApp API for sending QR passes, visitor entry alerts, and announcements",
+      "status": "backlog",
+      "justification": "Automated WhatsApp notifications for visitor entry, QR pass sharing, and urgent HOA notices."
+    },
+    {
+      "id": "qr-code-visitor-passes",
+      "title": "Generate dynamic QR code passes for visitor/contractor entry validation at turnstiles/gates",
+      "status": "backlog",
+      "justification": "Digital QR code pass generation for visitor access validation."
+    },
+    {
+      "id": "T001",
+      "title": "Cadastro de Lotes (quadra, lote, endereço) e vinculação de usuários",
+      "status": "done",
+      "justification": "Independently verified by QA. Backend tests passing with 97.01% coverage (>90%), 373 frontend vitest tests passing (100%), Alembic migration 0006 verified, composite unique constraints and RBAC rules fully enforced.",
+      "expected_results": [
+        "Lot CRUD data model and endpoints created",
+        "User-to-Lot binding mechanism implemented",
+        "Frontend Lot list and detail management pages active"
+      ],
+      "blockedBy": [],
+      "spec_path": "docs/tasks/T001-spec.md",
+      "spec_iterations": 1,
+      "qa_iterations": 1,
+      "last_review_findings": [],
+      "created_at": "2026-08-23T02:22:42-03:00",
+      "updated_at": "2026-08-24T04:14:17-03:00"
+    },
+    {
+      "id": "T002",
+      "title": "Cadastro de Moradores por Lote e vinculação de contas de usuário",
+      "status": "done",
+      "justification": "Independently verified by QA. Backend tests passing with 96.26% coverage (>90%), 381 frontend vitest tests passing (100%), Alembic migration 0007 verified, CPF check digit validation, signup auto-linking, manual binding, soft deletion, and RBAC rules fully enforced.",
+      "expected_results": [
+        "Resident model tied to Lot created",
+        "Resident profile linking with User accounts implemented",
+        "Resident management UI by lot enabled"
+      ],
+      "blockedBy": [],
+      "spec_path": "docs/tasks/T002-spec.md",
+      "spec_iterations": 1,
+      "qa_iterations": 1,
+      "last_review_findings": [],
+      "created_at": "2026-08-23T02:22:42-03:00",
+      "updated_at": "2026-08-25T14:55:00-03:00"
+    },
+    {
+      "id": "T003",
+      "title": "Cadastro e Autorização de Visitantes e Prestadores de Serviço",
+      "status": "done",
+      "justification": "Independently verified by QA. Backend tests passing with 95.39% coverage (>90%), 394 frontend vitest tests passing (100%), Alembic migration 0008 verified, Visitor/VisitorAuthorization/AccessLog data models with FKs and indices created, single vs permanent authorization rules with shift/day/date window validation enforced, gatekeeper check-in/out logic with search by name/CPF/plate verified, auto-expiration of single-entry authorizations enforced, and RBAC rules for Admin/Director/Manager/Resident/Gatekeeper fully satisfied.",
+      "expected_results": [
+        "Visitor and pre-authorization models created",
+        "Rules for single/recurring authorizations with day and shift constraints enforced",
+        "Portaria gatekeeper check-in/check-out endpoints and interface built"
+      ],
+      "blockedBy": [],
+      "spec_path": "docs/tasks/T003-spec.md",
+      "spec_iterations": 1,
+      "qa_iterations": 1,
+      "last_review_findings": [],
+      "created_at": "2026-08-23T02:22:42-03:00",
+      "updated_at": "2026-08-25T15:21:40-03:00"
+    },
+    {
+      "id": "T004",
+      "title": "Gestão e Armazenamento de Fotos nos Cadastros",
+      "status": "backlog",
+      "justification": "Photo attachment service for employees, residents, and visitors.",
+      "expected_results": [
+        "Secure file storage backend service configured",
+        "Photo upload, thumbnail generation, and cropping API ready",
+        "Webcam and photo selector frontend component created"
+      ],
+      "blockedBy": [],
+      "spec_path": "docs/tasks/T004-spec.md",
+      "spec_iterations": 0,
+      "qa_iterations": 0,
+      "last_review_findings": [],
+      "created_at": "2026-08-23T02:22:42-03:00",
+      "updated_at": "2026-08-23T02:22:42-03:00"
+    },
+    {
+      "id": "T005",
+      "title": "Controle de Acesso e Integração de Reconhecimento Facial",
+      "status": "blocked",
+      "justification": "Blocked on T003, T004",
+      "expected_results": [
+        "AccessDevice model and device management API created",
+        "Facial template sync and verification webhooks implemented",
+        "Live access control and gate monitor UI implemented"
+      ],
+      "blockedBy": [
+        "T003",
+        "T004"
+      ],
+      "spec_path": "docs/tasks/T005-spec.md",
+      "spec_iterations": 0,
+      "qa_iterations": 0,
+      "last_review_findings": [],
+      "created_at": "2026-08-23T02:22:42-03:00",
+      "updated_at": "2026-08-23T02:22:42-03:00"
+    },
+    {
+      "id": "T006",
+      "title": "Blog/Feed de Comunicados e Notícias",
+      "status": "blocked",
+      "justification": "Blocked on T004",
+      "expected_results": [
+        "Announcement post and media models created",
+        "Instagram-style news feed with image/PDF carousels built",
+        "Comment threads, read receipts, and publisher role guards active"
+      ],
+      "blockedBy": [
+        "T004"
+      ],
+      "spec_path": "docs/tasks/T006-spec.md",
+      "spec_iterations": 0,
+      "qa_iterations": 0,
+      "last_review_findings": [],
+      "created_at": "2026-08-23T02:22:42-03:00",
+      "updated_at": "2026-08-23T02:22:42-03:00"
+    },
+    {
+      "id": "T007",
+      "title": "Acompanhamento Físico e Financeiro de Obras",
+      "status": "backlog",
+      "justification": "Tracking of physical progress and financial execution of HOA capital projects.",
+      "expected_results": [
+        "Construction project and milestone data models implemented",
+        "Physical progress indicator and milestone status workflow built",
+        "Budget vs executed financial tracking and project updates feed created"
+      ],
+      "blockedBy": [],
+      "spec_path": "docs/tasks/T007-spec.md",
+      "spec_iterations": 0,
+      "qa_iterations": 0,
+      "last_review_findings": [],
+      "created_at": "2026-08-23T02:22:42-03:00",
+      "updated_at": "2026-08-23T02:22:42-03:00"
+    },
+    {
+      "id": "T008",
+      "title": "Área e Dashboard Financeiro da Associação",
+      "status": "backlog",
+      "justification": "Association financial health, cash balance, statement, and invoice drill-down.",
+      "expected_results": [
+        "Financial transaction and budget models created",
+        "Cash balance and statement of inflows/outflows calculated",
+        "Budget vs actual execution table with 1-click invoice PDF drill-down completed"
+      ],
+      "blockedBy": [],
+      "spec_path": "docs/tasks/T008-spec.md",
+      "spec_iterations": 0,
+      "qa_iterations": 0,
+      "last_review_findings": [],
+      "created_at": "2026-08-23T02:22:42-03:00",
+      "updated_at": "2026-08-23T02:22:42-03:00"
+    },
+    {
+      "id": "T009",
+      "title": "Central de Documentos e Arquivos da Associação",
+      "status": "backlog",
+      "justification": "Categorized repository for legal, financial, and administrative HOA documents.",
+      "expected_results": [
+        "Document folder tree and document metadata models created",
+        "Role-gated folder access control implemented",
+        "Document previewer, tag search, and download tracker built"
+      ],
+      "blockedBy": [],
+      "spec_path": "docs/tasks/T009-spec.md",
+      "spec_iterations": 0,
+      "qa_iterations": 0,
+      "last_review_findings": [],
+      "created_at": "2026-08-23T02:22:42-03:00",
+      "updated_at": "2026-08-23T02:22:42-03:00"
+    },
+    {
+      "id": "T010",
+      "title": "Livro de Ocorrências e Atendimento de Reclamações",
+      "status": "readytodo",
+      "justification": "Dependency on T001 satisfied.",
+      "expected_results": [
+        "Occurrence model with auto-generated protocol numbers created",
+        "Status workflow (Open -> Under Review -> Resolved) with internal timeline log built",
+        "Resident occurrence submission UI with photo evidence attachment active"
+      ],
+      "blockedBy": [],
+      "spec_path": "docs/tasks/T010-spec.md",
+      "spec_iterations": 0,
+      "qa_iterations": 0,
+      "last_review_findings": [],
+      "created_at": "2026-08-23T02:22:42-03:00",
+      "updated_at": "2026-08-24T06:04:16-03:00"
+    },
+    {
+      "id": "T011",
+      "title": "Canal de Críticas, Sugestões e Fale Conosco",
+      "status": "backlog",
+      "justification": "Direct board feedback and contact channel separate from operational occurrences.",
+      "expected_results": [
+        "Feedback message model supporting anonymous options created",
+        "Board response workflow and response notification system built",
+        "Categorized inbox for administration and resident contact UI deployed"
+      ],
+      "blockedBy": [],
+      "spec_path": "docs/tasks/T011-spec.md",
+      "spec_iterations": 0,
+      "qa_iterations": 0,
+      "last_review_findings": [],
+      "created_at": "2026-08-23T02:22:42-03:00",
+      "updated_at": "2026-08-23T02:22:42-03:00"
+    },
+    {
+      "id": "T012",
+      "title": "Análise Comparativa e Recursos Avançados COM21",
+      "status": "backlog",
+      "justification": "Benchmarking against COM21 to incorporate package management, reservations, and assemblies.",
+      "expected_results": [
+        "COM21 parity matrix and gap analysis completed",
+        "Architectural specifications for package tracking (encomendas) and area reservations created",
+        "Roadmap for web push notifications and offline gatekeeper mode finalized"
+      ],
+      "blockedBy": [],
+      "spec_path": "docs/tasks/T012-spec.md",
+      "spec_iterations": 0,
+      "qa_iterations": 0,
+      "last_review_findings": [],
+      "created_at": "2026-08-23T02:22:42-03:00",
+      "updated_at": "2026-08-23T02:22:42-03:00"
+    }
+  ]
+}

@@ -1,6 +1,8 @@
 """Global exception handlers."""
 
 from app.core.exceptions import (
+    AccessLogNotFoundError,
+    AuthorizationNotFoundError,
     DomainError,
     ForbiddenError,
     LotAlreadyExistsError,
@@ -11,6 +13,7 @@ from app.core.exceptions import (
     TaskNotFoundError,
     UserLotLinkAlreadyExistsError,
     UserLotLinkNotFoundError,
+    VisitorNotFoundError,
 )
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
@@ -31,7 +34,16 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
     status_code = status.HTTP_400_BAD_REQUEST
 
     if isinstance(
-        exc, (TaskNotFoundError, LotNotFoundError, UserLotLinkNotFoundError, ResidentNotFoundError)
+        exc,
+        (
+            TaskNotFoundError,
+            LotNotFoundError,
+            UserLotLinkNotFoundError,
+            ResidentNotFoundError,
+            VisitorNotFoundError,
+            AuthorizationNotFoundError,
+            AccessLogNotFoundError,
+        ),
     ):
         status_code = status.HTTP_404_NOT_FOUND
     elif isinstance(exc, ForbiddenError):
@@ -43,5 +55,6 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
         status_code=status_code,
         content={"detail": exc.message},
     )
+
 
 

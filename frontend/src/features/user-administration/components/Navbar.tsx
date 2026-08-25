@@ -71,6 +71,36 @@ const Navbar: React.FC = () => {
           </Link>
         )}
 
+        {effectiveRole !== UserRole.GUEST && (
+          <Link
+            to="/authorizations"
+            className={cn(
+              "text-sm font-semibold transition-all hover:text-primary relative py-1",
+              location.pathname === "/authorizations"
+                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
+                : "text-muted-foreground",
+            )}
+          >
+            {t("nav.authorizations")}
+          </Link>
+        )}
+
+        {(effectiveRole === UserRole.ADMINISTRATOR ||
+          effectiveRole === UserRole.DIRECTOR ||
+          effectiveRole === UserRole.MANAGER) && (
+          <Link
+            to="/gate"
+            className={cn(
+              "text-sm font-semibold transition-all hover:text-primary relative py-1",
+              location.pathname === "/gate"
+                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
+                : "text-muted-foreground",
+            )}
+          >
+            {t("nav.gate")}
+          </Link>
+        )}
+
         {effectiveRole === UserRole.ADMINISTRATOR && (
           <Link
             to="/admin/users"
@@ -84,6 +114,7 @@ const Navbar: React.FC = () => {
             {t("nav.administration")}
           </Link>
         )}
+
       </div>
 
       <div className="flex items-center gap-5">

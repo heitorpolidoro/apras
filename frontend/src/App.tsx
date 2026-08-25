@@ -12,6 +12,8 @@ import { AuthProvider } from "./features/user-administration/context/AuthContext
 import { SimulationProvider } from "./features/user-administration/context/SimulationContext";
 import Navbar from "./features/user-administration/components/Navbar";
 import SimulationBanner from "./features/user-administration/components/SimulationBanner";
+import { VisitorAuthPage } from "./features/visitor-management/components/VisitorAuthPage";
+import { GatekeeperDashboard } from "./features/visitor-management/components/GatekeeperDashboard";
 import { UserRole } from "./types/auth";
 import "./App.css";
 
@@ -55,6 +57,24 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <LotsPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/authorizations"
+                element={
+                  <ProtectedRoute>
+                    <VisitorAuthPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/gate"
+                element={
+                  <ProtectedRoute>
+                    <GatekeeperDashboard />
                   </ProtectedRoute>
                 }
               />

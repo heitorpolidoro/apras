@@ -2,9 +2,13 @@
 
 from .category import Category
 from .enums import (
+    AuthorizationStatus,
+    AuthorizationType,
+    DayOfWeek,
     LotAssociationType,
     LotStatus,
     ResidentRelationship,
+    ShiftType,
     TaskPriority,
     TaskStatus,
     UserRole,
@@ -15,14 +19,20 @@ from .task import Task, TaskHistory
 from .user import User
 from .user_type import UserType
 from .user_type_link import UserUserTypeLink
+from .visitor import AccessLog, Visitor, VisitorAuthorization
 
 __all__ = [
+    "AccessLog",
+    "AuthorizationStatus",
+    "AuthorizationType",
     "Category",
+    "DayOfWeek",
     "Lot",
     "LotAssociationType",
     "LotStatus",
     "Resident",
     "ResidentRelationship",
+    "ShiftType",
     "Task",
     "TaskHistory",
     "TaskPriority",
@@ -32,6 +42,9 @@ __all__ = [
     "UserRole",
     "UserType",
     "UserUserTypeLink",
+    "Visitor",
+    "VisitorAuthorization",
 ]
+
 
 

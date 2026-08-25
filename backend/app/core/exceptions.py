@@ -74,3 +74,72 @@ class ResidentCPFConflictError(DomainError):
         super().__init__(f"Active resident with CPF '{cpf}' already exists in this lot")
 
 
+class VisitorNotFoundError(DomainError):
+    """Raised when a visitor is not found."""
+
+    def __init__(self, visitor_id: UUID | str) -> None:
+        super().__init__(f"Visitor with ID {visitor_id} not found")
+
+
+class AuthorizationNotFoundError(DomainError):
+    """Raised when an authorization is not found."""
+
+    def __init__(self, auth_id: UUID | str) -> None:
+        super().__init__(f"Authorization with ID {auth_id} not found")
+
+
+class AuthorizationExpiredError(DomainError):
+    """Raised when authorization is expired."""
+
+    def __init__(self, message: str = "Authorization has expired") -> None:
+        super().__init__(message)
+
+
+class AuthorizationRevokedError(DomainError):
+    """Raised when authorization has been revoked."""
+
+    def __init__(self, message: str = "Authorization has been revoked") -> None:
+        super().__init__(message)
+
+
+class AuthorizationInvalidShiftError(DomainError):
+    """Raised when entry check-in shift is invalid."""
+
+    def __init__(self, message: str = "Entry denied: shift window not allowed") -> None:
+        super().__init__(message)
+
+
+AccessDeniedShiftError = AuthorizationInvalidShiftError
+
+
+class AuthorizationInvalidDayError(DomainError):
+    """Raised when entry check-in day of week is invalid."""
+
+    def __init__(self, message: str = "Entry denied: day of week not allowed") -> None:
+        super().__init__(message)
+
+
+AccessDeniedDayError = AuthorizationInvalidDayError
+
+
+class AccessLogNotFoundError(DomainError):
+    """Raised when access log is not found."""
+
+    def __init__(self, message: str = "Access log not found") -> None:
+        super().__init__(message)
+
+
+NoActiveCheckInError = AccessLogNotFoundError
+
+
+class OpenEntryExistsError(DomainError):
+    """Raised when visitor already has an active open check-in."""
+
+    def __init__(self, message: str = "Visitor already has an active check-in") -> None:
+        super().__init__(message)
+
+
+VisitorAlreadyCheckedInError = OpenEntryExistsError
+
+
+

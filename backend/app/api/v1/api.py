@@ -1,13 +1,16 @@
 """API v1 router."""
 
 from app.api.v1.endpoints import (
+    access_logs,
     auth,
+    authorizations,
     categories,
     lots,
     residents,
     tasks,
     user_types,
     users,
+    visitors,
 )
 from fastapi import APIRouter
 
@@ -27,5 +30,9 @@ api_router.include_router(categories.router, prefix="/categories", tags=["catego
 api_router.include_router(user_types.router, prefix="/user-types", tags=["user-types"])
 api_router.include_router(lots.router, prefix="/lots", tags=["lots"])
 api_router.include_router(residents.router, tags=["residents"])
+api_router.include_router(visitors.router, prefix="/visitors", tags=["visitors"])
+api_router.include_router(authorizations.router, tags=["authorizations"])
+api_router.include_router(access_logs.router, prefix="/access-logs", tags=["access-logs"])
+
 
 
