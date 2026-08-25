@@ -126,5 +126,34 @@ class OccurrencePriority(StrEnum):
     URGENT = "URGENT"
 
 
+class EntityType(StrEnum):
+    """Enumeration for photo asset target entity types."""
+
+    RESIDENT = "RESIDENT"
+    VISITOR = "VISITOR"
+    EMPLOYEE = "EMPLOYEE"
+    LOT = "LOT"
+    ANNOUNCEMENT = "ANNOUNCEMENT"
+    OCCURRENCE = "OCCURRENCE"
+
+
+class StorageProvider(StrEnum):
+    """Enumeration for photo storage backend providers."""
+
+    LOCAL_DISK = "LOCAL_DISK"
+    VERCEL_BLOB = "VERCEL_BLOB"
+    AWS_S3 = "AWS_S3"
+    CLOUDINARY = "CLOUDINARY"
+
+
+class PhotoApprovalStatus(StrEnum):
+    """Enumeration for photo asset approval workflow status."""
+
+    PENDING_APPROVAL = "PENDING_APPROVAL"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+
+
+
 
 

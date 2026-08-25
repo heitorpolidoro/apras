@@ -75,6 +75,10 @@ def get_current_user(
     return user
 
 
+get_current_active_user = get_current_user
+get_db = get_session
+
+
 def get_current_active_admin(
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> User:

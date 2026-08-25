@@ -9,10 +9,15 @@ from app.core.exceptions import (
     FolderAccessDeniedError,
     ForbiddenError,
     InvalidFolderHierarchyError,
+    InvalidPhotoFormatError,
     LotAlreadyExistsError,
     LotNotFoundError,
+    MediaAssetNotFoundError,
     OccurrenceAccessForbiddenError,
     OccurrenceNotFoundError,
+    PhotoApprovalPermissionError,
+    PhotoFileTooLargeError,
+    PhotoRejectionReasonRequiredError,
     ResidentAlreadyLinkedError,
     ResidentCPFConflictError,
     ResidentNotFoundError,
@@ -52,14 +57,26 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             OccurrenceNotFoundError,
             DocumentFolderNotFoundError,
             DocumentNotFoundError,
+            MediaAssetNotFoundError,
         ),
     ):
         status_code = status.HTTP_404_NOT_FOUND
-    elif isinstance(exc, (ForbiddenError, OccurrenceAccessForbiddenError, FolderAccessDeniedError)):
+    elif isinstance(
+        exc,
+        (ForbiddenError, OccurrenceAccessForbiddenError, FolderAccessDeniedError, PhotoApprovalPermissionError),
+    ):
         status_code = status.HTTP_403_FORBIDDEN
     elif isinstance(exc, ResidentCPFConflictError):
         status_code = status.HTTP_409_CONFLICT
-    elif isinstance(exc, InvalidFolderHierarchyError):
+    elif isinstance(
+        exc,
+        (
+            InvalidFolderHierarchyError,
+            PhotoFileTooLargeError,
+            InvalidPhotoFormatError,
+            PhotoRejectionReasonRequiredError,
+        ),
+    ):
         status_code = status.HTTP_400_BAD_REQUEST
 
     return JSONResponse(

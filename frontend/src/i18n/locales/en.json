@@ -13,7 +13,22 @@
     "gate": "Gatekeeper",
     "occurrences": "Occurrence Book",
     "documents": "Document Repository",
+    "photoApprovals": "Photo Approvals",
     "administration": "Administration"
+  },
+  "photos": {
+    "title": "Photo Approvals",
+    "pending": "Pending",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "uploadModalTitle": "Upload Registration Photo",
+    "webcamModalTitle": "Capture Photo from Camera",
+    "cropTitle": "Adjust Photo Crop",
+    "confirmCrop": "Confirm Crop",
+    "approveBtn": "Approve",
+    "rejectBtn": "Reject",
+    "rejectionReasonTitle": "Rejection Reason",
+    "confirmRejection": "Confirm Rejection"
   },
 
   "categories": {

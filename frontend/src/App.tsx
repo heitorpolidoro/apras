@@ -16,6 +16,7 @@ import { VisitorAuthPage } from "./features/visitor-management/components/Visito
 import { GatekeeperDashboard } from "./features/visitor-management/components/GatekeeperDashboard";
 import { OccurrenceBookPage } from "./features/occurrence-management/components/OccurrenceBookPage";
 import { DocumentCenterPage } from "./features/document-management/components/DocumentCenterPage";
+import PhotoApprovalQueuePage from "./features/media-management/components/PhotoApprovalQueuePage";
 import { UserRole } from "./types/auth";
 import "./App.css";
 
@@ -104,6 +105,15 @@ function App() {
                 element={
                   <ProtectedRoute requiredRole={UserRole.ADMINISTRATOR}>
                     <AdminUserDashboard />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/admin/photo-approvals"
+                element={
+                  <ProtectedRoute requiredRole={UserRole.DIRECTOR}>
+                    <PhotoApprovalQueuePage />
                   </ProtectedRoute>
                 }
               />

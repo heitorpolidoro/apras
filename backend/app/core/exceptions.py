@@ -196,6 +196,49 @@ class InvalidFolderHierarchyError(DomainError):
 FolderNotEmptyError = InvalidFolderHierarchyError
 
 
+class MediaAssetNotFoundError(DomainError):
+    """Raised when a photo asset is not found."""
+
+    def __init__(self, photo_id: UUID | str = "") -> None:
+        msg = f"Foto {photo_id} não encontrada." if photo_id else "Foto não encontrada."
+        super().__init__(msg)
+
+
+class PhotoFileTooLargeError(DomainError):
+    """Raised when uploaded photo file exceeds 5MB limit."""
+
+    def __init__(self, message: str = "Arquivo excede o limite máximo permitido de 5MB.") -> None:
+        super().__init__(message)
+
+
+ImageSizeExceededError = PhotoFileTooLargeError
+
+
+class InvalidPhotoFormatError(DomainError):
+    """Raised when uploaded photo file has invalid MIME type or corrupted binary."""
+
+    def __init__(self, message: str = "Formato de imagem inválido. Formatos aceitos: JPEG, PNG, WebP.") -> None:
+        super().__init__(message)
+
+
+InvalidImageFormatError = InvalidPhotoFormatError
+
+
+class PhotoApprovalPermissionError(DomainError):
+    """Raised when user lacks permission to approve or reject photos."""
+
+    def __init__(self, message: str = "Apenas Administradores e Diretores podem aprovar ou rejeitar fotos.") -> None:
+        super().__init__(message)
+
+
+class PhotoRejectionReasonRequiredError(DomainError):
+    """Raised when rejection reason is empty or missing."""
+
+    def __init__(self, message: str = "Motivo de rejeição é obrigatório.") -> None:
+        super().__init__(message)
+
+
+
 
 
 

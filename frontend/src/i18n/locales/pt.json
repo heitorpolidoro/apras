@@ -13,7 +13,22 @@
     "gate": "Portaria",
     "occurrences": "Livro de Ocorrências",
     "documents": "Central de Documentos",
+    "photoApprovals": "Aprovações de Fotos",
     "administration": "Administração"
+  },
+  "photos": {
+    "title": "Aprovações de Fotos",
+    "pending": "Pendente",
+    "approved": "Aprovada",
+    "rejected": "Rejeitada",
+    "uploadModalTitle": "Enviar Foto de Cadastro",
+    "webcamModalTitle": "Capturar Foto da Câmera",
+    "cropTitle": "Ajustar Recorte da Foto",
+    "confirmCrop": "Confirmar Recorte",
+    "approveBtn": "Aprovar",
+    "rejectBtn": "Rejeitar",
+    "rejectionReasonTitle": "Motivo da Rejeição",
+    "confirmRejection": "Confirmar Rejeição"
   },
 
   "categories": {

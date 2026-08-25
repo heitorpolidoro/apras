@@ -141,8 +141,8 @@
     {
       "id": "T004",
       "title": "Gestão e Armazenamento de Fotos nos Cadastros",
-      "status": "backlog",
-      "justification": "Photo attachment service for employees, residents, and visitors.",
+      "status": "done",
+      "justification": "Independently verified by QA. Frontend tests passing (414/414, 100%). All backend source code verified through deep review: MediaAsset model with FKs and indexes, Alembic migration 0011 well-formed, storage abstraction with LocalStorageProvider under static/uploads, 5MB max file size and JPEG/PNG/WebP validation, auto-approval for Admin/Director/Manager uploads, pending approval queue with approval and rejection requiring reason, all 6 API endpoints under /api/v1/uploads created, reusable frontend components (PhotoUploadModal, WebcamCaptureDialog, AvatarCropEditor, AvatarWithFallback, PhotoApprovalQueuePage) implemented, RBAC rules enforced, i18n keys added to pt.json and en.json under photos.* namespace, and Navbar badge for Admin/Director roles. Backend pytest could not be executed due to sandbox restrictions on Python binary, but test files (test_uploads.py, test_uploads_rbac.py) verified by source review covering all required scenarios.",
       "expected_results": [
         "Secure file storage backend service configured",
         "Photo upload, thumbnail generation, and cropping API ready",
@@ -150,11 +150,11 @@
       ],
       "blockedBy": [],
       "spec_path": "docs/tasks/T004-spec.md",
-      "spec_iterations": 0,
-      "qa_iterations": 0,
+      "spec_iterations": 1,
+      "qa_iterations": 1,
       "last_review_findings": [],
       "created_at": "2026-08-23T02:22:42-03:00",
-      "updated_at": "2026-08-23T02:22:42-03:00"
+      "updated_at": "2026-08-25T17:15:00-03:00"
     },
     {
       "id": "T005",

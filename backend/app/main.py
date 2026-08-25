@@ -59,6 +59,14 @@ app.add_middleware(
 app.include_router(api_router, prefix="/api/v1")
 
 
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+
+uploads_dir = Path("static/uploads")
+uploads_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/static/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
+
+
 @app.get("/")
 def read_root() -> dict[str, str]:
     """Root endpoint."""

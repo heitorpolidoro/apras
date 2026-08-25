@@ -139,6 +139,20 @@ const Navbar: React.FC = () => {
           </Link>
         )}
 
+        {(effectiveRole === UserRole.ADMINISTRATOR || effectiveRole === UserRole.DIRECTOR) && (
+          <Link
+            to="/admin/photo-approvals"
+            className={cn(
+              "text-sm font-semibold transition-all hover:text-primary relative py-1",
+              location.pathname === "/admin/photo-approvals"
+                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
+                : "text-muted-foreground",
+            )}
+          >
+            {t("nav.photoApprovals", "Aprovações de Fotos")}
+          </Link>
+        )}
+
       </div>
 
       <div className="flex items-center gap-5">
