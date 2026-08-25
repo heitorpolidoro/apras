@@ -15,6 +15,7 @@ import SimulationBanner from "./features/user-administration/components/Simulati
 import { VisitorAuthPage } from "./features/visitor-management/components/VisitorAuthPage";
 import { GatekeeperDashboard } from "./features/visitor-management/components/GatekeeperDashboard";
 import { OccurrenceBookPage } from "./features/occurrence-management/components/OccurrenceBookPage";
+import { DocumentCenterPage } from "./features/document-management/components/DocumentCenterPage";
 import { UserRole } from "./types/auth";
 import "./App.css";
 
@@ -85,6 +86,15 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <OccurrenceBookPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/documents"
+                element={
+                  <ProtectedRoute>
+                    <DocumentCenterPage />
                   </ProtectedRoute>
                 }
               />

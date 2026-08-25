@@ -159,5 +159,43 @@ class OccurrenceAccessForbiddenError(DomainError):
 OccurrencePermissionError = OccurrenceAccessForbiddenError
 
 
+class DocumentFolderNotFoundError(DomainError):
+    """Raised when a document folder is not found."""
+
+    def __init__(self, folder_id: UUID | str) -> None:
+        super().__init__(f"Document folder with ID {folder_id} not found")
+
+
+FolderNotFoundError = DocumentFolderNotFoundError
+
+
+class DocumentNotFoundError(DomainError):
+    """Raised when a document is not found."""
+
+    def __init__(self, document_id: UUID | str) -> None:
+        super().__init__(f"Document with ID {document_id} not found")
+
+
+class FolderAccessDeniedError(DomainError):
+    """Raised when access to a document folder is denied."""
+
+    def __init__(self, message: str = "Access to document folder forbidden") -> None:
+        super().__init__(message)
+
+
+FolderAccessForbiddenError = FolderAccessDeniedError
+
+
+class InvalidFolderHierarchyError(DomainError):
+    """Raised when folder hierarchy is invalid or folder is not empty upon deletion."""
+
+    def __init__(self, message: str = "Invalid folder operation or folder hierarchy") -> None:
+        super().__init__(message)
+
+
+FolderNotEmptyError = InvalidFolderHierarchyError
+
+
+
 
 

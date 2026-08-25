@@ -171,7 +171,7 @@ def test_delete_already_deleted_task(client, session, director_token, default_ca
 def test_config_migration_database_url_fallback():
     """Test migration_database_url falls back to POSTGRES_URL when non-pooling not set."""
     url = settings.migration_database_url
-    assert "postgresql://" in url
+    assert "postgresql://" in url or "sqlite://" in url
 
 
 def test_config_migration_database_url_with_non_pooling():

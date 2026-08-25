@@ -1,6 +1,7 @@
 """Database models package."""
 
 from .category import Category
+from .document import AssociationDocument, DocumentDownloadLog, DocumentFolder
 from .enums import (
     AuthorizationStatus,
     AuthorizationType,
@@ -27,10 +28,13 @@ from .visitor import AccessLog, Visitor, VisitorAuthorization
 
 __all__ = [
     "AccessLog",
+    "AssociationDocument",
     "AuthorizationStatus",
     "AuthorizationType",
     "Category",
     "DayOfWeek",
+    "DocumentDownloadLog",
+    "DocumentFolder",
     "Lot",
     "LotAssociationType",
     "LotStatus",

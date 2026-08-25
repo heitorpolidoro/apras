@@ -3,8 +3,12 @@
 from app.core.exceptions import (
     AccessLogNotFoundError,
     AuthorizationNotFoundError,
+    DocumentFolderNotFoundError,
+    DocumentNotFoundError,
     DomainError,
+    FolderAccessDeniedError,
     ForbiddenError,
+    InvalidFolderHierarchyError,
     LotAlreadyExistsError,
     LotNotFoundError,
     OccurrenceAccessForbiddenError,
@@ -46,13 +50,17 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             AuthorizationNotFoundError,
             AccessLogNotFoundError,
             OccurrenceNotFoundError,
+            DocumentFolderNotFoundError,
+            DocumentNotFoundError,
         ),
     ):
         status_code = status.HTTP_404_NOT_FOUND
-    elif isinstance(exc, (ForbiddenError, OccurrenceAccessForbiddenError)):
+    elif isinstance(exc, (ForbiddenError, OccurrenceAccessForbiddenError, FolderAccessDeniedError)):
         status_code = status.HTTP_403_FORBIDDEN
     elif isinstance(exc, ResidentCPFConflictError):
         status_code = status.HTTP_409_CONFLICT
+    elif isinstance(exc, InvalidFolderHierarchyError):
+        status_code = status.HTTP_400_BAD_REQUEST
 
     return JSONResponse(
         status_code=status_code,

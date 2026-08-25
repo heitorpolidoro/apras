@@ -10,6 +10,8 @@ _PSYCOPG2_VALID_PARAMS = frozenset({
 
 
 def _clean_db_url(url: str) -> str:
+    if not url.startswith(("postgres://", "postgresql://")):
+        return url
     parsed = urlparse(url.replace("postgres://", "postgresql://", 1))
     kept = {k: v[0] for k, v in parse_qs(parsed.query).items() if k in _PSYCOPG2_VALID_PARAMS}
     return urlunparse(parsed._replace(query=urlencode(kept)))
