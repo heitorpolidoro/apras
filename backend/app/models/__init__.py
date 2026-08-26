@@ -1,12 +1,15 @@
 """Database models package."""
 
+from .access_control import AccessDevice, FacialAccessEvent, FacialTemplate
 from .category import Category
 from .document import AssociationDocument, DocumentDownloadLog, DocumentFolder
 from .enums import (
+    AccessDeviceStatus,
     AuthorizationStatus,
     AuthorizationType,
     DayOfWeek,
     EntityType,
+    FacialTemplateSyncStatus,
     LotAssociationType,
     LotStatus,
     OccurrenceCategory,
@@ -31,6 +34,8 @@ from .user_type_link import UserUserTypeLink
 from .visitor import AccessLog, Visitor, VisitorAuthorization
 
 __all__ = [
+    "AccessDevice",
+    "AccessDeviceStatus",
     "AccessLog",
     "AssociationDocument",
     "AuthorizationStatus",
@@ -40,6 +45,9 @@ __all__ = [
     "DocumentDownloadLog",
     "DocumentFolder",
     "EntityType",
+    "FacialAccessEvent",
+    "FacialTemplate",
+    "FacialTemplateSyncStatus",
     "Lot",
     "LotAssociationType",
     "LotStatus",

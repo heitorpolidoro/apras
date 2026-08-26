@@ -17,6 +17,8 @@ import { GatekeeperDashboard } from "./features/visitor-management/components/Ga
 import { OccurrenceBookPage } from "./features/occurrence-management/components/OccurrenceBookPage";
 import { DocumentCenterPage } from "./features/document-management/components/DocumentCenterPage";
 import PhotoApprovalQueuePage from "./features/media-management/components/PhotoApprovalQueuePage";
+import { AccessControlPage } from "./features/access-control/components/AccessControlPage";
+import { GateMonitorPage } from "./features/access-control/components/GateMonitorPage";
 import { UserRole } from "./types/auth";
 import "./App.css";
 
@@ -114,6 +116,32 @@ function App() {
                 element={
                   <ProtectedRoute requiredRole={UserRole.DIRECTOR}>
                     <PhotoApprovalQueuePage />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/admin/access-control"
+                element={
+                  <ProtectedRoute
+                    requiredRoles={[UserRole.ADMINISTRATOR, UserRole.DIRECTOR]}
+                  >
+                    <AccessControlPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/gate-monitor"
+                element={
+                  <ProtectedRoute
+                    requiredRoles={[
+                      UserRole.ADMINISTRATOR,
+                      UserRole.DIRECTOR,
+                      UserRole.MANAGER,
+                    ]}
+                  >
+                    <GateMonitorPage />
                   </ProtectedRoute>
                 }
               />

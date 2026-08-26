@@ -153,6 +153,36 @@ const Navbar: React.FC = () => {
           </Link>
         )}
 
+        {(effectiveRole === UserRole.ADMINISTRATOR || effectiveRole === UserRole.DIRECTOR) && (
+          <Link
+            to="/admin/access-control"
+            className={cn(
+              "text-sm font-semibold transition-all hover:text-primary relative py-1",
+              location.pathname === "/admin/access-control"
+                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
+                : "text-muted-foreground",
+            )}
+          >
+            {t("nav.accessControl", "Controle de Acesso")}
+          </Link>
+        )}
+
+        {(effectiveRole === UserRole.ADMINISTRATOR ||
+          effectiveRole === UserRole.DIRECTOR ||
+          effectiveRole === UserRole.MANAGER) && (
+          <Link
+            to="/gate-monitor"
+            className={cn(
+              "text-sm font-semibold transition-all hover:text-primary relative py-1",
+              location.pathname === "/gate-monitor"
+                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
+                : "text-muted-foreground",
+            )}
+          >
+            {t("nav.gateMonitor", "Monitor da Portaria")}
+          </Link>
+        )}
+
       </div>
 
       <div className="flex items-center gap-5">

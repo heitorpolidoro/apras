@@ -1,6 +1,7 @@
 """Global exception handlers."""
 
 from app.core.exceptions import (
+    AccessDeviceNotFoundError,
     AccessLogNotFoundError,
     AuthorizationNotFoundError,
     DocumentFolderNotFoundError,
@@ -8,6 +9,7 @@ from app.core.exceptions import (
     DomainError,
     FolderAccessDeniedError,
     ForbiddenError,
+    InvalidDeviceKeyError,
     InvalidFolderHierarchyError,
     InvalidPhotoFormatError,
     LotAlreadyExistsError,
@@ -58,6 +60,7 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             DocumentFolderNotFoundError,
             DocumentNotFoundError,
             MediaAssetNotFoundError,
+            AccessDeviceNotFoundError,
         ),
     ):
         status_code = status.HTTP_404_NOT_FOUND
@@ -68,6 +71,8 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
         status_code = status.HTTP_403_FORBIDDEN
     elif isinstance(exc, ResidentCPFConflictError):
         status_code = status.HTTP_409_CONFLICT
+    elif isinstance(exc, InvalidDeviceKeyError):
+        status_code = status.HTTP_401_UNAUTHORIZED
     elif isinstance(
         exc,
         (
