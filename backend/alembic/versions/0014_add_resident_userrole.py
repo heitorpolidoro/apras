@@ -1,7 +1,7 @@
 """Add RESIDENT value to userrole enum.
 
-Revision ID: 0014
-Revises: 0013
+Revision ID: 0014_add_resident_userrole
+Revises: 0013_add_construction_project
 Create Date: 2026-08-27
 """
 
