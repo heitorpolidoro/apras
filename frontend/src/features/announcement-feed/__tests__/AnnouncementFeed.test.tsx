@@ -241,6 +241,66 @@ describe("MediaCarousel", () => {
     const { container } = render(<MediaCarousel media={[]} />);
     expect(container).toBeEmptyDOMElement();
   });
+
+  it("navigates to the next and previous items, wrapping at the boundaries", () => {
+    const media: AnnouncementMedia[] = [
+      {
+        id: "m1",
+        announcement_id: "ann-1",
+        media_type: "IMAGE",
+        url: "/static/uploads/2026/08/photo-1.jpg",
+        mime_type: "image/jpeg",
+        file_size_bytes: 1000,
+        order_index: 0,
+        created_at: "2026-08-27T10:00:00Z",
+      },
+      {
+        id: "m2",
+        announcement_id: "ann-1",
+        media_type: "IMAGE",
+        url: "/static/uploads/2026/08/photo-2.jpg",
+        mime_type: "image/jpeg",
+        file_size_bytes: 1000,
+        order_index: 1,
+        created_at: "2026-08-27T10:00:00Z",
+      },
+      {
+        id: "m3",
+        announcement_id: "ann-1",
+        media_type: "IMAGE",
+        url: "/static/uploads/2026/08/photo-3.jpg",
+        mime_type: "image/jpeg",
+        file_size_bytes: 1000,
+        order_index: 2,
+        created_at: "2026-08-27T10:00:00Z",
+      },
+    ];
+
+    render(<MediaCarousel media={media} />);
+
+    const image = () => screen.getByAltText("Anexo do comunicado");
+    expect(image()).toHaveAttribute("src", "/static/uploads/2026/08/photo-1.jpg");
+
+    const nextBtn = screen.getByLabelText("Próximo");
+    const prevBtn = screen.getByLabelText("Anterior");
+
+    fireEvent.click(nextBtn);
+    expect(image()).toHaveAttribute("src", "/static/uploads/2026/08/photo-2.jpg");
+
+    fireEvent.click(nextBtn);
+    expect(image()).toHaveAttribute("src", "/static/uploads/2026/08/photo-3.jpg");
+
+    // wraps around back to the first item
+    fireEvent.click(nextBtn);
+    expect(image()).toHaveAttribute("src", "/static/uploads/2026/08/photo-1.jpg");
+
+    // wraps backward to the last item
+    fireEvent.click(prevBtn);
+    expect(image()).toHaveAttribute("src", "/static/uploads/2026/08/photo-3.jpg");
+
+    fireEvent.click(prevBtn);
+    expect(image()).toHaveAttribute("src", "/static/uploads/2026/08/photo-2.jpg");
+  });
 });
 
 describe("CommentThread", () => {
