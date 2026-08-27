@@ -45,8 +45,8 @@
     {
       "id": "APRAS-7",
       "title": "Build UI to view/edit user phone and address (dedicated contact-info screen for Administrator/Manager)",
-      "status": "inprogress",
-      "justification": "Split off from user-profile-fields during brainstorming, then rescoped on 2026-08-27 after the Lot/Resident subsystem (APRAS-15/16) shipped and made User.block_lot redundant (Lot/Resident now own structured address/block/lot_number/phone for residents). Scope narrowed to phone/address only, on a dedicated /users/contact-info screen editable by Administrator and Manager, no self-service. Spec approved: docs/superpowers/specs/2026-08-10-user-profile-fields-ui-design.md.",
+      "status": "done",
+      "justification": "Rescoped on 2026-08-27 to drop block_lot (superseded by Lot/Resident, APRAS-15/16). Independent code review and independent QA both APPROVED with no blocking findings — QA verified live via curl that a Manager sending role/is_active/user_type_ids alongside phone/address cannot escalate them (fields stay unchanged on the target user). Reused the existing ProtectedRoute requiredRoles array prop from a later task instead of a redundant mechanism. Backend 353 passed/3 skipped/96.98% coverage, frontend 511 passed — independently reproduced. Merged to master (4ccce9a) and pushed. QA also surfaced an unrelated latent bug (tracked as APRAS-30): UserRead's cpf validator can throw ResponseValidationError/500 for a non-canonical CPF on serialization, affecting GET /users/ and PATCH /users/{id} too.",
       "expected_results": [
         "PATCH /users/{id}/contact-info endpoint restricted to Administrator/Manager, accepting only phone/address",
         "New /users/contact-info page listing users with editable phone/address, gated to Administrator/Manager via ProtectedRoute",
@@ -55,11 +55,11 @@
       "blockedBy": [],
       "spec_path": "docs/superpowers/specs/2026-08-10-user-profile-fields-ui-design.md",
       "spec_iterations": 1,
-      "qa_iterations": 0,
+      "qa_iterations": 1,
       "last_review_findings": [],
       "created_at": "2026-08-10T00:00:00-03:00",
-      "updated_at": "2026-08-27T15:20:00-03:00",
-      "running": true
+      "updated_at": "2026-08-27T16:05:00-03:00",
+      "running": false
     },
     {
       "id": "APRAS-8",
@@ -393,6 +393,24 @@
       "last_review_findings": [],
       "created_at": "2026-08-27T15:20:00-03:00",
       "updated_at": "2026-08-27T15:20:00-03:00",
+      "running": false
+    },
+    {
+      "id": "APRAS-30",
+      "title": "Fix UserRead 500 on non-canonical CPF during response serialization",
+      "status": "backlog",
+      "justification": "Discovered by independent QA while verifying APRAS-7: UserRead's cpf field validator re-runs on response serialization, so any user row with a non-canonical CPF format (e.g. a historically-seeded/imported value) causes a ResponseValidationError (500) on every endpoint that returns UserRead -- GET /users/, PATCH /users/{id}, and PATCH /users/{id}/contact-info all affected. Not introduced by APRAS-7, pre-existing since the cpf-validation task.",
+      "expected_results": [
+        "Endpoints returning UserRead no longer 500 for a user with a non-canonical (but previously-accepted) CPF value",
+        "Existing CPF validation on write (signup, PATCH) is unaffected"
+      ],
+      "blockedBy": [],
+      "spec_path": "",
+      "spec_iterations": 0,
+      "qa_iterations": 0,
+      "last_review_findings": [],
+      "created_at": "2026-08-27T16:05:00-03:00",
+      "updated_at": "2026-08-27T16:05:00-03:00",
       "running": false
     }
   ]
