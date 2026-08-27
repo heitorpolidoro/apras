@@ -1,5 +1,8 @@
 """Global exception handlers."""
 
+from fastapi import Request, status
+from fastapi.responses import JSONResponse
+
 from app.core.exceptions import (
     AccessDeviceNotFoundError,
     AccessLogNotFoundError,
@@ -9,16 +12,24 @@ from app.core.exceptions import (
     AnnouncementNotFoundError,
     AnnouncementPermissionError,
     AuthorizationNotFoundError,
+    BudgetLineAlreadyExistsError,
+    BudgetLineNotFoundError,
     DocumentFolderNotFoundError,
     DocumentNotFoundError,
     DomainError,
+    FinanceAccessForbiddenError,
+    FinanceCategoryAlreadyExistsError,
+    FinanceCategoryNotFoundError,
+    FinanceCategoryTypeMismatchError,
+    FinancialTransactionNotFoundError,
     FolderAccessDeniedError,
     ForbiddenError,
     InvalidAnnouncementMediaFormatError,
     InvalidDeviceKeyError,
     InvalidFolderHierarchyError,
+    InvalidInvoiceFormatError,
     InvalidPhotoFormatError,
-    LotAlreadyExistsError,
+    InvoiceFileTooLargeError,
     LotNotFoundError,
     MediaAssetNotFoundError,
     MilestoneNotFoundError,
@@ -31,16 +42,12 @@ from app.core.exceptions import (
     ProjectInvalidProgressError,
     ProjectNotFoundError,
     ProjectUpdateNotFoundError,
-    ResidentAlreadyLinkedError,
     ResidentCPFConflictError,
     ResidentNotFoundError,
     TaskNotFoundError,
-    UserLotLinkAlreadyExistsError,
     UserLotLinkNotFoundError,
     VisitorNotFoundError,
 )
-from fastapi import Request, status
-from fastapi.responses import JSONResponse
 
 
 async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse:
@@ -78,6 +85,9 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             AnnouncementNotFoundError,
             AnnouncementCommentNotFoundError,
             AnnouncementMediaNotFoundError,
+            FinanceCategoryNotFoundError,
+            BudgetLineNotFoundError,
+            FinancialTransactionNotFoundError,
         ),
     ):
         status_code = status.HTTP_404_NOT_FOUND
@@ -90,13 +100,31 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             PhotoApprovalPermissionError,
             ProjectAccessForbiddenError,
             AnnouncementPermissionError,
+            FinanceAccessForbiddenError,
         ),
     ):
         status_code = status.HTTP_403_FORBIDDEN
-    elif isinstance(exc, ResidentCPFConflictError):
+    elif isinstance(
+        exc,
+        (
+            ResidentCPFConflictError,
+            BudgetLineAlreadyExistsError,
+            FinanceCategoryAlreadyExistsError,
+        ),
+    ):
         status_code = status.HTTP_409_CONFLICT
     elif isinstance(exc, InvalidDeviceKeyError):
         status_code = status.HTTP_401_UNAUTHORIZED
+    elif isinstance(exc, InvoiceFileTooLargeError):
+        status_code = status.HTTP_413_REQUEST_ENTITY_TOO_LARGE
+    elif isinstance(
+        exc,
+        (
+            FinanceCategoryTypeMismatchError,
+            InvalidInvoiceFormatError,
+        ),
+    ):
+        status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
     elif isinstance(
         exc,
         (

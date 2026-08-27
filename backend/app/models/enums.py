@@ -194,6 +194,13 @@ class AnnouncementMediaType(StrEnum):
     PDF = "PDF"
 
 
+class TransactionType(StrEnum):
+    """Enumeration for financial transaction / category direction."""
+
+    INCOME = "INCOME"
+    EXPENSE = "EXPENSE"
+
+
 
 
 

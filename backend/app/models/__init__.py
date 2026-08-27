@@ -30,8 +30,10 @@ from .enums import (
     StorageProvider,
     TaskPriority,
     TaskStatus,
+    TransactionType,
     UserRole,
 )
+from .finance import BudgetLine, FinanceCategory, FinancialTransaction
 from .lot import Lot, UserLotLink
 from .media_asset import MediaAsset
 from .occurrence import Occurrence, OccurrenceTimeline
@@ -55,6 +57,7 @@ __all__ = [
     "AssociationDocument",
     "AuthorizationStatus",
     "AuthorizationType",
+    "BudgetLine",
     "Category",
     "ConstructionProject",
     "DayOfWeek",
@@ -64,6 +67,8 @@ __all__ = [
     "FacialAccessEvent",
     "FacialTemplate",
     "FacialTemplateSyncStatus",
+    "FinanceCategory",
+    "FinancialTransaction",
     "Lot",
     "LotAssociationType",
     "LotStatus",
@@ -86,6 +91,7 @@ __all__ = [
     "TaskHistory",
     "TaskPriority",
     "TaskStatus",
+    "TransactionType",
     "User",
     "UserLotLink",
     "UserRole",

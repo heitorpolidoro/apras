@@ -18,6 +18,7 @@ import { OccurrenceBookPage } from "./features/occurrence-management/components/
 import { DocumentCenterPage } from "./features/document-management/components/DocumentCenterPage";
 import { ConstructionTrackerPage } from "./features/project-management/components/ConstructionTrackerPage";
 import { AnnouncementFeedPage } from "./features/announcement-feed/components/AnnouncementFeedPage";
+import { FinanceDashboardPage } from "./features/finance/components/FinanceDashboardPage";
 import PhotoApprovalQueuePage from "./features/media-management/components/PhotoApprovalQueuePage";
 import { AccessControlPage } from "./features/access-control/components/AccessControlPage";
 import { GateMonitorPage } from "./features/access-control/components/GateMonitorPage";
@@ -118,6 +119,22 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <AnnouncementFeedPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/finance"
+                element={
+                  <ProtectedRoute
+                    requiredRoles={[
+                      UserRole.ADMINISTRATOR,
+                      UserRole.DIRECTOR,
+                      UserRole.MANAGER,
+                      UserRole.RESIDENT,
+                    ]}
+                  >
+                    <FinanceDashboardPage />
                   </ProtectedRoute>
                 }
               />
