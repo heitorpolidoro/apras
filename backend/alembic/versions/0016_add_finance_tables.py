@@ -1,7 +1,7 @@
 """add_finance_tables
 
-Revision ID: 0015_add_finance_tables
-Revises: 0014_add_resident_userrole
+Revision ID: 0016_add_finance_tables
+Revises: 0015_merge_heads
 Create Date: 2026-08-27 12:00:00.000000
 
 """
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = "0015_add_finance_tables"
-down_revision: Union[str, Sequence[str], None] = "0014_add_resident_userrole"
+revision: str = "0016_add_finance_tables"
+down_revision: Union[str, Sequence[str], None] = "0015_merge_heads"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
