@@ -6,7 +6,7 @@ from uuid import UUID
 from app.api import deps as api_deps
 from app.db import get_session
 from app.models.category import Category
-from app.models.enums import UserRole
+from app.models.enums import MenuKey, UserRole
 from app.models.user import User
 from app.schemas.category import CategoryCreate, CategoryRead, CategoryUpdate
 from app.services.category_service import CategoryService
@@ -33,6 +33,7 @@ def list_categories(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> list[CategoryRead]:
     """List all active categories. All authenticated users can see categories."""
+    api_deps.assert_menu_access(current_user, MenuKey.CATEGORIES)
     return CategoryService.get_categories(session=session)
 
 
@@ -43,6 +44,7 @@ def create_category(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> CategoryRead:
     """Create a new category. ADMINISTRATOR and DIRECTOR only."""
+    api_deps.assert_menu_access(current_user, MenuKey.CATEGORIES)
     _require_category_write_permission(current_user)
     return CategoryService.create_category(session=session, category_in=category_in)
 
@@ -55,6 +57,7 @@ def update_category(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> CategoryRead:
     """Update a category. ADMINISTRATOR and DIRECTOR only."""
+    api_deps.assert_menu_access(current_user, MenuKey.CATEGORIES)
     _require_category_write_permission(current_user)
     db_category = session.get(Category, category_id)
     if not db_category:
@@ -71,6 +74,7 @@ def delete_category(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> None:
     """Deactivate a category. ADMINISTRATOR and DIRECTOR only."""
+    api_deps.assert_menu_access(current_user, MenuKey.CATEGORIES)
     _require_category_write_permission(current_user)
     db_category = session.get(Category, category_id)
     if not db_category:

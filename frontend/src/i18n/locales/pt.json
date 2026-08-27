@@ -3,7 +3,9 @@
     "appName": "APRAS",
     "appSubtitle": "Aplicativo de Planejamento e Resoluções para Associações e Síndicos",
     "logout": "Sair",
-    "close": "Fechar"
+    "close": "Fechar",
+    "restrictedAccess": "Acesso restrito",
+    "restrictedAccessMessage": "Você não tem acesso a esta funcionalidade. Peça a um Administrador para liberá-la para o seu Tipo de Usuário."
   },
   "nav": {
     "tasks": "Tarefas",
@@ -166,7 +168,13 @@
     "errorCreatingType": "Erro ao criar tipo.",
     "errorDeletingType": "Erro ao excluir tipo.",
     "confirmDeleteType": "Excluir este tipo?",
-    "noTypesYet": "Nenhum tipo cadastrado."
+    "noTypesYet": "Nenhum tipo cadastrado.",
+    "editTypeTitle": "Editar Tipo de Usuário",
+    "editTypeName": "Nome",
+    "allowedMenus": "Menus permitidos",
+    "menuTasks": "Tarefas",
+    "menuCategories": "Categorias",
+    "errorUpdatingType": "Erro ao atualizar tipo."
   },
   "contactInfo": {
     "title": "Informações de Contato",

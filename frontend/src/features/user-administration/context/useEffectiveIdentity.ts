@@ -17,9 +17,14 @@ export interface EffectiveIdentity {
  * "viewing as" another role, or the real authenticated user's own
  * role/UserTypes otherwise.
  *
- * Route guards (`ProtectedRoute`) intentionally do NOT use this hook — they
- * must always reflect the real user's access so the admin can never get
- * locked out of ending a simulation.
+ * Route guards (`ProtectedRoute`) intentionally do NOT use this hook for
+ * requiredRole/requiredRoles checks — those must always reflect the real
+ * user's access so the admin can never get locked out of ending a
+ * simulation. The one exception is `requiredMenu` checks (via
+ * `useMenuAccess`), which intentionally DO use simulated identity so
+ * admin-role-simulation can preview menu-gated pages; this is safe because
+ * the exit-simulation control (`SimulationBanner`) is rendered outside
+ * `ProtectedRoute`/`<Routes>` in App.tsx and is always reachable.
  */
 export const useEffectiveIdentity = (): EffectiveIdentity => {
   const { user } = useAuth();

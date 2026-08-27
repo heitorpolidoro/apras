@@ -18,6 +18,18 @@ def test_manager_role_value_exists():
 
 @pytest.fixture(name="test_data")
 def test_data_fixture(session: Session):
+    from app.models.user_type import UserType
+
+    # DIRECTOR is now subject to the tasks/categories menu gate
+    # (assert_menu_access, APRAS-8); grant standing access so this fixture's
+    # director keeps the "full CRUD on all tasks" behavior these RBAC tests
+    # exercise, unrelated to the menu gate itself.
+    director_type = UserType(
+        name="Director RBAC Type", allowed_menus=["tasks", "categories"]
+    )
+    session.add(director_type)
+    session.commit()
+
     admin = User(
         id=uuid.uuid4(),
         email="admin_rbac@test.com",
@@ -33,6 +45,7 @@ def test_data_fixture(session: Session):
         hashed_password=get_password_hash("pass"),
         role=UserRole.DIRECTOR,
         cpf="11144477735",
+        user_types=[director_type],
     )
     category = Category(id=uuid.uuid4(), name="Test Category", color="#FFFFFF")
     session.add(admin)
@@ -183,9 +196,16 @@ def test_assert_can_edit_task_manager_other_user_raises(session: Session, test_d
 
 @pytest.fixture(name="manager_type")
 def manager_type_fixture(session: Session):
-    """Create and persist a user type for manager."""
+    """Create and persist a user type for manager.
+
+    Also grants "tasks" menu access: manager_type is the only UserType
+    assigned to `manager_user` in these tests, so it must carry standing
+    tasks access for the pre-existing visibility/RBAC assertions below to
+    keep exercising what they were designed to test, independent of the
+    new menu gate (APRAS-8).
+    """
     from app.models.user_type import UserType
-    ut = UserType(name="Test Manager Type")
+    ut = UserType(name="Test Manager Type", allowed_menus=["tasks"])
     session.add(ut)
     session.commit()
     return ut

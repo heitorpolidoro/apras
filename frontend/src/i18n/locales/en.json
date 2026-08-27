@@ -3,7 +3,9 @@
     "appName": "APRAS",
     "appSubtitle": "Planning and Resolutions Application for Associations and Syndics",
     "logout": "Sign out",
-    "close": "Close"
+    "close": "Close",
+    "restrictedAccess": "Restricted access",
+    "restrictedAccessMessage": "You don't have access to this feature. Ask an Administrator to grant it to your UserType."
   },
   "nav": {
     "tasks": "Tasks",
@@ -166,7 +168,13 @@
     "errorCreatingType": "Error creating type.",
     "errorDeletingType": "Error deleting type.",
     "confirmDeleteType": "Delete this type?",
-    "noTypesYet": "No types defined yet."
+    "noTypesYet": "No types defined yet.",
+    "editTypeTitle": "Edit User Type",
+    "editTypeName": "Name",
+    "allowedMenus": "Allowed menus",
+    "menuTasks": "Tasks",
+    "menuCategories": "Categories",
+    "errorUpdatingType": "Error updating type."
   },
   "contactInfo": {
     "title": "Contact Information",

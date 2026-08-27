@@ -6,6 +6,7 @@ from app.models.category import Category
 from app.models.enums import TaskPriority, TaskStatus, UserRole
 from app.models.task import Task
 from app.models.user import User
+from app.models.user_type import UserType
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
@@ -19,6 +20,13 @@ def get_token(client, username, password):
 
 @pytest.fixture(name="setup_data")
 def setup_data_fixture(session: Session):
+    # DIRECTOR is subject to the tasks menu gate (assert_menu_access,
+    # APRAS-8); grant director1 standing access since these tests exercise
+    # pre-existing task visibility/filter behavior, not the menu gate.
+    director_type = UserType(name="Director Cov Type", allowed_menus=["tasks"])
+    session.add(director_type)
+    session.commit()
+
     admin = User(
         id=uuid.uuid4(),
         email="admin_cov@test.com",
@@ -34,6 +42,7 @@ def setup_data_fixture(session: Session):
         hashed_password=get_password_hash("pass"),
         role=UserRole.DIRECTOR,
         cpf="08050681057",
+        user_types=[director_type],
     )
     director2 = User(
         id=uuid.uuid4(),

@@ -11,6 +11,7 @@ export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 export interface UserType {
   id: string;
   name: string;
+  allowed_menus: string[];
 }
 
 export interface User {
