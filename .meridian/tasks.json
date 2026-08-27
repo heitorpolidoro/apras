@@ -44,9 +44,21 @@
     },
     {
       "id": "APRAS-7",
-      "title": "Build UI to view/edit user address, block/lot, and phone (signup form, admin dashboard, possible self-service profile page)",
-      "status": "backlog",
-      "justification": "Split off from user-profile-fields during brainstorming: that task was descoped to data-layer-only (model/schema/migration), since these fields' required-ness, formatting/masking, and who can edit them (admin-only today, or a new self-service profile page) still need their own design pass.",
+      "title": "Build UI to view/edit user phone and address (dedicated contact-info screen for Administrator/Manager)",
+      "status": "inprogress",
+      "justification": "Split off from user-profile-fields during brainstorming, then rescoped on 2026-08-27 after the Lot/Resident subsystem (APRAS-15/16) shipped and made User.block_lot redundant (Lot/Resident now own structured address/block/lot_number/phone for residents). Scope narrowed to phone/address only, on a dedicated /users/contact-info screen editable by Administrator and Manager, no self-service. Spec approved: docs/superpowers/specs/2026-08-10-user-profile-fields-ui-design.md.",
+      "expected_results": [
+        "PATCH /users/{id}/contact-info endpoint restricted to Administrator/Manager, accepting only phone/address",
+        "New /users/contact-info page listing users with editable phone/address, gated to Administrator/Manager via ProtectedRoute",
+        "AdminUserDashboard, SignupPage, and the existing PATCH /users/{id} endpoint remain untouched"
+      ],
+      "blockedBy": [],
+      "spec_path": "docs/superpowers/specs/2026-08-10-user-profile-fields-ui-design.md",
+      "spec_iterations": 1,
+      "qa_iterations": 0,
+      "last_review_findings": [],
+      "created_at": "2026-08-10T00:00:00-03:00",
+      "updated_at": "2026-08-27T15:20:00-03:00",
       "running": false
     },
     {
@@ -362,6 +374,25 @@
       "last_review_findings": [],
       "created_at": "2026-08-27T14:45:00-03:00",
       "updated_at": "2026-08-27T14:45:00-03:00",
+      "running": false
+    },
+    {
+      "id": "APRAS-29",
+      "title": "Remove orphaned User.block_lot column",
+      "status": "backlog",
+      "justification": "block_lot was added to User (APRAS-6) before the Lot/Resident subsystem (APRAS-15/16) existed. Now that Lot/UserLotLink properly models which unit a user is associated with, block_lot is redundant and no UI writes to it (APRAS-7 was rescoped to drop it). Low priority cleanup: drop the column via migration once confirmed nothing reads it either.",
+      "expected_results": [
+        "Confirm no code reads User.block_lot before removing it",
+        "Alembic migration drops the block_lot column from the user table",
+        "User model and schemas no longer reference block_lot"
+      ],
+      "blockedBy": [],
+      "spec_path": "",
+      "spec_iterations": 0,
+      "qa_iterations": 0,
+      "last_review_findings": [],
+      "created_at": "2026-08-27T15:20:00-03:00",
+      "updated_at": "2026-08-27T15:20:00-03:00",
       "running": false
     }
   ]
