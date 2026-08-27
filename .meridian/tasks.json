@@ -234,20 +234,20 @@
     {
       "id": "APRAS-22",
       "title": "Área e Dashboard Financeiro da Associação",
-      "status": "backlog",
-      "justification": "Association financial health, cash balance, statement, and invoice drill-down.",
+      "status": "inprogress",
+      "justification": "Association financial health, cash balance, statement, and invoice drill-down. Spec approved after one revision round (added invoice_file_path field, missing from round 1). Implementation dispatched.",
       "expected_results": [
         "Financial transaction and budget models created",
         "Cash balance and statement of inflows/outflows calculated",
         "Budget vs actual execution table with 1-click invoice PDF drill-down completed"
       ],
       "blockedBy": [],
-      "spec_path": "docs/tasks/T008-spec.md",
-      "spec_iterations": 0,
+      "spec_path": "docs/tasks/APRAS-22-spec.md",
+      "spec_iterations": 1,
       "qa_iterations": 0,
       "last_review_findings": [],
       "created_at": "2026-08-23T02:22:42-03:00",
-      "updated_at": "2026-08-23T02:22:42-03:00",
+      "updated_at": "2026-08-27T14:35:00-03:00",
       "running": false
     },
     {
@@ -343,6 +343,25 @@
       "last_review_findings": [],
       "created_at": "2026-08-27T12:50:00-03:00",
       "updated_at": "2026-08-27T14:00:00-03:00",
+      "running": false
+    },
+    {
+      "id": "APRAS-28",
+      "title": "Fix diverging Alembic migration heads (two concurrent 0013 migrations)",
+      "status": "done",
+      "justification": "URGENT — discovered while implementing APRAS-22: T006 (announcement tables) and APRAS-21 (construction project tables) were both authored concurrently as revision 0013 against the same parent (0012_add_access_control_tables), creating two diverging heads (0013_add_announcement_tables and 0014_add_resident_userrole, the latter having chained after the other 0013 branch). This broke `alembic upgrade head` with 'Multiple head revisions', which caused the last two production migrate.yml runs to FAIL (confirmed via `gh run list`/`gh run view`) — meaning T006's and APRAS-27's schema changes were never actually applied to production. Fixed via `alembic merge heads` generating 0015_merge_migration_heads (no-op merge revision, standard tooling, not hand-written). Verified myself against a real throwaway Postgres 16 container: fresh upgrade head applies all 15 migrations cleanly (both 0013 branches' tables + RESIDENT enum value present), downgrade -1 correctly fails with Alembic's expected 'Ambiguous walk' at a merge point (not a bug), explicit-target downgrade past the merge point works, re-upgrade to head works. Full backend suite: 301 passed, 3 skipped, 96.52% coverage, no regressions. Committed directly (not via a developer/reviewer/QA agent cycle) given production was actively broken and the fix is Alembic's own standard auto-generated merge tooling with no custom logic.",
+      "expected_results": [
+        "alembic heads shows exactly one head",
+        "alembic upgrade head from a blank database applies all migrations cleanly, including both prior 0013 branches",
+        "The next migrate.yml run on master succeeds"
+      ],
+      "blockedBy": [],
+      "spec_path": "",
+      "spec_iterations": 0,
+      "qa_iterations": 0,
+      "last_review_findings": [],
+      "created_at": "2026-08-27T14:45:00-03:00",
+      "updated_at": "2026-08-27T14:45:00-03:00",
       "running": false
     }
   ]
