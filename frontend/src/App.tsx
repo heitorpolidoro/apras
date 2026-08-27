@@ -7,6 +7,7 @@ import SignupPage from "./features/user-administration/pages/SignupPage";
 import ForgotPasswordPage from "./features/user-administration/pages/ForgotPasswordPage";
 import ResetPasswordPage from "./features/user-administration/pages/ResetPasswordPage";
 import AdminUserDashboard from "./features/user-administration/pages/AdminUserDashboard";
+import ContactInfoDashboard from "./features/user-administration/pages/ContactInfoDashboard";
 import ProtectedRoute from "./features/user-administration/components/ProtectedRoute";
 import { AuthProvider } from "./features/user-administration/context/AuthContext";
 import { SimulationProvider } from "./features/user-administration/context/SimulationContext";
@@ -144,6 +145,17 @@ function App() {
                 element={
                   <ProtectedRoute requiredRole={UserRole.ADMINISTRATOR}>
                     <AdminUserDashboard />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/users/contact-info"
+                element={
+                  <ProtectedRoute
+                    requiredRoles={[UserRole.ADMINISTRATOR, UserRole.MANAGER]}
+                  >
+                    <ContactInfoDashboard />
                   </ProtectedRoute>
                 }
               />
