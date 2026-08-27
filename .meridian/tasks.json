@@ -5,7 +5,8 @@
     "status": "done",
     "justification": "Implemented JWT password reset token mechanism, forgot/reset password API endpoints, forgot/reset frontend screens, and updated user table checks.",
     "running": false,
-    "completed_at": null
+    "completed_at": null,
+    "priority": "medium"
   },
   {
     "id": "APRAS-2",
@@ -13,7 +14,8 @@
     "status": "done",
     "justification": "Successfully implemented many-to-many User-UserType relationships, replaced manager_visible with visible_to_id in Task, created and ran Alembic migrations on prod database, updated backend RBAC checks/endpoints, and refactored the frontend dashboard checklist and task creation/edit select dropdown. Fully tested and deployed.",
     "running": false,
-    "completed_at": null
+    "completed_at": null,
+    "priority": "medium"
   },
   {
     "id": "APRAS-3",
@@ -21,7 +23,8 @@
     "status": "done",
     "justification": "Created premium reusable AlertModal component with backdrop blur and animations. Replaced all inline Alert banners across 8 pages and verified 100% passing tests.",
     "running": false,
-    "completed_at": null
+    "completed_at": null,
+    "priority": "medium"
   },
   {
     "id": "APRAS-4",
@@ -29,7 +32,8 @@
     "status": "done",
     "justification": "Added mandatory CPF field to User SQLModel, implemented Pydantic check-digit validation, generated Alembic migration with automatic valid placeholder CPFs for existing database rows, added masked CPF input to SignupPage and read-only CPF display in AdminUserDashboard, and verified 100% test coverage.",
     "running": false,
-    "completed_at": null
+    "completed_at": null,
+    "priority": "medium"
   },
   {
     "id": "APRAS-5",
@@ -37,7 +41,8 @@
     "status": "done",
     "justification": "Implemented frontend-only role/UserType simulation per docs/superpowers/specs/2026-08-10-admin-role-simulation-design.md: SimulationContext, useEffectiveIdentity hook, permission-mirroring functions for task visibility/edit gating, an Axios interceptor blocking all mutations while simulating, and Navbar controls + persistent banner. 366 frontend tests passing. Merged to master (e0582d4) and pushed.",
     "running": false,
-    "completed_at": null
+    "completed_at": null,
+    "priority": "medium"
   },
   {
     "id": "APRAS-6",
@@ -45,7 +50,8 @@
     "status": "done",
     "justification": "Scope reduced during brainstorming to data-layer-only (SQLModel, Alembic migration 0005_add_profile_fields_to_user, Pydantic schemas, frontend TS type) per docs/superpowers/specs/2026-08-10-user-profile-fields-design.md. UI work split into user-profile-fields-ui (backlog). 165 backend tests passing (96.23% coverage), 366 frontend tests passing. Merged to master (b003f6e) and pushed.",
     "running": false,
-    "completed_at": null
+    "completed_at": null,
+    "priority": "medium"
   },
   {
     "id": "APRAS-7",
@@ -65,7 +71,9 @@
     "created_at": "2026-08-10T00:00:00-03:00",
     "updated_at": "2026-08-27T16:05:00-03:00",
     "running": false,
-    "completed_at": "2026-08-27T16:05:00-03:00"
+    "completed_at": "2026-08-27T16:05:00-03:00",
+    "priority": "medium",
+    "moved_at": "2026-08-27T16:05:00-03:00"
   },
   {
     "id": "APRAS-8",
@@ -87,49 +95,57 @@
     "created_at": "2026-08-27T16:20:00-03:00",
     "updated_at": "2026-08-27T19:05:00-03:00",
     "running": false,
-    "completed_at": "2026-08-27T19:15:00-03:00"
+    "completed_at": "2026-08-27T19:15:00-03:00",
+    "priority": "medium",
+    "moved_at": "2026-08-27T19:05:00-03:00"
   },
   {
     "id": "APRAS-9",
     "title": "Treat UserRole as a UserType for permission evaluation",
-    "status": "backlog",
-    "justification": "Include UserRole in permission evaluations alongside UserTypes.",
-    "running": false
+    "status": "specreview",
+    "justification": "Include UserRole in permission evaluations alongside UserTypes. Picked up from backlog, exploring design.",
+    "running": true,
+    "priority": "medium"
   },
   {
     "id": "APRAS-10",
     "title": "Create dedicated landing/welcome page for Guest users",
     "status": "backlog",
     "justification": "Add a dedicated initial page for users with GUEST role awaiting approval or guest access.",
-    "running": false
+    "running": false,
+    "priority": "medium"
   },
   {
     "id": "APRAS-11",
     "title": "Add UserTypes to task visibility configuration",
     "status": "backlog",
     "justification": "Include user types in task visibility configuration and filtering.",
-    "running": false
+    "running": false,
+    "priority": "medium"
   },
   {
     "id": "APRAS-12",
     "title": "Create PORTEIRO (Gatekeeper) user role and dedicated Portaria dashboard",
     "status": "backlog",
     "justification": "Dedicated role and interface for gatekeepers to check-in/check-out visitors and contractors.",
-    "running": false
+    "running": false,
+    "priority": "medium"
   },
   {
     "id": "APRAS-13",
     "title": "Integrate WhatsApp API for sending QR passes, visitor entry alerts, and announcements",
     "status": "backlog",
     "justification": "Automated WhatsApp notifications for visitor entry, QR pass sharing, and urgent HOA notices.",
-    "running": false
+    "running": false,
+    "priority": "medium"
   },
   {
     "id": "APRAS-14",
     "title": "Generate dynamic QR code passes for visitor/contractor entry validation at turnstiles/gates",
     "status": "backlog",
     "justification": "Digital QR code pass generation for visitor access validation.",
-    "running": false
+    "running": false,
+    "priority": "medium"
   },
   {
     "id": "APRAS-15",
@@ -149,7 +165,9 @@
     "created_at": "2026-08-23T02:22:42-03:00",
     "updated_at": "2026-08-24T04:14:17-03:00",
     "running": false,
-    "completed_at": "2026-08-24T04:14:17-03:00"
+    "completed_at": "2026-08-24T04:14:17-03:00",
+    "priority": "medium",
+    "moved_at": "2026-08-24T04:14:17-03:00"
   },
   {
     "id": "APRAS-16",
@@ -169,7 +187,9 @@
     "created_at": "2026-08-23T02:22:42-03:00",
     "updated_at": "2026-08-25T14:55:00-03:00",
     "running": false,
-    "completed_at": "2026-08-25T14:55:00-03:00"
+    "completed_at": "2026-08-25T14:55:00-03:00",
+    "priority": "medium",
+    "moved_at": "2026-08-25T14:55:00-03:00"
   },
   {
     "id": "APRAS-17",
@@ -189,7 +209,9 @@
     "created_at": "2026-08-23T02:22:42-03:00",
     "updated_at": "2026-08-25T15:21:40-03:00",
     "running": false,
-    "completed_at": "2026-08-25T15:21:40-03:00"
+    "completed_at": "2026-08-25T15:21:40-03:00",
+    "priority": "medium",
+    "moved_at": "2026-08-25T15:21:40-03:00"
   },
   {
     "id": "APRAS-18",
@@ -209,7 +231,9 @@
     "created_at": "2026-08-23T02:22:42-03:00",
     "updated_at": "2026-08-25T17:15:00-03:00",
     "running": false,
-    "completed_at": "2026-08-25T17:15:00-03:00"
+    "completed_at": "2026-08-25T17:15:00-03:00",
+    "priority": "medium",
+    "moved_at": "2026-08-25T17:15:00-03:00"
   },
   {
     "id": "APRAS-19",
@@ -229,7 +253,9 @@
     "created_at": "2026-08-23T02:22:42-03:00",
     "updated_at": "2026-08-27T09:00:00-03:00",
     "running": false,
-    "completed_at": "2026-08-27T09:00:00-03:00"
+    "completed_at": "2026-08-27T09:00:00-03:00",
+    "priority": "medium",
+    "moved_at": "2026-08-27T09:00:00-03:00"
   },
   {
     "id": "APRAS-20",
@@ -249,7 +275,9 @@
     "created_at": "2026-08-23T02:22:42-03:00",
     "updated_at": "2026-08-27T13:10:00-03:00",
     "running": false,
-    "completed_at": "2026-08-27T13:10:00-03:00"
+    "completed_at": "2026-08-27T13:10:00-03:00",
+    "priority": "medium",
+    "moved_at": "2026-08-27T13:10:00-03:00"
   },
   {
     "id": "APRAS-21",
@@ -269,7 +297,9 @@
     "created_at": "2026-08-23T02:22:42-03:00",
     "updated_at": "2026-08-27T10:22:00-03:00",
     "running": false,
-    "completed_at": "2026-08-27T10:22:00-03:00"
+    "completed_at": "2026-08-27T10:22:00-03:00",
+    "priority": "medium",
+    "moved_at": "2026-08-27T10:22:00-03:00"
   },
   {
     "id": "APRAS-22",
@@ -289,7 +319,9 @@
     "created_at": "2026-08-23T02:22:42-03:00",
     "updated_at": "2026-08-27T15:05:00-03:00",
     "running": false,
-    "completed_at": "2026-08-27T15:05:00-03:00"
+    "completed_at": "2026-08-27T15:05:00-03:00",
+    "priority": "medium",
+    "moved_at": "2026-08-27T15:05:00-03:00"
   },
   {
     "id": "APRAS-23",
@@ -309,7 +341,9 @@
     "created_at": "2026-08-23T02:22:42-03:00",
     "updated_at": "2026-08-25T16:22:45-03:00",
     "running": false,
-    "completed_at": "2026-08-25T16:22:45-03:00"
+    "completed_at": "2026-08-25T16:22:45-03:00",
+    "priority": "medium",
+    "moved_at": "2026-08-25T16:22:45-03:00"
   },
   {
     "id": "APRAS-24",
@@ -329,7 +363,9 @@
     "created_at": "2026-08-23T02:22:42-03:00",
     "updated_at": "2026-08-25T15:59:30-03:00",
     "running": false,
-    "completed_at": "2026-08-25T15:59:30-03:00"
+    "completed_at": "2026-08-25T15:59:30-03:00",
+    "priority": "medium",
+    "moved_at": "2026-08-25T15:59:30-03:00"
   },
   {
     "id": "APRAS-25",
@@ -348,7 +384,9 @@
     "last_review_findings": [],
     "created_at": "2026-08-23T02:22:42-03:00",
     "updated_at": "2026-08-23T02:22:42-03:00",
-    "running": false
+    "running": false,
+    "priority": "medium",
+    "moved_at": "2026-08-23T02:22:42-03:00"
   },
   {
     "id": "APRAS-26",
@@ -367,7 +405,9 @@
     "last_review_findings": [],
     "created_at": "2026-08-23T02:22:42-03:00",
     "updated_at": "2026-08-23T02:22:42-03:00",
-    "running": false
+    "running": false,
+    "priority": "medium",
+    "moved_at": "2026-08-23T02:22:42-03:00"
   },
   {
     "id": "APRAS-27",
@@ -387,7 +427,9 @@
     "created_at": "2026-08-27T12:50:00-03:00",
     "updated_at": "2026-08-27T14:00:00-03:00",
     "running": false,
-    "completed_at": "2026-08-27T14:00:00-03:00"
+    "completed_at": "2026-08-27T14:00:00-03:00",
+    "priority": "medium",
+    "moved_at": "2026-08-27T14:00:00-03:00"
   },
   {
     "id": "APRAS-28",
@@ -407,7 +449,9 @@
     "created_at": "2026-08-27T14:45:00-03:00",
     "updated_at": "2026-08-27T14:45:00-03:00",
     "running": false,
-    "completed_at": "2026-08-27T14:45:00-03:00"
+    "completed_at": "2026-08-27T14:45:00-03:00",
+    "priority": "medium",
+    "moved_at": "2026-08-27T14:45:00-03:00"
   },
   {
     "id": "APRAS-29",
@@ -426,7 +470,9 @@
     "last_review_findings": [],
     "created_at": "2026-08-27T15:20:00-03:00",
     "updated_at": "2026-08-27T15:20:00-03:00",
-    "running": false
+    "running": false,
+    "priority": "medium",
+    "moved_at": "2026-08-27T15:20:00-03:00"
   },
   {
     "id": "APRAS-30",
@@ -444,6 +490,8 @@
     "last_review_findings": [],
     "created_at": "2026-08-27T16:05:00-03:00",
     "updated_at": "2026-08-27T16:05:00-03:00",
-    "running": false
+    "running": false,
+    "priority": "medium",
+    "moved_at": "2026-08-27T16:05:00-03:00"
   }
 ]
