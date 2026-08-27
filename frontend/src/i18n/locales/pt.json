@@ -17,7 +17,8 @@
     "accessControl": "Controle de Acesso",
     "gateMonitor": "Monitor da Portaria",
     "administration": "Administração",
-    "announcements": "Comunicados"
+    "announcements": "Comunicados",
+    "finance": "Financeiro"
   },
   "accessControl": {
     "title": "Controle de Acesso",
@@ -721,5 +722,79 @@
     "send_comment": "Enviar comentário",
     "delete_comment": "Excluir comentário",
     "no_comments": "Nenhum comentário ainda."
+  },
+  "finance": {
+    "pageTitle": "Área Financeira",
+    "pageSubtitle": "Saldo de caixa, extrato de entradas/saídas e execução orçamentária da associação.",
+    "fiscalYear": "Ano Fiscal",
+    "newTransaction": "Nova Transação",
+    "newCategory": "Nova Categoria",
+    "newBudgetLine": "Novo Orçamento",
+    "type": {
+      "INCOME": "Receita",
+      "EXPENSE": "Despesa"
+    },
+    "balance": {
+      "current": "Saldo Atual",
+      "totalIncome": "Total de Entradas",
+      "totalExpense": "Total de Saídas"
+    },
+    "statement": {
+      "title": "Extrato de Entradas e Saídas",
+      "month": "Mês",
+      "income": "Entradas",
+      "expense": "Saídas",
+      "net": "Líquido",
+      "runningBalance": "Saldo Acumulado",
+      "empty": "Nenhum dado no período selecionado."
+    },
+    "budgetVsActual": {
+      "title": "Orçado vs. Executado",
+      "category": "Categoria",
+      "planned": "Orçado",
+      "executed": "Executado",
+      "variance": "Variação",
+      "overBudget": "Estourado",
+      "empty": "Nenhuma categoria orçamentária para este ano."
+    },
+    "drilldown": {
+      "date": "Data",
+      "description": "Descrição",
+      "amount": "Valor",
+      "invoice": "Nota Fiscal",
+      "viewInvoice": "Ver nota fiscal",
+      "noInvoice": "Nenhuma nota fiscal anexada",
+      "empty": "Nenhuma transação neste período."
+    },
+    "invoice": {
+      "previewTitle": "Nota Fiscal",
+      "download": "Baixar"
+    },
+    "transactionModal": {
+      "title": "Nova Transação",
+      "typeLabel": "Tipo",
+      "categoryLabel": "Categoria",
+      "selectCategory": "Selecione uma categoria",
+      "descriptionLabel": "Descrição",
+      "amountLabel": "Valor (R$)",
+      "dateLabel": "Data",
+      "paymentMethodLabel": "Forma de Pagamento",
+      "invoiceLabel": "Nota Fiscal (PDF)",
+      "save": "Salvar Transação"
+    },
+    "categoryModal": {
+      "title": "Nova Categoria",
+      "nameLabel": "Nome",
+      "typeLabel": "Tipo",
+      "save": "Salvar Categoria"
+    },
+    "budgetLineModal": {
+      "title": "Novo Orçamento",
+      "categoryLabel": "Categoria",
+      "yearLabel": "Ano Fiscal",
+      "amountLabel": "Valor Planejado (R$)",
+      "notesLabel": "Observações",
+      "save": "Salvar Orçamento"
+    }
   }
 }

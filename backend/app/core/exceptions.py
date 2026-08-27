@@ -378,6 +378,100 @@ class AnnouncementMediaTooLargeError(DomainError):
         super().__init__(message)
 
 
+class FinanceCategoryNotFoundError(DomainError):
+    """Raised when a finance category is not found."""
+
+    def __init__(self, category_id: UUID | str = "") -> None:
+        msg = (
+            f"Categoria financeira {category_id} não encontrada."
+            if category_id
+            else "Categoria financeira não encontrada."
+        )
+        super().__init__(msg)
+
+
+class FinanceCategoryAlreadyExistsError(DomainError):
+    """Raised when a finance category with the same (name, type) already exists."""
+
+    def __init__(
+        self,
+        message: str = "Já existe uma categoria financeira com este nome e tipo.",
+    ) -> None:
+        super().__init__(message)
+
+
+class FinanceCategoryTypeMismatchError(DomainError):
+    """Raised when a transaction's type does not match its category's type."""
+
+    def __init__(
+        self,
+        message: str = "O tipo da transação não corresponde ao tipo da categoria.",
+    ) -> None:
+        super().__init__(message)
+
+
+class BudgetLineNotFoundError(DomainError):
+    """Raised when a budget line is not found."""
+
+    def __init__(self, budget_line_id: UUID | str = "") -> None:
+        msg = (
+            f"Linha de orçamento {budget_line_id} não encontrada."
+            if budget_line_id
+            else "Linha de orçamento não encontrada."
+        )
+        super().__init__(msg)
+
+
+class BudgetLineAlreadyExistsError(DomainError):
+    """Raised when a budget line for the same category/fiscal year already exists."""
+
+    def __init__(
+        self,
+        message: str = "Já existe uma linha de orçamento para esta categoria e ano fiscal.",
+    ) -> None:
+        super().__init__(message)
+
+
+class FinancialTransactionNotFoundError(DomainError):
+    """Raised when a financial transaction is not found."""
+
+    def __init__(self, transaction_id: UUID | str = "") -> None:
+        msg = (
+            f"Transação financeira {transaction_id} não encontrada."
+            if transaction_id
+            else "Transação financeira não encontrada."
+        )
+        super().__init__(msg)
+
+
+class FinanceAccessForbiddenError(DomainError):
+    """Raised when access to a finance module action is forbidden."""
+
+    def __init__(
+        self, message: str = "Acesso ao módulo financeiro negado."
+    ) -> None:
+        super().__init__(message)
+
+
+class InvalidInvoiceFormatError(DomainError):
+    """Raised when uploaded invoice file has an unsupported MIME type."""
+
+    def __init__(
+        self,
+        message: str = "Formato de nota fiscal inválido. Apenas arquivos PDF são aceitos.",
+    ) -> None:
+        super().__init__(message)
+
+
+class InvoiceFileTooLargeError(DomainError):
+    """Raised when uploaded invoice file exceeds the 10MB limit."""
+
+    def __init__(
+        self, message: str = "Arquivo excede o limite máximo permitido de 10MB."
+    ) -> None:
+        super().__init__(message)
+
+
 
 
 

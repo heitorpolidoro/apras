@@ -17,7 +17,8 @@
     "accessControl": "Access Control",
     "gateMonitor": "Gate Monitor",
     "administration": "Administration",
-    "announcements": "Announcements"
+    "announcements": "Announcements",
+    "finance": "Finance"
   },
   "accessControl": {
     "title": "Access Control",
@@ -721,5 +722,79 @@
     "send_comment": "Send comment",
     "delete_comment": "Delete comment",
     "no_comments": "No comments yet."
+  },
+  "finance": {
+    "pageTitle": "Financial Area",
+    "pageSubtitle": "Cash balance, inflow/outflow statement, and budget execution for the association.",
+    "fiscalYear": "Fiscal Year",
+    "newTransaction": "New Transaction",
+    "newCategory": "New Category",
+    "newBudgetLine": "New Budget Line",
+    "type": {
+      "INCOME": "Income",
+      "EXPENSE": "Expense"
+    },
+    "balance": {
+      "current": "Current Balance",
+      "totalIncome": "Total Income",
+      "totalExpense": "Total Expense"
+    },
+    "statement": {
+      "title": "Inflows & Outflows Statement",
+      "month": "Month",
+      "income": "Income",
+      "expense": "Expense",
+      "net": "Net",
+      "runningBalance": "Running Balance",
+      "empty": "No data for the selected period."
+    },
+    "budgetVsActual": {
+      "title": "Budget vs. Actual",
+      "category": "Category",
+      "planned": "Planned",
+      "executed": "Executed",
+      "variance": "Variance",
+      "overBudget": "Over Budget",
+      "empty": "No budget categories for this year."
+    },
+    "drilldown": {
+      "date": "Date",
+      "description": "Description",
+      "amount": "Amount",
+      "invoice": "Invoice",
+      "viewInvoice": "View invoice",
+      "noInvoice": "No invoice attached",
+      "empty": "No transactions in this period."
+    },
+    "invoice": {
+      "previewTitle": "Invoice",
+      "download": "Download"
+    },
+    "transactionModal": {
+      "title": "New Transaction",
+      "typeLabel": "Type",
+      "categoryLabel": "Category",
+      "selectCategory": "Select a category",
+      "descriptionLabel": "Description",
+      "amountLabel": "Amount",
+      "dateLabel": "Date",
+      "paymentMethodLabel": "Payment Method",
+      "invoiceLabel": "Invoice (PDF)",
+      "save": "Save Transaction"
+    },
+    "categoryModal": {
+      "title": "New Category",
+      "nameLabel": "Name",
+      "typeLabel": "Type",
+      "save": "Save Category"
+    },
+    "budgetLineModal": {
+      "title": "New Budget Line",
+      "categoryLabel": "Category",
+      "yearLabel": "Fiscal Year",
+      "amountLabel": "Planned Amount",
+      "notesLabel": "Notes",
+      "save": "Save Budget Line"
+    }
   }
 }
