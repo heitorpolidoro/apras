@@ -18,7 +18,8 @@
     "gateMonitor": "Gate Monitor",
     "administration": "Administration",
     "announcements": "Announcements",
-    "finance": "Finance"
+    "finance": "Finance",
+    "contactInfo": "Contact Info"
   },
   "accessControl": {
     "title": "Access Control",
@@ -166,6 +167,25 @@
     "errorDeletingType": "Error deleting type.",
     "confirmDeleteType": "Delete this type?",
     "noTypesYet": "No types defined yet."
+  },
+  "contactInfo": {
+    "title": "Contact Information",
+    "backToDashboard": "Back to Dashboard",
+    "colName": "Name",
+    "colEmail": "Email",
+    "colPhone": "Phone",
+    "colAddress": "Address",
+    "colActions": "Actions",
+    "edit": "Edit",
+    "editTitle": "Edit Contact Info",
+    "editPhone": "Phone",
+    "editAddress": "Address",
+    "save": "Save",
+    "cancel": "Cancel",
+    "loadingUsers": "Loading users...",
+    "errorLoadingUsers": "Error loading users.",
+    "errorUpdating": "Error updating contact info",
+    "successUpdating": "Contact info updated successfully."
   },
   "tasks": {
     "priority": {

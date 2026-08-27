@@ -279,6 +279,102 @@ describe("Navbar", () => {
     expect(screen.queryByText("Simular")).not.toBeInTheDocument();
   });
 
+  it("renders contact-info link when user is ADMINISTRATOR", () => {
+    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      user: {
+        id: "1",
+        email: "admin@example.com",
+        full_name: "Admin User",
+        role: UserRole.ADMINISTRATOR,
+        is_active: true,
+      },
+      login: vi.fn() as any,
+      logout: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <Navbar />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Informações de Contato")).toBeDefined();
+  });
+
+  it("renders contact-info link when user is MANAGER", () => {
+    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      user: {
+        id: "1",
+        email: "manager@example.com",
+        full_name: "Manager User",
+        role: UserRole.MANAGER,
+        is_active: true,
+      },
+      login: vi.fn() as any,
+      logout: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <Navbar />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Informações de Contato")).toBeDefined();
+  });
+
+  it("hides contact-info link when user is DIRECTOR", () => {
+    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      user: {
+        id: "1",
+        email: "director@example.com",
+        full_name: "Director User",
+        role: UserRole.DIRECTOR,
+        is_active: true,
+      },
+      login: vi.fn() as any,
+      logout: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <Navbar />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByText("Informações de Contato")).toBeNull();
+  });
+
+  it("hides contact-info link when user is GUEST", () => {
+    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      user: {
+        id: "1",
+        email: "guest@example.com",
+        full_name: "Guest User",
+        role: UserRole.GUEST,
+        is_active: true,
+      },
+      login: vi.fn() as any,
+      logout: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <Navbar />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByText("Informações de Contato")).toBeNull();
+  });
+
   it("fires language change when a language button is clicked", () => {
     vi.spyOn(AuthHook, "useAuth").mockReturnValue({
       isAuthenticated: true,

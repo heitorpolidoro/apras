@@ -102,6 +102,29 @@ def get_current_active_admin(
     return current_user
 
 
+def get_current_admin_or_manager(
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> User:
+    """
+    Verify the current user has the ADMINISTRATOR or MANAGER role.
+
+    Args:
+        current_user: The authenticated user.
+
+    Returns:
+        User: The user if they have the administrator or manager role.
+
+    Raises:
+        HTTPException: If the user role is neither ADMINISTRATOR nor MANAGER.
+    """
+    if current_user.role not in (UserRole.ADMINISTRATOR, UserRole.MANAGER):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="The user doesn't have enough privileges",
+        )
+    return current_user
+
+
 def assert_manager_can_see_task(current_user: User, task: Task) -> None:
     """Raise TaskNotFoundError for tasks the user is not allowed to see.
 

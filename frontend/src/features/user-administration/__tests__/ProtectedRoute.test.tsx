@@ -101,6 +101,113 @@ describe("ProtectedRoute", () => {
     expect(screen.queryByText("Admin Content")).toBeNull();
   });
 
+  it("allows access when user's role is included in requiredRoles array", () => {
+    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      user: {
+        id: 1,
+        username: "test",
+        role: UserRole.MANAGER,
+        is_active: true,
+      } as any,
+      login: vi.fn() as any,
+      logout: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/contact-info"]}>
+        <Routes>
+          <Route path="/dashboard" element={<div>Dashboard</div>} />
+          <Route
+            path="/contact-info"
+            element={
+              <ProtectedRoute
+                requiredRoles={[UserRole.ADMINISTRATOR, UserRole.MANAGER]}
+              >
+                <div>Contact Info Content</div>
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Contact Info Content")).toBeDefined();
+  });
+
+  it("redirects to dashboard when user's role is not included in requiredRoles array", () => {
+    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      user: {
+        id: 1,
+        username: "test",
+        role: UserRole.DIRECTOR,
+        is_active: true,
+      } as any,
+      login: vi.fn() as any,
+      logout: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/contact-info"]}>
+        <Routes>
+          <Route path="/dashboard" element={<div>Dashboard</div>} />
+          <Route
+            path="/contact-info"
+            element={
+              <ProtectedRoute
+                requiredRoles={[UserRole.ADMINISTRATOR, UserRole.MANAGER]}
+              >
+                <div>Contact Info Content</div>
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Dashboard")).toBeDefined();
+    expect(screen.queryByText("Contact Info Content")).toBeNull();
+  });
+
+  it("redirects to dashboard for GUEST role when requiredRoles excludes it", () => {
+    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      user: {
+        id: 1,
+        username: "test",
+        role: UserRole.GUEST,
+        is_active: true,
+      } as any,
+      login: vi.fn() as any,
+      logout: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/contact-info"]}>
+        <Routes>
+          <Route path="/dashboard" element={<div>Dashboard</div>} />
+          <Route
+            path="/contact-info"
+            element={
+              <ProtectedRoute
+                requiredRoles={[UserRole.ADMINISTRATOR, UserRole.MANAGER]}
+              >
+                <div>Contact Info Content</div>
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Dashboard")).toBeDefined();
+    expect(screen.queryByText("Contact Info Content")).toBeNull();
+  });
+
   it("renders loading spinner when isLoading is true", () => {
     vi.spyOn(AuthHook, "useAuth").mockReturnValue({
       isAuthenticated: false,

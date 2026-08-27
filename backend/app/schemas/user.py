@@ -74,6 +74,15 @@ class UserRead(UserBase):
         return self.email.split("@")[0]
 
 
+class UserContactInfoUpdate(BaseModel):
+    """Contact-info-only update schema, used by the Administrator/Manager
+    contact-info endpoint. Deliberately has no role/is_active/user_type_ids/
+    full_name/cpf fields so those cannot be set through this schema."""
+
+    phone: str | None = None
+    address: str | None = None
+
+
 class UserUpdate(BaseModel):
     role: UserRole | None = None
     is_active: bool | None = None

@@ -18,7 +18,8 @@
     "gateMonitor": "Monitor da Portaria",
     "administration": "Administração",
     "announcements": "Comunicados",
-    "finance": "Financeiro"
+    "finance": "Financeiro",
+    "contactInfo": "Informações de Contato"
   },
   "accessControl": {
     "title": "Controle de Acesso",
@@ -166,6 +167,25 @@
     "errorDeletingType": "Erro ao excluir tipo.",
     "confirmDeleteType": "Excluir este tipo?",
     "noTypesYet": "Nenhum tipo cadastrado."
+  },
+  "contactInfo": {
+    "title": "Informações de Contato",
+    "backToDashboard": "Voltar ao Dashboard",
+    "colName": "Nome",
+    "colEmail": "E-mail",
+    "colPhone": "Telefone",
+    "colAddress": "Endereço",
+    "colActions": "Ações",
+    "edit": "Editar",
+    "editTitle": "Editar Informações de Contato",
+    "editPhone": "Telefone",
+    "editAddress": "Endereço",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "loadingUsers": "Carregando usuários...",
+    "errorLoadingUsers": "Erro ao carregar usuários.",
+    "errorUpdating": "Erro ao atualizar informações de contato",
+    "successUpdating": "Informações de contato atualizadas com sucesso."
   },
   "tasks": {
     "priority": {
