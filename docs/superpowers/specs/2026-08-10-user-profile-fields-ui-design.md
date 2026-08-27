@@ -1,16 +1,24 @@
 # User Profile Fields UI — Design Spec
 
-**Meridian task:** `user-profile-fields-ui`
-**Date:** 2026-08-10
-**Status:** Approved for planning
+**Meridian task:** `APRAS-7` (originally `user-profile-fields-ui`)
+**Date:** 2026-08-10, revised 2026-08-27
+**Status:** Approved for planning (revised)
+
+## Revision note (2026-08-27)
+
+Between the original design (2026-08-10) and picking this task up for implementation, the Lot/Resident subsystem shipped (`APRAS-15`/`APRAS-16`, i.e. former `T001`/`T002`): `Lot` now has its own `address`/`block`/`lot_number`, and `Resident` has its own `phone`, both properly structured and already manageable via the existing Lot/Resident admin screens. This made `User.block_lot` — a free-text field meant to informally capture "which unit does this person live in" — redundant with, and strictly worse than, the real `Lot`/`UserLotLink` relationship for anyone who actually lives in a unit.
+
+**Decision**: drop `block_lot` from this UI's scope entirely. The contact-info screen now edits only `phone` and `address` — generic contact fields useful for any user (most relevantly staff — Administrator/Director/Manager — who have no `Lot` to hang a phone number off of; residents' authoritative contact info lives on their `Resident` record). `User.block_lot` becomes an orphaned column with no UI ever writing to it; removing the column itself is out of scope here and tracked separately as a new backlog task (see `.meridian/tasks.json`).
+
+Everything else in this document — who edits, why a separate endpoint, no self-service, no signup changes, no validation — is unchanged from the original design and still holds.
 
 ## Problem
 
-The data-layer task ([`2026-08-10-user-profile-fields-design.md`](2026-08-10-user-profile-fields-design.md)) added `phone`, `address`, and `block_lot` to the `User` model and API schemas, but nothing can read or write them yet — there's no screen and no permission for anyone but a raw API call to set these values.
+The data-layer task ([`2026-08-10-user-profile-fields-design.md`](2026-08-10-user-profile-fields-design.md)) added `phone`, `address`, and (now-superseded) `block_lot` to the `User` model and API schemas, but nothing can read or write `phone`/`address` yet — there's no screen and no permission for anyone but a raw API call to set these values.
 
 ## Goal
 
-Give Administrators and Managers a dedicated screen to view and edit any user's `phone`, `address`, and `block_lot`, without touching the existing admin-only `AdminUserDashboard` (role, active status, user types, name) or the signup flow.
+Give Administrators and Managers a dedicated screen to view and edit any user's `phone` and `address`, without touching the existing admin-only `AdminUserDashboard` (role, active status, user types, name) or the signup flow.
 
 ## Scope Decisions (from brainstorming)
 
@@ -35,7 +43,6 @@ New schema, all fields optional (mirrors the model exactly):
 class UserContactInfoUpdate(BaseModel):
     phone: str | None = None
     address: str | None = None
-    block_lot: str | None = None
 ```
 
 ### `backend/app/api/deps.py`
@@ -63,7 +70,7 @@ def update_user_contact_info(
     user_id: UUID,
     user_in: UserContactInfoUpdate,
 ) -> User:
-    """Update a user's phone, address, and block/lot. Administrator or Manager only."""
+    """Update a user's phone and address. Administrator or Manager only."""
 ```
 
 Same 404-if-missing behavior as `update_user`; no self-edit safety checks are needed (those exist on `update_user` only to prevent an admin from locking themselves out of role/active-status, which don't apply here).
@@ -95,8 +102,8 @@ Registered in `App.tsx`, wrapped in `<ProtectedRoute requiredRole={[UserRole.ADM
 ### New page: `frontend/src/features/user-administration/pages/ContactInfoDashboard.tsx`
 
 - Fetches users via the existing `GET /users/` (same query pattern as `AdminUserDashboard`).
-- Table columns: full name, email (identification only, read-only), phone, address, block/lot, and an "Editar" action.
-- Edit modal (same visual pattern as `AdminUserDashboard`'s edit modal: `Input` fields, `Button` actions, escape/backdrop-to-close) with three plain text inputs (no mask, no required attribute) for phone/address/block_lot, saved via `PATCH /users/{id}/contact-info` through a `useMutation`, invalidating the `["users"]` query key on success — same invalidation key `AdminUserDashboard` uses, so both screens stay in sync if open in different tabs.
+- Table columns: full name, email (identification only, read-only), phone, address, and an "Editar" action.
+- Edit modal (same visual pattern as `AdminUserDashboard`'s edit modal: `Input` fields, `Button` actions, escape/backdrop-to-close) with two plain text inputs (no mask, no required attribute) for phone/address, saved via `PATCH /users/{id}/contact-info` through a `useMutation`, invalidating the `["users"]` query key on success — same invalidation key `AdminUserDashboard` uses, so both screens stay in sync if open in different tabs.
 - No status filter, no search — lists all users. (Can be added later if the user list grows large enough to need it; out of scope now.)
 
 ### Navbar
