@@ -159,43 +159,40 @@
     {
       "id": "T005",
       "title": "Controle de Acesso e Integração de Reconhecimento Facial",
-      "status": "blocked",
-      "justification": "Blocked on T003, T004",
+      "status": "done",
+      "justification": "Independently verified by QA and merged to master at commit 067ed8c (Access Control and Facial Recognition Integration).",
       "expected_results": [
         "AccessDevice model and device management API created",
         "Facial template sync and verification webhooks implemented",
         "Live access control and gate monitor UI implemented"
       ],
-      "blockedBy": [
-        "T003",
-        "T004"
-      ],
+      "blockedBy": [],
       "spec_path": "docs/tasks/T005-spec.md",
-      "spec_iterations": 0,
-      "qa_iterations": 0,
+      "spec_iterations": 1,
+      "code_review_iterations": 1,
+      "qa_iterations": 1,
       "last_review_findings": [],
       "created_at": "2026-08-23T02:22:42-03:00",
-      "updated_at": "2026-08-23T02:22:42-03:00"
+      "updated_at": "2026-08-27T00:00:00-03:00"
     },
     {
       "id": "T006",
       "title": "Blog/Feed de Comunicados e Notícias",
-      "status": "blocked",
-      "justification": "Blocked on T004",
+      "status": "done",
+      "justification": "QA approved. Backend: 283/283 pytest passing, 96.37% coverage (>90% gate). Migration 0013 verified upgrade+downgrade against live Postgres. Frontend: 438/438 vitest passing (100%); new announcement-feed module coverage on par with sibling features. All RBAC/CRUD/media/comment/read-receipt expected_results verified mechanically. Non-blocking finding: the frontend global 'functions' coverage threshold (75%) is already failing on master pre-T006 (baseline 70.99%, all app-wide api/*.ts client files show 0% function coverage since they're always mocked in component tests) — logged in suggestions-log.md as a follow-up, not caused by and out of scope for T006.",
       "expected_results": [
         "Announcement post and media models created",
         "Instagram-style news feed with image/PDF carousels built",
         "Comment threads, read receipts, and publisher role guards active"
       ],
-      "blockedBy": [
-        "T004"
-      ],
+      "blockedBy": [],
       "spec_path": "docs/tasks/T006-spec.md",
-      "spec_iterations": 0,
-      "qa_iterations": 0,
+      "spec_iterations": 1,
+      "code_review_iterations": 1,
+      "qa_iterations": 1,
       "last_review_findings": [],
       "created_at": "2026-08-23T02:22:42-03:00",
-      "updated_at": "2026-08-23T02:22:42-03:00"
+      "updated_at": "2026-08-27T00:00:00-03:00"
     },
     {
       "id": "T007",

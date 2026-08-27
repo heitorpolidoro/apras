@@ -1,10 +1,17 @@
 """Database models package."""
 
 from .access_control import AccessDevice, FacialAccessEvent, FacialTemplate
+from .announcement import (
+    Announcement,
+    AnnouncementComment,
+    AnnouncementMedia,
+    AnnouncementReadReceipt,
+)
 from .category import Category
 from .document import AssociationDocument, DocumentDownloadLog, DocumentFolder
 from .enums import (
     AccessDeviceStatus,
+    AnnouncementMediaType,
     AuthorizationStatus,
     AuthorizationType,
     DayOfWeek,
@@ -37,6 +44,11 @@ __all__ = [
     "AccessDevice",
     "AccessDeviceStatus",
     "AccessLog",
+    "Announcement",
+    "AnnouncementComment",
+    "AnnouncementMedia",
+    "AnnouncementMediaType",
+    "AnnouncementReadReceipt",
     "AssociationDocument",
     "AuthorizationStatus",
     "AuthorizationType",

@@ -3,12 +3,18 @@
 from app.core.exceptions import (
     AccessDeviceNotFoundError,
     AccessLogNotFoundError,
+    AnnouncementCommentNotFoundError,
+    AnnouncementMediaNotFoundError,
+    AnnouncementMediaTooLargeError,
+    AnnouncementNotFoundError,
+    AnnouncementPermissionError,
     AuthorizationNotFoundError,
     DocumentFolderNotFoundError,
     DocumentNotFoundError,
     DomainError,
     FolderAccessDeniedError,
     ForbiddenError,
+    InvalidAnnouncementMediaFormatError,
     InvalidDeviceKeyError,
     InvalidFolderHierarchyError,
     InvalidPhotoFormatError,
@@ -61,12 +67,21 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             DocumentNotFoundError,
             MediaAssetNotFoundError,
             AccessDeviceNotFoundError,
+            AnnouncementNotFoundError,
+            AnnouncementCommentNotFoundError,
+            AnnouncementMediaNotFoundError,
         ),
     ):
         status_code = status.HTTP_404_NOT_FOUND
     elif isinstance(
         exc,
-        (ForbiddenError, OccurrenceAccessForbiddenError, FolderAccessDeniedError, PhotoApprovalPermissionError),
+        (
+            ForbiddenError,
+            OccurrenceAccessForbiddenError,
+            FolderAccessDeniedError,
+            PhotoApprovalPermissionError,
+            AnnouncementPermissionError,
+        ),
     ):
         status_code = status.HTTP_403_FORBIDDEN
     elif isinstance(exc, ResidentCPFConflictError):
@@ -80,6 +95,8 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             PhotoFileTooLargeError,
             InvalidPhotoFormatError,
             PhotoRejectionReasonRequiredError,
+            InvalidAnnouncementMediaFormatError,
+            AnnouncementMediaTooLargeError,
         ),
     ):
         status_code = status.HTTP_400_BAD_REQUEST

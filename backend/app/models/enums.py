@@ -170,6 +170,13 @@ class FacialTemplateSyncStatus(StrEnum):
     FAILED = "FAILED"
 
 
+class AnnouncementMediaType(StrEnum):
+    """Enumeration for announcement media attachment types."""
+
+    IMAGE = "IMAGE"
+    PDF = "PDF"
+
+
 
 
 

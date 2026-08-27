@@ -3,6 +3,7 @@
 from app.api.v1.endpoints import (
     access_control,
     access_logs,
+    announcements,
     auth,
     authorizations,
     categories,
@@ -41,6 +42,7 @@ api_router.include_router(occurrences.router, prefix="/occurrences", tags=["occu
 api_router.include_router(documents.router, prefix="/documents", tags=["documents"])
 api_router.include_router(uploads.router)
 api_router.include_router(access_control.router, prefix="/access-control", tags=["access-control"])
+api_router.include_router(announcements.router, prefix="/announcements", tags=["announcements"])
 
 
 
