@@ -1,6 +1,7 @@
 """API v1 router."""
 
 from app.api.v1.endpoints import (
+    access_control,
     access_logs,
     auth,
     authorizations,
@@ -39,6 +40,7 @@ api_router.include_router(access_logs.router, prefix="/access-logs", tags=["acce
 api_router.include_router(occurrences.router, prefix="/occurrences", tags=["occurrences"])
 api_router.include_router(documents.router, prefix="/documents", tags=["documents"])
 api_router.include_router(uploads.router)
+api_router.include_router(access_control.router, prefix="/access-control", tags=["access-control"])
 
 
 

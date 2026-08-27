@@ -5,11 +5,13 @@ import { useAuth, UserRole } from "../context/AuthContext";
 interface ProtectedRouteProps {
   children: React.ReactElement;
   requiredRole?: UserRole;
+  requiredRoles?: UserRole[];
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
   requiredRole,
+  requiredRoles,
 }) => {
   const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
@@ -27,6 +29,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   if (requiredRole && user?.role !== requiredRole) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (requiredRoles && (!user || !requiredRoles.includes(user.role))) {
     return <Navigate to="/dashboard" replace />;
   }
 

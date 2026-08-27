@@ -154,6 +154,22 @@ class PhotoApprovalStatus(StrEnum):
     REJECTED = "REJECTED"
 
 
+class AccessDeviceStatus(StrEnum):
+    """Enumeration for facial-recognition access device status."""
+
+    ONLINE = "ONLINE"
+    OFFLINE = "OFFLINE"
+    MAINTENANCE = "MAINTENANCE"
+
+
+class FacialTemplateSyncStatus(StrEnum):
+    """Enumeration for facial template sync status."""
+
+    PENDING = "PENDING"
+    SYNCED = "SYNCED"
+    FAILED = "FAILED"
+
+
 
 
 

@@ -238,6 +238,47 @@ class PhotoRejectionReasonRequiredError(DomainError):
         super().__init__(message)
 
 
+class AccessDeviceNotFoundError(DomainError):
+    """Raised when an access control device is not found."""
+
+    def __init__(self, device_id: UUID | str = "") -> None:
+        msg = (
+            f"Dispositivo de acesso {device_id} não encontrado."
+            if device_id
+            else "Dispositivo de acesso não encontrado."
+        )
+        super().__init__(msg)
+
+
+class DuplicateDeviceNameError(DomainError):
+    """Raised when registering a device with a name already in use."""
+
+    def __init__(self, name: str = "") -> None:
+        msg = (
+            f"Já existe um dispositivo com o nome '{name}'."
+            if name
+            else "Já existe um dispositivo com esse nome."
+        )
+        super().__init__(msg)
+
+
+class InvalidDeviceKeyError(DomainError):
+    """Raised when a webhook call presents a missing or unknown device key."""
+
+    def __init__(self, message: str = "Chave de dispositivo inválida ou ausente.") -> None:
+        super().__init__(message)
+
+
+class NoApprovedPhotoError(DomainError):
+    """Raised when attempting to sync a facial template without an approved photo."""
+
+    def __init__(
+        self,
+        message: str = "Morador não possui foto aprovada para sincronização facial.",
+    ) -> None:
+        super().__init__(message)
+
+
 
 
 
