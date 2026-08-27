@@ -46,7 +46,7 @@ function App() {
               <Route
                 path="/dashboard"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredMenu="tasks">
                     <TaskDashboard />
                   </ProtectedRoute>
                 }
@@ -55,7 +55,7 @@ function App() {
               <Route
                 path="/categories"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredMenu="categories">
                     <CategoriesPage />
                   </ProtectedRoute>
                 }

@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth, UserRole } from "../context/AuthContext";
 import { useEffectiveIdentity } from "../context/useEffectiveIdentity";
+import { useMenuAccess } from "../context/useMenuAccess";
 import { cn } from "../../../lib/utils";
 import SimulationControls from "./SimulationControls";
 
@@ -14,6 +15,8 @@ const LANGUAGES = [
 const Navbar: React.FC = () => {
   const { user, logout, isAuthenticated } = useAuth();
   const { role: effectiveRole } = useEffectiveIdentity();
+  const canAccessTasks = useMenuAccess("tasks");
+  const canAccessCategories = useMenuAccess("categories");
   const location = useLocation();
   const { t, i18n } = useTranslation();
   const currentLang = i18n.resolvedLanguage ?? i18n.language;
@@ -33,29 +36,33 @@ const Navbar: React.FC = () => {
       </Link>
 
       <div className="flex items-center gap-8">
-        <Link
-          to="/dashboard"
-          className={cn(
-            "text-sm font-semibold transition-all hover:text-primary relative py-1",
-            location.pathname === "/dashboard"
-              ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
-              : "text-muted-foreground",
-          )}
-        >
-          {t("nav.tasks")}
-        </Link>
+        {canAccessTasks && (
+          <Link
+            to="/dashboard"
+            className={cn(
+              "text-sm font-semibold transition-all hover:text-primary relative py-1",
+              location.pathname === "/dashboard"
+                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
+                : "text-muted-foreground",
+            )}
+          >
+            {t("nav.tasks")}
+          </Link>
+        )}
 
-        <Link
-          to="/categories"
-          className={cn(
-            "text-sm font-semibold transition-all hover:text-primary relative py-1",
-            location.pathname === "/categories"
-              ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
-              : "text-muted-foreground",
-          )}
-        >
-          {t("nav.categories")}
-        </Link>
+        {canAccessCategories && (
+          <Link
+            to="/categories"
+            className={cn(
+              "text-sm font-semibold transition-all hover:text-primary relative py-1",
+              location.pathname === "/categories"
+                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
+                : "text-muted-foreground",
+            )}
+          >
+            {t("nav.categories")}
+          </Link>
+        )}
 
         {effectiveRole !== UserRole.GUEST && (
           <Link

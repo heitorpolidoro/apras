@@ -304,16 +304,18 @@ An authenticated actor in the system. Fields include email (used as login), full
 
 The permission model is a four-tier enum:
 
+This table is not exhaustive — e.g. it does not yet have a `RESIDENT` row (a pre-existing gap, unrelated to the UserType-menu-gate note below).
+
 | Role            | Tasks                                           | Users & Categories       |
 |-----------------|------------------------------------------------|--------------------------|
-| `ADMINISTRATOR` | Full CRUD on all tasks; toggle `manager_visible` | Full user and category management |
-| `DIRECTOR`      | Full CRUD on all tasks; toggle `manager_visible` | Can manage categories    |
-| `MANAGER`       | View only `manager_visible` tasks; edit only unassigned or self-assigned tasks; cannot toggle visibility | Read-only on categories  |
+| `ADMINISTRATOR` | Full CRUD on all tasks; toggle `manager_visible`. The only role unconditionally exempt from the UserType menu gate below. | Full user and category management |
+| `DIRECTOR`      | Full CRUD on all tasks; toggle `manager_visible` — **but only if at least one of the Director's assigned UserTypes has `"tasks"`/`"categories"` in `allowed_menus`** (see UserType below). A Director with no qualifying UserType is blocked from Tarefas/Categorias entirely, same as any other non-Administrator role. | Can manage categories, subject to the same UserType gate |
+| `MANAGER`       | View only `manager_visible` tasks; edit only unassigned or self-assigned tasks; cannot toggle visibility. Also subject to the UserType menu gate. | Read-only on categories, subject to the UserType menu gate |
 | `GUEST`         | No task access                                  | No access                |
 
 ### UserType
 
-An administrator-managed label (e.g., "Board Member", "Building Staff") that can be assigned to users for classification purposes. Not tied to permissions — purely informational.
+An administrator-managed label (e.g., "Board Member", "Building Staff") assigned to users for classification. Since APRAS-8, it also gates feature-level access via `allowed_menus: list[str]` (valid keys: `"tasks"`, `"categories"`): a non-Administrator user can access a gated menu only if at least one of their assigned UserTypes includes that key. A user with no UserTypes assigned has no access to gated menus. This is an additional coarse gate layered in front of the existing role-based RBAC above, not a replacement for it — it does not affect fine-grained rules like `Task.visible_to_id` filtering or category write-role restrictions.
 
 ### Soft Delete
 

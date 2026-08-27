@@ -201,6 +201,13 @@ class TransactionType(StrEnum):
     EXPENSE = "EXPENSE"
 
 
+class MenuKey(StrEnum):
+    """Enumeration for menus/features gated by UserType.allowed_menus."""
+
+    TASKS = "tasks"
+    CATEGORIES = "categories"
+
+
 
 
 

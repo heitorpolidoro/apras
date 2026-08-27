@@ -1,20 +1,41 @@
 import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuth, UserRole } from "../context/AuthContext";
+import { useMenuAccess, type MenuKey } from "../context/useMenuAccess";
 
 interface ProtectedRouteProps {
   children: React.ReactElement;
   requiredRole?: UserRole;
   requiredRoles?: UserRole[];
+  requiredMenu?: MenuKey;
 }
+
+const RestrictedAccessMessage: React.FC = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="flex flex-col items-center justify-center gap-2 min-h-[50vh] p-8 text-center">
+      <p className="text-lg font-semibold text-foreground">
+        {t("common.restrictedAccess")}
+      </p>
+      <p className="text-sm text-muted-foreground max-w-md">
+        {t("common.restrictedAccessMessage")}
+      </p>
+    </div>
+  );
+};
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
   requiredRole,
   requiredRoles,
+  requiredMenu,
 }) => {
   const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
+  // Always called (rules of hooks): when requiredMenu is undefined,
+  // useMenuAccess is effectively a no-op below.
+  const hasMenuAccess = useMenuAccess(requiredMenu ?? "tasks");
 
   if (isLoading) {
     return (
@@ -34,6 +55,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   if (requiredRoles && (!user || !requiredRoles.includes(user.role))) {
     return <Navigate to="/dashboard" replace />;
+  }
+
+  if (requiredMenu && !hasMenuAccess) {
+    return <RestrictedAccessMessage />;
   }
 
   return children;

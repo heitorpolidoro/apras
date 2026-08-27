@@ -14,7 +14,7 @@ from sqlmodel import Session
 from app.core.config import settings
 from app.core.exceptions import ForbiddenError
 from app.db import get_session
-from app.models.enums import UserRole
+from app.models.enums import MenuKey, UserRole
 from app.models.task import Task
 from app.models.user import User
 
@@ -123,6 +123,27 @@ def get_current_admin_or_manager(
             detail="The user doesn't have enough privileges",
         )
     return current_user
+
+
+def assert_menu_access(current_user: User, menu_key: MenuKey) -> None:
+    """Raise ForbiddenError unless the user can access the given menu/feature.
+
+    ADMINISTRATOR always passes. Every other role needs at least one
+    assigned UserType with `menu_key` in its `allowed_menus`. A user with
+    no UserTypes assigned is denied.
+
+    Args:
+        current_user: The authenticated user making the request.
+        menu_key: The menu/feature being accessed (e.g. tasks, categories).
+
+    Raises:
+        ForbiddenError: If the user does not have access to the menu.
+    """
+    if current_user.role == UserRole.ADMINISTRATOR:
+        return
+    if any(menu_key.value in ut.allowed_menus for ut in current_user.user_types):
+        return
+    raise ForbiddenError(f"Not enough privileges to access {menu_key.value}")
 
 
 def assert_manager_can_see_task(current_user: User, task: Task) -> None:

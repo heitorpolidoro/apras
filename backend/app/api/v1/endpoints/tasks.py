@@ -6,7 +6,7 @@ from uuid import UUID
 from app.api import deps as api_deps
 from app.core.exceptions import ForbiddenError, TaskNotFoundError
 from app.db import get_session
-from app.models.enums import TaskPriority, TaskStatus, UserRole
+from app.models.enums import MenuKey, TaskPriority, TaskStatus, UserRole
 from app.models.task import Task, TaskComment, TaskHistory
 from app.models.user import User
 from app.schemas.task import (TaskCommentCreate, TaskCommentRead,
@@ -26,6 +26,7 @@ def create_task(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> TaskRead:
     """Create a new task. Any authenticated user except GUEST can create tasks."""
+    api_deps.assert_menu_access(current_user, MenuKey.TASKS)
     if current_user.role == UserRole.GUEST:
         raise ForbiddenError("Guests cannot create tasks")
     db_task = TaskService.create_task(
@@ -47,6 +48,7 @@ def list_tasks(
     category_id: Annotated[UUID | None, Query()] = None,
 ) -> list[TaskRead]:
     """List tasks with optional filters. GUEST sees no tasks."""
+    api_deps.assert_menu_access(current_user, MenuKey.TASKS)
     if current_user.role == UserRole.GUEST:
         return []
 
@@ -110,6 +112,7 @@ def update_task(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> TaskRead:
     """Update an existing task."""
+    api_deps.assert_menu_access(current_user, MenuKey.TASKS)
     db_task = session.get(Task, task_id)
     if not db_task or db_task.is_deleted:
         raise TaskNotFoundError(task_id)
@@ -130,6 +133,7 @@ def get_task_history(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> list[TaskHistory]:
     """Get the audit history for a specific task."""
+    api_deps.assert_menu_access(current_user, MenuKey.TASKS)
     db_task = session.get(Task, task_id)
     if not db_task or db_task.is_deleted:
         raise TaskNotFoundError(task_id)
@@ -145,6 +149,7 @@ def delete_task(
     current_user: Annotated[User, Depends(api_deps.get_current_active_admin)],
 ) -> None:
     """Delete a task (Soft Delete). Only ADMINISTRATOR can delete tasks."""
+    api_deps.assert_menu_access(current_user, MenuKey.TASKS)
     db_task = session.get(Task, task_id)
     if not db_task or db_task.is_deleted:
         raise TaskNotFoundError(task_id)
@@ -164,6 +169,7 @@ def list_comments(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> list[TaskCommentRead]:
     """List all comments for a task."""
+    api_deps.assert_menu_access(current_user, MenuKey.TASKS)
     db_task = session.get(Task, task_id)
     if not db_task or db_task.is_deleted:
         raise TaskNotFoundError(task_id)
@@ -184,6 +190,7 @@ def create_comment(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> TaskCommentRead:
     """Add a comment to a task. Any authenticated user can comment."""
+    api_deps.assert_menu_access(current_user, MenuKey.TASKS)
     db_task = session.get(Task, task_id)
     if not db_task or db_task.is_deleted:
         raise TaskNotFoundError(task_id)
@@ -206,6 +213,7 @@ def update_comment(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> TaskCommentRead:
     """Edit a comment. Only the comment author can edit it."""
+    api_deps.assert_menu_access(current_user, MenuKey.TASKS)
     db_task = session.get(Task, task_id)
     if not db_task or db_task.is_deleted:
         raise TaskNotFoundError(task_id)

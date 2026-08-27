@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import * as AuthHook from "../context/AuthContext";
 import { UserRole } from "../context/AuthContext";
+import { useUserTypes } from "../../../hooks/useUserTypes";
 
 // Navbar reads the effective (possibly simulated) role via
 // useEffectiveIdentity, which combines useAuth (spied on per-test below) with
@@ -22,9 +23,13 @@ vi.mock("../context/SimulationContext", () => ({
 }));
 
 // SimulationControls (rendered only for a real ADMINISTRATOR) fetches
-// UserTypes; avoid a real network call in tests.
+// UserTypes; avoid a real network call in tests. Also backs useMenuAccess
+// (via useEffectiveIdentity), so it includes a type granting tasks/categories
+// access for the DIRECTOR fixtures below that assign it via user_types.
 vi.mock("../../../hooks/useUserTypes", () => ({
-  useUserTypes: vi.fn(() => ({ data: [] })),
+  useUserTypes: vi.fn(() => ({
+    data: [{ id: "type-1", name: "Test Type", allowed_menus: ["tasks", "categories"] }],
+  })),
 }));
 
 describe("Navbar", () => {
@@ -57,7 +62,8 @@ describe("Navbar", () => {
         full_name: "Test User",
         role: UserRole.DIRECTOR,
         is_active: true,
-      },
+        user_types: [{ id: "type-1", name: "Test Type" }],
+      } as any,
       login: vi.fn() as any,
       logout: vi.fn(),
     });
@@ -111,7 +117,8 @@ describe("Navbar", () => {
         full_name: "Test User",
         role: UserRole.DIRECTOR,
         is_active: true,
-      },
+        user_types: [{ id: "type-1", name: "Test Type" }],
+      } as any,
       login: vi.fn() as any,
       logout: vi.fn(),
     });
@@ -190,7 +197,8 @@ describe("Navbar", () => {
         full_name: "Test User",
         role: UserRole.DIRECTOR,
         is_active: true,
-      },
+        user_types: [{ id: "type-1", name: "Test Type" }],
+      } as any,
       login: vi.fn() as any,
       logout: vi.fn(),
     });
@@ -386,7 +394,8 @@ describe("Navbar", () => {
         full_name: "Test User",
         role: UserRole.DIRECTOR,
         is_active: true,
-      },
+        user_types: [{ id: "type-1", name: "Test Type" }],
+      } as any,
       login: vi.fn() as any,
       logout: vi.fn(),
     });
@@ -399,5 +408,116 @@ describe("Navbar", () => {
 
     fireEvent.click(screen.getByText("PT"));
     expect(screen.getByText("Tarefas")).toBeInTheDocument();
+  });
+
+  // ── UserType-gated Tarefas/Categorias links (APRAS-8) ───────────────────
+
+  it("hides Tarefas and Categorias links for a DIRECTOR with no UserType", () => {
+    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      user: {
+        id: "1",
+        email: "director@example.com",
+        full_name: "Director User",
+        role: UserRole.DIRECTOR,
+        is_active: true,
+      },
+      login: vi.fn() as any,
+      logout: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <Navbar />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByText("Tarefas")).toBeNull();
+    expect(screen.queryByText("Categorias")).toBeNull();
+  });
+
+  it("hides Tarefas and Categorias links when the assigned UserType grants neither", () => {
+    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      user: {
+        id: "1",
+        email: "director@example.com",
+        full_name: "Director User",
+        role: UserRole.DIRECTOR,
+        is_active: true,
+        user_types: [{ id: "type-2", name: "No Access Type" }],
+      } as any,
+      login: vi.fn() as any,
+      logout: vi.fn(),
+    });
+    vi.mocked(useUserTypes).mockReturnValue({
+      data: [{ id: "type-2", name: "No Access Type", allowed_menus: [] }],
+    } as any); // skipcq: JS-0323
+
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <Navbar />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByText("Tarefas")).toBeNull();
+    expect(screen.queryByText("Categorias")).toBeNull();
+  });
+
+  it("shows only Tarefas when the UserType grants tasks but not categories", () => {
+    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      user: {
+        id: "1",
+        email: "director@example.com",
+        full_name: "Director User",
+        role: UserRole.DIRECTOR,
+        is_active: true,
+        user_types: [{ id: "type-3", name: "Tasks Only" }],
+      } as any,
+      login: vi.fn() as any,
+      logout: vi.fn(),
+    });
+    vi.mocked(useUserTypes).mockReturnValue({
+      data: [{ id: "type-3", name: "Tasks Only", allowed_menus: ["tasks"] }],
+    } as any); // skipcq: JS-0323
+
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <Navbar />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Tarefas")).toBeInTheDocument();
+    expect(screen.queryByText("Categorias")).toBeNull();
+  });
+
+  it("shows Tarefas and Categorias for ADMINISTRATOR even with no UserType", () => {
+    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      user: {
+        id: "1",
+        email: "admin@example.com",
+        full_name: "Admin User",
+        role: UserRole.ADMINISTRATOR,
+        is_active: true,
+      },
+      login: vi.fn() as any,
+      logout: vi.fn(),
+    });
+    vi.mocked(useUserTypes).mockReturnValue({ data: [] } as any); // skipcq: JS-0323
+
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <Navbar />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Tarefas")).toBeInTheDocument();
+    expect(screen.getByText("Categorias")).toBeInTheDocument();
   });
 });

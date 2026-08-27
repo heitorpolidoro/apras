@@ -7,6 +7,7 @@ from app.main import app
 from app.models.enums import UserRole
 from app.models.user import User
 from app.models.category import Category
+from app.models.user_type import UserType
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, StaticPool, create_engine
 
@@ -58,7 +59,21 @@ def admin_user_fixture(session: Session):
 
 @pytest.fixture(name="normal_user")
 def normal_user_fixture(session: Session):
-    """Create and persist a DIRECTOR user for tests."""
+    """Create and persist a DIRECTOR user for tests.
+
+    Since DIRECTOR is subject to the UserType-based menu gate
+    (`assert_menu_access`, see APRAS-8), this fixture also creates and
+    assigns a UserType granting `allowed_menus: ["tasks", "categories"]`
+    so `normal_user` carries forward the standing tasks/categories access
+    it previously had unconditionally. Tests that need a user *without*
+    menu access (to exercise the 403 path) should build one explicitly.
+    """
+    user_type = UserType(
+        name="Normal User Type", allowed_menus=["tasks", "categories"]
+    )
+    session.add(user_type)
+    session.commit()
+
     user = User(
         id=uuid.uuid4(),
         email="user1@test.com",
@@ -66,6 +81,7 @@ def normal_user_fixture(session: Session):
         hashed_password=get_password_hash("test_user_password"),
         role=UserRole.DIRECTOR,
         cpf="11144477735",
+        user_types=[user_type],
     )
     session.add(user)
     session.commit()

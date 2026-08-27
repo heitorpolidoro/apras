@@ -3,8 +3,8 @@ import { describe, it, expect, vi } from "vitest";
 import UserTypeMultiSelect from "../components/UserTypeMultiSelect";
 
 const userTypes = [
-  { id: "type-1", name: "Board Member" },
-  { id: "type-2", name: "Building Staff" },
+  { id: "type-1", name: "Board Member", allowed_menus: [] },
+  { id: "type-2", name: "Building Staff", allowed_menus: [] },
 ];
 
 describe("UserTypeMultiSelect", () => {

@@ -10,6 +10,9 @@ import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Select } from "../../../components/ui/select";
 import { AlertModal } from "../../../components/ui/alert-modal";
+import type { MenuKey } from "../context/useMenuAccess";
+
+const ALL_MENU_KEYS: MenuKey[] = ["tasks", "categories"];
 
 const AdminUserDashboard: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<
@@ -20,6 +23,11 @@ const AdminUserDashboard: React.FC = () => {
   const [editFullName, setEditFullName] = useState("");
   const [editTypeIds, setEditTypeIds] = useState<string[]>([]);
   const [newTypeName, setNewTypeName] = useState("");
+  const [editingType, setEditingType] = useState<UserType | null>(null);
+  const [editTypeNameValue, setEditTypeNameValue] = useState("");
+  const [editTypeAllowedMenus, setEditTypeAllowedMenus] = useState<string[]>(
+    [],
+  );
   const queryClient = useQueryClient();
   const { user: currentUser, logout } = useAuth();
   const { t } = useTranslation();
@@ -101,6 +109,32 @@ const AdminUserDashboard: React.FC = () => {
     },
   });
 
+  const updateUserTypeMutation = useMutation({
+    mutationFn: async ({
+      typeId,
+      data,
+    }: {
+      typeId: string;
+      data: { name: string; allowed_menus: string[] };
+    }) => {
+      const response = await apiClient.patch<UserType>(
+        `/user-types/${typeId}`,
+        data,
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["user-types"] });
+      setActionError(null);
+      setEditingType(null);
+    },
+    onError: (err: Error & { response?: { data?: { detail?: string } } }) => {
+      setActionError(
+        err.response?.data?.detail || t("admin.errorUpdatingType"),
+      );
+    },
+  });
+
   const handleToggleActive = (user: User) => {
     if (user.id === currentUser?.id) {
       setActionError(t("admin.cannotDeactivateSelf"));
@@ -142,6 +176,24 @@ const AdminUserDashboard: React.FC = () => {
     e.preventDefault();
     if (!newTypeName.trim()) return;
     createTypeMutation.mutate(newTypeName.trim());
+  };
+
+  const openEditTypeModal = (userType: UserType) => {
+    setEditingType(userType);
+    setEditTypeNameValue(userType.name);
+    setEditTypeAllowedMenus(userType.allowed_menus ?? []);
+  };
+
+  const handleSaveEditType = () => {
+    /* v8 ignore next */
+    if (!editingType) return;
+    updateUserTypeMutation.mutate({
+      typeId: editingType.id,
+      data: {
+        name: editTypeNameValue,
+        allowed_menus: editTypeAllowedMenus,
+      },
+    });
   };
 
   if (isLoading)
@@ -191,6 +243,13 @@ const AdminUserDashboard: React.FC = () => {
           {userTypes?.map((ut) => (
             <div key={ut.id} className="flex items-center gap-1">
               <Badge variant="secondary">{ut.name}</Badge>
+              <button
+                onClick={() => openEditTypeModal(ut)}
+                className="text-xs text-muted-foreground hover:text-primary transition-colors ml-1"
+                aria-label={`edit ${ut.name}`}
+              >
+                ✎
+              </button>
               <button
                 onClick={() => {
                   if (window.confirm(t("admin.confirmDeleteType"))) {
@@ -433,6 +492,87 @@ const AdminUserDashboard: React.FC = () => {
               <Button
                 onClick={handleSaveEdit}
                 disabled={updateUserMutation.isPending}
+              >
+                {t("admin.save")}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit User Type Modal */}
+      {editingType && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          role="presentation"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setEditingType(null);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setEditingType(null);
+          }}
+        >
+          <div className="bg-card border rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
+            <h2 className="text-lg font-semibold text-foreground mb-4">
+              {t("admin.editTypeTitle")}
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-muted-foreground block mb-1">
+                  {t("admin.editTypeName")}
+                </label>
+                <Input
+                  value={editTypeNameValue}
+                  onChange={(e) => setEditTypeNameValue(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground block mb-1">
+                  {t("admin.allowedMenus")}
+                </label>
+                <div className="border rounded-md p-2 space-y-2">
+                  {ALL_MENU_KEYS.map((menuKey) => {
+                    const isChecked = editTypeAllowedMenus.includes(menuKey);
+                    const label =
+                      menuKey === "tasks"
+                        ? t("admin.menuTasks")
+                        : t("admin.menuCategories");
+                    return (
+                      <label
+                        key={menuKey}
+                        className="flex items-center gap-2 text-sm cursor-pointer select-none"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setEditTypeAllowedMenus((prev) => [
+                                ...prev,
+                                menuKey,
+                              ]);
+                            } else {
+                              setEditTypeAllowedMenus((prev) =>
+                                prev.filter((key) => key !== menuKey),
+                              );
+                            }
+                          }}
+                          className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4"
+                        />
+                        <span>{label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6 justify-end">
+              <Button variant="outline" onClick={() => setEditingType(null)}>
+                {t("admin.cancel")}
+              </Button>
+              <Button
+                onClick={handleSaveEditType}
+                disabled={updateUserTypeMutation.isPending}
               >
                 {t("admin.save")}
               </Button>

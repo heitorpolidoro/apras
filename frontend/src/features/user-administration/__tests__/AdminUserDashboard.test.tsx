@@ -731,4 +731,143 @@ describe("AdminUserDashboard", () => {
     const checkbox = screen.getByLabelText("Manager") as HTMLInputElement;
     expect(checkbox.checked).toBe(true);
   });
+
+  // ── Edit UserType modal (APRAS-8) ───────────────────────────────────────
+
+  it("opens the edit UserType modal when its edit button is clicked", async () => {
+    (apiClient.get as any).mockImplementation((url: string) => {
+      if (url === "/user-types/")
+        return Promise.resolve({
+          data: [{ id: "type-1", name: "Manager", allowed_menus: ["tasks"] }],
+        });
+      return Promise.resolve({ data: mockUsers });
+    });
+
+    render(<AdminUserDashboard />, { wrapper: createWrapper() });
+
+    await waitFor(() => expect(screen.getByText("Manager")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByLabelText("edit Manager"));
+
+    expect(screen.getByText("Editar Tipo de Usuário")).toBeInTheDocument();
+  });
+
+  it("pre-fills name and allowed-menu checkboxes from the UserType", async () => {
+    (apiClient.get as any).mockImplementation((url: string) => {
+      if (url === "/user-types/")
+        return Promise.resolve({
+          data: [{ id: "type-1", name: "Manager", allowed_menus: ["tasks"] }],
+        });
+      return Promise.resolve({ data: mockUsers });
+    });
+
+    render(<AdminUserDashboard />, { wrapper: createWrapper() });
+
+    await waitFor(() => expect(screen.getByText("Manager")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByLabelText("edit Manager"));
+
+    expect(screen.getByDisplayValue("Manager")).toBeInTheDocument();
+    expect((screen.getByLabelText("Tarefas") as HTMLInputElement).checked).toBe(
+      true,
+    );
+    expect(
+      (screen.getByLabelText("Categorias") as HTMLInputElement).checked,
+    ).toBe(false);
+  });
+
+  it("closes the edit UserType modal on Cancel", async () => {
+    (apiClient.get as any).mockImplementation((url: string) => {
+      if (url === "/user-types/")
+        return Promise.resolve({
+          data: [{ id: "type-1", name: "Manager", allowed_menus: [] }],
+        });
+      return Promise.resolve({ data: mockUsers });
+    });
+
+    render(<AdminUserDashboard />, { wrapper: createWrapper() });
+
+    await waitFor(() => expect(screen.getByText("Manager")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByLabelText("edit Manager"));
+    expect(screen.getByText("Editar Tipo de Usuário")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Cancelar"));
+    expect(screen.queryByText("Editar Tipo de Usuário")).toBeNull();
+  });
+
+  it("toggles an allowed-menu checkbox in the edit UserType modal", async () => {
+    (apiClient.get as any).mockImplementation((url: string) => {
+      if (url === "/user-types/")
+        return Promise.resolve({
+          data: [{ id: "type-1", name: "Manager", allowed_menus: [] }],
+        });
+      return Promise.resolve({ data: mockUsers });
+    });
+
+    render(<AdminUserDashboard />, { wrapper: createWrapper() });
+
+    await waitFor(() => expect(screen.getByText("Manager")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByLabelText("edit Manager"));
+
+    const checkbox = screen.getByLabelText("Tarefas") as HTMLInputElement;
+    expect(checkbox.checked).toBe(false);
+    fireEvent.click(checkbox);
+    expect(checkbox.checked).toBe(true);
+    fireEvent.click(checkbox);
+    expect(checkbox.checked).toBe(false);
+  });
+
+  it("saves the edited UserType via PATCH with name and allowed_menus", async () => {
+    (apiClient.get as any).mockImplementation((url: string) => {
+      if (url === "/user-types/")
+        return Promise.resolve({
+          data: [{ id: "type-1", name: "Manager", allowed_menus: [] }],
+        });
+      return Promise.resolve({ data: mockUsers });
+    });
+    (apiClient.patch as any).mockResolvedValue({
+      data: { id: "type-1", name: "Manager", allowed_menus: ["tasks"] },
+    });
+
+    render(<AdminUserDashboard />, { wrapper: createWrapper() });
+
+    await waitFor(() => expect(screen.getByText("Manager")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByLabelText("edit Manager"));
+    fireEvent.click(screen.getByLabelText("Tarefas"));
+    fireEvent.click(screen.getByText("Salvar"));
+
+    await waitFor(() => {
+      expect(apiClient.patch).toHaveBeenCalledWith("/user-types/type-1", {
+        name: "Manager",
+        allowed_menus: ["tasks"],
+      });
+    });
+  });
+
+  it("shows an error when saving the edited UserType fails", async () => {
+    (apiClient.get as any).mockImplementation((url: string) => {
+      if (url === "/user-types/")
+        return Promise.resolve({
+          data: [{ id: "type-1", name: "Manager", allowed_menus: [] }],
+        });
+      return Promise.resolve({ data: mockUsers });
+    });
+    (apiClient.patch as any).mockRejectedValue({
+      response: { data: { detail: "Nome inválido" } },
+    });
+
+    render(<AdminUserDashboard />, { wrapper: createWrapper() });
+
+    await waitFor(() => expect(screen.getByText("Manager")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByLabelText("edit Manager"));
+    fireEvent.click(screen.getByText("Salvar"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Nome inválido")).toBeInTheDocument();
+    });
+  });
 });

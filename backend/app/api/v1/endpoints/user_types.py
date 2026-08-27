@@ -39,7 +39,9 @@ def create_user_type(
             status_code=status.HTTP_409_CONFLICT,
             detail="A user type with this name already exists",
         )
-    user_type = UserType(name=user_type_in.name)
+    user_type = UserType(
+        name=user_type_in.name, allowed_menus=user_type_in.allowed_menus
+    )
     session.add(user_type)
     session.commit()
     session.refresh(user_type)
@@ -61,6 +63,7 @@ def update_user_type(
             status_code=status.HTTP_404_NOT_FOUND, detail="User type not found"
         )
     db_type.name = user_type_in.name
+    db_type.allowed_menus = user_type_in.allowed_menus
     session.add(db_type)
     session.commit()
     session.refresh(db_type)
