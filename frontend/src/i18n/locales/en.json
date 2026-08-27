@@ -16,7 +16,8 @@
     "photoApprovals": "Photo Approvals",
     "accessControl": "Access Control",
     "gateMonitor": "Gate Monitor",
-    "administration": "Administration"
+    "administration": "Administration",
+    "announcements": "Announcements"
   },
   "accessControl": {
     "title": "Access Control",
@@ -72,7 +73,6 @@
     "rejectionReasonTitle": "Rejection Reason",
     "confirmRejection": "Confirm Rejection"
   },
-
   "categories": {
     "title": "Categories",
     "newCategory": "New Category",
@@ -693,5 +693,33 @@
     },
     "noProjectsFound": "No construction projects found",
     "noProjectsDescription": "There are no projects matching the selected filter."
+  },
+  "announcements": {
+    "page_title": "Announcements & News",
+    "page_subtitle": "Stay up to date with the HOA's latest news.",
+    "new_announcement_btn": "New Announcement",
+    "new_title": "New Announcement",
+    "edit_title": "Edit Announcement",
+    "title_label": "Title",
+    "title_placeholder": "E.g.: Annual General Assembly",
+    "content_label": "Content",
+    "content_placeholder": "Write the announcement...",
+    "attach_media": "Attach image or PDF",
+    "publish": "Publish Announcement",
+    "save": "Save Changes",
+    "edit": "Edit announcement",
+    "delete": "Delete announcement",
+    "empty_feed": "No announcements published yet.",
+    "unknown_author": "User",
+    "read": "Read",
+    "media_alt": "Announcement attachment",
+    "open_pdf": "Open PDF document",
+    "carousel_prev": "Previous",
+    "carousel_next": "Next",
+    "comment_count": "{{count}} comments",
+    "comment_placeholder": "Write a comment...",
+    "send_comment": "Send comment",
+    "delete_comment": "Delete comment",
+    "no_comments": "No comments yet."
   }
 }

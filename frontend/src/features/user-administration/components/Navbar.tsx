@@ -139,6 +139,18 @@ const Navbar: React.FC = () => {
           </Link>
         )}
 
+        <Link
+          to="/announcements"
+          className={cn(
+            "text-sm font-semibold transition-all hover:text-primary relative py-1",
+            location.pathname === "/announcements"
+              ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
+              : "text-muted-foreground",
+          )}
+        >
+          {t("nav.announcements", "Comunicados")}
+        </Link>
+
         {effectiveRole === UserRole.ADMINISTRATOR && (
           <Link
             to="/admin/users"

@@ -3,12 +3,18 @@
 from app.core.exceptions import (
     AccessDeviceNotFoundError,
     AccessLogNotFoundError,
+    AnnouncementCommentNotFoundError,
+    AnnouncementMediaNotFoundError,
+    AnnouncementMediaTooLargeError,
+    AnnouncementNotFoundError,
+    AnnouncementPermissionError,
     AuthorizationNotFoundError,
     DocumentFolderNotFoundError,
     DocumentNotFoundError,
     DomainError,
     FolderAccessDeniedError,
     ForbiddenError,
+    InvalidAnnouncementMediaFormatError,
     InvalidDeviceKeyError,
     InvalidFolderHierarchyError,
     InvalidPhotoFormatError,
@@ -69,6 +75,9 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             ProjectNotFoundError,
             MilestoneNotFoundError,
             ProjectUpdateNotFoundError,
+            AnnouncementNotFoundError,
+            AnnouncementCommentNotFoundError,
+            AnnouncementMediaNotFoundError,
         ),
     ):
         status_code = status.HTTP_404_NOT_FOUND
@@ -80,6 +89,7 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             FolderAccessDeniedError,
             PhotoApprovalPermissionError,
             ProjectAccessForbiddenError,
+            AnnouncementPermissionError,
         ),
     ):
         status_code = status.HTTP_403_FORBIDDEN
@@ -95,6 +105,8 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             InvalidPhotoFormatError,
             PhotoRejectionReasonRequiredError,
             ProjectInvalidProgressError,
+            InvalidAnnouncementMediaFormatError,
+            AnnouncementMediaTooLargeError,
         ),
     ):
         status_code = status.HTTP_400_BAD_REQUEST

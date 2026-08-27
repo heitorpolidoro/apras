@@ -16,7 +16,8 @@
     "photoApprovals": "Aprovações de Fotos",
     "accessControl": "Controle de Acesso",
     "gateMonitor": "Monitor da Portaria",
-    "administration": "Administração"
+    "administration": "Administração",
+    "announcements": "Comunicados"
   },
   "accessControl": {
     "title": "Controle de Acesso",
@@ -72,7 +73,6 @@
     "rejectionReasonTitle": "Motivo da Rejeição",
     "confirmRejection": "Confirmar Rejeição"
   },
-
   "categories": {
     "title": "Categorias",
     "newCategory": "Nova Categoria",
@@ -693,5 +693,33 @@
     },
     "noProjectsFound": "Nenhuma obra cadastrada",
     "noProjectsDescription": "Não há obras correspondentes ao filtro selecionado."
+  },
+  "announcements": {
+    "page_title": "Comunicados e Notícias",
+    "page_subtitle": "Fique por dentro das novidades do condomínio.",
+    "new_announcement_btn": "Novo Comunicado",
+    "new_title": "Novo Comunicado",
+    "edit_title": "Editar Comunicado",
+    "title_label": "Título",
+    "title_placeholder": "Ex: Assembleia Geral Ordinária",
+    "content_label": "Conteúdo",
+    "content_placeholder": "Escreva o comunicado...",
+    "attach_media": "Anexar imagem ou PDF",
+    "publish": "Publicar Comunicado",
+    "save": "Salvar Alterações",
+    "edit": "Editar comunicado",
+    "delete": "Excluir comunicado",
+    "empty_feed": "Nenhum comunicado publicado até o momento.",
+    "unknown_author": "Usuário",
+    "read": "Lido",
+    "media_alt": "Anexo do comunicado",
+    "open_pdf": "Abrir documento PDF",
+    "carousel_prev": "Anterior",
+    "carousel_next": "Próximo",
+    "comment_count": "{{count}} comentários",
+    "comment_placeholder": "Escreva um comentário...",
+    "send_comment": "Enviar comentário",
+    "delete_comment": "Excluir comentário",
+    "no_comments": "Nenhum comentário ainda."
   }
 }

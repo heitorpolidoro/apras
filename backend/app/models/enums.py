@@ -187,6 +187,13 @@ class MilestoneStatus(StrEnum):
     NEXT_STEPS = "NEXT_STEPS"
 
 
+class AnnouncementMediaType(StrEnum):
+    """Enumeration for announcement media attachment types."""
+
+    IMAGE = "IMAGE"
+    PDF = "PDF"
+
+
 
 
 

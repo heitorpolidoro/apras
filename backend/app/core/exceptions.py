@@ -320,6 +320,64 @@ class ProjectInvalidProgressError(DomainError):
         super().__init__(message)
 
 
+class AnnouncementNotFoundError(DomainError):
+    """Raised when an announcement is not found."""
+
+    def __init__(self, announcement_id: UUID | str = "") -> None:
+        msg = (
+            f"Comunicado {announcement_id} não encontrado."
+            if announcement_id
+            else "Comunicado não encontrado."
+        )
+        super().__init__(msg)
+
+
+class AnnouncementCommentNotFoundError(DomainError):
+    """Raised when an announcement comment is not found."""
+
+    def __init__(self, comment_id: UUID | str = "") -> None:
+        msg = (
+            f"Comentário {comment_id} não encontrado." if comment_id else "Comentário não encontrado."
+        )
+        super().__init__(msg)
+
+
+class AnnouncementMediaNotFoundError(DomainError):
+    """Raised when an announcement media item is not found."""
+
+    def __init__(self, media_id: UUID | str = "") -> None:
+        msg = f"Mídia {media_id} não encontrada." if media_id else "Mídia não encontrada."
+        super().__init__(msg)
+
+
+class AnnouncementPermissionError(DomainError):
+    """Raised when a user lacks permission for an announcement action."""
+
+    def __init__(
+        self, message: str = "Apenas Administradores e Diretores podem publicar comunicados."
+    ) -> None:
+        super().__init__(message)
+
+
+class InvalidAnnouncementMediaFormatError(DomainError):
+    """Raised when uploaded announcement media has an unsupported MIME type or is corrupted."""
+
+    def __init__(
+        self,
+        message: str = "Formato de mídia inválido. Formatos aceitos: JPEG, PNG, WebP, PDF.",
+    ) -> None:
+        super().__init__(message)
+
+
+class AnnouncementMediaTooLargeError(DomainError):
+    """Raised when uploaded announcement media exceeds the 10MB limit."""
+
+    def __init__(
+        self, message: str = "Arquivo excede o limite máximo permitido de 10MB."
+    ) -> None:
+        super().__init__(message)
+
+
 
 
 
