@@ -64,9 +64,23 @@
     {
       "id": "APRAS-8",
       "title": "Restrict access to Tarefas and Categorias navigation menus to specific UserTypes",
-      "status": "backlog",
-      "justification": "Limit navigation and access to Tarefas and Categorias pages based on user types.",
-      "running": false
+      "status": "specreview",
+      "justification": "Design brainstormed: UserType gains a generic allowed_menus list (opt-in, not opt-out). Only ADMINISTRATOR is exempt from the gate -- DIRECTOR now also requires a qualifying UserType, a deliberate breaking change from its previously-unconditional task access. Migration starts every UserType with allowed_menus=[] (empty), so this is an intentionally disruptive rollout: everyone except Administrator loses Tarefas/Categorias access until an admin manually grants it per UserType. Enforced both frontend (nav+route) and backend (403 on tasks/categories endpoints), layered in front of existing RBAC, not replacing it. Spec at docs/tasks/APRAS-8-spec.md, dispatched for independent review.",
+      "expected_results": [
+        "UserType.allowed_menus (Postgres array, default empty) exists and is editable via API and UI",
+        "GET/POST/PUT/DELETE on /tasks/* and /categories/* return 403 for any non-Administrator user unless a qualifying UserType allows it",
+        "Administrator is never blocked by this gate",
+        "Navbar hides gated links and ProtectedRoute blocks direct navigation for users failing the gate",
+        "AGENTS.md RBAC table updated to reflect Director's now-conditional task access"
+      ],
+      "blockedBy": [],
+      "spec_path": "docs/tasks/APRAS-8-spec.md",
+      "spec_iterations": 0,
+      "qa_iterations": 0,
+      "last_review_findings": [],
+      "created_at": "2026-08-27T16:20:00-03:00",
+      "updated_at": "2026-08-27T16:20:00-03:00",
+      "running": true
     },
     {
       "id": "APRAS-9",
