@@ -64,10 +64,10 @@
     {
       "id": "APRAS-8",
       "title": "Restrict access to Tarefas and Categorias navigation menus to specific UserTypes",
-      "status": "specreview",
-      "justification": "Design brainstormed: UserType gains a generic allowed_menus list (opt-in, not opt-out). Only ADMINISTRATOR is exempt from the gate -- DIRECTOR now also requires a qualifying UserType, a deliberate breaking change from its previously-unconditional task access. Migration starts every UserType with allowed_menus=[] (empty), so this is an intentionally disruptive rollout: everyone except Administrator loses Tarefas/Categorias access until an admin manually grants it per UserType. Enforced both frontend (nav+route) and backend (403 on tasks/categories endpoints), layered in front of existing RBAC, not replacing it. Spec at docs/tasks/APRAS-8-spec.md. Independent spec review round 1: NEEDS_REVISION -- Postgres ARRAY column incompatible with SQLite test DB (would break entire backend suite), user_types.py create/update never wired to persist allowed_menus, UserType edit UI doesn't exist yet (spec wrongly assumed it did), ProtectedRoute's use of simulation-aware identity for the new check contradicts a documented invariant without explaining why, and the test blast radius is far larger than stated (normal_user/DIRECTOR fixture used in 19 files). Redispatching spec-generator with findings.",
+      "status": "inprogress",
+      "justification": "UserType gains a generic allowed_menus JSON list (opt-in). Only ADMINISTRATOR exempt from the gate -- DIRECTOR now also requires a qualifying UserType, a deliberate breaking change. Migration starts every UserType with allowed_menus=[] (empty): intentionally disruptive rollout, everyone except Administrator loses Tarefas/Categorias access until manually granted. Enforced both frontend and backend, layered in front of existing RBAC. Spec approved after 1 revision round (fixed: SQLite-incompatible ARRAY column -> JSON, missing user_types.py persistence, non-existent edit UI assumption, undocumented simulation-identity divergence in ProtectedRoute, understated test blast radius). Implementation dispatched.",
       "expected_results": [
-        "UserType.allowed_menus (Postgres array, default empty) exists and is editable via API and UI",
+        "UserType.allowed_menus (JSON list, default empty) exists and is editable via API and UI",
         "GET/POST/PUT/DELETE on /tasks/* and /categories/* return 403 for any non-Administrator user unless a qualifying UserType allows it",
         "Administrator is never blocked by this gate",
         "Navbar hides gated links and ProtectedRoute blocks direct navigation for users failing the gate",
@@ -75,17 +75,11 @@
       ],
       "blockedBy": [],
       "spec_path": "docs/tasks/APRAS-8-spec.md",
-      "spec_iterations": 1,
+      "spec_iterations": 2,
       "qa_iterations": 0,
-      "last_review_findings": [
-        "sa_column=Column(ARRAY(String)) for UserType.allowed_menus does not compile against SQLite (backend/tests/conftest.py's session fixture uses sqlite:// + create_all for every test) -- would break the entire backend suite, not just tasks/categories tests. Use a portable sqlalchemy.JSON column instead (compiles on both SQLite and Postgres), not a manually-serialized string.",
-        "backend/app/api/v1/endpoints/user_types.py's create_user_type/update_user_type hard-assign only `name` today and must be updated to read/persist allowed_menus, or the field is silently dropped on every request -- add this as an explicit 'endpoints touched' item.",
-        "The UserType management UI in AdminUserDashboard.tsx has no edit affordance today (only create-form + delete button) -- the spec must call for building a net-new edit UI (checkboxes + a PATCH /user-types/{id} mutation), not 'extending' something that doesn't exist.",
-        "useEffectiveIdentity.ts has a documented invariant that ProtectedRoute must never use simulated identity. The spec's useMenuAccess hook (built on useEffectiveIdentity) is wired into ProtectedRoute via requiredMenu, diverging from that invariant. This divergence is very likely correct (otherwise simulation could never preview a menu-gated page) and the lockout scenario the comment warns about doesn't reappear (SimulationBanner/exit-simulation control renders outside ProtectedRoute), but the spec must say so explicitly and instruct updating the doc comment, not silently diverge.",
-        "Test-impact section understates blast radius: `normal_user` (a DIRECTOR fixture in conftest.py) is used in ~19 test files, at least 7 of which directly exercise task/category endpoints and will fail under the new default-deny gate. Spec must call this out explicitly and specify the fix strategy (e.g. give normal_user a UserType with the right allowed_menus directly in the shared fixture)."
-      ],
+      "last_review_findings": [],
       "created_at": "2026-08-27T16:20:00-03:00",
-      "updated_at": "2026-08-27T16:45:00-03:00",
+      "updated_at": "2026-08-27T17:00:00-03:00",
       "running": true
     },
     {
