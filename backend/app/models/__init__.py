@@ -12,10 +12,12 @@ from .enums import (
     FacialTemplateSyncStatus,
     LotAssociationType,
     LotStatus,
+    MilestoneStatus,
     OccurrenceCategory,
     OccurrencePriority,
     OccurrenceStatus,
     PhotoApprovalStatus,
+    ProjectStatus,
     ResidentRelationship,
     ShiftType,
     StorageProvider,
@@ -26,6 +28,7 @@ from .enums import (
 from .lot import Lot, UserLotLink
 from .media_asset import MediaAsset
 from .occurrence import Occurrence, OccurrenceTimeline
+from .project import ConstructionProject, ProjectMilestone, ProjectUpdate
 from .resident import Resident
 from .task import Task, TaskHistory
 from .user import User
@@ -41,6 +44,7 @@ __all__ = [
     "AuthorizationStatus",
     "AuthorizationType",
     "Category",
+    "ConstructionProject",
     "DayOfWeek",
     "DocumentDownloadLog",
     "DocumentFolder",
@@ -52,12 +56,16 @@ __all__ = [
     "LotAssociationType",
     "LotStatus",
     "MediaAsset",
+    "MilestoneStatus",
     "Occurrence",
     "OccurrenceCategory",
     "OccurrencePriority",
     "OccurrenceStatus",
     "OccurrenceTimeline",
     "PhotoApprovalStatus",
+    "ProjectMilestone",
+    "ProjectStatus",
+    "ProjectUpdate",
     "Resident",
     "ResidentRelationship",
     "ShiftType",

@@ -16,6 +16,7 @@ import { VisitorAuthPage } from "./features/visitor-management/components/Visito
 import { GatekeeperDashboard } from "./features/visitor-management/components/GatekeeperDashboard";
 import { OccurrenceBookPage } from "./features/occurrence-management/components/OccurrenceBookPage";
 import { DocumentCenterPage } from "./features/document-management/components/DocumentCenterPage";
+import { ConstructionTrackerPage } from "./features/project-management/components/ConstructionTrackerPage";
 import PhotoApprovalQueuePage from "./features/media-management/components/PhotoApprovalQueuePage";
 import { AccessControlPage } from "./features/access-control/components/AccessControlPage";
 import { GateMonitorPage } from "./features/access-control/components/GateMonitorPage";
@@ -98,6 +99,15 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <DocumentCenterPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/projects"
+                element={
+                  <ProtectedRoute>
+                    <ConstructionTrackerPage />
                   </ProtectedRoute>
                 }
               />

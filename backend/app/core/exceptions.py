@@ -279,6 +279,47 @@ class NoApprovedPhotoError(DomainError):
         super().__init__(message)
 
 
+class ProjectNotFoundError(DomainError):
+    """Raised when a construction project is not found."""
+
+    def __init__(self, project_id: UUID | str = "") -> None:
+        msg = f"Projeto de obra {project_id} não encontrado." if project_id else "Projeto de obra não encontrado."
+        super().__init__(msg)
+
+
+class MilestoneNotFoundError(DomainError):
+    """Raised when a milestone is not found."""
+
+    def __init__(self, milestone_id: UUID | str = "") -> None:
+        msg = f"Marco da obra {milestone_id} não encontrado." if milestone_id else "Marco da obra não encontrado."
+        super().__init__(msg)
+
+
+class ProjectUpdateNotFoundError(DomainError):
+    """Raised when a project update log is not found."""
+
+    def __init__(self, update_id: UUID | str = "") -> None:
+        msg = f"Atualização de obra {update_id} não encontrada." if update_id else "Atualização de obra não encontrada."
+        super().__init__(msg)
+
+
+class ProjectAccessForbiddenError(DomainError):
+    """Raised when access to a project or project action is forbidden."""
+
+    def __init__(self, message: str = "Acesso ao projeto de obra negado.") -> None:
+        super().__init__(message)
+
+
+ProjectPermissionError = ProjectAccessForbiddenError
+
+
+class ProjectInvalidProgressError(DomainError):
+    """Raised when progress percentage or budget configuration is invalid."""
+
+    def __init__(self, message: str = "Porcentagem de progresso inválida (deve estar entre 0% e 100%).") -> None:
+        super().__init__(message)
+
+
 
 
 

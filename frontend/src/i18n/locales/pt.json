@@ -596,5 +596,102 @@
     "folderDescriptionLabel": "Descrição",
     "folderDescriptionPlaceholder": "Finalidade da pasta...",
     "createFolder": "Criar Pasta"
+  },
+  "projects": {
+    "navItem": "Obras",
+    "pageTitle": "Acompanhamento de Obras",
+    "pageSubtitle": "Acompanhe o andamento físico, metas e execução financeira das reformas e melhorias do condomínio.",
+    "newProject": "Nova Obra",
+    "allStatuses": "Todos os Status",
+    "status": {
+      "PLANNED": "Planejada",
+      "IN_PROGRESS": "Em Andamento",
+      "PAUSED": "Pausada",
+      "COMPLETED": "Concluída"
+    },
+    "milestoneStatus": {
+      "DONE": "Feito",
+      "IN_PROGRESS": "Em Andamento",
+      "NEXT_STEPS": "Próximos Passos"
+    },
+    "card": {
+      "contractor": "Empreiteira",
+      "notSpecified": "Não informada",
+      "physicalProgress": "Progresso Físico",
+      "budgetExecution": "Execução Orçamentária",
+      "of": "de",
+      "period": "Período",
+      "viewDetails": "Ver Detalhes",
+      "edit": "Editar Obra",
+      "delete": "Excluir Obra",
+      "confirmDelete": "Tem certeza que deseja excluir esta obra e todos os seus marcos e atualizações?"
+    },
+    "budget": {
+      "title": "Acompanhamento Orçamentário",
+      "total": "Orçamento Total",
+      "executed": "Total Executado",
+      "remaining": "Saldo Restante",
+      "overBudget": "Orçamento Estourado",
+      "executionPct": "Executado"
+    },
+    "milestones": {
+      "title": "Marcos e Etapas da Obra",
+      "add": "Novo Marco",
+      "empty": "Nenhum marco cadastrado nesta etapa.",
+      "done": "Feito",
+      "inProgress": "Em Andamento",
+      "nextSteps": "Próximos Passos",
+      "completedOn": "Concluído em",
+      "dueOn": "Previsão",
+      "edit": "Editar Marco",
+      "delete": "Excluir Marco",
+      "confirmDelete": "Tem certeza que deseja excluir este marco?"
+    },
+    "updates": {
+      "title": "Diário de Bordo e Fotos da Obra",
+      "add": "Publicar Atualização",
+      "empty": "Nenhuma atualização registrada ainda.",
+      "costImpact": "Impacto Financeiro",
+      "postedBy": "Publicado por",
+      "delete": "Excluir Atualização",
+      "confirmDelete": "Tem certeza que deseja excluir esta publicação?"
+    },
+    "modals": {
+      "projectCreateTitle": "Cadastrar Nova Obra",
+      "projectEditTitle": "Editar Obra",
+      "projectTitleLabel": "Título da Obra",
+      "projectTitlePlaceholder": "Ex: Reforma da Piscina Principal",
+      "descriptionLabel": "Descrição",
+      "descriptionPlaceholder": "Detalhes sobre o escopo da obra...",
+      "contractorLabel": "Nome da Empreiteira / Responsável",
+      "totalBudgetLabel": "Orçamento Previsto (R$)",
+      "executedBudgetLabel": "Orçamento Já Executado (R$)",
+      "progressPctLabel": "Progresso Físico (%)",
+      "startDateLabel": "Data de Início",
+      "estCompletionDateLabel": "Previsão de Término",
+      "actCompletionDateLabel": "Data Efetiva de Conclusão",
+      "statusLabel": "Status Atual",
+      "coverPhotoLabel": "URL da Foto de Capa",
+      "saveProject": "Salvar Obra",
+      "milestoneCreateTitle": "Novo Marco da Obra",
+      "milestoneEditTitle": "Editar Marco",
+      "milestoneTitleLabel": "Título do Marco",
+      "milestoneTitlePlaceholder": "Ex: Concretagem das fundações",
+      "milestoneDescLabel": "Descrição",
+      "milestoneDueDateLabel": "Data Prevista",
+      "milestoneCompDateLabel": "Data de Conclusão",
+      "milestoneOrderLabel": "Ordem de Exibição",
+      "saveMilestone": "Salvar Marco",
+      "updateCreateTitle": "Publicar Atualização da Obra",
+      "updateTitleLabel": "Título da Atualização",
+      "updateTitlePlaceholder": "Ex: Chegada dos materiais e início da concretagem",
+      "updateContentLabel": "Relato das Atividades",
+      "updateContentPlaceholder": "Descreva o que foi feito nesta etapa...",
+      "updateCostImpactLabel": "Impacto Financeiro Adicional (R$ - opcional)",
+      "updatePhotosLabel": "URLs das Fotos (uma por linha)",
+      "saveUpdate": "Publicar Atualização"
+    },
+    "noProjectsFound": "Nenhuma obra cadastrada",
+    "noProjectsDescription": "Não há obras correspondentes ao filtro selecionado."
   }
 }

@@ -596,5 +596,102 @@
     "folderDescriptionLabel": "Description",
     "folderDescriptionPlaceholder": "Purpose of folder...",
     "createFolder": "Create Folder"
+  },
+  "projects": {
+    "navItem": "Projects",
+    "pageTitle": "Construction & Improvement Tracking",
+    "pageSubtitle": "Track physical progress, stage milestones, and financial execution of HOA renovations and construction projects.",
+    "newProject": "New Project",
+    "allStatuses": "All Statuses",
+    "status": {
+      "PLANNED": "Planned",
+      "IN_PROGRESS": "In Progress",
+      "PAUSED": "Paused",
+      "COMPLETED": "Completed"
+    },
+    "milestoneStatus": {
+      "DONE": "Done",
+      "IN_PROGRESS": "In Progress",
+      "NEXT_STEPS": "Next Steps"
+    },
+    "card": {
+      "contractor": "Contractor",
+      "notSpecified": "Not specified",
+      "physicalProgress": "Physical Progress",
+      "budgetExecution": "Budget Execution",
+      "of": "of",
+      "period": "Timeline",
+      "viewDetails": "View Details",
+      "edit": "Edit Project",
+      "delete": "Delete Project",
+      "confirmDelete": "Are you sure you want to delete this construction project and all its milestones and updates?"
+    },
+    "budget": {
+      "title": "Budget Execution",
+      "total": "Total Budget",
+      "executed": "Executed Budget",
+      "remaining": "Remaining",
+      "overBudget": "Budget Overrun",
+      "executionPct": "Executed"
+    },
+    "milestones": {
+      "title": "Project Milestones",
+      "add": "New Milestone",
+      "empty": "No milestones in this stage.",
+      "done": "Done",
+      "inProgress": "In Progress",
+      "nextSteps": "Next Steps",
+      "completedOn": "Completed on",
+      "dueOn": "Target Date",
+      "edit": "Edit Milestone",
+      "delete": "Delete Milestone",
+      "confirmDelete": "Are you sure you want to delete this milestone?"
+    },
+    "updates": {
+      "title": "Site Log & Photos",
+      "add": "Post Update",
+      "empty": "No updates posted yet.",
+      "costImpact": "Cost Impact",
+      "postedBy": "Posted by",
+      "delete": "Delete Update",
+      "confirmDelete": "Are you sure you want to delete this update?"
+    },
+    "modals": {
+      "projectCreateTitle": "New Construction Project",
+      "projectEditTitle": "Edit Project",
+      "projectTitleLabel": "Project Title",
+      "projectTitlePlaceholder": "e.g. Main Swimming Pool Renovation",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Details regarding scope of work...",
+      "contractorLabel": "Contractor / Company Name",
+      "totalBudgetLabel": "Total Budget (R$)",
+      "executedBudgetLabel": "Executed Budget (R$)",
+      "progressPctLabel": "Physical Progress (%)",
+      "startDateLabel": "Start Date",
+      "estCompletionDateLabel": "Est. Completion Date",
+      "actCompletionDateLabel": "Actual Completion Date",
+      "statusLabel": "Current Status",
+      "coverPhotoLabel": "Cover Photo URL",
+      "saveProject": "Save Project",
+      "milestoneCreateTitle": "New Project Milestone",
+      "milestoneEditTitle": "Edit Milestone",
+      "milestoneTitleLabel": "Milestone Title",
+      "milestoneTitlePlaceholder": "e.g. Concrete foundations pouring",
+      "milestoneDescLabel": "Description",
+      "milestoneDueDateLabel": "Due Date",
+      "milestoneCompDateLabel": "Completion Date",
+      "milestoneOrderLabel": "Display Order",
+      "saveMilestone": "Save Milestone",
+      "updateCreateTitle": "Post Project Update",
+      "updateTitleLabel": "Update Title",
+      "updateTitlePlaceholder": "e.g. Materials delivered & framing started",
+      "updateContentLabel": "Activity Narrative",
+      "updateContentPlaceholder": "Describe work performed in this phase...",
+      "updateCostImpactLabel": "Cost Impact (R$ - optional)",
+      "updatePhotosLabel": "Photo URLs (one per line)",
+      "saveUpdate": "Publish Update"
+    },
+    "noProjectsFound": "No construction projects found",
+    "noProjectsDescription": "There are no projects matching the selected filter."
   }
 }

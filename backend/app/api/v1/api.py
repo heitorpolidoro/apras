@@ -9,6 +9,7 @@ from app.api.v1.endpoints import (
     documents,
     lots,
     occurrences,
+    projects,
     residents,
     tasks,
     uploads,
@@ -41,6 +42,7 @@ api_router.include_router(occurrences.router, prefix="/occurrences", tags=["occu
 api_router.include_router(documents.router, prefix="/documents", tags=["documents"])
 api_router.include_router(uploads.router)
 api_router.include_router(access_control.router, prefix="/access-control", tags=["access-control"])
+api_router.include_router(projects.router, prefix="/projects", tags=["projects"])
 
 
 

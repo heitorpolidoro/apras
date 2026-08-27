@@ -170,6 +170,23 @@ class FacialTemplateSyncStatus(StrEnum):
     FAILED = "FAILED"
 
 
+class ProjectStatus(StrEnum):
+    """Enumeration for construction project lifecycle status."""
+
+    PLANNED = "PLANNED"
+    IN_PROGRESS = "IN_PROGRESS"
+    PAUSED = "PAUSED"
+    COMPLETED = "COMPLETED"
+
+
+class MilestoneStatus(StrEnum):
+    """Enumeration for project milestone status."""
+
+    DONE = "DONE"
+    IN_PROGRESS = "IN_PROGRESS"
+    NEXT_STEPS = "NEXT_STEPS"
+
+
 
 
 

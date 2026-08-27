@@ -1,92 +1,106 @@
 {
   "tasks": [
     {
-      "id": "password-recovery",
+      "id": "APRAS-1",
       "title": "Implement password recovery flow (forgot password / reset password) in frontend and backend",
       "status": "done",
-      "justification": "Implemented JWT password reset token mechanism, forgot/reset password API endpoints, forgot/reset frontend screens, and updated user table checks."
+      "justification": "Implemented JWT password reset token mechanism, forgot/reset password API endpoints, forgot/reset frontend screens, and updated user table checks.",
+      "running": false
     },
     {
-      "id": "dynamic-visibility",
+      "id": "APRAS-2",
       "title": "Refactor task visibility from boolean flag to dynamic UserType-based targeting",
       "status": "done",
-      "justification": "Successfully implemented many-to-many User-UserType relationships, replaced manager_visible with visible_to_id in Task, created and ran Alembic migrations on prod database, updated backend RBAC checks/endpoints, and refactored the frontend dashboard checklist and task creation/edit select dropdown. Fully tested and deployed."
+      "justification": "Successfully implemented many-to-many User-UserType relationships, replaced manager_visible with visible_to_id in Task, created and ran Alembic migrations on prod database, updated backend RBAC checks/endpoints, and refactored the frontend dashboard checklist and task creation/edit select dropdown. Fully tested and deployed.",
+      "running": false
     },
     {
-      "id": "alerts-to-modals",
+      "id": "APRAS-3",
       "title": "Replace all inline Alerts with modal dialogs on the frontend",
       "status": "done",
-      "justification": "Created premium reusable AlertModal component with backdrop blur and animations. Replaced all inline Alert banners across 8 pages and verified 100% passing tests."
+      "justification": "Created premium reusable AlertModal component with backdrop blur and animations. Replaced all inline Alert banners across 8 pages and verified 100% passing tests.",
+      "running": false
     },
     {
-      "id": "cpf-validation",
+      "id": "APRAS-4",
       "title": "Add mandatory CPF field on user signup with mathematical validation",
       "status": "done",
-      "justification": "Added mandatory CPF field to User SQLModel, implemented Pydantic check-digit validation, generated Alembic migration with automatic valid placeholder CPFs for existing database rows, added masked CPF input to SignupPage and read-only CPF display in AdminUserDashboard, and verified 100% test coverage."
+      "justification": "Added mandatory CPF field to User SQLModel, implemented Pydantic check-digit validation, generated Alembic migration with automatic valid placeholder CPFs for existing database rows, added masked CPF input to SignupPage and read-only CPF display in AdminUserDashboard, and verified 100% test coverage.",
+      "running": false
     },
     {
-      "id": "admin-role-simulation",
+      "id": "APRAS-5",
       "title": "Allow administrators to simulate/impersonate other roles and user types in frontend",
       "status": "done",
-      "justification": "Implemented frontend-only role/UserType simulation per docs/superpowers/specs/2026-08-10-admin-role-simulation-design.md: SimulationContext, useEffectiveIdentity hook, permission-mirroring functions for task visibility/edit gating, an Axios interceptor blocking all mutations while simulating, and Navbar controls + persistent banner. 366 frontend tests passing. Merged to master (e0582d4) and pushed."
+      "justification": "Implemented frontend-only role/UserType simulation per docs/superpowers/specs/2026-08-10-admin-role-simulation-design.md: SimulationContext, useEffectiveIdentity hook, permission-mirroring functions for task visibility/edit gating, an Axios interceptor blocking all mutations while simulating, and Navbar controls + persistent banner. 366 frontend tests passing. Merged to master (e0582d4) and pushed.",
+      "running": false
     },
     {
-      "id": "user-profile-fields",
+      "id": "APRAS-6",
       "title": "Add address, block/lot, and phone fields to user registration and administration",
       "status": "done",
-      "justification": "Scope reduced during brainstorming to data-layer-only (SQLModel, Alembic migration 0005_add_profile_fields_to_user, Pydantic schemas, frontend TS type) per docs/superpowers/specs/2026-08-10-user-profile-fields-design.md. UI work split into user-profile-fields-ui (backlog). 165 backend tests passing (96.23% coverage), 366 frontend tests passing. Merged to master (b003f6e) and pushed."
+      "justification": "Scope reduced during brainstorming to data-layer-only (SQLModel, Alembic migration 0005_add_profile_fields_to_user, Pydantic schemas, frontend TS type) per docs/superpowers/specs/2026-08-10-user-profile-fields-design.md. UI work split into user-profile-fields-ui (backlog). 165 backend tests passing (96.23% coverage), 366 frontend tests passing. Merged to master (b003f6e) and pushed.",
+      "running": false
     },
     {
-      "id": "user-profile-fields-ui",
+      "id": "APRAS-7",
       "title": "Build UI to view/edit user address, block/lot, and phone (signup form, admin dashboard, possible self-service profile page)",
       "status": "backlog",
-      "justification": "Split off from user-profile-fields during brainstorming: that task was descoped to data-layer-only (model/schema/migration), since these fields' required-ness, formatting/masking, and who can edit them (admin-only today, or a new self-service profile page) still need their own design pass."
+      "justification": "Split off from user-profile-fields during brainstorming: that task was descoped to data-layer-only (model/schema/migration), since these fields' required-ness, formatting/masking, and who can edit them (admin-only today, or a new self-service profile page) still need their own design pass.",
+      "running": false
     },
     {
-      "id": "menu-access-by-type",
+      "id": "APRAS-8",
       "title": "Restrict access to Tarefas and Categorias navigation menus to specific UserTypes",
       "status": "backlog",
-      "justification": "Limit navigation and access to Tarefas and Categorias pages based on user types."
+      "justification": "Limit navigation and access to Tarefas and Categorias pages based on user types.",
+      "running": false
     },
     {
-      "id": "role-as-usertype-permission",
+      "id": "APRAS-9",
       "title": "Treat UserRole as a UserType for permission evaluation",
       "status": "backlog",
-      "justification": "Include UserRole in permission evaluations alongside UserTypes."
+      "justification": "Include UserRole in permission evaluations alongside UserTypes.",
+      "running": false
     },
     {
-      "id": "guest-landing-page",
+      "id": "APRAS-10",
       "title": "Create dedicated landing/welcome page for Guest users",
       "status": "backlog",
-      "justification": "Add a dedicated initial page for users with GUEST role awaiting approval or guest access."
+      "justification": "Add a dedicated initial page for users with GUEST role awaiting approval or guest access.",
+      "running": false
     },
     {
-      "id": "task-visibility-types",
+      "id": "APRAS-11",
       "title": "Add UserTypes to task visibility configuration",
       "status": "backlog",
-      "justification": "Include user types in task visibility configuration and filtering."
+      "justification": "Include user types in task visibility configuration and filtering.",
+      "running": false
     },
     {
-      "id": "gatekeeper-user-role",
+      "id": "APRAS-12",
       "title": "Create PORTEIRO (Gatekeeper) user role and dedicated Portaria dashboard",
       "status": "backlog",
-      "justification": "Dedicated role and interface for gatekeepers to check-in/check-out visitors and contractors."
+      "justification": "Dedicated role and interface for gatekeepers to check-in/check-out visitors and contractors.",
+      "running": false
     },
     {
-      "id": "whatsapp-integration",
+      "id": "APRAS-13",
       "title": "Integrate WhatsApp API for sending QR passes, visitor entry alerts, and announcements",
       "status": "backlog",
-      "justification": "Automated WhatsApp notifications for visitor entry, QR pass sharing, and urgent HOA notices."
+      "justification": "Automated WhatsApp notifications for visitor entry, QR pass sharing, and urgent HOA notices.",
+      "running": false
     },
     {
-      "id": "qr-code-visitor-passes",
+      "id": "APRAS-14",
       "title": "Generate dynamic QR code passes for visitor/contractor entry validation at turnstiles/gates",
       "status": "backlog",
-      "justification": "Digital QR code pass generation for visitor access validation."
+      "justification": "Digital QR code pass generation for visitor access validation.",
+      "running": false
     },
     {
-      "id": "T001",
-      "title": "Cadastro de Lotes (quadra, lote, endereço) e vinculação de usuários",
+      "id": "APRAS-15",
+      "title": "Cadastro de Lotes (quadra, lote, endere\u00e7o) e vincula\u00e7\u00e3o de usu\u00e1rios",
       "status": "done",
       "justification": "Independently verified by QA. Backend tests passing with 97.01% coverage (>90%), 373 frontend vitest tests passing (100%), Alembic migration 0006 verified, composite unique constraints and RBAC rules fully enforced.",
       "expected_results": [
@@ -100,11 +114,12 @@
       "qa_iterations": 1,
       "last_review_findings": [],
       "created_at": "2026-08-23T02:22:42-03:00",
-      "updated_at": "2026-08-24T04:14:17-03:00"
+      "updated_at": "2026-08-24T04:14:17-03:00",
+      "running": false
     },
     {
-      "id": "T002",
-      "title": "Cadastro de Moradores por Lote e vinculação de contas de usuário",
+      "id": "APRAS-16",
+      "title": "Cadastro de Moradores por Lote e vincula\u00e7\u00e3o de contas de usu\u00e1rio",
       "status": "done",
       "justification": "Independently verified by QA. Backend tests passing with 96.26% coverage (>90%), 381 frontend vitest tests passing (100%), Alembic migration 0007 verified, CPF check digit validation, signup auto-linking, manual binding, soft deletion, and RBAC rules fully enforced.",
       "expected_results": [
@@ -118,11 +133,12 @@
       "qa_iterations": 1,
       "last_review_findings": [],
       "created_at": "2026-08-23T02:22:42-03:00",
-      "updated_at": "2026-08-25T14:55:00-03:00"
+      "updated_at": "2026-08-25T14:55:00-03:00",
+      "running": false
     },
     {
-      "id": "T003",
-      "title": "Cadastro e Autorização de Visitantes e Prestadores de Serviço",
+      "id": "APRAS-17",
+      "title": "Cadastro e Autoriza\u00e7\u00e3o de Visitantes e Prestadores de Servi\u00e7o",
       "status": "done",
       "justification": "Independently verified by QA. Backend tests passing with 95.39% coverage (>90%), 394 frontend vitest tests passing (100%), Alembic migration 0008 verified, Visitor/VisitorAuthorization/AccessLog data models with FKs and indices created, single vs permanent authorization rules with shift/day/date window validation enforced, gatekeeper check-in/out logic with search by name/CPF/plate verified, auto-expiration of single-entry authorizations enforced, and RBAC rules for Admin/Director/Manager/Resident/Gatekeeper fully satisfied.",
       "expected_results": [
@@ -136,11 +152,12 @@
       "qa_iterations": 1,
       "last_review_findings": [],
       "created_at": "2026-08-23T02:22:42-03:00",
-      "updated_at": "2026-08-25T15:21:40-03:00"
+      "updated_at": "2026-08-25T15:21:40-03:00",
+      "running": false
     },
     {
-      "id": "T004",
-      "title": "Gestão e Armazenamento de Fotos nos Cadastros",
+      "id": "APRAS-18",
+      "title": "Gest\u00e3o e Armazenamento de Fotos nos Cadastros",
       "status": "done",
       "justification": "Independently verified by QA. Frontend tests passing (414/414, 100%). All backend source code verified through deep review: MediaAsset model with FKs and indexes, Alembic migration 0011 well-formed, storage abstraction with LocalStorageProvider under static/uploads, 5MB max file size and JPEG/PNG/WebP validation, auto-approval for Admin/Director/Manager uploads, pending approval queue with approval and rejection requiring reason, all 6 API endpoints under /api/v1/uploads created, reusable frontend components (PhotoUploadModal, WebcamCaptureDialog, AvatarCropEditor, AvatarWithFallback, PhotoApprovalQueuePage) implemented, RBAC rules enforced, i18n keys added to pt.json and en.json under photos.* namespace, and Navbar badge for Admin/Director roles. Backend pytest could not be executed due to sandbox restrictions on Python binary, but test files (test_uploads.py, test_uploads_rbac.py) verified by source review covering all required scenarios.",
       "expected_results": [
@@ -154,54 +171,52 @@
       "qa_iterations": 1,
       "last_review_findings": [],
       "created_at": "2026-08-23T02:22:42-03:00",
-      "updated_at": "2026-08-25T17:15:00-03:00"
+      "updated_at": "2026-08-25T17:15:00-03:00",
+      "running": false
     },
     {
-      "id": "T005",
-      "title": "Controle de Acesso e Integração de Reconhecimento Facial",
-      "status": "blocked",
-      "justification": "Blocked on T003, T004",
+      "id": "APRAS-19",
+      "title": "Controle de Acesso e Integra\u00e7\u00e3o de Reconhecimento Facial",
+      "status": "done",
+      "justification": "Independently verified by QA on first pass (no iterations). Backend: AccessDevice/FacialTemplate/FacialAccessEvent models, endpoints under /api/v1/access-control, Alembic migration 0012, 21 new tests (100% coverage on new files, full suite 269 passing at 96.05%). Frontend: AccessControlPage, GateMonitorPage, device/sync/event-feed components, ProtectedRoute extended for multi-role, 420/420 tests passing. Also fixed a pre-existing missing Pillow dependency that silently broke pytest. Known non-blocking gap: migration 0012 not run against a real Postgres instance (no Docker in sandbox, same as T004).",
       "expected_results": [
         "AccessDevice model and device management API created",
         "Facial template sync and verification webhooks implemented",
         "Live access control and gate monitor UI implemented"
       ],
-      "blockedBy": [
-        "T003",
-        "T004"
-      ],
+      "blockedBy": [],
       "spec_path": "docs/tasks/T005-spec.md",
-      "spec_iterations": 0,
-      "qa_iterations": 0,
+      "spec_iterations": 1,
+      "qa_iterations": 1,
       "last_review_findings": [],
       "created_at": "2026-08-23T02:22:42-03:00",
-      "updated_at": "2026-08-23T02:22:42-03:00"
+      "updated_at": "2026-08-27T09:00:00-03:00",
+      "running": false
     },
     {
-      "id": "T006",
-      "title": "Blog/Feed de Comunicados e Notícias",
-      "status": "blocked",
-      "justification": "Blocked on T004",
+      "id": "APRAS-20",
+      "title": "Blog/Feed de Comunicados e Not\u00edcias",
+      "status": "backlog",
+      "justification": "Unblocked: T004 is done. Not yet started.",
       "expected_results": [
         "Announcement post and media models created",
         "Instagram-style news feed with image/PDF carousels built",
         "Comment threads, read receipts, and publisher role guards active"
       ],
-      "blockedBy": [
-        "T004"
-      ],
+      "blockedBy": [],
       "spec_path": "docs/tasks/T006-spec.md",
       "spec_iterations": 0,
       "qa_iterations": 0,
       "last_review_findings": [],
       "created_at": "2026-08-23T02:22:42-03:00",
-      "updated_at": "2026-08-23T02:22:42-03:00"
+      "updated_at": "2026-08-27T09:00:00-03:00",
+      "running": false
     },
     {
-      "id": "T007",
-      "title": "Acompanhamento Físico e Financeiro de Obras",
-      "status": "backlog",
-      "justification": "Tracking of physical progress and financial execution of HOA capital projects.",
+      "id": "APRAS-21",
+      "title": "Acompanhamento F\u00edsico e Financeiro de Obras",
+      "status": "done",
+      "justification": "Independently verified by QA. Backend tests passing with 96.04% coverage (>90%) across 287 tests; frontend vitest tests passing (431/431, 100%). Alembic migration 0013 well-formed with cascading deletes and indices; ConstructionProject, ProjectMilestone, and ProjectUpdate models implemented; milestone status workflow with auto completion dates verified; budget vs actual execution and updates feed with photos/cost impacts verified; full RBAC permissions verified across Admin, Director, Manager, Resident, and Guest roles.",
       "expected_results": [
         "Construction project and milestone data models implemented",
         "Physical progress indicator and milestone status workflow built",
@@ -209,15 +224,16 @@
       ],
       "blockedBy": [],
       "spec_path": "docs/tasks/T007-spec.md",
-      "spec_iterations": 0,
-      "qa_iterations": 0,
+      "spec_iterations": 1,
+      "qa_iterations": 1,
       "last_review_findings": [],
       "created_at": "2026-08-23T02:22:42-03:00",
-      "updated_at": "2026-08-23T02:22:42-03:00"
+      "updated_at": "2026-08-27T10:22:00-03:00",
+      "running": false
     },
     {
-      "id": "T008",
-      "title": "Área e Dashboard Financeiro da Associação",
+      "id": "APRAS-22",
+      "title": "\u00c1rea e Dashboard Financeiro da Associa\u00e7\u00e3o",
       "status": "backlog",
       "justification": "Association financial health, cash balance, statement, and invoice drill-down.",
       "expected_results": [
@@ -231,11 +247,12 @@
       "qa_iterations": 0,
       "last_review_findings": [],
       "created_at": "2026-08-23T02:22:42-03:00",
-      "updated_at": "2026-08-23T02:22:42-03:00"
+      "updated_at": "2026-08-23T02:22:42-03:00",
+      "running": false
     },
     {
-      "id": "T009",
-      "title": "Central de Documentos e Arquivos da Associação",
+      "id": "APRAS-23",
+      "title": "Central de Documentos e Arquivos da Associa\u00e7\u00e3o",
       "status": "done",
       "justification": "Independently verified by QA. Backend tests passing with 95.63% coverage (>90%), 406 frontend vitest tests passing (100%), Alembic migration 0010_add_document_tables verified, DocumentFolder, AssociationDocument, and DocumentDownloadLog models created with FKs and indexes, role-gated folder security matching user's effective role enforced, document versioning chain preserved, download audit logging verified, inline PDF viewer modal and multi-parameter document search active, and RBAC rules for Admin, Director, Manager, Resident fully satisfied.",
       "expected_results": [
@@ -249,11 +266,12 @@
       "qa_iterations": 1,
       "last_review_findings": [],
       "created_at": "2026-08-23T02:22:42-03:00",
-      "updated_at": "2026-08-25T16:22:45-03:00"
+      "updated_at": "2026-08-25T16:22:45-03:00",
+      "running": false
     },
     {
-      "id": "T010",
-      "title": "Livro de Ocorrências e Atendimento de Reclamações",
+      "id": "APRAS-24",
+      "title": "Livro de Ocorr\u00eancias e Atendimento de Reclama\u00e7\u00f5es",
       "status": "done",
       "justification": "Independently verified by QA. Backend tests passing with 95.22% coverage (>90%), 399 frontend vitest tests passing (100%), Alembic migration 0009_add_occurrence_tables verified, Occurrence and OccurrenceTimeline data models with FKs and indices created, protocol sequence generator (OCO-YYYY-XXXXXX) verified, public vs private visibility rules, anonymous masking, internal timeline auditing, and RBAC rules fully satisfied.",
       "expected_results": [
@@ -267,11 +285,12 @@
       "qa_iterations": 1,
       "last_review_findings": [],
       "created_at": "2026-08-23T02:22:42-03:00",
-      "updated_at": "2026-08-25T15:59:30-03:00"
+      "updated_at": "2026-08-25T15:59:30-03:00",
+      "running": false
     },
     {
-      "id": "T011",
-      "title": "Canal de Críticas, Sugestões e Fale Conosco",
+      "id": "APRAS-25",
+      "title": "Canal de Cr\u00edticas, Sugest\u00f5es e Fale Conosco",
       "status": "backlog",
       "justification": "Direct board feedback and contact channel separate from operational occurrences.",
       "expected_results": [
@@ -285,11 +304,12 @@
       "qa_iterations": 0,
       "last_review_findings": [],
       "created_at": "2026-08-23T02:22:42-03:00",
-      "updated_at": "2026-08-23T02:22:42-03:00"
+      "updated_at": "2026-08-23T02:22:42-03:00",
+      "running": false
     },
     {
-      "id": "T012",
-      "title": "Análise Comparativa e Recursos Avançados COM21",
+      "id": "APRAS-26",
+      "title": "An\u00e1lise Comparativa e Recursos Avan\u00e7ados COM21",
       "status": "backlog",
       "justification": "Benchmarking against COM21 to incorporate package management, reservations, and assemblies.",
       "expected_results": [
@@ -303,7 +323,8 @@
       "qa_iterations": 0,
       "last_review_findings": [],
       "created_at": "2026-08-23T02:22:42-03:00",
-      "updated_at": "2026-08-23T02:22:42-03:00"
+      "updated_at": "2026-08-23T02:22:42-03:00",
+      "running": false
     }
   ]
 }

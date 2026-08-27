@@ -15,11 +15,16 @@ from app.core.exceptions import (
     LotAlreadyExistsError,
     LotNotFoundError,
     MediaAssetNotFoundError,
+    MilestoneNotFoundError,
     OccurrenceAccessForbiddenError,
     OccurrenceNotFoundError,
     PhotoApprovalPermissionError,
     PhotoFileTooLargeError,
     PhotoRejectionReasonRequiredError,
+    ProjectAccessForbiddenError,
+    ProjectInvalidProgressError,
+    ProjectNotFoundError,
+    ProjectUpdateNotFoundError,
     ResidentAlreadyLinkedError,
     ResidentCPFConflictError,
     ResidentNotFoundError,
@@ -61,12 +66,21 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             DocumentNotFoundError,
             MediaAssetNotFoundError,
             AccessDeviceNotFoundError,
+            ProjectNotFoundError,
+            MilestoneNotFoundError,
+            ProjectUpdateNotFoundError,
         ),
     ):
         status_code = status.HTTP_404_NOT_FOUND
     elif isinstance(
         exc,
-        (ForbiddenError, OccurrenceAccessForbiddenError, FolderAccessDeniedError, PhotoApprovalPermissionError),
+        (
+            ForbiddenError,
+            OccurrenceAccessForbiddenError,
+            FolderAccessDeniedError,
+            PhotoApprovalPermissionError,
+            ProjectAccessForbiddenError,
+        ),
     ):
         status_code = status.HTTP_403_FORBIDDEN
     elif isinstance(exc, ResidentCPFConflictError):
@@ -80,6 +94,7 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             PhotoFileTooLargeError,
             InvalidPhotoFormatError,
             PhotoRejectionReasonRequiredError,
+            ProjectInvalidProgressError,
         ),
     ):
         status_code = status.HTTP_400_BAD_REQUEST
