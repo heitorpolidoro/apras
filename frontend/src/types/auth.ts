@@ -4,6 +4,7 @@ export const UserRole = {
   MANAGER: "MANAGER",
   GUEST: "GUEST",
   RESIDENT: "RESIDENT",
+  PORTEIRO: "PORTEIRO",
 } as const;
 
 export type UserRole = (typeof UserRole)[keyof typeof UserRole];

@@ -30,6 +30,7 @@ class UserRole(StrEnum):
     MANAGER = "MANAGER"
     GUEST = "GUEST"
     RESIDENT = "RESIDENT"
+    PORTEIRO = "PORTEIRO"
 
 
 class LotStatus(StrEnum):

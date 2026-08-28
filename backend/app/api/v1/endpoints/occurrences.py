@@ -2,12 +2,12 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlmodel import Session
 
 from app.api.deps import get_current_user
 from app.db import get_session
-from app.models.enums import OccurrenceCategory, OccurrenceStatus
+from app.models.enums import OccurrenceCategory, OccurrenceStatus, UserRole
 from app.models.user import User
 from app.schemas.occurrence import (
     OccurrenceCreate,
@@ -23,6 +23,15 @@ from app.services.occurrence_service import OccurrenceService
 router = APIRouter()
 
 
+def _assert_not_porteiro(current_user: User) -> None:
+    """Raise 403 if the caller is PORTEIRO (gate-only role, no access here)."""
+    if current_user.role == UserRole.PORTEIRO:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough privileges",
+        )
+
+
 @router.get("", response_model=PaginatedOccurrenceRead)
 def list_occurrences(
     db: Session = Depends(get_session),
@@ -35,6 +44,7 @@ def list_occurrences(
     limit: int = Query(default=50, ge=1, le=100),
 ) -> PaginatedOccurrenceRead:
     """Lists occurrences visible to current user."""
+    _assert_not_porteiro(current_user)
     items, total = OccurrenceService.get_occurrences(
         session=db,
         current_user=current_user,
@@ -55,6 +65,7 @@ def create_occurrence(
     current_user: User = Depends(get_current_user),
 ) -> OccurrenceRead:
     """Creates a new occurrence ticket."""
+    _assert_not_porteiro(current_user)
     return OccurrenceService.create_occurrence(
         session=db, current_user=current_user, occurrence_in=occurrence_in
     )
@@ -67,6 +78,7 @@ def get_occurrence(
     current_user: User = Depends(get_current_user),
 ) -> OccurrenceDetailRead:
     """Retrieves full details and timeline history of an occurrence ticket."""
+    _assert_not_porteiro(current_user)
     return OccurrenceService.get_occurrence_by_id(
         session=db, current_user=current_user, occurrence_id=id
     )
@@ -80,6 +92,7 @@ def update_occurrence_status(
     current_user: User = Depends(get_current_user),
 ) -> OccurrenceRead:
     """Updates status, priority, assignment, or resolution notes of a ticket."""
+    _assert_not_porteiro(current_user)
     return OccurrenceService.update_occurrence_status(
         session=db, current_user=current_user, occurrence_id=id, update_in=update_in
     )
@@ -97,6 +110,7 @@ def add_timeline_note(
     current_user: User = Depends(get_current_user),
 ) -> OccurrenceTimelineRead:
     """Appends a timeline note or status transition entry to an occurrence."""
+    _assert_not_porteiro(current_user)
     return OccurrenceService.add_timeline_note(
         session=db, current_user=current_user, occurrence_id=id, note_in=note_in
     )

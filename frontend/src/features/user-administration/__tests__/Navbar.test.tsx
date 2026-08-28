@@ -495,6 +495,48 @@ describe("Navbar", () => {
     expect(screen.queryByText("Categorias")).toBeNull();
   });
 
+  // ── PORTEIRO scoping (APRAS-12) ─────────────────────────────────────────
+
+  it("shows only the Portaria link for PORTEIRO, nothing else", () => {
+    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      user: {
+        id: "1",
+        email: "porteiro@example.com",
+        full_name: "Porteiro User",
+        role: UserRole.PORTEIRO,
+        is_active: true,
+      } as any,
+      login: vi.fn() as any,
+      logout: vi.fn(),
+    });
+    vi.mocked(useUserTypes).mockReturnValue({ data: [] } as any); // skipcq: JS-0323
+
+    render(
+      <MemoryRouter initialEntries={["/gate"]}>
+        <Navbar />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("APRAS")).toBeDefined();
+    expect(screen.getByText(/nav\.gate|Portaria/)).toBeInTheDocument();
+    expect(screen.queryByText("Tarefas")).toBeNull();
+    expect(screen.queryByText("Categorias")).toBeNull();
+    expect(screen.queryByText("Lotes")).toBeNull();
+    expect(screen.queryByText(/nav\.authorizations|Autorizações/)).toBeNull();
+    expect(screen.queryByText(/nav\.occurrences|Ocorrências/)).toBeNull();
+    expect(screen.queryByText(/nav\.documents|Documentos/)).toBeNull();
+    expect(screen.queryByText(/projects\.navItem|Obras/)).toBeNull();
+    expect(screen.queryByText(/nav\.announcements|Comunicados/)).toBeNull();
+    expect(screen.queryByText(/nav\.finance|Financeiro/)).toBeNull();
+    expect(screen.queryByText("Informações de Contato")).toBeNull();
+    expect(screen.queryByText("Administração")).toBeNull();
+    expect(screen.queryByText(/nav\.photoApprovals|Aprovações de Fotos/)).toBeNull();
+    expect(screen.queryByText(/nav\.accessControl|Controle de Acesso/)).toBeNull();
+    expect(screen.queryByText(/nav\.gateMonitor|Monitor da Portaria/)).toBeNull();
+  });
+
   it("shows Tarefas and Categorias for ADMINISTRATOR even with no UserType", () => {
     vi.spyOn(AuthHook, "useAuth").mockReturnValue({
       isAuthenticated: true,

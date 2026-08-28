@@ -23,7 +23,7 @@ from sqlmodel import Session
 
 router = APIRouter()
 
-_LOT_READ_ROLES = {UserRole.ADMINISTRATOR, UserRole.DIRECTOR, UserRole.MANAGER}
+_LOT_READ_ROLES = {UserRole.ADMINISTRATOR, UserRole.DIRECTOR, UserRole.MANAGER, UserRole.PORTEIRO}
 _LOT_WRITE_ROLES = {UserRole.ADMINISTRATOR, UserRole.DIRECTOR}
 
 
