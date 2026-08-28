@@ -564,16 +564,16 @@
   {
     "id": "APRAS-33",
     "title": "Scope online assembly/voting feature (COM21 parity gap)",
-    "status": "specreview",
-    "justification": "Surfaced by the APRAS-26 COM21 comparative analysis as a real, concrete gap (COM21 offers attendance lists, minutes, and single/multiple-choice/free-text voting) not currently in the APRAS backlog anywhere. Needs its own brainstorming pass before a spec -- not scoped in APRAS-26 itself, which was limited to package tracking and reservations per its own expected results.",
+    "status": "blocked",
+    "justification": "Scoping document written (not an implementation spec). Surfaces legal/governance open questions (vote anonymity vs attribution per Brazilian condo bylaws, whether output needs standing as ata de assembleia) that require explicit user decision before a real spec-review cycle can start. Blocked on user input, not on another task.",
     "blockedBy": [],
-    "spec_path": "",
+    "spec_path": "docs/tasks/APRAS-33-scope.md",
     "spec_iterations": 0,
     "qa_iterations": 0,
     "last_review_findings": [],
     "created_at": "2026-08-27T23:45:00-03:00",
     "updated_at": "2026-08-27T23:45:00-03:00",
-    "running": true,
+    "running": false,
     "priority": "low"
   }
 ]
