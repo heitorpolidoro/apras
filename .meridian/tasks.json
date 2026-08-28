@@ -417,15 +417,15 @@
   {
     "id": "APRAS-26",
     "title": "Análise Comparativa e Recursos Avançados COM21",
-    "status": "backlog",
-    "justification": "Benchmarking against COM21 to incorporate package management, reservations, and assemblies.",
+    "status": "done",
+    "justification": "Sourced comparative analysis of COM21 (real product, via web search, sources cited in the document) against APRAS current features. APRAS matches/exceeds on occurrence-tracking and RBAC granularity; clear gaps are space reservations, package tracking, online assembly/voting (surfaced but not in original scope), and push notifications. Full architectural specs written for space reservations and package tracking (spun off as APRAS-31/APRAS-32 backlog tasks for future implementation). Push notifications and offline gatekeeper mode kept at roadmap level per their cross-cutting/security complexity, each needing its own future brainstorming pass.",
     "expected_results": [
       "COM21 parity matrix and gap analysis completed",
       "Architectural specifications for package tracking (encomendas) and area reservations created",
       "Roadmap for web push notifications and offline gatekeeper mode finalized"
     ],
     "blockedBy": [],
-    "spec_path": "docs/tasks/T012-spec.md",
+    "spec_path": "docs/tasks/APRAS-26-analysis.md",
     "spec_iterations": 0,
     "qa_iterations": 0,
     "last_review_findings": [],
@@ -433,7 +433,8 @@
     "updated_at": "2026-08-23T02:22:42-03:00",
     "running": false,
     "priority": "medium",
-    "moved_at": "2026-08-23T02:22:42-03:00"
+    "moved_at": "2026-08-23T02:22:42-03:00",
+    "completed_at": "2026-08-27T23:45:00-03:00"
   },
   {
     "id": "APRAS-27",
@@ -519,5 +520,60 @@
     "running": false,
     "priority": "medium",
     "moved_at": "2026-08-27T16:05:00-03:00"
+  },
+  {
+    "id": "APRAS-31",
+    "title": "Implement space/amenity reservation system",
+    "status": "backlog",
+    "justification": "Architectural spec ready in docs/tasks/APRAS-26-analysis.md (Spec A) -- let residents book shared amenities against an availability calendar with server-side double-booking prevention. Identified as a COM21 parity gap.",
+    "expected_results": [
+      "ReservableSpace admin-managed CRUD (Administrator/Director)",
+      "SpaceReservation booking with server-side overlap/double-booking prevention",
+      "Resident-facing calendar/booking view per space"
+    ],
+    "blockedBy": [],
+    "spec_path": "docs/tasks/APRAS-26-analysis.md",
+    "spec_iterations": 0,
+    "qa_iterations": 0,
+    "last_review_findings": [],
+    "created_at": "2026-08-27T23:45:00-03:00",
+    "updated_at": "2026-08-27T23:45:00-03:00",
+    "running": false,
+    "priority": "low"
+  },
+  {
+    "id": "APRAS-32",
+    "title": "Implement package tracking (encomendas) for Gatekeeper",
+    "status": "backlog",
+    "justification": "Architectural spec ready in docs/tasks/APRAS-26-analysis.md (Spec B) -- let the Gatekeeper log package arrivals and mark pickups, with lot-scoped resident visibility. Identified as a COM21 parity gap; fits naturally alongside the existing Gatekeeper Dashboard and the new PORTEIRO role (APRAS-12).",
+    "expected_results": [
+      "Package model with AWAITING_PICKUP/PICKED_UP status",
+      "Gatekeeper (incl. PORTEIRO) can log arrival and mark pickup",
+      "Resident can see their own lot-scoped package status"
+    ],
+    "blockedBy": [],
+    "spec_path": "docs/tasks/APRAS-26-analysis.md",
+    "spec_iterations": 0,
+    "qa_iterations": 0,
+    "last_review_findings": [],
+    "created_at": "2026-08-27T23:45:00-03:00",
+    "updated_at": "2026-08-27T23:45:00-03:00",
+    "running": false,
+    "priority": "low"
+  },
+  {
+    "id": "APRAS-33",
+    "title": "Scope online assembly/voting feature (COM21 parity gap)",
+    "status": "backlog",
+    "justification": "Surfaced by the APRAS-26 COM21 comparative analysis as a real, concrete gap (COM21 offers attendance lists, minutes, and single/multiple-choice/free-text voting) not currently in the APRAS backlog anywhere. Needs its own brainstorming pass before a spec -- not scoped in APRAS-26 itself, which was limited to package tracking and reservations per its own expected results.",
+    "blockedBy": [],
+    "spec_path": "",
+    "spec_iterations": 0,
+    "qa_iterations": 0,
+    "last_review_findings": [],
+    "created_at": "2026-08-27T23:45:00-03:00",
+    "updated_at": "2026-08-27T23:45:00-03:00",
+    "running": false,
+    "priority": "low"
   }
 ]
