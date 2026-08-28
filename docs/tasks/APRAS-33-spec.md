@@ -304,13 +304,17 @@ Guard de service layer, seguindo o padrão de `_assert_gatekeeper_access` em `ac
    - **`lot.is_delinquent == False`. Senão `DELINQUENT_LOT`.**
    - **Trava por lote** (ver subseção "Um voto por lote, vários elegíveis" abaixo). Se já existe cédula ativa de OUTRO elegível para este lote nesta votação, recusa com `LOT_ALREADY_VOTED`.
    - `voter_key = f"lot:{lot_id}"`, `fraction_ideal_at_cast = lot.fraction_ideal`.
-3b. **Se `kind == ASSEMBLEIA` e `is_retraction == True`** (`POST /{id}/ballots/retract`) — **cadeia deliberadamente mais curta**, ver "Retirada não reavalia elegibilidade" abaixo:
+3b. **Se `kind == ASSEMBLEIA` e `is_retraction == True`** (`POST /{id}/ballots/retract`, corpo `BallotRetract{lot_id: UUID}`) — **cadeia deliberadamente mais curta**, ver "Retirada não reavalia elegibilidade" abaixo:
+   - `lot_id` é **obrigatório no corpo** desta chamada também — um usuário pode deter cédulas ativas em mais de um lote na mesma votação (ver "Um proprietário, vários lotes"), então a retirada precisa dizer qual. **`BallotRetract` não é um corpo vazio** (correção de uma versão anterior desta spec, que dizia "corpo vazio" — estava errada): carrega exatamente `lot_id`.
    - `get_active_ballot_holder(vote, lot_id)` precisa ser o próprio `user`. Se não houver cédula ativa nenhuma para o lote → `NoActiveBallotError` (`404`). Se houver, mas de outro elegível → `LotAlreadyVotedError` (`403`).
    - **Não reavalia** `lot.is_deleted`, conjunto elegível nem `is_delinquent` — quem já detém a cédula pode sempre retirá-la, mesmo que tenha perdido elegibilidade depois de votar (ver justificativa abaixo). Ainda passa pelas checagens 1 (Janela) e 2 (Papel) no topo.
-4. **Se `kind == ENQUETE`:**
+4. **Se `kind == ENQUETE` e `is_retraction == False`** (votar/trocar):
    - Existe algum `UserLotLink` ativo para o usuário, de **qualquer** `association_type` — inclusive `INQUILINO`. Senão `NO_ACTIVE_LOT_LINK`.
    - Sem checagem de adimplência.
    - `voter_key = f"user:{user.id}"`, `lot_id` e `fraction_ideal_at_cast` ficam nulos.
+4b. **Se `kind == ENQUETE` e `is_retraction == True`** (`POST /{id}/ballots/retract`, corpo `BallotRetract{lot_id: None}` — `lot_id` deve vir nulo/ausente, é rejeitado com `422` se vier preenchido numa votação `ENQUETE`) — mais simples que 3b porque `voter_key = user:<id>` já é exclusivo do próprio usuário, não existe conceito de "detentora" diferente de quem pergunta:
+   - Existe alguma linha para `voter_key = f"user:{user.id}"` cuja última entrada (por `cast_at`) **não** é `is_retraction=True`. Senão (nunca votou, ou já retirou) → `NoActiveBallotError` (`404`).
+   - **Não reavalia** `NO_ACTIVE_LOT_LINK` — mesma justificativa da 3b: quem já votou pode sempre retirar o próprio voto, mesmo tendo perdido o vínculo ao lote depois (ex: inquilino que já se mudou). Ainda passa pelas checagens 1 (Janela) e 2 (Papel) no topo.
 
 ### Conjunto elegível do lote (`ASSEMBLEIA`)
 
@@ -336,7 +340,7 @@ Isso não muda a contagem: a apuração por lote (`voter_key = lot:<id>`) contin
 
 ⚠️ **Adicionado após review: sem isso, o lote trava.** Se a detentora perde elegibilidade **depois** de votar (deixa de ser `PROPRIETARIO`, é removida de `LotVoterEligibility`, ou — em enquete — seu `UserLotLink` expira) e a cadeia de retirada reavaliasse "conjunto elegível" como a cadeia de voto reavalia, ela não conseguiria mais nem retirar o próprio voto (falha na checagem de elegibilidade) nem ninguém mais conseguiria votar por aquele lote (`LOT_ALREADY_VOTED` ainda aponta pra ela) — o lote fica travado pelo resto da janela, sem saída, sem endpoint de admin para forçar a liberação.
 
-Por isso a checagem 3b é deliberadamente mais curta que a 3: **retirar o próprio voto não exige continuar elegível.** Quem já votou pode sempre tirar o próprio voto do jogo — não é um novo ato de representar o lote, é o oposto, é abrir mão dele. Isso não abre brecha: só afeta quem **já era** a detentora (identidade verificada via `get_active_ballot_holder`), nunca um terceiro qualquer.
+Por isso as checagens 3b e 4b são deliberadamente mais curtas que 3 e 4: **retirar o próprio voto não exige continuar elegível**, nem em assembleia nem em enquete. Quem já votou pode sempre tirar o próprio voto do jogo — não é um novo ato de representar o lote (ou de participar), é o oposto, é abrir mão dele. Isso não abre brecha: em `ASSEMBLEIA` só afeta quem **já era** a detentora (identidade verificada via `get_active_ballot_holder`), nunca um terceiro qualquer; em `ENQUETE` o `voter_key` já é exclusivo do próprio usuário, então a mesma garantia vem de graça.
 
 ### Momento da validação
 
@@ -460,14 +464,14 @@ Conteúdo do snapshot: contagem por opção, total de votantes, e a lista atribu
 
 Mapear: `*NotFoundError` → `404`, incluindo `NoActiveBallotError`; `DelinquentLotError`, `NotLotOwnerError`, `NoActiveLotLinkError`, `TallyNotAvailableError`, `LotAlreadyVotedError` → `403`; `VoteNotOpenError`, `VoteAlreadyClosedError`, `VoteFrozenError`, `AnonymousAssemblyError` → `400`.
 
-**Mapeamento exato de `POST /{id}/ballots/retract`** (a ambiguidade apontada no review): três casos, três respostas diferentes —
-- Ninguém do `voter_key` do usuário tem cédula ativa (nunca votou, ou a última já é retirada) → `NoActiveBallotError`, `404`.
-- Existe cédula ativa, mas de **outro** elegível (não é o usuário quem detém) → `LotAlreadyVotedError`, `403`.
-- Papel proibido (`GUEST`/`PORTEIRO`) ou janela fechada → `ROLE_FORBIDDEN`/`VOTE_NOT_OPEN` como em qualquer outra ação, `400`/`403` conforme o mapeamento já existente.
+**Mapeamento exato de `POST /{id}/ballots/retract`** (a ambiguidade apontada no review): três casos, três respostas diferentes, iguais para `ASSEMBLEIA` (regra 3b) e `ENQUETE` (regra 4b) —
+- Ninguém do `voter_key` do usuário (o lote informado, em `ASSEMBLEIA`; o próprio usuário, em `ENQUETE`) tem cédula ativa (nunca votou, ou a última já é retirada) → `NoActiveBallotError`, `404`.
+- `ASSEMBLEIA` apenas: existe cédula ativa do lote, mas de **outro** elegível (não é o usuário quem detém) → `LotAlreadyVotedError`, `403`. Não existe equivalente em `ENQUETE`, já que `voter_key = user:<id>` nunca é compartilhado.
+- Papel proibido (`GUEST`/`PORTEIRO`) ou janela fechada → `ROLE_FORBIDDEN`/`VOTE_NOT_OPEN` como em qualquer outra ação, `400`/`403` conforme o mapeamento já existente. Essas duas checagens (1 e 2 da cadeia) rodam **antes** das duas acima, então janela fechada vence sobre "sem cédula ativa" se ambas seriam verdade.
 
 ### `backend/app/schemas/voting.py` (arquivo novo)
 
-`AssemblyCreate/Update/Read`, `VoteCreate/Update/Read`, `VoteOptionCreate/Read`, `LotVoterEligibilityCreate/Read`, `BallotCreate` (`lot_id: UUID | None`, `selected_option_ids: list[UUID]`), `BallotRetract` (corpo vazio — a ação é o endpoint), `BallotRead` (inclui `is_retraction`), `MyBallotRead`, `TallyRead`.
+`AssemblyCreate/Update/Read`, `VoteCreate/Update/Read`, `VoteOptionCreate/Read`, `LotVoterEligibilityCreate/Read`, `BallotCreate` (`lot_id: UUID | None`, `selected_option_ids: list[UUID]`), `BallotRetract` (**`lot_id: UUID | None`** — obrigatório e deve apontar para um lote em que o usuário detém cédula ativa quando `kind == ASSEMBLEIA`; deve vir nulo/ausente quando `kind == ENQUETE`, `422` se vier preenchido nesse caso), `BallotRead` (inclui `is_retraction`), `MyBallotRead`, `TallyRead`.
 
 `MyBallotRead` — schema de resposta de `GET /votes/{id}/my-ballot`, **uma lista de `BallotRead`**, não um objeto único: em `ASSEMBLEIA` traz a cédula ativa do(s) lote(s) em que o usuário é elegível (0 ou 1 por lote, já que só existe uma cédula ativa por lote); em `ENQUETE` não anônima traz a própria cédula **e** a de quem mais divide algum lote com o usuário; em `ENQUETE` anônima traz só a própria. Cada item tem um campo `can_edit: bool` calculado pelo service (verdadeiro só para quem detém aquela cédula especificamente).
 
@@ -484,7 +488,7 @@ Mapear: `*NotFoundError` → `404`, incluindo `NoActiveBallotError`; `Delinquent
 - `_assert_can_create_vote(user, kind)` — inclui Manager quando `ENQUETE`.
 - `_assert_can_view_tally(user, vote)` — quem podia votar + Administrator/Director/Manager (ver RBAC).
 - `get_lot_eligible_user_ids(lot)` — união de `UserLotLink` ativo com `association_type == PROPRIETARIO` e `LotVoterEligibility` do lote. Usado tanto por `_assert_can_cast` quanto pela Regra 3 de visibilidade.
-- `get_active_ballot_holder(vote, lot_id)` — `voter_user_id` da última linha (por `cast_at`) do `voter_key` do lote, ou `None` se não existe ou a última é `is_retraction=True`. Base da trava por lote.
+- `get_active_ballot_holder(vote, lot_id)` — `voter_user_id` da última linha do `voter_key` do lote, ordenando por `cast_at` e desempatando por `id` (mesmo critério do docstring de `Ballot`), ou `None` se não existe nenhuma linha ou a última é `is_retraction=True`. Base da trava por lote (regra 3) e da autorização de retirada (regra 3b) — os dois call sites usam exatamente esta função, não reimplementam a ordenação cada um a seu modo.
 - `_assert_can_cast(user, vote, lot_id, *, is_retraction=False)` — a cadeia da seção Elegibilidade, incluindo a trava por lote via `get_active_ballot_holder`, gravando `BallotRejection` (com commit explícito) em toda recusa.
 - `cast_ballot(...)` — sempre `INSERT`, nunca `UPDATE`; aceita `is_retraction` para a linha de retirada.
 - `get_latest_ballots(vote)` — última linha por `voter_key`, filtrando fora as `is_retraction=True` (essas representam "sem voto ativo", não contam).
@@ -505,7 +509,7 @@ Dois routers no mesmo módulo, como `reservations.py` já faz com `spaces_router
 `votes_router`:
 - `POST /` · `GET /` (filtros `kind`, `status`, `assembly_id`) · `GET /{id}` · `PATCH /{id}` · `POST /{id}/close`
 - `POST /{id}/ballots` → votar ou trocar voto (corpo `BallotCreate`)
-- `POST /{id}/ballots/retract` → retirar a cédula ativa que o usuário detém (corpo `BallotRetract`, vazio) — mapeamento exato de erros em Backend Changes → exceptions (`NoActiveBallotError` 404 / `LotAlreadyVotedError` 403)
+- `POST /{id}/ballots/retract` → retirar a cédula ativa que o usuário detém (corpo `BallotRetract{lot_id}` — obrigatório em `ASSEMBLEIA`, nulo em `ENQUETE`, ver schemas) — mapeamento exato de erros em Backend Changes → exceptions (`NoActiveBallotError` 404 / `LotAlreadyVotedError` 403, este último só em `ASSEMBLEIA`)
 - `GET /{id}/my-ballot` → lista conforme a Regra 3 estendida (ver Backend Changes → schemas)
 - `GET /{id}/tally` → contagem se aberta, apuração se fechada
 
@@ -546,7 +550,7 @@ Conteúdo, por `Assembly`:
 1. `render_minutes_html(assembly)` gera a string HTML.
 2. Grava os bytes via `storage_service` (o mesmo `LocalStorageProvider.save_file` que `media_service.py` usa) — recebe de volta `(file_path, url)`, não um par `(file_url, file_size_bytes)`; `file_size_bytes` é `len()` dos bytes do HTML, calculado à parte, mesmo padrão de `media_service.py:125`. Não inventar um mecanismo de storage novo.
 3. `folder_id`: `AssociationDocumentCreate.folder_id` é obrigatório e não existe convenção de pasta padrão hoje. Resolver com find-or-create: procurar (ou, na primeira vez, criar via `document_service.create_folder`) uma pasta de nome fixo `"Atas de Assembleia"` na raiz do Document Center, e usar o `id` dela. Não expor escolha de pasta ao usuário nesta task — é sempre essa.
-4. Cria o `AssociationDocument` com `mime_type = "text/html"`, `file_url`/`file_size_bytes` do passo 2, `folder_id` do passo 3.
+4. Cria o `AssociationDocument` com `mime_type = "text/html"`, `file_url = url` (o segundo item da tupla do passo 2) e `file_size_bytes` (calculado no passo 2), `folder_id` do passo 3.
 
 `AssociationDocument` já tem versionamento via `previous_version_id`, então o síndico pode subir a versão final assinada como nova versão do mesmo documento (fora desta task — a UI de upload de nova versão já existe no Document Center).
 
@@ -613,8 +617,10 @@ Os testes abaixo cobrem as regras decididas e são obrigatórios. Cobertura gen�
 16. **`GET /votes/{id}/my-ballot`**: para `ASSEMBLEIA`, um segundo elegível do mesmo lote (que não votou) recebe a cédula ativa lançada pelo primeiro, com `can_edit=False`; para `ENQUETE` não anônima, um morador vê a lista incluindo o voto de outro morador do mesmo lote, também com `can_edit=False` no item alheio; para `ENQUETE` anônima, só o próprio item aparece.
 17. `MANAGER` sem nenhum vínculo a lote consegue `GET /votes/{id}/tally` e ver a contagem de uma `ENQUETE` que criou (mesmo antes do fechamento) e a apuração completa de uma `ASSEMBLEIA` (depois do fechamento).
 18. `ENQUETE` fechada: `TallyRead` não tem campo de denominador/`total_lots` (só `voters_count` e `results`).
+19. **Retirada em `ENQUETE`**: usuário vota → `POST /{id}/ballots/retract` com `lot_id=null` retira com sucesso, apuração deixa de contá-lo; tentando retirar de novo (sem votar antes) recebe `404 NoActiveBallotError`; enviar `lot_id` preenchido numa votação `ENQUETE` devolve `422`. Depois de retirar, um inquilino que perdeu o `UserLotLink` (mudou-se) ainda consegue essa retirada — prova que 4b não reavalia `NO_ACTIVE_LOT_LINK`, espelhando o teste 15b para assembleia.
+20. **Retirada em lote errado (multi-lote)**: usuário elegível em dois lotes vota nos dois; `POST /{id}/ballots/retract` com `lot_id` do lote A retira só a cédula de A — a de B permanece ativa e contando na apuração.
 
-Complementares: `PATCH` em votação com cédula existente devolve `400` (`VoteFrozenError`); `PATCH` em `Assembly` com `status == CLOSED` devolve `400`; criar votação de assembleia com `is_anonymous=True` devolve `400`; votar numa assembleia em `DRAFT` devolve `400` mesmo com a janela da votação aberta; `POST /assemblies/{id}/close` fecha em cascata as votações abertas e materializa o snapshot de cada uma; `GET /{id}/minutes` antes do fechamento devolve `400`; `POST /{id}/ballots/retract` sem deter nenhuma cédula ativa devolve `404`/`403`; a materialização preguiçosa não dispara em `GET /votes/` (listagem), só em `GET /{id}` e `GET /{id}/tally`.
+Complementares: `PATCH` em votação com cédula existente devolve `400` (`VoteFrozenError`); `PATCH` em `Assembly` com `status == CLOSED` devolve `400`; criar votação de assembleia com `is_anonymous=True` devolve `400`; votar numa assembleia em `DRAFT` devolve `400` mesmo com a janela da votação aberta; `POST /assemblies/{id}/close` fecha em cascata as votações abertas e materializa o snapshot de cada uma; `GET /{id}/minutes` antes do fechamento devolve `400`; janela fechada some com `VOTE_NOT_OPEN` mesmo quando o usuário também não tem cédula ativa (checagem 1 vence sobre `NoActiveBallotError`); a materialização preguiçosa não dispara em `GET /votes/` (listagem), só em `GET /{id}` e `GET /{id}/tally`.
 
 **Frontend**
 
