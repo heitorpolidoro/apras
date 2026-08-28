@@ -6,7 +6,7 @@ columns as a plain ``VARCHAR`` with no native constraint, so it cannot catch
 against a real PostgreSQL ``userrole`` enum type. These tests exercise the
 Alembic migration chain against a real Postgres instance to prove that
 ``RESIDENT`` (added by migration ``0014_add_resident_userrole``) and
-``PORTEIRO`` (added by migration ``0018_add_porteiro_userrole``, APRAS-12)
+``PORTEIRO`` (added by migration ``0020_add_porteiro_userrole``, APRAS-12)
 are actually insertable.
 
 They are skipped automatically unless ``TEST_POSTGRES_URL`` points at a
@@ -246,8 +246,13 @@ def test_user_type_role_unique_constraint_allows_multiple_null_roles(
 
 
 def test_user_type_role_downgrade_removes_seeded_rows_only(migrated_pg_engine):
-    """Downgrading 0018 removes exactly the 5 seeded role rows and the role
-    column, without touching admin-created (role IS NULL) types."""
+    """Downgrading past 0018 removes exactly the 5 seeded role rows and the
+    role column, without touching admin-created (role IS NULL) types.
+
+    Targets the explicit revision id rather than a relative "-N" step count:
+    later migrations (0019, 0020, 0021, ...) keep getting chained on top of
+    0018 as new features land, so a relative offset silently drifts out of
+    sync with the actual head every time that happens."""
     survivor_id = uuid.uuid4()
     survivor_name = f"Survivor {survivor_id}"
     with migrated_pg_engine.begin() as conn:
@@ -259,7 +264,7 @@ def test_user_type_role_downgrade_removes_seeded_rows_only(migrated_pg_engine):
             {"id": survivor_id, "name": survivor_name},
         )
 
-    _run_alembic("downgrade", "-1")
+    _run_alembic("downgrade", "0017_add_user_type_allowed_menus")
 
     with migrated_pg_engine.connect() as conn:
         columns = (
@@ -284,7 +289,7 @@ def test_user_type_role_downgrade_removes_seeded_rows_only(migrated_pg_engine):
 
 
 def test_downgrade_is_a_safe_noop(migrated_pg_engine):
-    """Downgrading the head migration (currently 0018_add_porteiro_userrole)
+    """Downgrading the head migration (currently 0020_add_porteiro_userrole)
     must not remove the enum value or fail (matching the precedent set by
     0003_add_guest_to_userrole_enum.py / 0014_add_resident_userrole.py:
     Postgres cannot drop enum values, so the downgrade is a documented
