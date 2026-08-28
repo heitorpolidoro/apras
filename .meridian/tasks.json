@@ -528,7 +528,7 @@
   {
     "id": "APRAS-31",
     "title": "Implement space/amenity reservation system",
-    "status": "codereview",
+    "status": "done",
     "justification": "Space/amenity reservation system (ReservableSpace + SpaceReservation). Spec approved after 1 revision round (fixed a stale migration number, a false CategoriesPage.tsx UI-pattern claim, and an underspecified query-param interaction). Implementation dispatched.",
     "expected_results": [
       "ReservableSpace admin-managed CRUD (Administrator/Director)",
@@ -543,7 +543,8 @@
     "created_at": "2026-08-27T23:45:00-03:00",
     "updated_at": "2026-08-27T23:45:00-03:00",
     "running": false,
-    "priority": "low"
+    "priority": "low",
+    "completed_at": "2026-08-28T03:27:24.068682-03:00"
   },
   {
     "id": "APRAS-32",
