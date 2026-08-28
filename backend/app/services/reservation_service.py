@@ -87,16 +87,25 @@ class SpaceReservationService:
     ) -> bool:
         """Return True if the requested window overlaps a blocking reservation.
 
-        A blocking reservation is one whose status is CONFIRMED or PENDING
-        on the same space (the default `statuses`). Uses a standard
-        half-open interval overlap test: two windows [a, b) and [c, d)
-        overlap iff a < d and c < b.
+        Uses a standard half-open interval overlap test: two windows
+        [a, b) and [c, d) overlap iff a < d and c < b.
 
-        `statuses` may be narrowed by callers that need a different
-        definition of "blocking" -- e.g. the approval re-check only
-        considers already-CONFIRMED rows (see `decide_reservation`), since
-        two PENDING requests are expected to be able to coexist until one
-        of them is decided.
+        `statuses` selects which reservation statuses count as "blocking"
+        for this particular check; it defaults to CONFIRMED+PENDING (the
+        broadest definition) if omitted, but every current call site in
+        this service passes an explicit, narrower `statuses=[CONFIRMED]`:
+        only an already-CONFIRMED booking is a real commitment on the
+        space. `create_reservation` and `decide_reservation`'s approval
+        re-check both use CONFIRMED-only deliberately, so that multiple
+        overlapping PENDING requests on the same `requires_approval` space
+        can coexist as competing bids until staff decides one -- approving
+        one of them then correctly 409s any later approval attempt on a
+        still-PENDING overlapping request, via this same CONFIRMED-only
+        check. This is a first-class part of the approval workflow, not an
+        edge case: with PENDING counted as blocking at creation time, a
+        second competing bid could never be filed in the first place, and
+        the re-check-on-approve logic would be unreachable through any
+        normal, sequential request.
         """
         blocking_statuses = statuses if statuses is not None else _BLOCKING_STATUSES
         statement = (
@@ -182,6 +191,7 @@ class SpaceReservationService:
             space_id=reservation_in.space_id,
             start_time=reservation_in.start_time,
             end_time=reservation_in.end_time,
+            statuses=[ReservationStatus.CONFIRMED],
         ):
             raise SpaceReservationConflictError
 

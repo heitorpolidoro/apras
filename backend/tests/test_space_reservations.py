@@ -328,18 +328,50 @@ def test_reject_frees_slot_for_new_reservation(session: Session, admin_user):
     assert second.status == ReservationStatus.PENDING
 
 
+def test_overlapping_pending_requests_can_coexist_before_decision(session: Session):
+    """Two overlapping PENDING requests on the same requires_approval space
+    are competing bids that can both exist simultaneously until staff
+    decides one -- create_reservation only conflict-checks against
+    CONFIRMED rows, not PENDING ones, so a second bid is never blocked at
+    creation time just because an earlier bid for an overlapping window is
+    still awaiting a decision.
+    """
+    space = make_space(session, requires_approval=True)
+    resident1 = make_user(session, UserRole.RESIDENT, "coex1@test.com", "16899535009")
+    resident2 = make_user(session, UserRole.RESIDENT, "coex2@test.com", "63093783050")
+
+    first = SpaceReservationService.create_reservation(
+        session=session,
+        current_user=resident1,
+        reservation_in=SpaceReservationCreate(
+            space_id=space.id, start_time=dt(10), end_time=dt(12)
+        ),
+    )
+    second = SpaceReservationService.create_reservation(
+        session=session,
+        current_user=resident2,
+        reservation_in=SpaceReservationCreate(
+            space_id=space.id, start_time=dt(11), end_time=dt(13)
+        ),
+    )
+
+    assert first.status == ReservationStatus.PENDING
+    assert second.status == ReservationStatus.PENDING
+
+
 def test_approve_conflicting_pending_returns_409_and_leaves_first_pending(
     session: Session, admin_user
 ):
-    """Simulates the race the spec describes: two overlapping PENDING
-    requests filed concurrently before either is decided (each individually
-    would have passed create_reservation's check against the *other*
-    existing rows at the moment it was filed). Since create_reservation
-    itself always rejects an overlap against an existing PENDING row, this
-    race can't be reproduced via two sequential create_reservation calls --
-    it is simulated here by inserting the second PENDING row directly,
-    exactly as a genuine race under concurrent requests would leave the
-    database.
+    """Reproduces the spec's normal, sequential competing-bids scenario
+    (Testing section: "two overlapping requests on the same
+    requires_approval space, second one directly approved first"): both
+    requests are filed as ordinary, sequential create_reservation calls
+    (see test_overlapping_pending_requests_can_coexist_before_decision)
+    and both land PENDING, since create_reservation's conflict check only
+    considers CONFIRMED rows. Approving the second one first promotes it to
+    CONFIRMED; approving the first one afterwards must then 409 via the
+    approval re-check, and must leave the first reservation PENDING rather
+    than silently double-booking the space.
     """
     space = make_space(session, requires_approval=True)
     resident1 = make_user(session, UserRole.RESIDENT, "conf1@test.com", "60259444020")
@@ -352,16 +384,13 @@ def test_approve_conflicting_pending_returns_409_and_leaves_first_pending(
             space_id=space.id, start_time=dt(10), end_time=dt(12)
         ),
     )
-    second = SpaceReservation(
-        space_id=space.id,
-        reserved_by_id=resident2.id,
-        start_time=dt(11),
-        end_time=dt(13),
-        status=ReservationStatus.PENDING,
+    second = SpaceReservationService.create_reservation(
+        session=session,
+        current_user=resident2,
+        reservation_in=SpaceReservationCreate(
+            space_id=space.id, start_time=dt(11), end_time=dt(13)
+        ),
     )
-    session.add(second)
-    session.commit()
-    session.refresh(second)
     assert first.status == ReservationStatus.PENDING
     assert second.status == ReservationStatus.PENDING
 
