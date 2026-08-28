@@ -4,12 +4,13 @@ Authentication and authorization dependencies for the API.
 
 import uuid
 from typing import Annotated
+from uuid import UUID
 
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import ValidationError
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.core.config import settings
 from app.core.exceptions import ForbiddenError
@@ -17,6 +18,7 @@ from app.db import get_session
 from app.models.enums import MenuKey, UserRole
 from app.models.task import Task
 from app.models.user import User
+from app.models.user_type import UserType
 
 reusable_oauth2 = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
@@ -125,36 +127,67 @@ def get_current_admin_or_manager(
     return current_user
 
 
-def assert_menu_access(current_user: User, menu_key: MenuKey) -> None:
+def get_effective_user_type_ids(user: User, session: Session) -> set[UUID]:
+    """Return the user's effective UserType ids for permission evaluation.
+
+    This is the explicitly-assigned UserType ids (`user.user_types`) plus
+    the id of the UserType matching the user's own role, if one exists
+    (APRAS-9). The role-matching membership is computed on every call, not
+    stored in the `UserUserTypeLink` join table, so a role change takes
+    effect immediately with no sync step.
+
+    Args:
+        user: The user whose effective UserType ids are being computed.
+        session: Database session used to look up the role-matching UserType.
+
+    Returns:
+        set[UUID]: The union of explicit and role-implicit UserType ids.
+    """
+    explicit_ids = {ut.id for ut in user.user_types}
+    role_type = session.exec(select(UserType).where(UserType.role == user.role)).first()
+    if role_type:
+        explicit_ids.add(role_type.id)
+    return explicit_ids
+
+
+def assert_menu_access(current_user: User, menu_key: MenuKey, session: Session) -> None:
     """Raise ForbiddenError unless the user can access the given menu/feature.
 
     ADMINISTRATOR always passes. Every other role needs at least one
-    assigned UserType with `menu_key` in its `allowed_menus`. A user with
-    no UserTypes assigned is denied.
+    effective UserType (explicitly-assigned or role-implicit, see
+    `get_effective_user_type_ids`) with `menu_key` in its `allowed_menus`.
 
     Args:
         current_user: The authenticated user making the request.
         menu_key: The menu/feature being accessed (e.g. tasks, categories).
+        session: Database session used to resolve effective UserType ids.
 
     Raises:
         ForbiddenError: If the user does not have access to the menu.
     """
     if current_user.role == UserRole.ADMINISTRATOR:
         return
-    if any(menu_key.value in ut.allowed_menus for ut in current_user.user_types):
-        return
+    effective_ids = get_effective_user_type_ids(current_user, session)
+    if effective_ids:
+        effective_types = session.exec(
+            select(UserType).where(UserType.id.in_(effective_ids))
+        ).all()
+        if any(menu_key.value in ut.allowed_menus for ut in effective_types):
+            return
     raise ForbiddenError(f"Not enough privileges to access {menu_key.value}")
 
 
-def assert_manager_can_see_task(current_user: User, task: Task) -> None:
+def assert_manager_can_see_task(current_user: User, task: Task, session: Session) -> None:
     """Raise TaskNotFoundError for tasks the user is not allowed to see.
 
-    MANAGER may only access tasks with visible_to_id = None OR visible_to_id in their user_types list.
-    GUEST may not access any task.
+    MANAGER may only access tasks with visible_to_id = None OR visible_to_id
+    in their effective UserType ids (explicitly-assigned or role-implicit,
+    see `get_effective_user_type_ids`). GUEST may not access any task.
 
     Args:
         current_user: The authenticated user making the request.
         task: The task being accessed.
+        session: Database session used to resolve effective UserType ids.
 
     Raises:
         TaskNotFoundError: If the task is not visible to the user's role.
@@ -165,7 +198,7 @@ def assert_manager_can_see_task(current_user: User, task: Task) -> None:
         raise TaskNotFoundError(task.id)
     if current_user.role == UserRole.MANAGER:
         if task.visible_to_id is not None:
-            user_type_ids = [ut.id for ut in current_user.user_types]
+            user_type_ids = get_effective_user_type_ids(current_user, session)
             if task.visible_to_id not in user_type_ids:
                 raise TaskNotFoundError(task.id)
 

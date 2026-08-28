@@ -140,6 +140,28 @@ describe("useTaskFiltering", () => {
       expect(result.current.map((t) => t.id)).toEqual(["pub", "typed"]);
     });
 
+    it("resolves visibility via a role-type id folded into userTypeIds by useEffectiveIdentity (APRAS-9)", () => {
+      // useTaskFiltering has no concept of "explicit" vs "role-implicit"
+      // UserType ids: useEffectiveIdentity (APRAS-9) already folds a
+      // role-type id into `userTypeIds` before it reaches here, so a
+      // simulated MANAGER with zero *explicitly* simulated UserTypes still
+      // sees a task targeted at their role-type, indistinguishably from an
+      // explicitly-assigned UserType id — no change to this hook needed.
+      const roleTypeTasks: TaskRead[] = [
+        { ...mockTasks[0], id: "pub", visible_to_id: null },
+        { ...mockTasks[1], id: "via-role-type", visible_to_id: "role-type-manager" },
+        { ...mockTasks[2], id: "other-typed", visible_to_id: "type-2" },
+      ];
+      const { result } = renderHook(() =>
+        useTaskFiltering(roleTypeTasks, {}, {
+          isSimulating: true,
+          role: UserRole.MANAGER,
+          userTypeIds: ["role-type-manager"],
+        }),
+      );
+      expect(result.current.map((t) => t.id)).toEqual(["pub", "via-role-type"]);
+    });
+
     it("shows every task when simulating DIRECTOR or ADMINISTRATOR", () => {
       const { result: directorResult } = renderHook(() =>
         useTaskFiltering(simulationTasks, {}, {

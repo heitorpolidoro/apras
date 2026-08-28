@@ -77,11 +77,22 @@ def delete_user_type(
     current_user: Annotated[User, Depends(api_deps.get_current_active_admin)],  # noqa: ARG001
     user_type_id: UUID,
 ) -> None:
-    """Delete a user type. Restricted to ADMINISTRATOR."""
+    """Delete a user type. Restricted to ADMINISTRATOR.
+
+    Role-linked types (seeded by the APRAS-9 migration, `role` is not None)
+    cannot be deleted: the role column is the mechanism used to compute
+    effective UserType ids for every user of that role, so removing the row
+    would silently break that mapping.
+    """
     db_type = session.get(UserType, user_type_id)
     if not db_type:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User type not found"
+        )
+    if db_type.role is not None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Role-linked user types cannot be deleted",
         )
     session.delete(db_type)
     session.commit()

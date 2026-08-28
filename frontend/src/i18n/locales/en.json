@@ -178,7 +178,8 @@
     "allowedMenus": "Allowed menus",
     "menuTasks": "Tasks",
     "menuCategories": "Categories",
-    "errorUpdatingType": "Error updating type."
+    "errorUpdatingType": "Error updating type.",
+    "roleLinkedTypeCannotBeDeleted": "Role-linked type: cannot be deleted."
   },
   "contactInfo": {
     "title": "Contact Information",
