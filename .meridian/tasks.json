@@ -504,8 +504,8 @@
   {
     "id": "APRAS-30",
     "title": "Fix UserRead 500 on non-canonical CPF during response serialization",
-    "status": "specreview",
-    "justification": "Discovered by independent QA while verifying APRAS-7: UserRead's cpf field validator re-runs on response serialization, so any user row with a non-canonical CPF format (e.g. a historically-seeded/imported value) causes a ResponseValidationError (500) on every endpoint that returns UserRead -- GET /users/, PATCH /users/{id}, and PATCH /users/{id}/contact-info all affected. Not introduced by APRAS-7, pre-existing since the cpf-validation task.",
+    "status": "codereview",
+    "justification": "Discovered by independent QA while verifying APRAS-7: UserRead's cpf field validator re-runs on response serialization, so any user row with a non-canonical CPF format (e.g. a historically-seeded/imported value) causes a ResponseValidationError (500) on every endpoint that returns UserRead -- GET /users/, PATCH /users/{id}, and PATCH /users/{id}/contact-info all affected. Not introduced by APRAS-7, pre-existing since the cpf-validation task. Implemented per approved spec: removed cpf/validate_cpf from UserBase, added plain cpf to UserRead, duplicated cpf+validate_cpf into UserCreate (matching UserUpdate's existing duplication convention). Backend suite 387 passed/3 skipped, 97.17% coverage overall, 99% on app/schemas/user.py (remaining uncovered line is a pre-existing unreachable guard clause in _validate_cpf_digits, out of scope).",
     "expected_results": [
       "Endpoints returning UserRead no longer 500 for a user with a non-canonical (but previously-accepted) CPF value",
       "Existing CPF validation on write (signup, PATCH) is unaffected"
@@ -516,10 +516,10 @@
     "qa_iterations": 0,
     "last_review_findings": [],
     "created_at": "2026-08-27T16:05:00-03:00",
-    "updated_at": "2026-08-27T16:05:00-03:00",
-    "running": true,
+    "updated_at": "2026-08-28T00:00:00-03:00",
+    "running": false,
     "priority": "medium",
-    "moved_at": "2026-08-27T16:05:00-03:00"
+    "moved_at": "2026-08-28T00:00:00-03:00"
   },
   {
     "id": "APRAS-31",

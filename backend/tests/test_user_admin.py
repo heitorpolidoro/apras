@@ -131,3 +131,135 @@ def test_admin_cannot_change_own_role(client: TestClient, admin_user):
     )
     assert response.status_code == 400
     assert "Administrators cannot change their own role" in response.json()["detail"]
+
+
+def test_list_users_with_noncanonical_stored_cpf_returns_200(
+    client: TestClient, admin_user, session: Session
+):
+    """A previously-stored CPF that fails the check-digit algorithm must not
+    crash UserRead serialization on GET /users/ (APRAS-30)."""
+    bad_cpf_user = User(
+        email="badcpf@test.com",
+        full_name="Bad CPF User",
+        hashed_password="...",
+        role=UserRole.DIRECTOR,
+        cpf="11111111111",
+    )
+    session.add(bad_cpf_user)
+    session.commit()
+
+    admin_token = get_token(client, "admin", "test_admin_password")
+    response = client.get(
+        "/api/v1/users/", headers={"Authorization": f"Bearer {admin_token}"}
+    )
+    assert response.status_code == 200
+    emails = [u["email"] for u in response.json()]
+    assert "badcpf@test.com" in emails
+
+
+def test_update_user_with_noncanonical_stored_cpf_returns_200(
+    client: TestClient, admin_user, session: Session
+):
+    """Updating an unrelated field on a user with a non-canonical stored CPF
+    must not crash UserRead serialization on PATCH /users/{id} (APRAS-30)."""
+    bad_cpf_user = User(
+        email="badcpf2@test.com",
+        full_name="Bad CPF User 2",
+        hashed_password="...",
+        role=UserRole.DIRECTOR,
+        cpf="22222222222",
+    )
+    session.add(bad_cpf_user)
+    session.commit()
+    session.refresh(bad_cpf_user)
+
+    admin_token = get_token(client, "admin", "test_admin_password")
+    response = client.patch(
+        f"/api/v1/users/{bad_cpf_user.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={"role": UserRole.ADMINISTRATOR},
+    )
+    assert response.status_code == 200
+    assert response.json()["role"] == UserRole.ADMINISTRATOR
+
+
+def test_update_user_with_invalid_cpf_in_body_still_rejected(
+    client: TestClient, admin_user, normal_user
+):
+    """Write-path CPF validation on PATCH /users/{id} is unaffected by the
+    UserRead read-path fix (APRAS-30)."""
+    admin_token = get_token(client, "admin", "test_admin_password")
+    response = client.patch(
+        f"/api/v1/users/{normal_user.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={"cpf": "11111111111"},
+    )
+    assert response.status_code == 422
+
+
+def test_update_user_with_short_cpf_in_body_still_rejected(
+    client: TestClient, admin_user, normal_user
+):
+    """A CPF with fewer than 11 digits is still rejected by UserUpdate's
+    validator on PATCH /users/{id} (APRAS-30)."""
+    admin_token = get_token(client, "admin", "test_admin_password")
+    response = client.patch(
+        f"/api/v1/users/{normal_user.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={"cpf": "12345"},
+    )
+    assert response.status_code == 422
+
+
+def test_update_user_with_valid_cpf_in_body_accepted(
+    client: TestClient, admin_user, normal_user
+):
+    """A well-formed, check-digit-valid CPF is accepted and normalized by
+    UserUpdate's validator on PATCH /users/{id} (APRAS-30)."""
+    admin_token = get_token(client, "admin", "test_admin_password")
+    response = client.patch(
+        f"/api/v1/users/{normal_user.id}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={"cpf": "987.654.321-00"},
+    )
+    assert response.status_code == 200
+    assert response.json()["cpf"] == "98765432100"
+
+
+def test_signup_with_invalid_cpf_still_rejected(client: TestClient):
+    """Write-path CPF validation on signup is unaffected by the UserRead
+    read-path fix (APRAS-30)."""
+    signup_data = {
+        "email": "badcpfsignup@test.com",
+        "full_name": "Bad Cpf Signup",
+        "password": "Password123!",
+        "cpf": "11111111111",
+    }
+    response = client.post("/api/v1/auth/signup", json=signup_data)
+    assert response.status_code == 422
+
+
+def test_signup_with_wrong_check_digit_cpf_still_rejected(client: TestClient):
+    """CPF with the correct length/distinct digits but a wrong first check
+    digit is still rejected by UserCreate's validator (APRAS-30)."""
+    signup_data = {
+        "email": "badcheckdigit@test.com",
+        "full_name": "Bad Check Digit",
+        "password": "Password123!",
+        "cpf": "90700092900",
+    }
+    response = client.post("/api/v1/auth/signup", json=signup_data)
+    assert response.status_code == 422
+
+
+def test_signup_with_short_cpf_still_rejected(client: TestClient):
+    """A CPF with fewer than 11 digits is still rejected by UserCreate's
+    validator (APRAS-30)."""
+    signup_data = {
+        "email": "shortcpf@test.com",
+        "full_name": "Short Cpf",
+        "password": "Password123!",
+        "cpf": "12345",
+    }
+    response = client.post("/api/v1/auth/signup", json=signup_data)
+    assert response.status_code == 422

@@ -147,6 +147,32 @@ def test_contact_info_update_ignores_extra_fields(
     assert data["user_types"] == []
 
 
+def test_contact_info_update_with_noncanonical_stored_cpf_returns_200(
+    client: TestClient, admin_user, session: Session
+):
+    """A previously-stored CPF that fails the check-digit algorithm must not
+    crash UserRead serialization on PATCH /users/{id}/contact-info (APRAS-30)."""
+    bad_cpf_user = User(
+        id=uuid.uuid4(),
+        email="badcpf-contact@test.com",
+        full_name="Bad CPF Contact User",
+        hashed_password=get_password_hash("test_target_password"),
+        role=UserRole.DIRECTOR,
+        cpf="33333333333",
+    )
+    session.add(bad_cpf_user)
+    session.commit()
+
+    token = get_token(client, "admin", "test_admin_password")
+    response = client.patch(
+        f"/api/v1/users/{bad_cpf_user.id}/contact-info",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"phone": "11911112222"},
+    )
+    assert response.status_code == 200
+    assert response.json()["phone"] == "11911112222"
+
+
 def test_contact_info_update_404_for_missing_user(client: TestClient, admin_user):
     token = get_token(client, "admin", "test_admin_password")
     response = client.patch(
