@@ -4,9 +4,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 import { GatekeeperDashboard } from "../components/GatekeeperDashboard";
 import * as visitorsApi from "../../../api/visitors";
+import * as packagesApi from "../../../api/packages";
 import * as lotsHook from "../../lot-management/hooks/useLots";
 
 vi.mock("../../../api/visitors");
+vi.mock("../../../api/packages");
 vi.mock("../../lot-management/hooks/useLots");
 
 
@@ -66,12 +68,30 @@ const renderComponent = () => {
   );
 };
 
+const mockPackageQueue = {
+  items: [
+    {
+      id: "pkg-1",
+      lot_id: "lot-1",
+      lot_summary: { id: "lot-1", block: "A", lot_number: "101" },
+      description: "Caixa Amazon",
+      carrier: "Correios",
+      received_at: "2026-08-27T10:00:00Z",
+      status: "AWAITING_PICKUP",
+    },
+  ],
+  total: 1,
+  skip: 0,
+  limit: 100,
+};
+
 describe("GatekeeperDashboard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(visitorsApi.searchVisitors).mockResolvedValue(mockVisitors as any);
     vi.mocked(visitorsApi.getAccessLogs).mockResolvedValue(mockAccessLogs as any);
     vi.mocked(lotsHook.useLots).mockReturnValue({ data: mockLots as any, isLoading: false } as any);
+    vi.mocked(packagesApi.getPackageQueue).mockResolvedValue(mockPackageQueue as any);
   });
 
 
@@ -126,6 +146,65 @@ describe("GatekeeperDashboard", () => {
         visitor_id: "v-1",
         lot_id: "lot-1",
         entry_notes: undefined,
+      });
+    });
+  });
+
+  it("renders the Encomendas section with the log-arrival form and awaiting-pickup queue", async () => {
+    renderComponent();
+
+    expect(await screen.findByText("Registrar Encomenda")).toBeInTheDocument();
+    expect(await screen.findByText("Caixa Amazon")).toBeInTheDocument();
+  });
+
+  it("log-arrival button is disabled until a lot is selected, then submits with the right payload", async () => {
+    vi.mocked(packagesApi.createPackage).mockResolvedValue({ id: "pkg-2" } as any);
+
+    renderComponent();
+    await screen.findByText("Caixa Amazon");
+
+    const registerButton = screen.getByRole("button", { name: "Registrar Encomenda" });
+    expect(registerButton).toBeDisabled();
+
+    const lotSelects = screen.getAllByRole("combobox");
+    fireEvent.change(lotSelects[0], { target: { value: "lot-1" } });
+
+    expect(registerButton).not.toBeDisabled();
+
+    fireEvent.change(screen.getByPlaceholderText("Descrição"), {
+      target: { value: "Encomenda nova" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Transportadora"), {
+      target: { value: "Sedex" },
+    });
+    fireEvent.click(registerButton);
+
+    await waitFor(() => {
+      expect(packagesApi.createPackage).toHaveBeenCalledWith({
+        lot_id: "lot-1",
+        description: "Encomenda nova",
+        carrier: "Sedex",
+      });
+    });
+  });
+
+  it("confirms pickup for a queued package with optional notes", async () => {
+    vi.mocked(packagesApi.markPackagePickedUp).mockResolvedValue({
+      id: "pkg-1",
+      status: "PICKED_UP",
+    } as any);
+
+    renderComponent();
+    await screen.findByText("Caixa Amazon");
+
+    fireEvent.change(screen.getByPlaceholderText("Retirado por: ___"), {
+      target: { value: "Retirado pelo morador" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar Retirada" }));
+
+    await waitFor(() => {
+      expect(packagesApi.markPackagePickedUp).toHaveBeenCalledWith("pkg-1", {
+        picked_up_by_notes: "Retirado pelo morador",
       });
     });
   });

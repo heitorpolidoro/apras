@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Search, LogIn, Users, Building2, History } from "lucide-react";
+import { Search, LogIn, Users, Building2, History, Package as PackageIcon } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { useLots } from "../../lot-management/hooks/useLots";
 import {
@@ -9,6 +9,11 @@ import {
   useCheckOut,
   useVisitors,
 } from "../hooks/useVisitors";
+import {
+  useCreatePackage,
+  useMarkPackagePickedUp,
+  usePackageQueue,
+} from "../hooks/usePackages";
 import { GatekeeperEntryModal } from "./GatekeeperEntryModal";
 import { AccessLogTimeline } from "./AccessLogTimeline";
 import type { AccessLog, Visitor } from "../../../types/visitor";
@@ -20,16 +25,24 @@ export const GatekeeperDashboard: React.FC = () => {
   const [selectedVisitor, setSelectedVisitor] = useState<Visitor | null>(null);
   const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
 
+  const [packageDescription, setPackageDescription] = useState("");
+  const [packageCarrier, setPackageCarrier] = useState("");
+  const [pickupNotes, setPickupNotes] = useState<Record<string, string>>({});
+
   const { data: visitorsData } = useVisitors(searchTerm);
   const { data: logsData } = useAccessLogs();
   const { data: lotsData } = useLots();
+  const { data: packageQueueData } = usePackageQueue();
 
   const checkInMutation = useCheckIn();
   const checkOutMutation = useCheckOut();
+  const createPackageMutation = useCreatePackage();
+  const markPickedUpMutation = useMarkPackagePickedUp();
 
   const logs = logsData?.items || [];
   const activeLogs = logs.filter((l) => !l.exit_time);
   const lots = lotsData?.items || [];
+  const packageQueue = packageQueueData?.items || [];
 
   const handleSelectVisitorForCheckIn = (visitor: Visitor) => {
     setSelectedVisitor(visitor);
@@ -52,6 +65,25 @@ export const GatekeeperDashboard: React.FC = () => {
     await checkOutMutation.mutateAsync({
       access_log_id: log.id,
     });
+  };
+
+  const handleLogPackageArrival = async () => {
+    if (!selectedLotId) return;
+    await createPackageMutation.mutateAsync({
+      lot_id: selectedLotId,
+      description: packageDescription || undefined,
+      carrier: packageCarrier || undefined,
+    });
+    setPackageDescription("");
+    setPackageCarrier("");
+  };
+
+  const handleConfirmPickup = async (packageId: string) => {
+    await markPickedUpMutation.mutateAsync({
+      id: packageId,
+      data: { picked_up_by_notes: pickupNotes[packageId] || undefined },
+    });
+    setPickupNotes((prev) => ({ ...prev, [packageId]: "" }));
   };
 
   return (
@@ -167,6 +199,109 @@ export const GatekeeperDashboard: React.FC = () => {
               onCheckOut={handleCheckOut}
               canCheckOut={true}
             />
+          </div>
+        </div>
+      </div>
+
+      {/* Encomendas Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column: Log Arrival Form */}
+        <div className="lg:col-span-1 space-y-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-4">
+            <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <PackageIcon className="size-4 text-indigo-600" />
+              {t("packages.title", "Encomendas")}
+            </h2>
+
+            <div>
+              <input
+                type="text"
+                value={packageDescription}
+                onChange={(e) => setPackageDescription(e.target.value)}
+                placeholder={t("packages.description", "Descrição")}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm bg-white dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-white"
+              />
+            </div>
+
+            <div>
+              <input
+                type="text"
+                value={packageCarrier}
+                onChange={(e) => setPackageCarrier(e.target.value)}
+                placeholder={t("packages.carrier", "Transportadora")}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm bg-white dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-white"
+              />
+            </div>
+
+            <Button
+              disabled={!selectedLotId || createPackageMutation.isPending}
+              onClick={handleLogPackageArrival}
+              className="w-full gap-1 bg-indigo-600 hover:bg-indigo-700 text-white"
+            >
+              <PackageIcon className="size-3.5" />
+              {t("packages.logArrival", "Registrar Encomenda")}
+            </Button>
+          </div>
+        </div>
+
+        {/* Right Column: Awaiting Pickup Queue */}
+        <div className="lg:col-span-2 space-y-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-4">
+              <PackageIcon className="size-5 text-indigo-600 dark:text-indigo-400" />
+              {t("packages.awaitingPickup", "Encomendas Aguardando Retirada")}
+            </h2>
+
+            {packageQueue.length === 0 ? (
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                {t("packages.noPackages", "Nenhuma encomenda aguardando retirada.")}
+              </p>
+            ) : (
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {packageQueue.map((pkg) => (
+                  <div
+                    key={pkg.id}
+                    className="flex flex-col gap-2 rounded-xl border border-slate-100 p-3 dark:border-slate-800/80"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-semibold text-slate-900 dark:text-white text-sm">
+                          {pkg.lot_summary
+                            ? `${t("lots.block")} ${pkg.lot_summary.block}, ${t("lots.lotNumber")} ${pkg.lot_summary.lot_number}`
+                            : ""}
+                        </div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400 flex gap-2">
+                          {pkg.description && <span>{pkg.description}</span>}
+                          {pkg.carrier && <span>{pkg.carrier}</span>}
+                        </div>
+                        <div className="text-xs text-slate-400 dark:text-slate-500">
+                          {new Date(pkg.received_at).toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={pickupNotes[pkg.id] || ""}
+                        onChange={(e) =>
+                          setPickupNotes((prev) => ({ ...prev, [pkg.id]: e.target.value }))
+                        }
+                        placeholder={t("packages.pickedUpBy", "Retirado por: ___")}
+                        className="flex-1 rounded-md border border-slate-300 px-3 py-1.5 text-xs bg-white dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-white"
+                      />
+                      <Button
+                        size="sm"
+                        disabled={markPickedUpMutation.isPending}
+                        onClick={() => handleConfirmPickup(pkg.id)}
+                        className="gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                      >
+                        {t("packages.confirmPickup", "Confirmar Retirada")}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
