@@ -125,6 +125,20 @@ const Navbar: React.FC = () => {
 
         {effectiveRole !== UserRole.PORTEIRO && (
           <Link
+            to="/feedback"
+            className={cn(
+              "text-sm font-semibold transition-all hover:text-primary relative py-1",
+              location.pathname === "/feedback"
+                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
+                : "text-muted-foreground",
+            )}
+          >
+            {t("nav.feedback", "Fale Conosco")}
+          </Link>
+        )}
+
+        {effectiveRole !== UserRole.PORTEIRO && (
+          <Link
             to="/documents"
             className={cn(
               "text-sm font-semibold transition-all hover:text-primary relative py-1",

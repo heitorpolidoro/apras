@@ -17,6 +17,8 @@ from .enums import (
     DayOfWeek,
     EntityType,
     FacialTemplateSyncStatus,
+    FeedbackCategory,
+    FeedbackStatus,
     LotAssociationType,
     LotStatus,
     MilestoneStatus,
@@ -33,6 +35,7 @@ from .enums import (
     TransactionType,
     UserRole,
 )
+from .feedback import Feedback
 from .finance import BudgetLine, FinanceCategory, FinancialTransaction
 from .lot import Lot, UserLotLink
 from .media_asset import MediaAsset
@@ -67,6 +70,9 @@ __all__ = [
     "FacialAccessEvent",
     "FacialTemplate",
     "FacialTemplateSyncStatus",
+    "Feedback",
+    "FeedbackCategory",
+    "FeedbackStatus",
     "FinanceCategory",
     "FinancialTransaction",
     "Lot",

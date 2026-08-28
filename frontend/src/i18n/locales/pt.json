@@ -14,6 +14,7 @@
     "authorizations": "Autorizações",
     "gate": "Portaria",
     "occurrences": "Livro de Ocorrências",
+    "feedback": "Fale Conosco",
     "documents": "Central de Documentos",
     "photoApprovals": "Aprovações de Fotos",
     "accessControl": "Controle de Acesso",
@@ -577,6 +578,51 @@
       "internal_only_label": "Apenas interno (Administração)",
       "select_status": "Manter status atual",
       "send": "Enviar"
+    }
+  },
+  "feedback": {
+    "page_title": "Fale Conosco",
+    "page_subtitle": "Envie críticas, sugestões e elogios diretamente para a diretoria.",
+    "form_title": "Enviar Mensagem",
+    "category": "Categoria",
+    "message": "Mensagem",
+    "message_placeholder": "Escreva sua crítica, sugestão ou elogio...",
+    "anonymous_toggle": "Enviar anonimamente",
+    "anonymous_hint": "Ocultar sua identidade da diretoria.",
+    "anonymous": "Anônimo",
+    "submit": "Enviar",
+    "history_title": "Meu Histórico",
+    "no_records_history": "Nenhuma mensagem enviada ainda",
+    "no_records_inbox": "Nenhuma mensagem recebida ainda",
+    "unread_indicator": "Nova resposta",
+    "unread_badge": "Novo",
+    "view_details": "Ver Detalhes",
+    "board_response": "Resposta da Diretoria",
+    "respond_title": "Responder",
+    "respond_placeholder": "Escreva a resposta da diretoria...",
+    "send_response": "Enviar Resposta",
+    "category_labels": {
+      "CRITICISM": "Crítica",
+      "SUGGESTION": "Sugestão",
+      "COMPLIMENT": "Elogio",
+      "OTHER": "Outro"
+    },
+    "status": {
+      "PENDING": "Pendente",
+      "ANSWERED": "Respondido"
+    },
+    "filters": {
+      "title": "Filtros",
+      "all_categories": "Todas as Categorias",
+      "all_statuses": "Todos os Status"
+    },
+    "table": {
+      "category": "Categoria",
+      "message": "Mensagem",
+      "status": "Status",
+      "reporter": "Remetente",
+      "date": "Data",
+      "actions": "Ações"
     }
   },
   "documents": {

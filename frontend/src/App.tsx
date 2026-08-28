@@ -18,6 +18,7 @@ import SimulationBanner from "./features/user-administration/components/Simulati
 import { VisitorAuthPage } from "./features/visitor-management/components/VisitorAuthPage";
 import { GatekeeperDashboard } from "./features/visitor-management/components/GatekeeperDashboard";
 import { OccurrenceBookPage } from "./features/occurrence-management/components/OccurrenceBookPage";
+import { FeedbackChannelPage } from "./features/feedback-management/components/FeedbackChannelPage";
 import { DocumentCenterPage } from "./features/document-management/components/DocumentCenterPage";
 import { ConstructionTrackerPage } from "./features/project-management/components/ConstructionTrackerPage";
 import { AnnouncementFeedPage } from "./features/announcement-feed/components/AnnouncementFeedPage";
@@ -153,6 +154,15 @@ function App() {
                     ]}
                   >
                     <OccurrenceBookPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/feedback"
+                element={
+                  <ProtectedRoute>
+                    <FeedbackChannelPage />
                   </ProtectedRoute>
                 }
               />

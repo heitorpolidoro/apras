@@ -159,6 +159,20 @@ class OccurrenceAccessForbiddenError(DomainError):
 OccurrencePermissionError = OccurrenceAccessForbiddenError
 
 
+class FeedbackNotFoundError(DomainError):
+    """Raised when a feedback submission is not found."""
+
+    def __init__(self, feedback_id: UUID | str) -> None:
+        super().__init__(f"Feedback with ID {feedback_id} not found")
+
+
+class FeedbackAccessForbiddenError(DomainError):
+    """Raised when access to a feedback submission or action is forbidden."""
+
+    def __init__(self, message: str = "Access to feedback forbidden") -> None:
+        super().__init__(message)
+
+
 class DocumentFolderNotFoundError(DomainError):
     """Raised when a document folder is not found."""
 

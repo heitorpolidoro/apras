@@ -209,6 +209,22 @@ class MenuKey(StrEnum):
     CATEGORIES = "categories"
 
 
+class FeedbackCategory(StrEnum):
+    """Enumeration for feedback/suggestion/complaint categories."""
+
+    CRITICISM = "CRITICISM"
+    SUGGESTION = "SUGGESTION"
+    COMPLIMENT = "COMPLIMENT"
+    OTHER = "OTHER"
+
+
+class FeedbackStatus(StrEnum):
+    """Enumeration for feedback response status."""
+
+    PENDING = "PENDING"
+    ANSWERED = "ANSWERED"
+
+
 
 
 
