@@ -25,7 +25,6 @@ class User(SQLModel, table=True):
     cpf: str = Field(unique=True, index=True)
     phone: str | None = Field(default=None)
     address: str | None = Field(default=None)
-    block_lot: str | None = Field(default=None)
 
     @property
     def username(self) -> str:

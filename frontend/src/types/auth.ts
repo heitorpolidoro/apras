@@ -28,5 +28,4 @@ export interface User {
   cpf?: string;
   phone?: string;
   address?: string;
-  block_lot?: string;
 }

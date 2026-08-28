@@ -20,7 +20,7 @@ def test_user_model_creation():
 
 
 def test_user_model_profile_fields_default_to_none():
-    """Optional profile fields (phone, address, block_lot) default to None."""
+    """Optional profile fields (phone, address) default to None."""
     user = User(
         email="noprofile@test.com",
         hashed_password="hash",
@@ -30,7 +30,6 @@ def test_user_model_profile_fields_default_to_none():
     )
     assert user.phone is None
     assert user.address is None
-    assert user.block_lot is None
 
 
 def test_user_model_profile_fields_accept_strings():
@@ -43,11 +42,9 @@ def test_user_model_profile_fields_accept_strings():
         cpf="11144477735",
         phone="+55 11 91234-5678",
         address="Rua das Flores, 123",
-        block_lot="Bloco A, Lote 12",
     )
     assert user.phone == "+55 11 91234-5678"
     assert user.address == "Rua das Flores, 123"
-    assert user.block_lot == "Bloco A, Lote 12"
 
 
 def test_task_model_defaults():
