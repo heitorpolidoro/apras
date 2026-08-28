@@ -467,7 +467,7 @@ Mapear: `*NotFoundError` → `404`, incluindo `NoActiveBallotError`; `Delinquent
 **Mapeamento exato de `POST /{id}/ballots/retract`** (a ambiguidade apontada no review): três casos, três respostas diferentes, iguais para `ASSEMBLEIA` (regra 3b) e `ENQUETE` (regra 4b) —
 - Ninguém do `voter_key` do usuário (o lote informado, em `ASSEMBLEIA`; o próprio usuário, em `ENQUETE`) tem cédula ativa (nunca votou, ou a última já é retirada) → `NoActiveBallotError`, `404`.
 - `ASSEMBLEIA` apenas: existe cédula ativa do lote, mas de **outro** elegível (não é o usuário quem detém) → `LotAlreadyVotedError`, `403`. Não existe equivalente em `ENQUETE`, já que `voter_key = user:<id>` nunca é compartilhado.
-- Papel proibido (`GUEST`/`PORTEIRO`) ou janela fechada → `ROLE_FORBIDDEN`/`VOTE_NOT_OPEN` como em qualquer outra ação, `400`/`403` conforme o mapeamento já existente. Essas duas checagens (1 e 2 da cadeia) rodam **antes** das duas acima, então janela fechada vence sobre "sem cédula ativa" se ambas seriam verdade.
+- Papel proibido (`GUEST`/`PORTEIRO`) → `ForbiddenError`, `403` (mesmo padrão já usado em outras ações de governança). Janela fechada → `VoteNotOpenError`, `400`. Essas duas checagens (1 e 2 da cadeia) rodam **antes** das duas acima, então janela fechada vence sobre "sem cédula ativa" se ambas seriam verdade.
 
 ### `backend/app/schemas/voting.py` (arquivo novo)
 
@@ -618,7 +618,7 @@ Os testes abaixo cobrem as regras decididas e são obrigatórios. Cobertura gen�
 17. `MANAGER` sem nenhum vínculo a lote consegue `GET /votes/{id}/tally` e ver a contagem de uma `ENQUETE` que criou (mesmo antes do fechamento) e a apuração completa de uma `ASSEMBLEIA` (depois do fechamento).
 18. `ENQUETE` fechada: `TallyRead` não tem campo de denominador/`total_lots` (só `voters_count` e `results`).
 19. **Retirada em `ENQUETE`**: usuário vota → `POST /{id}/ballots/retract` com `lot_id=null` retira com sucesso, apuração deixa de contá-lo; tentando retirar de novo (sem votar antes) recebe `404 NoActiveBallotError`; enviar `lot_id` preenchido numa votação `ENQUETE` devolve `422`. Depois de retirar, um inquilino que perdeu o `UserLotLink` (mudou-se) ainda consegue essa retirada — prova que 4b não reavalia `NO_ACTIVE_LOT_LINK`, espelhando o teste 15b para assembleia.
-20. **Retirada em lote errado (multi-lote)**: usuário elegível em dois lotes vota nos dois; `POST /{id}/ballots/retract` com `lot_id` do lote A retira só a cédula de A — a de B permanece ativa e contando na apuração.
+20. **Retirada seletiva entre dois lotes (multi-lote)**: usuário elegível em dois lotes vota nos dois; `POST /{id}/ballots/retract` com `lot_id` do lote A retira só a cédula de A — a de B permanece ativa e contando na apuração.
 
 Complementares: `PATCH` em votação com cédula existente devolve `400` (`VoteFrozenError`); `PATCH` em `Assembly` com `status == CLOSED` devolve `400`; criar votação de assembleia com `is_anonymous=True` devolve `400`; votar numa assembleia em `DRAFT` devolve `400` mesmo com a janela da votação aberta; `POST /assemblies/{id}/close` fecha em cascata as votações abertas e materializa o snapshot de cada uma; `GET /{id}/minutes` antes do fechamento devolve `400`; janela fechada some com `VOTE_NOT_OPEN` mesmo quando o usuário também não tem cédula ativa (checagem 1 vence sobre `NoActiveBallotError`); a materialização preguiçosa não dispara em `GET /votes/` (listagem), só em `GET /{id}` e `GET /{id}/tally`.
 
