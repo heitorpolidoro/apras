@@ -118,9 +118,9 @@
   {
     "id": "APRAS-11",
     "title": "Add UserTypes to task visibility configuration",
-    "status": "backlog",
-    "justification": "Include user types in task visibility configuration and filtering.",
-    "running": false,
+    "status": "specreview",
+    "justification": "Include user types in task visibility configuration and filtering. Picked up from backlog, exploring design.",
+    "running": true,
     "priority": "medium"
   },
   {
