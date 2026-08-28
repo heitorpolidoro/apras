@@ -42,13 +42,33 @@ No `requiredRole`/`requiredMenu` — any authenticated user can reach `/welcome`
 
 ### Redirect logic — three places send an active `GUEST` to `/welcome` instead of `/dashboard`
 
-1. **Root redirect**: `App.tsx`'s `<Route path="/" element={<Navigate to="/dashboard" />} />` (or wherever this lives — confirm the exact current implementation) becomes role-aware: `GUEST` → `/welcome`, everyone else → `/dashboard` (unchanged).
-2. **Post-login navigation**: `LoginPage.tsx`'s success handler currently navigates to `/dashboard` (or wherever it navigates post-auth) — becomes role-aware the same way. Since the user object isn't available until after `AuthContext`'s `fetchUser` resolves inside `login()`, check the actual current flow (`AuthContext.tsx`'s `login` function) to place this correctly — it may be cleaner to make the root-redirect role-aware (item 1) and have `LoginPage` simply navigate to `/` post-login, letting the root redirect decide, rather than duplicating the role check in two places. Prefer this single-source-of-truth approach if the current code allows it without a larger refactor.
-3. **Direct navigation to `/dashboard` or `/categories`**: an active `GUEST` typing either URL directly is redirected to `/welcome` rather than seeing APRAS-8's generic restricted-access message. This is an addition to `ProtectedRoute.tsx`'s existing `requiredMenu` handling, or a small role check at the top of those two routes specifically — do not change `requiredMenu`'s generic behavior for any other role, only add a `GUEST`-specific redirect that takes precedence over it for these two routes.
+All three checks below use the user's **real** role (`user?.role` from `useAuth()`), never the simulated role from `useEffectiveIdentity`/`SimulationContext` — except item 3, which is explicitly the one exception (see below). A real Administrator's own root-redirect and post-login navigation must never be affected by an active simulation of another role; this matches how `ProtectedRoute`'s existing `requiredRole`/`requiredRoles` checks already use the real identity.
+
+1. **Root redirect**: `App.tsx`'s existing `<Route path="/" element={<Navigate to="/dashboard" replace />} />` (line 198-201) becomes role-aware, using the real role: `GUEST` → `/welcome`, everyone else → `/dashboard` (unchanged). Note the `isLoading` window in `AuthContext` (before `fetchUser` resolves) means `user` may briefly be `undefined` here; treat that case the same as "everyone else" (default to `/dashboard`) — this isn't a correctness bug because item 3's `ProtectedRoute` check on `/dashboard` acts as a safety net and will still catch a `GUEST` and redirect to `/welcome` once the user loads.
+2. **Post-login navigation**: `LoginPage.tsx` (line 38) currently computes `const from = location.state?.from?.pathname || "/dashboard";` and navigates there after `login()` resolves. **Do not change the `from`-based logic** — `location.state.from` is populated by `ProtectedRoute.tsx:49`'s `<Navigate to="/login" state={{ from: location }} replace />` whenever an unauthenticated user is bounced from *any* protected route, not just `/dashboard`, so preserving it is required to keep "return to originally-requested page" working for every role. The only change is the **fallback default**, from `"/dashboard"` to `"/"`:
+   ```ts
+   const from = location.state?.from?.pathname || "/";
+   ```
+   This way, an explicit deep-link target is always honored as before, and only the no-deep-link case falls through to the root route, whose role-aware redirect (item 1, using the real role) then decides between `/dashboard` and `/welcome`.
+3. **Direct navigation to `/dashboard` or `/categories`**: an active `GUEST` typing either URL directly is redirected to `/welcome` rather than seeing APRAS-8's generic restricted-access message. Concretely, add a new branch in `ProtectedRoute.tsx` immediately before the existing `requiredMenu` restricted-message check:
+   ```tsx
+   if (requiredMenu && effectiveRole === UserRole.GUEST) {
+     return <Navigate to="/welcome" replace />;
+   }
+
+   if (requiredMenu && !hasMenuAccess) {
+     return <RestrictedAccessMessage />;
+   }
+   ```
+   where `effectiveRole` comes from `useEffectiveIdentity()` (the same hook `useMenuAccess` already uses internally) — i.e. this check uses the **effective/simulated** role, not the real one. This is the deliberate exception to the real-role rule above: it matches `useMenuAccess`'s existing convention on these same two routes, so an Administrator simulating `GUEST` sees the `/welcome` redirect consistently with how they already see the restricted-message behavior today for other simulated roles. The new branch is gated on `requiredMenu` being set, so it can only fire on the two routes that pass `requiredMenu` (`/dashboard`, `/categories`) and never affects any of the ~13 other routes that use `requiredRole`/`requiredRoles` instead.
 
 ### i18n
 
-New keys (e.g. under a `guestWelcome` namespace) in `en.json`/`pt.json`: page heading, explanatory body text, logout button label (can reuse the existing `common.logout` key rather than duplicating it).
+New keys under a `guestWelcome` namespace in `en.json`/`pt.json`:
+- `guestWelcome.heading` — page heading (e.g. "Welcome" / "Bem-vindo(a)").
+- `guestWelcome.body` — explanatory body text about the account being approved and awaiting role assignment.
+
+Logout button reuses the existing `common.logout` key rather than duplicating it.
 
 ## Non-Goals
 
