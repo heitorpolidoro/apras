@@ -110,8 +110,8 @@
   {
     "id": "APRAS-10",
     "title": "Create dedicated landing/welcome page for Guest users",
-    "status": "specreview",
-    "justification": "Add a dedicated initial page for users with GUEST role awaiting approval or guest access. Picked up from backlog, exploring design. Independent spec review round 1: NEEDS_REVISION -- post-login nav change would break deep-link return-to-original-page behavior for every role, GUEST redirect mechanism left as unresolved either/or, and simulation feature (Administrator simulating GUEST) not addressed at all. Redispatching spec-generator.",
+    "status": "inprogress",
+    "justification": "Dedicated /welcome page for active GUEST users, replacing the generic APRAS-8 restricted-access message. Spec approved after 1 revision round (fixed: deep-link regression risk, unresolved redirect mechanism choice, simulation-identity handling). Frontend-only, no backend changes. Implementation dispatched.",
     "running": true,
     "priority": "medium"
   },
