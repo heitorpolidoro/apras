@@ -524,7 +524,7 @@
   {
     "id": "APRAS-31",
     "title": "Implement space/amenity reservation system",
-    "status": "backlog",
+    "status": "specreview",
     "justification": "Architectural spec ready in docs/tasks/APRAS-26-analysis.md (Spec A) -- let residents book shared amenities against an availability calendar with server-side double-booking prevention. Identified as a COM21 parity gap.",
     "expected_results": [
       "ReservableSpace admin-managed CRUD (Administrator/Director)",
@@ -538,13 +538,13 @@
     "last_review_findings": [],
     "created_at": "2026-08-27T23:45:00-03:00",
     "updated_at": "2026-08-27T23:45:00-03:00",
-    "running": false,
+    "running": true,
     "priority": "low"
   },
   {
     "id": "APRAS-32",
     "title": "Implement package tracking (encomendas) for Gatekeeper",
-    "status": "backlog",
+    "status": "specreview",
     "justification": "Architectural spec ready in docs/tasks/APRAS-26-analysis.md (Spec B) -- let the Gatekeeper log package arrivals and mark pickups, with lot-scoped resident visibility. Identified as a COM21 parity gap; fits naturally alongside the existing Gatekeeper Dashboard and the new PORTEIRO role (APRAS-12).",
     "expected_results": [
       "Package model with AWAITING_PICKUP/PICKED_UP status",
@@ -558,13 +558,13 @@
     "last_review_findings": [],
     "created_at": "2026-08-27T23:45:00-03:00",
     "updated_at": "2026-08-27T23:45:00-03:00",
-    "running": false,
+    "running": true,
     "priority": "low"
   },
   {
     "id": "APRAS-33",
     "title": "Scope online assembly/voting feature (COM21 parity gap)",
-    "status": "backlog",
+    "status": "specreview",
     "justification": "Surfaced by the APRAS-26 COM21 comparative analysis as a real, concrete gap (COM21 offers attendance lists, minutes, and single/multiple-choice/free-text voting) not currently in the APRAS backlog anywhere. Needs its own brainstorming pass before a spec -- not scoped in APRAS-26 itself, which was limited to package tracking and reservations per its own expected results.",
     "blockedBy": [],
     "spec_path": "",
@@ -573,7 +573,7 @@
     "last_review_findings": [],
     "created_at": "2026-08-27T23:45:00-03:00",
     "updated_at": "2026-08-27T23:45:00-03:00",
-    "running": false,
+    "running": true,
     "priority": "low"
   }
 ]
