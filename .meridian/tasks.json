@@ -545,7 +545,8 @@
     "updated_at": "2026-08-27T23:45:00-03:00",
     "running": false,
     "priority": "low",
-    "completed_at": "2026-08-28T03:27:24.068682-03:00"
+    "completed_at": "2026-08-28T03:27:24.068682-03:00",
+    "moved_at": "2026-08-27T23:45:00-03:00"
   },
   {
     "id": "APRAS-32",
@@ -566,21 +567,40 @@
     "updated_at": "2026-08-27T23:45:00-03:00",
     "running": false,
     "priority": "low",
-    "completed_at": "2026-08-28T02:58:37.033900-03:00"
+    "completed_at": "2026-08-28T02:58:37.033900-03:00",
+    "moved_at": "2026-08-27T23:45:00-03:00"
   },
   {
     "id": "APRAS-33",
     "title": "Scope online assembly/voting feature (COM21 parity gap)",
-    "status": "blocked",
-    "justification": "Scoping document written (not an implementation spec). Surfaces legal/governance open questions (vote anonymity vs attribution per Brazilian condo bylaws, whether output needs standing as ata de assembleia) that require explicit user decision before a real spec-review cycle can start. Blocked on user input, not on another task.",
+    "status": "specreview",
+    "justification": "Scoping brainstorm resolved with user in a parallel session: assembly voting with per-lot eligibility + delinquency check-in-the-moment, temporal-only secrecy (vote-count-only while open, full tally on close, even for staff), Assembly as a minimal real entity (no scheduling/calendar), minuta (not legal ata) generated as HTML and stored in Document Center, append-only Ballot (no unique constraint, vote-changing allowed), single-tenant. FREE_TEXT vote type cut per user decision. Full spec written and user-approved; dispatching independent spec review.",
     "blockedBy": [],
-    "spec_path": "docs/tasks/APRAS-33-scope.md",
-    "spec_iterations": 0,
+    "spec_path": "docs/tasks/APRAS-33-spec.md",
+    "spec_iterations": 1,
     "qa_iterations": 0,
     "last_review_findings": [],
     "created_at": "2026-08-27T23:45:00-03:00",
     "updated_at": "2026-08-27T23:45:00-03:00",
+    "running": true,
+    "priority": "low",
+    "moved_at": "2026-08-27T23:45:00-03:00"
+  },
+  {
+    "id": "APRAS-34",
+    "title": "Implementar controle de ativos e estoque do condomínio",
+    "status": "backlog",
+    "justification": "",
+    "priority": "low",
+    "expected_results": [
+      "CRUD de ativo patrimonial (nome, categoria, localização, data de aquisição, valor, estado) restrito a Administrator/Director",
+      "Registro de movimentação de estoque (entrada/saída com quantidade e responsável) com saldo atual calculado por item",
+      "Listagem de ativos filtrável por categoria e localização, visível a Administrator/Director/Manager"
+    ],
     "running": false,
-    "priority": "low"
+    "blockedBy": [],
+    "created_at": "2026-08-28T16:06:19.091Z",
+    "moved_at": "2026-08-28T16:06:19.091Z",
+    "updated_at": "2026-08-28T16:06:19.091Z"
   }
 ]
