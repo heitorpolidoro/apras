@@ -19,7 +19,7 @@ A Gatekeeper today finds a visitor's authorization by manually searching name/CP
 
 ### New endpoint: `GET /authorizations/{authorization_id}/qr-code`
 
-Returns a QR code image (PNG, `image/png` response) encoding the authorization's `id` (its UUID, as a plain string — no signing, no expiry, no extra payload). 404 if the authorization doesn't exist. Add the `qrcode` Python package (with the `[pil]` extra for PNG rendering) as a new backend dependency.
+Returns a QR code image (PNG, `image/png` response) encoding the authorization's `id` (its UUID, as a plain string — no signing, no expiry, no extra payload). 404 if the authorization doesn't exist. Add the `qrcode` Python package as a new backend dependency — the `[pil]` extra is unnecessary since `pillow>=11.0.0` is already a direct backend dependency.
 
 ### `backend/app/schemas/visitor.py`
 
@@ -29,19 +29,22 @@ No new schema needed for the QR endpoint itself (it returns a raw image response
 
 ### `VisitorAuthPage.tsx` — "show QR" affordance
 
-Wherever an authorization is listed (the existing per-lot authorization list), add a "Ver QR" button/icon per row, opening a small modal that displays `<img src="{API_BASE}/authorizations/{id}/qr-code" />` — no new API client method needed beyond the base URL construction already used elsewhere for direct image endpoints (check how, e.g., media/photo endpoints are referenced directly by URL elsewhere in this codebase and follow the same pattern for auth-header handling, since this is likely behind the same JWT-protected API — if the existing pattern for direct-image endpoints doesn't already handle auth headers on an `<img>` tag, e.g. via a signed/public URL scheme, resolve this concretely at implementation time using whichever approach this codebase's existing image-serving code already uses, rather than inventing a new one).
+Wherever an authorization is listed (the existing per-lot authorization list), add a "Ver QR" button/icon per row, opening a small modal that displays the QR image. There is **no existing precedent in this codebase for a JWT-protected `<img>` tag**: the only direct-image-URL pattern here is `/static/uploads/...` (bare `StaticFiles` mount in `backend/app/main.py`), which is deliberately public with no auth, and this app's auth is exclusively Bearer-token-in-header (no cookies) — so a bare `<img src="{API_BASE}/authorizations/{id}/qr-code">` cannot carry the token, and the new endpoint (protected by `deps.get_current_user`) would 401. Implement instead as: on opening the modal, call `apiClient.get(url, { responseType: 'blob' })` (the same `apiClient` used elsewhere in the codebase, which attaches the auth header), then `URL.createObjectURL(blob)` on the response and set that as the `<img>` element's `src`. Revoke the object URL (`URL.revokeObjectURL`) when the modal closes/unmounts to avoid leaking memory.
 
 ### `GatekeeperDashboard.tsx` — "scan QR" affordance
 
-Add a "Escanear QR" button opening a camera view. Use the `html5-qrcode` npm package (handles camera access + continuous frame decoding out of the box, avoiding custom `getUserMedia`/canvas-frame-extraction code). On a successful scan:
+Add a "Escanear QR" button opening a camera view. Use the `html5-qrcode` npm package (handles camera access + continuous frame decoding out of the box, avoiding custom `getUserMedia`/canvas-frame-extraction code). At implementation time, do a quick sanity-check of `html5-qrcode`'s recent release history/issues for browser-compatibility regressions before pinning a version — its release cadence has slowed, though this is not reason to pick a different library. On a successful scan:
 1. Parse the decoded text as a UUID (reject/show an error for anything that doesn't look like one — e.g. a QR code from an unrelated source).
 2. Call `GET /authorizations/{id}` to fetch the full authorization + visitor details.
-3. If found, open the existing `GatekeeperEntryModal` pre-filled with that authorization/visitor — the gatekeeper still reviews and confirms before submitting check-in, identical to today's manual-search flow from that point forward. No new check-in code path.
-4. If not found (404) or the authorization's status/window rules would reject it, surface the same error messaging `VisitorService.check_in` already produces for those cases today — no new error-handling logic, reuse what exists.
+3. If found, store the scanned `authorization_id` in component state (e.g. a new `scannedAuthorizationId` state variable), and **set `selectedLotId` to the scanned authorization's `lot_id`** — overwriting whatever is currently selected in the manual lot dropdown. The scanned authorization is more specific/authoritative than a stale manual dropdown selection, so this overwrite happens unconditionally on every successful scan, not just when nothing was previously selected.
+4. Open the existing `GatekeeperEntryModal` pre-filled with that authorization/visitor — the gatekeeper still reviews and confirms before submitting check-in, identical to today's manual-search flow from that point forward.
+5. `handleConfirmCheckIn` must pass the stored `authorization_id` through explicitly to `checkInMutation.mutateAsync` when the check-in originated from a scan (today it calls `checkInMutation.mutateAsync({ visitor_id, lot_id, entry_notes })` and never passes `authorization_id`, even though `AccessLogCheckIn`/`useCheckIn` already supports the field). Without this, `VisitorService.check_in` falls back to the visitor's most-recently-created ACTIVE authorization for that visitor+lot — not necessarily the one actually scanned — silently defeating the purpose of scanning a specific QR when a visitor has more than one active authorization for the same lot. `GatekeeperEntryModal.tsx` already declares an `authorizationId?: string | null` prop in its interface, but it is currently unused/never wired up — this is dead scaffolding to actually wire up (pass it from `GatekeeperDashboard`'s scanned-state through the modal and into `handleConfirmCheckIn`'s call to `mutateAsync`), not evidence this flow already works today.
+6. If not found (404) or the authorization's status/window rules would reject it, surface the same error messaging `VisitorService.check_in` already produces for those cases today — no new error-handling logic, reuse what exists.
+7. Clear `scannedAuthorizationId` (and stop overriding `selectedLotId` from a scan) once the modal is closed/cancelled or check-in completes, so a subsequent manual-search check-in doesn't accidentally reuse a stale scanned `authorization_id`.
 
 ### New dependency
 
-`html5-qrcode` (frontend). No new backend Python dependency beyond `qrcode[pil]`.
+`html5-qrcode` (frontend). No new backend Python dependency beyond `qrcode`.
 
 ## Non-Goals
 
