@@ -1,7 +1,7 @@
 """Tests for treating UserRole as an implicit UserType (APRAS-9).
 
 Covers `get_effective_user_type_ids` in isolation, and its effect on the
-menu-access gate (APRAS-8) and `Task.visible_to_id` targeting/visibility
+menu-access gate (APRAS-8) and `Task.visible_to` targeting/visibility
 once a role-linked UserType exists (normally seeded by the
 `0018_add_role_to_user_type` migration; created directly here since the
 backend test suite builds its schema via `SQLModel.metadata.create_all()`
@@ -283,15 +283,15 @@ def test_director_gains_access_after_role_type_allowed_menus_patched(
 
 
 # ---------------------------------------------------------------------------
-# Task.visible_to_id targeting a role-type
+# Task.visible_to targeting a role-type
 # ---------------------------------------------------------------------------
 
 
 def test_task_visible_to_role_type_visible_to_manager_with_zero_explicit_types(
     client: TestClient, session: Session
 ):
-    """A task with visible_to_id set to a Manager role-type's id is visible
-    to a Manager who has zero explicitly-assigned UserTypes."""
+    """A task with `visible_to` targeting a Manager role-type's UserType is
+    visible to a Manager who has zero explicitly-assigned UserTypes."""
     manager_role_type = UserType(
         name="Gerente (papel)", allowed_menus=["tasks"], role=UserRole.MANAGER
     )
@@ -324,7 +324,7 @@ def test_task_visible_to_role_type_visible_to_manager_with_zero_explicit_types(
         title="Visible via role-type",
         category_id=category.id,
         created_by_id=admin.id,
-        visible_to_id=manager_role_type.id,
+        visible_to=[manager_role_type],
     )
     session.add(task)
     session.commit()

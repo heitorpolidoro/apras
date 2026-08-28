@@ -98,7 +98,7 @@ describe("TaskForm", () => {
     } as any); // skipcq: JS-0323
 
     vi.mocked(useUserTypes).mockReturnValue({
-      data: [{ id: "type-1", name: "Gerente" }],
+      data: [{ id: "type-1", name: "Gerente", allowed_menus: [] }],
       isLoading: false,
     } as any);
   });
@@ -593,14 +593,14 @@ describe("TaskForm", () => {
           assigned_to_id: "user-1",
           category_id: "cat-1",
           status: TaskStatus.PENDING,
-          visible_to_id: null,
+          visible_to_ids: [],
         },
       },
       expect.any(Object),
     );
   });
 
-  describe("visible_to_id field", () => {
+  describe("visible_to_ids field", () => {
     const existingTask = {
       id: "1",
       title: "Existing Task",
@@ -612,10 +612,10 @@ describe("TaskForm", () => {
       created_at: new Date(),
       updated_at: new Date(),
       category_id: "cat-1",
-      visible_to_id: "",
+      visible_to: [],
     };
 
-    it("shows visible_to_id select for ADMINISTRATOR in edit mode", () => {
+    it("shows the visibility multi-select for ADMINISTRATOR in edit mode", () => {
       vi.mocked(useAuth).mockReturnValue({
         user: { id: "admin-1", role: UserRole.ADMINISTRATOR },
       } as any); // skipcq: JS-0323
@@ -628,12 +628,13 @@ describe("TaskForm", () => {
         />,
       );
 
+      expect(screen.getByText("Visibilidade")).toBeInTheDocument();
       expect(
-        screen.getByLabelText(/visibilidade/i),
+        screen.getByRole("button", { name: /Selecionar tipos/i }),
       ).toBeInTheDocument();
     });
 
-    it("shows visible_to_id select for DIRECTOR in edit mode", () => {
+    it("shows the visibility multi-select for DIRECTOR in edit mode", () => {
       vi.mocked(useAuth).mockReturnValue({
         user: { id: "director-1", role: UserRole.DIRECTOR },
       } as any); // skipcq: JS-0323
@@ -647,11 +648,11 @@ describe("TaskForm", () => {
       );
 
       expect(
-        screen.getByLabelText(/visibilidade/i),
+        screen.getByRole("button", { name: /Selecionar tipos/i }),
       ).toBeInTheDocument();
     });
 
-    it("does NOT show visible_to_id select for MANAGER", () => {
+    it("does NOT show the visibility multi-select for MANAGER", () => {
       vi.mocked(useAuth).mockReturnValue({
         user: { id: "manager-1", role: UserRole.MANAGER },
       } as any); // skipcq: JS-0323
@@ -665,11 +666,11 @@ describe("TaskForm", () => {
       );
 
       expect(
-        screen.queryByLabelText(/visibilidade/i),
+        screen.queryByRole("button", { name: /Selecionar tipos/i }),
       ).not.toBeInTheDocument();
     });
 
-    it("shows visible_to_id select in create mode for ADMIN", () => {
+    it("shows the visibility multi-select in create mode for ADMIN", () => {
       vi.mocked(useAuth).mockReturnValue({
         user: { id: "admin-1", role: UserRole.ADMINISTRATOR },
       } as any); // skipcq: JS-0323
@@ -677,11 +678,11 @@ describe("TaskForm", () => {
       render(<TaskForm onSuccess={mockOnSuccess} onCancel={mockOnCancel} />);
 
       expect(
-        screen.getByLabelText(/visibilidade/i),
+        screen.getByRole("button", { name: /Selecionar tipos/i }),
       ).toBeInTheDocument();
     });
 
-    it("selecting a user type in the select updates visible_to_id in form state", () => {
+    it("selecting a user type updates visible_to_ids and submits it", () => {
       vi.mocked(useAuth).mockReturnValue({
         user: { id: "admin-1", role: UserRole.ADMINISTRATOR },
       } as any); // skipcq: JS-0323
@@ -694,10 +695,38 @@ describe("TaskForm", () => {
         />,
       );
 
-      const select = screen.getByLabelText(/visibilidade/i) as HTMLSelectElement;
-      expect(select.value).toBe("");
-      fireEvent.change(select, { target: { value: "type-1" } });
-      expect(select.value).toBe("type-1");
+      fireEvent.click(screen.getByRole("button", { name: /Selecionar tipos/i }));
+      fireEvent.click(screen.getByRole("checkbox"));
+
+      fireEvent.click(screen.getByRole("button", { name: /Atualizar tarefa/i }));
+
+      expect(mockUpdateMutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ visible_to_ids: ["type-1"] }),
+        }),
+        expect.any(Object),
+      );
+    });
+
+    it("pre-fills selected ids from an existing task's visible_to list", () => {
+      vi.mocked(useAuth).mockReturnValue({
+        user: { id: "admin-1", role: UserRole.ADMINISTRATOR },
+      } as any); // skipcq: JS-0323
+
+      render(
+        <TaskForm
+          task={
+            {
+              ...existingTask,
+              visible_to: [{ id: "type-1", name: "Gerente", allowed_menus: [] }],
+            } as any // skipcq: JS-0323
+          }
+          onSuccess={mockOnSuccess}
+          onCancel={mockOnCancel}
+        />,
+      );
+
+      expect(screen.getByText("Gerente")).toBeInTheDocument();
     });
   });
 
@@ -746,7 +775,7 @@ describe("TaskForm", () => {
   });
 
   describe("admin role simulation", () => {
-    it("hides the visible_to_id field when simulating MANAGER, even for a real ADMINISTRATOR", () => {
+    it("hides the visibility multi-select when simulating MANAGER, even for a real ADMINISTRATOR", () => {
       vi.mocked(useAuth).mockReturnValue({
         user: { id: "admin-1", role: UserRole.ADMINISTRATOR },
       } as any); // skipcq: JS-0323
@@ -761,7 +790,9 @@ describe("TaskForm", () => {
 
       render(<TaskForm onSuccess={mockOnSuccess} onCancel={mockOnCancel} />);
 
-      expect(screen.queryByLabelText(/visibilidade/i)).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /Selecionar tipos/i }),
+      ).not.toBeInTheDocument();
     });
 
     it("disables the submit button while simulating, even though the form is not otherwise loading", () => {

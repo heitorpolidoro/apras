@@ -13,48 +13,68 @@ const baseTask: TaskRead = {
   updated_at: new Date().toISOString(),
   created_by_id: "creator-1",
   assigned_to_id: null,
-  visible_to_id: null,
+  visible_to: [],
 };
 
 const MANAGER_TYPE_ID = "type-manager";
 const OTHER_TYPE_ID = "type-other";
+
+const userType = (id: string) => ({ id, name: id, allowed_menus: [] });
 
 describe("canSeeSimulatedTask", () => {
   it("GUEST never sees any task, even a public one", () => {
     expect(canSeeSimulatedTask(baseTask, UserRole.GUEST, [])).toBe(false);
     expect(
       canSeeSimulatedTask(
-        { ...baseTask, visible_to_id: MANAGER_TYPE_ID },
+        { ...baseTask, visible_to: [userType(MANAGER_TYPE_ID)] },
         UserRole.GUEST,
         [MANAGER_TYPE_ID],
       ),
     ).toBe(false);
   });
 
-  it("MANAGER sees a public task (visible_to_id null) regardless of UserTypes", () => {
+  it("MANAGER sees a public task (empty visible_to) regardless of UserTypes", () => {
     expect(canSeeSimulatedTask(baseTask, UserRole.MANAGER, [])).toBe(true);
   });
 
   it("MANAGER sees a task targeted to one of their selected UserType ids", () => {
-    const task = { ...baseTask, visible_to_id: MANAGER_TYPE_ID };
+    const task = { ...baseTask, visible_to: [userType(MANAGER_TYPE_ID)] };
     expect(
       canSeeSimulatedTask(task, UserRole.MANAGER, [MANAGER_TYPE_ID, OTHER_TYPE_ID]),
     ).toBe(true);
   });
 
+  it("MANAGER sees a task with multiple targets when at least one overlaps", () => {
+    const task = {
+      ...baseTask,
+      visible_to: [userType(MANAGER_TYPE_ID), userType(OTHER_TYPE_ID)],
+    };
+    expect(canSeeSimulatedTask(task, UserRole.MANAGER, [MANAGER_TYPE_ID])).toBe(true);
+  });
+
   it("MANAGER does not see a task targeted to a UserType they don't have selected", () => {
-    const task = { ...baseTask, visible_to_id: MANAGER_TYPE_ID };
+    const task = { ...baseTask, visible_to: [userType(MANAGER_TYPE_ID)] };
     expect(canSeeSimulatedTask(task, UserRole.MANAGER, [OTHER_TYPE_ID])).toBe(false);
     expect(canSeeSimulatedTask(task, UserRole.MANAGER, [])).toBe(false);
   });
 
+  it("MANAGER does not see a task with multiple targets when none overlap", () => {
+    const task = {
+      ...baseTask,
+      visible_to: [userType(MANAGER_TYPE_ID), userType(OTHER_TYPE_ID)],
+    };
+    expect(canSeeSimulatedTask(task, UserRole.MANAGER, ["type-unrelated"])).toBe(
+      false,
+    );
+  });
+
   it("ADMINISTRATOR sees every task regardless of visibility targeting", () => {
-    const task = { ...baseTask, visible_to_id: OTHER_TYPE_ID };
+    const task = { ...baseTask, visible_to: [userType(OTHER_TYPE_ID)] };
     expect(canSeeSimulatedTask(task, UserRole.ADMINISTRATOR, [])).toBe(true);
   });
 
   it("DIRECTOR sees every task regardless of visibility targeting", () => {
-    const task = { ...baseTask, visible_to_id: OTHER_TYPE_ID };
+    const task = { ...baseTask, visible_to: [userType(OTHER_TYPE_ID)] };
     expect(canSeeSimulatedTask(task, UserRole.DIRECTOR, [])).toBe(true);
   });
 });

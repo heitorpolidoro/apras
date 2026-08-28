@@ -180,9 +180,10 @@ def assert_menu_access(current_user: User, menu_key: MenuKey, session: Session) 
 def assert_manager_can_see_task(current_user: User, task: Task, session: Session) -> None:
     """Raise TaskNotFoundError for tasks the user is not allowed to see.
 
-    MANAGER may only access tasks with visible_to_id = None OR visible_to_id
-    in their effective UserType ids (explicitly-assigned or role-implicit,
-    see `get_effective_user_type_ids`). GUEST may not access any task.
+    MANAGER may only access tasks with an empty `visible_to` list (visible
+    to every Manager) OR at least one target in their effective UserType ids
+    (explicitly-assigned or role-implicit, see `get_effective_user_type_ids`).
+    GUEST may not access any task.
 
     Args:
         current_user: The authenticated user making the request.
@@ -197,10 +198,11 @@ def assert_manager_can_see_task(current_user: User, task: Task, session: Session
     if current_user.role == UserRole.GUEST:
         raise TaskNotFoundError(task.id)
     if current_user.role == UserRole.MANAGER:
-        if task.visible_to_id is not None:
-            user_type_ids = get_effective_user_type_ids(current_user, session)
-            if task.visible_to_id not in user_type_ids:
-                raise TaskNotFoundError(task.id)
+        if task.visible_to and not (
+            {vt.id for vt in task.visible_to}
+            & get_effective_user_type_ids(current_user, session)
+        ):
+            raise TaskNotFoundError(task.id)
 
 
 def assert_can_edit_task(current_user: User, task: Task) -> None:

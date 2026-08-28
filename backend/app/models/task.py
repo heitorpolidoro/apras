@@ -15,6 +15,20 @@ if TYPE_CHECKING:
     from .user_type import UserType
 
 
+class TaskVisibleToLink(SQLModel, table=True):
+    """Join table for the many-to-many `Task.visible_to` relationship.
+
+    Matches `UserUserTypeLink`'s shape exactly: composite primary key
+    (`task_id`, `user_type_id`), no surrogate `id` column, no
+    `ondelete`/`index` annotations (see APRAS-11 spec).
+    """
+
+    __tablename__ = "task_visible_to_link"
+
+    task_id: UUID = Field(foreign_key="task.id", primary_key=True)
+    user_type_id: UUID = Field(foreign_key="user_type.id", primary_key=True)
+
+
 def get_utc_now() -> datetime:
     """
     Get the current UTC time.
@@ -65,9 +79,6 @@ class Task(SQLModel, table=True):
     category_id: UUID | None = Field(
         default=None, foreign_key=CATEGORY_ID_FK, index=True
     )
-    visible_to_id: UUID | None = Field(
-        default=None, foreign_key="user_type.id", index=True
-    )
 
     # Relationships
     creator: "User" = Relationship(
@@ -79,7 +90,7 @@ class Task(SQLModel, table=True):
         sa_relationship_kwargs={"foreign_keys": "Task.assigned_to_id"},
     )
     category: "Category" = Relationship(back_populates="tasks")
-    visible_to: Optional["UserType"] = Relationship()
+    visible_to: list["UserType"] = Relationship(link_model=TaskVisibleToLink)
     history: list["TaskHistory"] = Relationship(
         back_populates="task", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )

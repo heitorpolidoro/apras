@@ -6,8 +6,8 @@ import type { TaskRead } from "../types";
  * (`backend/app/api/deps.py`) for the frontend "view-as" simulation.
  *
  * - GUEST never sees any task.
- * - MANAGER sees a task if it is public (`visible_to_id` is `null`) or
- *   targeted to one of the given UserType ids.
+ * - MANAGER sees a task if it has no visibility targets (`visible_to` is
+ *   empty) or if `visible_to` intersects the given UserType ids.
  * - ADMINISTRATOR and DIRECTOR see every task.
  */
 export function canSeeSimulatedTask(
@@ -17,8 +17,8 @@ export function canSeeSimulatedTask(
 ): boolean {
   if (role === UserRole.GUEST) return false;
   if (role === UserRole.MANAGER) {
-    if (task.visible_to_id == null) return true;
-    return userTypeIds.includes(task.visible_to_id);
+    if (!task.visible_to || task.visible_to.length === 0) return true;
+    return task.visible_to.some((userType) => userTypeIds.includes(userType.id));
   }
   return true;
 }

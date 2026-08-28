@@ -16,7 +16,7 @@ const mockTasks: TaskRead[] = [
     updated_at: new Date().toISOString(),
     created_by_id: "admin",
     category_id: "cat-1",
-    visible_to_id: null,
+    visible_to: [],
   },
   {
     id: "2",
@@ -28,7 +28,7 @@ const mockTasks: TaskRead[] = [
     updated_at: new Date().toISOString(),
     created_by_id: "admin",
     category_id: "cat-1",
-    visible_to_id: null,
+    visible_to: [],
   },
   {
     id: "3",
@@ -40,9 +40,11 @@ const mockTasks: TaskRead[] = [
     updated_at: new Date().toISOString(),
     created_by_id: "admin",
     category_id: "cat-1",
-    visible_to_id: null,
+    visible_to: [],
   },
 ];
+
+const userType = (id: string) => ({ id, name: id, allowed_menus: [] });
 
 describe("useTaskFiltering", () => {
   it("returns all tasks when no filters are applied", () => {
@@ -95,9 +97,9 @@ describe("useTaskFiltering", () => {
 
   describe("admin role simulation filtering", () => {
     const simulationTasks: TaskRead[] = [
-      { ...mockTasks[0], id: "pub", visible_to_id: null },
-      { ...mockTasks[1], id: "typed", visible_to_id: "type-1" },
-      { ...mockTasks[2], id: "other-typed", visible_to_id: "type-2" },
+      { ...mockTasks[0], id: "pub", visible_to: [] },
+      { ...mockTasks[1], id: "typed", visible_to: [userType("type-1")] },
+      { ...mockTasks[2], id: "other-typed", visible_to: [userType("type-2")] },
     ];
 
     it("is a no-op when no simulation option is passed", () => {
@@ -148,9 +150,13 @@ describe("useTaskFiltering", () => {
       // sees a task targeted at their role-type, indistinguishably from an
       // explicitly-assigned UserType id — no change to this hook needed.
       const roleTypeTasks: TaskRead[] = [
-        { ...mockTasks[0], id: "pub", visible_to_id: null },
-        { ...mockTasks[1], id: "via-role-type", visible_to_id: "role-type-manager" },
-        { ...mockTasks[2], id: "other-typed", visible_to_id: "type-2" },
+        { ...mockTasks[0], id: "pub", visible_to: [] },
+        {
+          ...mockTasks[1],
+          id: "via-role-type",
+          visible_to: [userType("role-type-manager")],
+        },
+        { ...mockTasks[2], id: "other-typed", visible_to: [userType("type-2")] },
       ];
       const { result } = renderHook(() =>
         useTaskFiltering(roleTypeTasks, {}, {
@@ -190,7 +196,7 @@ describe("useTaskFiltering", () => {
           { isSimulating: true, role: UserRole.MANAGER, userTypeIds: [] },
         ),
       );
-      // Only "pub" (visible_to_id null) is visible to this manager, and it
+      // Only "pub" (empty visible_to) is visible to this manager, and it
       // must also match the PENDING status filter.
       expect(result.current.map((t) => t.id)).toEqual(["pub"]);
     });

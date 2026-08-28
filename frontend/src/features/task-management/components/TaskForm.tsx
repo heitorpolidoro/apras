@@ -15,6 +15,7 @@ import { Select } from "../../../components/ui/select";
 import { Label } from "../../../components/ui/label";
 import { AlertModal } from "../../../components/ui/alert-modal";
 import { getStatusLabel } from "../utils/taskUtils";
+import UserTypeMultiSelect from "../../user-administration/components/UserTypeMultiSelect";
 
 interface TaskFormProps {
   task?: TaskRead;
@@ -45,7 +46,6 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSuccess, onCancel }) => {
     due_date: "",
     status: TaskStatus.PENDING,
     category_id: "",
-    visible_to_id: "",
   };
 
   const transforms: Record<string, (value: unknown) => unknown> = {
@@ -57,7 +57,6 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSuccess, onCancel }) => {
       v ? new Date(v as string).toISOString().split("T")[0] : "",
     status: (v) => v,
     category_id: (v) => v || "",
-    visible_to_id: (v) => v || "",
   };
 
   const getInitialState = () => {
@@ -68,6 +67,11 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSuccess, onCancel }) => {
         initial[key] = transforms[key](value);
       },
     );
+    // `visible_to_ids` has no matching key on TaskRead (it reads from the
+    // nested `visible_to` list of UserTypeRead objects instead), so it's
+    // computed separately rather than through the generic key-to-key loop
+    // above.
+    initial.visible_to_ids = task?.visible_to?.map((ut) => ut.id) ?? [];
     return initial;
   };
 
@@ -88,6 +92,10 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSuccess, onCancel }) => {
         return newErrors;
       });
     }
+  };
+
+  const handleVisibleToIdsChange = (ids: string[]) => {
+    setFormData((prev) => ({ ...prev, visible_to_ids: ids }));
   };
 
   const validate = () => {
@@ -113,14 +121,14 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSuccess, onCancel }) => {
         : null,
       assigned_to_id: (formData.assigned_to_id as string) || null,
       category_id: formData.category_id as string,
-      visible_to_id: (formData.visible_to_id as string) || null,
+      visible_to_ids: formData.visible_to_ids as string[],
     };
 
     if (isEditing && task) {
       const updatePayload: TaskUpdate = {
         ...commonData,
         status: formData.status as TaskStatus,
-        visible_to_id: (formData.visible_to_id as string) || null,
+        visible_to_ids: formData.visible_to_ids as string[],
       };
       updateTaskMutation.mutate(
         { id: task.id, data: updatePayload },
@@ -284,21 +292,12 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSuccess, onCancel }) => {
 
         {role !== UserRole.MANAGER && (
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="visible_to_id">{t("tasks.form.visibleToLabel")}</Label>
-            <Select
-              id="visible_to_id"
-              name="visible_to_id"
-              value={formData.visible_to_id as string}
-              onChange={handleChange}
-              disabled={isLoading}
-            >
-              <option value="">{t("tasks.form.visibleToAll")}</option>
-              {userTypes?.map((ut) => (
-                <option key={ut.id} value={ut.id}>
-                  {ut.name}
-                </option>
-              ))}
-            </Select>
+            <Label>{t("tasks.form.visibleToLabel")}</Label>
+            <UserTypeMultiSelect
+              userTypes={userTypes ?? []}
+              selectedIds={formData.visible_to_ids as string[]}
+              onChange={handleVisibleToIdsChange}
+            />
             <p className="text-xs text-muted-foreground">
               {t("tasks.form.visibleToHelper")}
             </p>

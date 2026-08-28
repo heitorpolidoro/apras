@@ -58,6 +58,12 @@ def test_task_model_defaults():
     assert task.created_at is not None
 
 
+def test_task_model_visible_to_defaults_to_empty_list():
+    """A freshly-constructed Task has no visibility targets by default."""
+    task = Task(title="New Task", created_by_id=uuid4())
+    assert task.visible_to == []
+
+
 def test_task_history_model():
     """Test that a TaskHistory record stores field-change values correctly."""
     history = TaskHistory(

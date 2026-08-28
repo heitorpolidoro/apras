@@ -211,6 +211,21 @@ def manager_type_fixture(session: Session):
     return ut
 
 
+@pytest.fixture(name="other_type")
+def other_type_fixture(session: Session):
+    """A second UserType, distinct from `manager_type` and held by nobody
+    in these tests — used to build tasks targeted away from the Manager
+    (replacing the old single-FK tests' use of an arbitrary random uuid,
+    which can no longer represent "a real target the Manager lacks" once
+    `visible_to` only ever contains ids resolved to real UserType rows)."""
+    from app.models.user_type import UserType
+
+    ut = UserType(name="Other RBAC Type", allowed_menus=[])
+    session.add(ut)
+    session.commit()
+    return ut
+
+
 @pytest.fixture(name="manager_user")
 def manager_user_fixture(session: Session, manager_type):
     """Create and persist a MANAGER user for RBAC tests."""
@@ -259,7 +274,7 @@ def test_admin_can_create_task(client: TestClient, session: Session, test_data):
 def test_manager_cannot_edit_other_assigned_task(
     client: TestClient, session: Session, test_data, manager_user, manager_type
 ):
-    """MANAGER gets 403 when editing a task visible to them (visible_to_id=manager_type.id) but assigned to someone else."""
+    """MANAGER gets 403 when editing a task visible to them (visible_to_ids=[manager_type.id]) but assigned to someone else."""
     dir_token = get_token(client, "director_rbac", "pass")
     mgr_token = get_token(client, "manager_rbac", "pass")
     category_id = str(test_data["category"].id)
@@ -272,7 +287,7 @@ def test_manager_cannot_edit_other_assigned_task(
             "title": "Director Task",
             "category_id": category_id,
             "assigned_to_id": str(test_data["director"].id),
-            "visible_to_id": str(manager_type.id),
+            "visible_to_ids": [str(manager_type.id)],
         },
     )
     assert resp.status_code == 200
@@ -287,14 +302,14 @@ def test_manager_cannot_edit_other_assigned_task(
 
 
 def test_manager_gets_404_for_invisible_task(
-    client: TestClient, session: Session, test_data, manager_user
+    client: TestClient, session: Session, test_data, manager_user, other_type
 ):
     """MANAGER gets 404 when accessing/editing a task not visible to them."""
     dir_token = get_token(client, "director_rbac", "pass")
     mgr_token = get_token(client, "manager_rbac", "pass")
     category_id = str(test_data["category"].id)
 
-    # Task is private (visible_to_id=None or uuid.uuid4())
+    # Task is targeted at a UserType the Manager doesn't belong to.
     resp = client.post(
         "/api/v1/tasks/",
         headers={"Authorization": f"Bearer {dir_token}"},
@@ -302,7 +317,7 @@ def test_manager_gets_404_for_invisible_task(
             "title": "Director Task",
             "category_id": category_id,
             "assigned_to_id": str(test_data["director"].id),
-            "visible_to_id": str(uuid.uuid4()),
+            "visible_to_ids": [str(other_type.id)],
         },
     )
     assert resp.status_code == 200
@@ -319,7 +334,7 @@ def test_manager_gets_404_for_invisible_task(
 def test_manager_can_edit_self_assigned_task(
     client: TestClient, session: Session, test_data, manager_user, manager_type
 ):
-    """MANAGER can edit a task assigned to themselves (when visible_to_id=manager_type.id)."""
+    """MANAGER can edit a task assigned to themselves (when visible_to=[manager_type])."""
     from app.models.task import Task
 
     mgr_token = get_token(client, "manager_rbac", "pass")
@@ -328,7 +343,7 @@ def test_manager_can_edit_self_assigned_task(
         category_id=test_data["category"].id,
         created_by_id=test_data["admin"].id,
         assigned_to_id=manager_user.id,
-        visible_to_id=manager_type.id,
+        visible_to=[manager_type],
     )
     session.add(task)
     session.commit()
@@ -346,7 +361,7 @@ def test_manager_can_edit_self_assigned_task(
 def test_manager_can_edit_unassigned_task(
     client: TestClient, session: Session, test_data, manager_user, manager_type
 ):
-    """MANAGER can edit a task with no assignee (when visible_to_id=manager_type.id)."""
+    """MANAGER can edit a task with no assignee (when visible_to=[manager_type])."""
     from app.models.task import Task
 
     mgr_token = get_token(client, "manager_rbac", "pass")
@@ -355,7 +370,7 @@ def test_manager_can_edit_unassigned_task(
         category_id=test_data["category"].id,
         created_by_id=test_data["admin"].id,
         assigned_to_id=None,
-        visible_to_id=manager_type.id,
+        visible_to=[manager_type],
     )
     session.add(task)
     session.commit()
@@ -382,7 +397,7 @@ def test_manager_cannot_delete_task(
         json={
             "title": "Task To Delete",
             "category_id": str(test_data["category"].id),
-            "visible_to_id": str(manager_type.id),
+            "visible_to_ids": [str(manager_type.id)],
         },
     )
     task_id = resp.json()["id"]
@@ -394,34 +409,41 @@ def test_manager_cannot_delete_task(
     assert resp.status_code == 403
 
 
-def test_visible_to_id_field_exists_on_task():
-    """Task model must have a visible_to_id field defaulting to None."""
+def test_task_model_has_no_visible_to_id_field():
+    """Task model no longer has a `visible_to_id` column: it's replaced by
+    the many-to-many `visible_to` relationship (APRAS-11), defaulting to an
+    empty list."""
     from app.models.task import Task
 
     task = Task(title="t", created_by_id=__import__("uuid").uuid4())
-    assert task.visible_to_id is None
+    assert not hasattr(task, "visible_to_id")
+    assert task.visible_to == []
 
 
-def test_task_read_schema_includes_visible_to_id():
-    """TaskRead schema must expose visible_to_id and visible_to_name."""
+def test_task_read_schema_includes_visible_to():
+    """TaskRead schema must expose `visible_to` (list of UserTypeRead), not
+    the old `visible_to_id`/`visible_to_name` single-value fields."""
     from app.schemas.task import TaskRead
 
-    assert "visible_to_id" in TaskRead.model_fields
-    assert "visible_to_name" in TaskRead.model_fields
+    assert "visible_to" in TaskRead.model_fields
+    assert "visible_to_id" not in TaskRead.model_fields
+    assert "visible_to_name" not in TaskRead.model_fields
 
 
-def test_task_update_schema_includes_visible_to_id():
-    """TaskUpdate schema must accept visible_to_id."""
+def test_task_update_schema_includes_visible_to_ids():
+    """TaskUpdate schema must accept `visible_to_ids` (a list)."""
     from app.schemas.task import TaskUpdate
 
-    update = TaskUpdate(visible_to_id=uuid.uuid4())
-    assert update.visible_to_id is not None
+    target_id = uuid.uuid4()
+    update = TaskUpdate(visible_to_ids=[target_id])
+    assert update.visible_to_ids == [target_id]
 
 
-def test_manager_create_task_sets_visible_to_id_to_default(
+def test_manager_create_task_defaults_visible_to_explicit_user_type(
     client: TestClient, test_data, manager_user, manager_type
 ):
-    """Tasks created by MANAGER must default to the MANAGER's first user type."""
+    """Tasks created by MANAGER with no explicit targets default to the
+    Manager's explicit UserType ids (APRAS-11)."""
     token = get_token(client, "manager_rbac", "pass")
     response = client.post(
         "/api/v1/tasks/",
@@ -432,11 +454,14 @@ def test_manager_create_task_sets_visible_to_id_to_default(
         },
     )
     assert response.status_code == 200
-    assert response.json()["visible_to_id"] == str(manager_type.id)
+    visible_to_ids = {vt["id"] for vt in response.json()["visible_to"]}
+    assert visible_to_ids == {str(manager_type.id)}
 
 
-def test_admin_create_task_sets_visible_to_id_none(client: TestClient, test_data):
-    """Tasks created by ADMIN must have visible_to_id=None by default."""
+def test_admin_create_task_defaults_to_empty_visible_to(
+    client: TestClient, test_data
+):
+    """Tasks created by ADMIN must have an empty `visible_to` by default."""
     token = get_token(client, "admin_rbac", "pass")
     response = client.post(
         "/api/v1/tasks/",
@@ -447,11 +472,13 @@ def test_admin_create_task_sets_visible_to_id_none(client: TestClient, test_data
         },
     )
     assert response.status_code == 200
-    assert response.json()["visible_to_id"] is None
+    assert response.json()["visible_to"] == []
 
 
-def test_director_create_task_sets_visible_to_id_none(client: TestClient, test_data):
-    """Tasks created by DIRECTOR must have visible_to_id=None by default."""
+def test_director_create_task_defaults_to_empty_visible_to(
+    client: TestClient, test_data
+):
+    """Tasks created by DIRECTOR must have an empty `visible_to` by default."""
     token = get_token(client, "director_rbac", "pass")
     response = client.post(
         "/api/v1/tasks/",
@@ -462,11 +489,16 @@ def test_director_create_task_sets_visible_to_id_none(client: TestClient, test_d
         },
     )
     assert response.status_code == 200
-    assert response.json()["visible_to_id"] is None
+    assert response.json()["visible_to"] == []
 
 
 def test_manager_list_only_sees_targeted_tasks(
-    client: TestClient, session: Session, test_data, manager_user, manager_type
+    client: TestClient,
+    session: Session,
+    test_data,
+    manager_user,
+    manager_type,
+    other_type,
 ):
     """MANAGER only sees tasks targeted to their UserType."""
     from app.models.task import Task
@@ -475,13 +507,13 @@ def test_manager_list_only_sees_targeted_tasks(
         title="Hidden from Manager",
         category_id=test_data["category"].id,
         created_by_id=test_data["admin"].id,
-        visible_to_id=uuid.uuid4(),
+        visible_to=[other_type],
     )
     visible = Task(
         title="Visible to Manager",
         category_id=test_data["category"].id,
         created_by_id=test_data["admin"].id,
-        visible_to_id=manager_type.id,
+        visible_to=[manager_type],
     )
     session.add(hidden)
     session.add(visible)
@@ -499,16 +531,16 @@ def test_manager_list_only_sees_targeted_tasks(
 
 
 def test_admin_list_sees_all_tasks(
-    client: TestClient, session: Session, test_data, manager_user
+    client: TestClient, session: Session, test_data, manager_user, other_type
 ):
-    """ADMIN sees all tasks regardless of visible_to_id."""
+    """ADMIN sees all tasks regardless of visible_to targeting."""
     from app.models.task import Task
 
     hidden = Task(
         title="Admin Sees Hidden",
         category_id=test_data["category"].id,
         created_by_id=test_data["admin"].id,
-        visible_to_id=uuid.uuid4(),
+        visible_to=[other_type],
     )
     session.add(hidden)
     session.commit()
@@ -524,7 +556,7 @@ def test_admin_list_sees_all_tasks(
 
 
 def test_manager_gets_404_for_invisible_task_history(
-    client: TestClient, session: Session, test_data, manager_user
+    client: TestClient, session: Session, test_data, manager_user, other_type
 ):
     """MANAGER gets 404 when accessing history of an invisible task."""
     from app.models.task import Task
@@ -533,7 +565,7 @@ def test_manager_gets_404_for_invisible_task_history(
         title="Hidden History Task",
         category_id=test_data["category"].id,
         created_by_id=test_data["admin"].id,
-        visible_to_id=uuid.uuid4(),
+        visible_to=[other_type],
     )
     session.add(hidden)
     session.commit()
@@ -547,7 +579,7 @@ def test_manager_gets_404_for_invisible_task_history(
 
 
 def test_manager_gets_404_for_invisible_task_comments(
-    client: TestClient, session: Session, test_data, manager_user
+    client: TestClient, session: Session, test_data, manager_user, other_type
 ):
     """MANAGER gets 404 when listing comments of an invisible task."""
     from app.models.task import Task
@@ -556,7 +588,7 @@ def test_manager_gets_404_for_invisible_task_comments(
         title="Hidden Comments Task",
         category_id=test_data["category"].id,
         created_by_id=test_data["admin"].id,
-        visible_to_id=uuid.uuid4(),
+        visible_to=[other_type],
     )
     session.add(hidden)
     session.commit()
@@ -569,17 +601,17 @@ def test_manager_gets_404_for_invisible_task_comments(
     assert response.status_code == 404
 
 
-def test_admin_can_set_visible_to_id(
-    client: TestClient, session: Session, test_data, manager_user, manager_type
+def test_admin_can_set_visible_to_ids(
+    client: TestClient, session: Session, test_data, manager_user, manager_type, other_type
 ):
-    """ADMIN can set visible_to_id on a task, making it visible to MANAGER."""
+    """ADMIN can set visible_to_ids on a task, making it visible to MANAGER."""
     from app.models.task import Task
 
     hidden = Task(
         title="Will Become Visible",
         category_id=test_data["category"].id,
         created_by_id=test_data["admin"].id,
-        visible_to_id=uuid.uuid4(),
+        visible_to=[other_type],
     )
     session.add(hidden)
     session.commit()
@@ -588,10 +620,10 @@ def test_admin_can_set_visible_to_id(
     response = client.patch(
         f"/api/v1/tasks/{hidden.id}",
         headers={"Authorization": f"Bearer {admin_token}"},
-        json={"visible_to_id": str(manager_type.id)},
+        json={"visible_to_ids": [str(manager_type.id)]},
     )
     assert response.status_code == 200
-    assert response.json()["visible_to_id"] == str(manager_type.id)
+    assert {vt["id"] for vt in response.json()["visible_to"]} == {str(manager_type.id)}
 
     # MANAGER can now see it in the list
     mgr_token = get_token(client, "manager_rbac", "pass")
@@ -603,17 +635,19 @@ def test_admin_can_set_visible_to_id(
     assert "Will Become Visible" in titles
 
 
-def test_manager_cannot_change_visible_to_id(
+def test_manager_cannot_change_visible_to_ids_outside_effective_set(
     client: TestClient, session: Session, test_data, manager_user, manager_type
 ):
-    """MANAGER cannot change visible_to_id to a type they don't possess."""
+    """MANAGER gets 403 when setting visible_to_ids to a type they don't
+    possess (APRAS-11 generalizes the old single-value check to a list, and
+    now rejects the request outright instead of silently ignoring it)."""
     from app.models.task import Task
 
     visible = Task(
         title="Manager Own Task",
         category_id=test_data["category"].id,
         created_by_id=manager_user.id,
-        visible_to_id=manager_type.id,
+        visible_to=[manager_type],
     )
     session.add(visible)
     session.commit()
@@ -623,8 +657,32 @@ def test_manager_cannot_change_visible_to_id(
     response = client.patch(
         f"/api/v1/tasks/{visible.id}",
         headers={"Authorization": f"Bearer {mgr_token}"},
-        json={"visible_to_id": other_type_id},
+        json={"visible_to_ids": [other_type_id]},
     )
-    # Request succeeds (other fields could be updated) but visible_to_id change to invalid type is ignored
+    assert response.status_code == 403
+
+
+def test_manager_can_change_visible_to_ids_within_effective_set(
+    client: TestClient, session: Session, test_data, manager_user, manager_type
+):
+    """MANAGER can set visible_to_ids as long as every id is within their
+    effective UserType ids."""
+    from app.models.task import Task
+
+    visible = Task(
+        title="Manager Own Task 2",
+        category_id=test_data["category"].id,
+        created_by_id=manager_user.id,
+        visible_to=[manager_type],
+    )
+    session.add(visible)
+    session.commit()
+
+    mgr_token = get_token(client, "manager_rbac", "pass")
+    response = client.patch(
+        f"/api/v1/tasks/{visible.id}",
+        headers={"Authorization": f"Bearer {mgr_token}"},
+        json={"visible_to_ids": [str(manager_type.id)]},
+    )
     assert response.status_code == 200
-    assert response.json()["visible_to_id"] == str(manager_type.id)  # unchanged
+    assert {vt["id"] for vt in response.json()["visible_to"]} == {str(manager_type.id)}

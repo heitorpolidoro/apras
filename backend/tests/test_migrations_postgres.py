@@ -259,7 +259,12 @@ def test_user_type_role_downgrade_removes_seeded_rows_only(migrated_pg_engine):
             {"id": survivor_id, "name": survivor_name},
         )
 
-    _run_alembic("downgrade", "-1")
+    # Target 0018's own down_revision explicitly rather than a relative
+    # "-1": later migrations (0019+, including APRAS-11's 0021) have moved
+    # head further away from 0018 since this test was written, so "-1"
+    # would silently downgrade whatever migration currently happens to sit
+    # at head instead of 0018 itself.
+    _run_alembic("downgrade", "0017_add_user_type_allowed_menus")
 
     with migrated_pg_engine.connect() as conn:
         columns = (
@@ -307,6 +312,143 @@ def test_downgrade_is_a_safe_noop(migrated_pg_engine):
     # migration is "downgraded", since Postgres has no DROP VALUE for enums.
     assert "RESIDENT" in labels
     assert "PORTEIRO" in labels
+
+    # Restore head so other tests in this module are unaffected by ordering.
+    _run_alembic("upgrade", "head")
+
+
+# ---------------------------------------------------------------------------
+# 0021_task_visible_to_m2m (APRAS-11) – Task.visible_to becomes many-to-many
+# ---------------------------------------------------------------------------
+
+
+def test_task_visible_to_id_backfilled_into_join_table(migrated_pg_engine):
+    """A task's existing single `visible_to_id` becomes a one-row
+    `task_visible_to_link` entry after upgrading past 0021, and the
+    `visible_to_id` column itself is dropped."""
+    _run_alembic("downgrade", "0020_add_porteiro_userrole")
+
+    user_type_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    task_id = uuid.uuid4()
+    with migrated_pg_engine.begin() as conn:
+        conn.execute(
+            text(
+                "INSERT INTO user_type (id, name, allowed_menus) "
+                "VALUES (:id, :name, '[]')"
+            ),
+            {"id": user_type_id, "name": f"Migration Type {user_type_id}"},
+        )
+        conn.execute(
+            text(
+                'INSERT INTO "user" '
+                "(id, email, hashed_password, full_name, role, is_active, cpf) "
+                "VALUES (:id, :email, 'x', 'Migration Test', 'ADMINISTRATOR', "
+                "true, :cpf)"
+            ),
+            {
+                "id": user_id,
+                "email": f"migration-{user_id}@test.com",
+                # Derived from the row's own uuid (rather than a fixed
+                # literal) so it can never collide with a cpf used by an
+                # earlier test in this module, regardless of test order.
+                "cpf": str(user_id.int % 10**11).zfill(11),
+            },
+        )
+        conn.execute(
+            text(
+                "INSERT INTO task "
+                "(id, title, status, priority, is_deleted, created_by_id, "
+                "visible_to_id, created_at, updated_at) "
+                "VALUES (:id, 'Migration Task', 'PENDING', 'MEDIUM', false, "
+                ":created_by_id, :visible_to_id, now(), now())"
+            ),
+            {"id": task_id, "created_by_id": user_id, "visible_to_id": user_type_id},
+        )
+
+    _run_alembic("upgrade", "head")
+
+    with migrated_pg_engine.connect() as conn:
+        links = conn.execute(
+            text(
+                "SELECT task_id, user_type_id FROM task_visible_to_link "
+                "WHERE task_id = :task_id"
+            ),
+            {"task_id": task_id},
+        ).all()
+        columns = (
+            conn.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name = 'task'"
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+    assert len(links) == 1
+    assert links[0].user_type_id == user_type_id
+    assert "visible_to_id" not in columns
+
+
+def test_task_visible_to_downgrade_backfills_one_arbitrary_target(migrated_pg_engine):
+    """Downgrading after a task has multiple `task_visible_to_link` targets
+    re-adds `visible_to_id` populated with one arbitrary target — lossy by
+    design (documented on the migration's downgrade), acceptable since this
+    is a downgrade path, not a normal operation."""
+    task_id = uuid.uuid4()
+    creator_id = uuid.uuid4()
+    type_a, type_b = uuid.uuid4(), uuid.uuid4()
+
+    with migrated_pg_engine.begin() as conn:
+        conn.execute(
+            text(
+                'INSERT INTO "user" '
+                "(id, email, hashed_password, full_name, role, is_active, cpf) "
+                "VALUES (:id, :email, 'x', 'Downgrade Test', 'ADMINISTRATOR', "
+                "true, :cpf)"
+            ),
+            {
+                "id": creator_id,
+                "email": f"downgrade-{creator_id}@test.com",
+                "cpf": str(creator_id.int % 10**11).zfill(11),
+            },
+        )
+        conn.execute(
+            text(
+                "INSERT INTO task "
+                "(id, title, status, priority, is_deleted, created_by_id, "
+                "created_at, updated_at) "
+                "VALUES (:id, 'Downgrade Task', 'PENDING', 'MEDIUM', false, "
+                ":created_by_id, now(), now())"
+            ),
+            {"id": task_id, "created_by_id": creator_id},
+        )
+        for type_id, name in ((type_a, "Type A"), (type_b, "Type B")):
+            conn.execute(
+                text(
+                    "INSERT INTO user_type (id, name, allowed_menus) "
+                    "VALUES (:id, :name, '[]')"
+                ),
+                {"id": type_id, "name": f"{name} {type_id}"},
+            )
+        conn.execute(
+            text(
+                "INSERT INTO task_visible_to_link (task_id, user_type_id) "
+                "VALUES (:task_id, :type_a), (:task_id, :type_b)"
+            ),
+            {"task_id": task_id, "type_a": type_a, "type_b": type_b},
+        )
+
+    _run_alembic("downgrade", "0020_add_porteiro_userrole")
+
+    with migrated_pg_engine.connect() as conn:
+        visible_to_id = conn.execute(
+            text("SELECT visible_to_id FROM task WHERE id = :id"), {"id": task_id}
+        ).scalar_one()
+
+    assert visible_to_id in (type_a, type_b)
 
     # Restore head so other tests in this module are unaffected by ordering.
     _run_alembic("upgrade", "head")
