@@ -54,6 +54,8 @@ New Alembic revision (check `alembic heads` for the actual current head at imple
 
 Downgrade: re-add `visible_to_id` (nullable), backfill it from `task_visible_to_link` by picking one arbitrary target per task if multiple exist (document this as lossy — downgrading after multiple targets have been assigned to any task loses data beyond the first target; this is acceptable for a downgrade path, not a normal operation), then drop the join table.
 
+This exact pattern — an `INSERT INTO ... SELECT` backfill on upgrade and an arbitrary `LIMIT 1` lossy downgrade — already has precedent in this codebase: `backend/alembic/versions/3f75bcd3d49f_many_to_many_user_types_and_task_.py` did the structurally identical thing when it introduced the current `visible_to_id` single-FK from an earlier state. Follow that migration's approach directly rather than inventing a new one.
+
 ## Backend Changes
 
 ### `backend/app/schemas/task.py`
@@ -120,11 +122,17 @@ Currently compares `task.visible_to_id` against a single value/list of simulated
 
 ### Any other consumer of `visible_to_id`
 
-Grep the frontend for `visible_to_id` (e.g. `TaskCard.tsx`, `TaskDetailsView.tsx`, `AuditTimeline.tsx` if it renders visibility-change history) and update each to the new array shape — enumerate the actual list at implementation time via grep, since this spec cannot exhaustively name every display site without re-deriving it from the code as it exists at that point.
+The complete current list of frontend files referencing `visible_to_id` is: `frontend/src/features/task-management/types/index.ts`, `TaskForm.tsx`, and `simulatedPermissions.ts` (all three already named above). `TaskCard.tsx`, `TaskDetailsView.tsx`, and `AuditTimeline.tsx` were checked and contain zero references to `visible_to_id` — no changes needed in those three files.
 
 ## Documentation
 
-`AGENTS.md`'s `Task` domain-concept description ("Manager Visibility... Only Administrators and Directors can toggle this flag" / any mention of `visible_to_id` as a single target) needs updating to describe multiple targets.
+`AGENTS.md` is already stale relative to the *current* code, independent of this task: its `Target Users` table (line ~15: "Sees only tasks explicitly marked as `manager_visible`") and its `### Task` domain-concept bullet (line ~285: "**Manager Visibility** (`manager_visible`): Controls whether users with the Manager role can see this task. Only Administrators and Directors can toggle this flag.") and the RBAC table (lines ~311-313, the `manager_visible`-toggle cells for `ADMINISTRATOR`/`DIRECTOR`/`MANAGER`) all still describe a `manager_visible` **boolean flag** — a field removed and replaced by the single-FK `visible_to_id` back in `3f75bcd3d49f_many_to_many_user_types_and_task_.py`. There is no accurate "single target" baseline to update from.
+
+This task must therefore **write these rows fresh** to describe the new `visible_to` list, not "update" them incrementally:
+- The `Gerente (Manager)` row in the `Target Users` table: describe visibility as "sees tasks with no visibility targets, or at least one target matching one of the Manager's effective UserTypes" (not `manager_visible`).
+- The `### Task` bullet: replace the `manager_visible` sentence with one describing `visible_to: list[UserType]` — zero or more UserType targets, empty meaning visible to every Manager, settable by Administrator/Director/self-scoped Manager per existing role rules.
+- The RBAC table's `ADMINISTRATOR`/`DIRECTOR`/`MANAGER` cells: replace "toggle `manager_visible`" / "cannot toggle visibility" phrasing with "set/edit `visible_to` targets" phrasing, consistent with the rest of this task's semantics.
+- The `### UserType` section's closing sentence ("...it does not affect fine-grained rules like `Task.visible_to_id` filtering...") must also be corrected to reference `Task.visible_to` (list), since `visible_to_id` no longer exists after this task.
 
 ## Non-Goals
 
@@ -133,7 +141,7 @@ Grep the frontend for `visible_to_id` (e.g. `TaskCard.tsx`, `TaskDetailsView.tsx
 
 ## Testing
 
-- **Backend**: `assert_manager_can_see_task` with zero, one, and multiple targets, including a Manager whose effective ids overlap with only one of several targets (should see it) and a Manager with no overlap at all (should not). `list_tasks` filter test with multiple targets. `create_task` auto-default assigns the Manager's full effective set. `update_task` rejects a Manager setting a target outside their effective set, accepts one within it. Migration test: an existing task's single `visible_to_id` correctly becomes a one-row `task_visible_to_link` entry after upgrade.
+- **Backend**: `assert_manager_can_see_task` with zero, one, and multiple targets, including a Manager whose effective ids overlap with only one of several targets (should see it) and a Manager with no overlap at all (should not). `list_tasks` filter test with multiple targets. `create_task` auto-default assigns the Manager's explicit UserType ids when they have at least one, and falls back to the role-type id alone when they have zero explicit UserTypes (assert it does *not* pull in the shared role-type id when explicit ids exist). `update_task` rejects a Manager setting a target outside their effective set, accepts one within it. Migration test: an existing task's single `visible_to_id` correctly becomes a one-row `task_visible_to_link` entry after upgrade.
 - **Frontend**: `TaskForm` multi-select round-trips correctly (submits `visible_to_ids`, pre-fills from `visible_to` on edit). `simulatedPermissions.ts` tests for zero/one/multiple targets under simulation.
 
 ## Expected Results
