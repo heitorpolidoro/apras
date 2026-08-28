@@ -103,6 +103,10 @@
     "validationError": "Erro: {{messages}}",
     "genericError": "Ocorreu um erro ao tentar fazer login. Verifique suas credenciais."
   },
+  "guestWelcome": {
+    "heading": "Bem-vindo(a)",
+    "body": "Sua conta foi aprovada, mas ainda não recebeu um papel (role). Assim que um Administrador atribuir um papel a você, terá acesso ao restante do sistema."
+  },
   "signup": {
     "heading": "Criar conta",
     "passwordHint": "A senha deve ter 8+ caracteres com letras, números e símbolos.",

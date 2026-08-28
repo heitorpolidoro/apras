@@ -2,6 +2,7 @@ import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth, UserRole } from "../context/AuthContext";
+import { useEffectiveIdentity } from "../context/useEffectiveIdentity";
 import { useMenuAccess, type MenuKey } from "../context/useMenuAccess";
 
 interface ProtectedRouteProps {
@@ -36,6 +37,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // Always called (rules of hooks): when requiredMenu is undefined,
   // useMenuAccess is effectively a no-op below.
   const hasMenuAccess = useMenuAccess(requiredMenu ?? "tasks");
+  const { role: effectiveRole } = useEffectiveIdentity();
 
   if (isLoading) {
     return (
@@ -55,6 +57,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   if (requiredRoles && (!user || !requiredRoles.includes(user.role))) {
     return <Navigate to="/dashboard" replace />;
+  }
+
+  if (requiredMenu && effectiveRole === UserRole.GUEST) {
+    return <Navigate to="/welcome" replace />;
   }
 
   if (requiredMenu && !hasMenuAccess) {

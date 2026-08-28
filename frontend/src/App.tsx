@@ -1,3 +1,4 @@
+import type React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import TaskDashboard from "./features/task-management/components/TaskDashboard";
 import CategoriesPage from "./features/task-management/components/CategoriesPage";
@@ -8,8 +9,9 @@ import ForgotPasswordPage from "./features/user-administration/pages/ForgotPassw
 import ResetPasswordPage from "./features/user-administration/pages/ResetPasswordPage";
 import AdminUserDashboard from "./features/user-administration/pages/AdminUserDashboard";
 import ContactInfoDashboard from "./features/user-administration/pages/ContactInfoDashboard";
+import GuestWelcomePage from "./features/user-administration/pages/GuestWelcomePage";
 import ProtectedRoute from "./features/user-administration/components/ProtectedRoute";
-import { AuthProvider } from "./features/user-administration/context/AuthContext";
+import { AuthProvider, useAuth } from "./features/user-administration/context/AuthContext";
 import { SimulationProvider } from "./features/user-administration/context/SimulationContext";
 import Navbar from "./features/user-administration/components/Navbar";
 import SimulationBanner from "./features/user-administration/components/SimulationBanner";
@@ -25,6 +27,19 @@ import { AccessControlPage } from "./features/access-control/components/AccessCo
 import { GateMonitorPage } from "./features/access-control/components/GateMonitorPage";
 import { UserRole } from "./types/auth";
 import "./App.css";
+
+/**
+ * Root-redirect target. Uses the user's real role (never the simulated
+ * role from useEffectiveIdentity/SimulationContext): an active GUEST goes
+ * to /welcome, everyone else (including the brief isLoading window where
+ * `user` is still undefined) goes to /dashboard as before.
+ */
+export const RootRedirect: React.FC = () => {
+  const { user } = useAuth();
+  return (
+    <Navigate to={user?.role === UserRole.GUEST ? "/welcome" : "/dashboard"} replace />
+  );
+};
 
 function App() {
   return (
@@ -57,6 +72,15 @@ function App() {
                 element={
                   <ProtectedRoute requiredMenu="categories">
                     <CategoriesPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/welcome"
+                element={
+                  <ProtectedRoute>
+                    <GuestWelcomePage />
                   </ProtectedRoute>
                 }
               />
@@ -195,10 +219,7 @@ function App() {
                 }
               />
 
-              <Route
-                path="/"
-                element={<Navigate to="/dashboard" replace />}
-              />
+              <Route path="/" element={<RootRedirect />} />
             </Routes>
           </div>
         </BrowserRouter>
