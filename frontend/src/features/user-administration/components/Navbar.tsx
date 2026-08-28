@@ -64,7 +64,7 @@ const Navbar: React.FC = () => {
           </Link>
         )}
 
-        {effectiveRole !== UserRole.GUEST && (
+        {effectiveRole !== UserRole.GUEST && effectiveRole !== UserRole.PORTEIRO && (
           <Link
             to="/lots"
             className={cn(
@@ -78,7 +78,7 @@ const Navbar: React.FC = () => {
           </Link>
         )}
 
-        {effectiveRole !== UserRole.GUEST && (
+        {effectiveRole !== UserRole.GUEST && effectiveRole !== UserRole.PORTEIRO && (
           <Link
             to="/authorizations"
             className={cn(
@@ -94,7 +94,8 @@ const Navbar: React.FC = () => {
 
         {(effectiveRole === UserRole.ADMINISTRATOR ||
           effectiveRole === UserRole.DIRECTOR ||
-          effectiveRole === UserRole.MANAGER) && (
+          effectiveRole === UserRole.MANAGER ||
+          effectiveRole === UserRole.PORTEIRO) && (
           <Link
             to="/gate"
             className={cn(
@@ -108,31 +109,35 @@ const Navbar: React.FC = () => {
           </Link>
         )}
 
-        <Link
-          to="/occurrences"
-          className={cn(
-            "text-sm font-semibold transition-all hover:text-primary relative py-1",
-            location.pathname === "/occurrences"
-              ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
-              : "text-muted-foreground",
-          )}
-        >
-          {t("nav.occurrences", "Ocorrências")}
-        </Link>
+        {effectiveRole !== UserRole.PORTEIRO && (
+          <Link
+            to="/occurrences"
+            className={cn(
+              "text-sm font-semibold transition-all hover:text-primary relative py-1",
+              location.pathname === "/occurrences"
+                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
+                : "text-muted-foreground",
+            )}
+          >
+            {t("nav.occurrences", "Ocorrências")}
+          </Link>
+        )}
 
-        <Link
-          to="/documents"
-          className={cn(
-            "text-sm font-semibold transition-all hover:text-primary relative py-1",
-            location.pathname === "/documents"
-              ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
-              : "text-muted-foreground",
-          )}
-        >
-          {t("nav.documents", "Documentos")}
-        </Link>
+        {effectiveRole !== UserRole.PORTEIRO && (
+          <Link
+            to="/documents"
+            className={cn(
+              "text-sm font-semibold transition-all hover:text-primary relative py-1",
+              location.pathname === "/documents"
+                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
+                : "text-muted-foreground",
+            )}
+          >
+            {t("nav.documents", "Documentos")}
+          </Link>
+        )}
 
-        {effectiveRole !== UserRole.GUEST && (
+        {effectiveRole !== UserRole.GUEST && effectiveRole !== UserRole.PORTEIRO && (
           <Link
             to="/projects"
             className={cn(
@@ -146,19 +151,21 @@ const Navbar: React.FC = () => {
           </Link>
         )}
 
-        <Link
-          to="/announcements"
-          className={cn(
-            "text-sm font-semibold transition-all hover:text-primary relative py-1",
-            location.pathname === "/announcements"
-              ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
-              : "text-muted-foreground",
-          )}
-        >
-          {t("nav.announcements", "Comunicados")}
-        </Link>
+        {effectiveRole !== UserRole.PORTEIRO && (
+          <Link
+            to="/announcements"
+            className={cn(
+              "text-sm font-semibold transition-all hover:text-primary relative py-1",
+              location.pathname === "/announcements"
+                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
+                : "text-muted-foreground",
+            )}
+          >
+            {t("nav.announcements", "Comunicados")}
+          </Link>
+        )}
 
-        {effectiveRole !== UserRole.GUEST && (
+        {effectiveRole !== UserRole.GUEST && effectiveRole !== UserRole.PORTEIRO && (
           <Link
             to="/finance"
             className={cn(

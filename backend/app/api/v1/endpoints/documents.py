@@ -1,9 +1,10 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlmodel import Session
 
 from app.api.deps import get_current_user
 from app.db import get_session
+from app.models.enums import UserRole
 from app.models.user import User
 from app.schemas.document import (
     AssociationDocumentCreate,
@@ -20,11 +21,21 @@ from app.services import document_service
 router = APIRouter()
 
 
+def _assert_not_porteiro(current_user: User) -> None:
+    """Raise 403 if the caller is PORTEIRO (gate-only role, no access here)."""
+    if current_user.role == UserRole.PORTEIRO:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough privileges",
+        )
+
+
 @router.get("/folders", response_model=list[DocumentFolderTreeRead])
 def list_folder_tree(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> list[DocumentFolderTreeRead]:
+    _assert_not_porteiro(current_user)
     return document_service.get_folder_tree(session, current_user)
 
 
@@ -36,6 +47,7 @@ def create_folder(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> DocumentFolderRead:
+    _assert_not_porteiro(current_user)
     return document_service.create_folder(session, current_user, folder_in)
 
 
@@ -46,6 +58,7 @@ def update_folder(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> DocumentFolderRead:
+    _assert_not_porteiro(current_user)
     return document_service.update_folder(session, current_user, id, folder_in)
 
 
@@ -55,6 +68,7 @@ def delete_folder(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> None:
+    _assert_not_porteiro(current_user)
     document_service.delete_folder(session, current_user, id)
 
 
@@ -70,6 +84,7 @@ def list_documents(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> PaginatedDocumentRead:
+    _assert_not_porteiro(current_user)
     return document_service.get_documents(
         session=session,
         user=current_user,
@@ -91,6 +106,7 @@ def create_document(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> AssociationDocumentRead:
+    _assert_not_porteiro(current_user)
     return document_service.create_document(session, current_user, doc_in)
 
 
@@ -105,6 +121,7 @@ def create_document_version(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> AssociationDocumentRead:
+    _assert_not_porteiro(current_user)
     return document_service.create_document_version(session, current_user, id, version_in)
 
 
@@ -114,6 +131,7 @@ def download_document(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> dict[str, str]:
+    _assert_not_porteiro(current_user)
     file_url = document_service.log_download(session, current_user, id)
     return {"file_url": file_url}
 
@@ -124,4 +142,5 @@ def delete_document(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> None:
+    _assert_not_porteiro(current_user)
     document_service.delete_document(session, current_user, id)

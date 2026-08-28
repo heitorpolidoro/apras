@@ -5,7 +5,7 @@ from typing import Annotated
 from uuid import UUID
 
 from app.api import deps
-from app.models.enums import AuthorizationStatus, DayOfWeek, ShiftType
+from app.models.enums import AuthorizationStatus, DayOfWeek, ShiftType, UserRole
 from app.models.user import User
 from app.models.visitor import VisitorAuthorization
 from app.schemas.visitor import (
@@ -16,10 +16,19 @@ from app.schemas.visitor import (
     VisitorRead,
 )
 from app.services.visitor_service import VisitorService
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session
 
 router = APIRouter()
+
+
+def _assert_not_porteiro(current_user: User) -> None:
+    """Raise 403 if the caller is PORTEIRO (gate-only role, no access here)."""
+    if current_user.role == UserRole.PORTEIRO:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough privileges",
+        )
 
 
 def _to_authorization_read(auth: VisitorAuthorization) -> VisitorAuthorizationRead:
@@ -60,6 +69,7 @@ def list_lot_authorizations(
     limit: int = 100,
 ) -> PaginatedAuthorizationRead:
     """List visitor pre-authorizations for a specific lot."""
+    _assert_not_porteiro(current_user)
     auths, total = VisitorService.get_lot_authorizations(
         session, lot_id, current_user, skip=skip, limit=limit, status=status_filter
     )
@@ -79,6 +89,7 @@ def create_lot_authorization(
     current_user: Annotated[User, Depends(deps.get_current_user)],
 ) -> VisitorAuthorizationRead:
     """Create a visitor pre-authorization for a lot."""
+    _assert_not_porteiro(current_user)
     auth = VisitorService.create_authorization(session, lot_id, auth_in, current_user)
     return _to_authorization_read(auth)
 
@@ -95,5 +106,6 @@ def revoke_authorization(
     payload: VisitorAuthorizationRevoke | None = None,
 ) -> VisitorAuthorizationRead:
     """Revoke an active pre-authorization immediately."""
+    _assert_not_porteiro(current_user)
     auth = VisitorService.revoke_authorization(session, auth_id, current_user)
     return _to_authorization_read(auth)

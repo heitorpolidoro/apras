@@ -14,7 +14,11 @@ describe("UserRole", () => {
     expect(UserRole.RESIDENT).toBe("RESIDENT");
   });
 
-  it("has exactly five roles", () => {
-    expect(Object.keys(UserRole)).toHaveLength(5);
+  it("includes PORTEIRO", () => {
+    expect(UserRole.PORTEIRO).toBe("PORTEIRO");
+  });
+
+  it("has exactly six roles", () => {
+    expect(Object.keys(UserRole)).toHaveLength(6);
   });
 });

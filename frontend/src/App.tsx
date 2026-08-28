@@ -31,14 +31,19 @@ import "./App.css";
 /**
  * Root-redirect target. Uses the user's real role (never the simulated
  * role from useEffectiveIdentity/SimulationContext): an active GUEST goes
- * to /welcome, everyone else (including the brief isLoading window where
- * `user` is still undefined) goes to /dashboard as before.
+ * to /welcome, an active PORTEIRO goes to /gate, everyone else (including
+ * the brief isLoading window where `user` is still undefined) goes to
+ * /dashboard as before.
  */
 export const RootRedirect: React.FC = () => {
   const { user } = useAuth();
-  return (
-    <Navigate to={user?.role === UserRole.GUEST ? "/welcome" : "/dashboard"} replace />
-  );
+  let target = "/dashboard";
+  if (user?.role === UserRole.GUEST) {
+    target = "/welcome";
+  } else if (user?.role === UserRole.PORTEIRO) {
+    target = "/gate";
+  }
+  return <Navigate to={target} replace />;
 };
 
 function App() {
@@ -88,7 +93,15 @@ function App() {
               <Route
                 path="/lots"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute
+                    requiredRoles={[
+                      UserRole.ADMINISTRATOR,
+                      UserRole.DIRECTOR,
+                      UserRole.MANAGER,
+                      UserRole.RESIDENT,
+                      UserRole.GUEST,
+                    ]}
+                  >
                     <LotsPage />
                   </ProtectedRoute>
                 }
@@ -97,7 +110,15 @@ function App() {
               <Route
                 path="/authorizations"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute
+                    requiredRoles={[
+                      UserRole.ADMINISTRATOR,
+                      UserRole.DIRECTOR,
+                      UserRole.MANAGER,
+                      UserRole.RESIDENT,
+                      UserRole.GUEST,
+                    ]}
+                  >
                     <VisitorAuthPage />
                   </ProtectedRoute>
                 }
@@ -106,7 +127,14 @@ function App() {
               <Route
                 path="/gate"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute
+                    requiredRoles={[
+                      UserRole.ADMINISTRATOR,
+                      UserRole.DIRECTOR,
+                      UserRole.MANAGER,
+                      UserRole.PORTEIRO,
+                    ]}
+                  >
                     <GatekeeperDashboard />
                   </ProtectedRoute>
                 }
@@ -115,7 +143,15 @@ function App() {
               <Route
                 path="/occurrences"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute
+                    requiredRoles={[
+                      UserRole.ADMINISTRATOR,
+                      UserRole.DIRECTOR,
+                      UserRole.MANAGER,
+                      UserRole.RESIDENT,
+                      UserRole.GUEST,
+                    ]}
+                  >
                     <OccurrenceBookPage />
                   </ProtectedRoute>
                 }
@@ -124,7 +160,15 @@ function App() {
               <Route
                 path="/documents"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute
+                    requiredRoles={[
+                      UserRole.ADMINISTRATOR,
+                      UserRole.DIRECTOR,
+                      UserRole.MANAGER,
+                      UserRole.RESIDENT,
+                      UserRole.GUEST,
+                    ]}
+                  >
                     <DocumentCenterPage />
                   </ProtectedRoute>
                 }
@@ -133,7 +177,15 @@ function App() {
               <Route
                 path="/projects"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute
+                    requiredRoles={[
+                      UserRole.ADMINISTRATOR,
+                      UserRole.DIRECTOR,
+                      UserRole.MANAGER,
+                      UserRole.RESIDENT,
+                      UserRole.GUEST,
+                    ]}
+                  >
                     <ConstructionTrackerPage />
                   </ProtectedRoute>
                 }
@@ -142,7 +194,15 @@ function App() {
               <Route
                 path="/announcements"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute
+                    requiredRoles={[
+                      UserRole.ADMINISTRATOR,
+                      UserRole.DIRECTOR,
+                      UserRole.MANAGER,
+                      UserRole.RESIDENT,
+                      UserRole.GUEST,
+                    ]}
+                  >
                     <AnnouncementFeedPage />
                   </ProtectedRoute>
                 }

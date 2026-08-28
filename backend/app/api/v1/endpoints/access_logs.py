@@ -22,11 +22,12 @@ from sqlmodel import Session
 router = APIRouter()
 
 
-def _assert_gatekeeper_or_admin(current_user: User) -> None:
+def _assert_gatekeeper_access(current_user: User) -> None:
     if current_user.role not in (
         UserRole.ADMINISTRATOR,
         UserRole.DIRECTOR,
         UserRole.MANAGER,
+        UserRole.PORTEIRO,
     ):
         raise ForbiddenError("Only gatekeepers and administrators can perform check-in or check-out")
 
@@ -58,7 +59,7 @@ def check_in_visitor(
     current_user: Annotated[User, Depends(deps.get_current_user)],
 ) -> AccessLogRead:
     """Register visitor entry at gate."""
-    _assert_gatekeeper_or_admin(current_user)
+    _assert_gatekeeper_access(current_user)
     log = VisitorService.check_in(session, check_in_in, current_user)
     return _to_access_log_read(log)
 
@@ -74,7 +75,7 @@ def check_out_visitor(
     current_user: Annotated[User, Depends(deps.get_current_user)],
 ) -> AccessLogRead:
     """Register visitor exit at gate."""
-    _assert_gatekeeper_or_admin(current_user)
+    _assert_gatekeeper_access(current_user)
     log = VisitorService.check_out(session, check_out_in, current_user)
     return _to_access_log_read(log)
 

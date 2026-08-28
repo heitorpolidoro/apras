@@ -132,7 +132,8 @@
     "ADMINISTRATOR": "Administrator",
     "DIRECTOR": "Director",
     "MANAGER": "Manager",
-    "GUEST": "Guest"
+    "GUEST": "Guest",
+    "PORTEIRO": "Gatekeeper"
   },
   "admin": {
     "title": "User Management",
