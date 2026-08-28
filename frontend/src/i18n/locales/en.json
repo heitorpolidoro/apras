@@ -22,7 +22,9 @@
     "administration": "Administration",
     "announcements": "Announcements",
     "finance": "Finance",
-    "contactInfo": "Contact Info"
+    "contactInfo": "Contact Info",
+    "reservations": "Reservations",
+    "manageSpaces": "Spaces"
   },
   "accessControl": {
     "title": "Access Control",
@@ -875,6 +877,47 @@
       "amountLabel": "Planned Amount",
       "notesLabel": "Notes",
       "save": "Save Budget Line"
+    }
+  },
+  "reservations": {
+    "spaces": {
+      "title": "Reservable Spaces",
+      "newSpace": "New Space",
+      "namePlaceholder": "Space name",
+      "descriptionPlaceholder": "Description",
+      "capacityPlaceholder": "Capacity",
+      "requiresApproval": "Requires approval",
+      "save": "Save",
+      "cancel": "Cancel",
+      "loading": "Loading spaces...",
+      "empty": "No reservable spaces yet.",
+      "confirmDelete": "Deactivate space \"{{name}}\"?",
+      "errorCreating": "Error creating space.",
+      "errorUpdating": "Error updating space.",
+      "errorDeleting": "Error deactivating space."
+    },
+    "booking": {
+      "title": "Space Reservations",
+      "loadingSpaces": "Loading spaces...",
+      "existingBookings": "Existing Bookings",
+      "noBookings": "No bookings for this space yet.",
+      "masked": "Booked",
+      "newBooking": "New Booking",
+      "startTime": "Start",
+      "endTime": "End",
+      "notesPlaceholder": "Notes (optional)",
+      "submit": "Book",
+      "myReservations": "My Reservations",
+      "noMyReservations": "You have no reservations yet.",
+      "cancel": "Cancel",
+      "pendingApprovals": "Pending Approvals",
+      "noPendingApprovals": "No pending approvals.",
+      "approve": "Approve",
+      "reject": "Reject",
+      "errorCreating": "Error creating reservation.",
+      "errorCancelling": "Error cancelling reservation.",
+      "errorApproving": "Error approving reservation.",
+      "errorRejecting": "Error rejecting reservation."
     }
   }
 }

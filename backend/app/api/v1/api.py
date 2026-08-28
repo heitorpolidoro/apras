@@ -13,6 +13,7 @@ from app.api.v1.endpoints import (
     lots,
     occurrences,
     projects,
+    reservations,
     residents,
     tasks,
     uploads,
@@ -49,6 +50,16 @@ api_router.include_router(projects.router, prefix="/projects", tags=["projects"]
 api_router.include_router(announcements.router, prefix="/announcements", tags=["announcements"])
 api_router.include_router(finance.router, prefix="/finance", tags=["finance"])
 api_router.include_router(feedback.router, prefix="/feedback", tags=["feedback"])
+api_router.include_router(
+    reservations.spaces_router,
+    prefix="/reservable-spaces",
+    tags=["reservable-spaces"],
+)
+api_router.include_router(
+    reservations.reservations_router,
+    prefix="/space-reservations",
+    tags=["space-reservations"],
+)
 
 
 

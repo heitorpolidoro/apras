@@ -44,8 +44,11 @@ from app.core.exceptions import (
     ProjectInvalidProgressError,
     ProjectNotFoundError,
     ProjectUpdateNotFoundError,
+    ReservableSpaceNotFoundError,
     ResidentCPFConflictError,
     ResidentNotFoundError,
+    SpaceReservationConflictError,
+    SpaceReservationNotFoundError,
     TaskNotFoundError,
     UserLotLinkNotFoundError,
     VisitorNotFoundError,
@@ -91,6 +94,8 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             BudgetLineNotFoundError,
             FinancialTransactionNotFoundError,
             FeedbackNotFoundError,
+            ReservableSpaceNotFoundError,
+            SpaceReservationNotFoundError,
         ),
     ):
         status_code = status.HTTP_404_NOT_FOUND
@@ -114,6 +119,7 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             ResidentCPFConflictError,
             BudgetLineAlreadyExistsError,
             FinanceCategoryAlreadyExistsError,
+            SpaceReservationConflictError,
         ),
     ):
         status_code = status.HTTP_409_CONFLICT

@@ -26,6 +26,8 @@ import { FinanceDashboardPage } from "./features/finance/components/FinanceDashb
 import PhotoApprovalQueuePage from "./features/media-management/components/PhotoApprovalQueuePage";
 import { AccessControlPage } from "./features/access-control/components/AccessControlPage";
 import { GateMonitorPage } from "./features/access-control/components/GateMonitorPage";
+import ReservableSpacesPage from "./features/space-reservation-management/components/ReservableSpacesPage";
+import SpaceBookingPage from "./features/space-reservation-management/components/SpaceBookingPage";
 import { UserRole } from "./types/auth";
 import "./App.css";
 
@@ -285,6 +287,34 @@ function App() {
                     ]}
                   >
                     <GateMonitorPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/spaces"
+                element={
+                  <ProtectedRoute
+                    requiredRoles={[UserRole.ADMINISTRATOR, UserRole.DIRECTOR]}
+                  >
+                    <ReservableSpacesPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/reservations"
+                element={
+                  <ProtectedRoute
+                    requiredRoles={[
+                      UserRole.ADMINISTRATOR,
+                      UserRole.DIRECTOR,
+                      UserRole.MANAGER,
+                      UserRole.RESIDENT,
+                      UserRole.GUEST,
+                    ]}
+                  >
+                    <SpaceBookingPage />
                   </ProtectedRoute>
                 }
               />

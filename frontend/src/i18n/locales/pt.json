@@ -22,7 +22,9 @@
     "administration": "Administração",
     "announcements": "Comunicados",
     "finance": "Financeiro",
-    "contactInfo": "Informações de Contato"
+    "contactInfo": "Informações de Contato",
+    "reservations": "Reservas",
+    "manageSpaces": "Espaços"
   },
   "accessControl": {
     "title": "Controle de Acesso",
@@ -875,6 +877,47 @@
       "amountLabel": "Valor Planejado (R$)",
       "notesLabel": "Observações",
       "save": "Salvar Orçamento"
+    }
+  },
+  "reservations": {
+    "spaces": {
+      "title": "Espaços Reserváveis",
+      "newSpace": "Novo Espaço",
+      "namePlaceholder": "Nome do espaço",
+      "descriptionPlaceholder": "Descrição",
+      "capacityPlaceholder": "Capacidade",
+      "requiresApproval": "Requer aprovação",
+      "save": "Salvar",
+      "cancel": "Cancelar",
+      "loading": "Carregando espaços...",
+      "empty": "Nenhum espaço cadastrado.",
+      "confirmDelete": "Desativar o espaço \"{{name}}\"?",
+      "errorCreating": "Erro ao criar espaço.",
+      "errorUpdating": "Erro ao atualizar espaço.",
+      "errorDeleting": "Erro ao desativar espaço."
+    },
+    "booking": {
+      "title": "Reservas de Espaços",
+      "loadingSpaces": "Carregando espaços...",
+      "existingBookings": "Reservas Existentes",
+      "noBookings": "Ainda não há reservas para este espaço.",
+      "masked": "Reservado",
+      "newBooking": "Nova Reserva",
+      "startTime": "Início",
+      "endTime": "Fim",
+      "notesPlaceholder": "Observações (opcional)",
+      "submit": "Reservar",
+      "myReservations": "Minhas Reservas",
+      "noMyReservations": "Você ainda não possui reservas.",
+      "cancel": "Cancelar",
+      "pendingApprovals": "Aprovações Pendentes",
+      "noPendingApprovals": "Nenhuma aprovação pendente.",
+      "approve": "Aprovar",
+      "reject": "Rejeitar",
+      "errorCreating": "Erro ao criar reserva.",
+      "errorCancelling": "Erro ao cancelar reserva.",
+      "errorApproving": "Erro ao aprovar reserva.",
+      "errorRejecting": "Erro ao rejeitar reserva."
     }
   }
 }
