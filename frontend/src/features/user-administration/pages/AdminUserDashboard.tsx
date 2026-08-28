@@ -250,17 +250,28 @@ const AdminUserDashboard: React.FC = () => {
               >
                 ✎
               </button>
-              <button
-                onClick={() => {
-                  if (window.confirm(t("admin.confirmDeleteType"))) {
-                    deleteTypeMutation.mutate(ut.id);
-                  }
-                }}
-                className="text-xs text-muted-foreground hover:text-destructive transition-colors ml-1"
-                aria-label={`delete ${ut.name}`}
-              >
-                ×
-              </button>
+              {!ut.role && (
+                <button
+                  onClick={() => {
+                    if (window.confirm(t("admin.confirmDeleteType"))) {
+                      deleteTypeMutation.mutate(ut.id);
+                    }
+                  }}
+                  className="text-xs text-muted-foreground hover:text-destructive transition-colors ml-1"
+                  aria-label={`delete ${ut.name}`}
+                >
+                  ×
+                </button>
+              )}
+              {ut.role && (
+                <span
+                  className="text-xs text-muted-foreground ml-1"
+                  title={t("admin.roleLinkedTypeCannotBeDeleted")}
+                  aria-label={`role-linked ${ut.name}`}
+                >
+                  🔒
+                </span>
+              )}
             </div>
           ))}
         </div>

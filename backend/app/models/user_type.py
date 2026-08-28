@@ -6,6 +6,7 @@ from uuid import UUID, uuid4
 from sqlalchemy import JSON, Column
 from sqlmodel import Field, Relationship, SQLModel
 
+from .enums import UserRole
 from .user_type_link import UserUserTypeLink
 
 if TYPE_CHECKING:
@@ -27,6 +28,13 @@ class UserType(SQLModel, table=True):
         default_factory=list,
         sa_column=Column(JSON, nullable=False, server_default="[]"),
     )
+    # Identifies a UserType implicitly linked to a UserRole (APRAS-9): at
+    # most one row per role value, enforced by `unique=True`. NULL (the
+    # default, for regular admin-created types) is never counted as a
+    # duplicate by a UNIQUE constraint on either Postgres or SQLite, so
+    # this does not limit the number of admin-created types. Only ever set
+    # by the seeding migration, never through the create/update API.
+    role: UserRole | None = Field(default=None, nullable=True, unique=True)
 
     users: list["User"] = Relationship(
         back_populates="user_types", link_model=UserUserTypeLink

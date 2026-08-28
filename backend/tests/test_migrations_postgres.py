@@ -122,6 +122,118 @@ def test_insert_user_with_resident_role_succeeds(migrated_pg_engine):
     assert role == "RESIDENT"
 
 
+# ---------------------------------------------------------------------------
+# 0018_add_role_to_user_type (APRAS-9) – seeded role-linked UserType rows
+# ---------------------------------------------------------------------------
+
+
+def test_user_type_role_seeds_five_rows(migrated_pg_engine):
+    """Exactly one UserType row per UserRole value is seeded, each starting
+    with allowed_menus == [] and a "(papel)"-suffixed name."""
+    with migrated_pg_engine.connect() as conn:
+        rows = conn.execute(
+            text(
+                "SELECT role, name, allowed_menus FROM user_type "
+                "WHERE role IS NOT NULL"
+            )
+        ).all()
+
+    assert len(rows) == 5
+    assert {row.role for row in rows} == {
+        "ADMINISTRATOR",
+        "DIRECTOR",
+        "MANAGER",
+        "GUEST",
+        "RESIDENT",
+    }
+    for row in rows:
+        assert row.allowed_menus == []
+        assert "(papel)" in row.name
+
+
+def test_user_type_role_unique_constraint_rejects_duplicate_role(migrated_pg_engine):
+    """A second UserType row with the same non-null role is rejected."""
+    with pytest.raises(Exception, match="duplicate key|unique constraint"):
+        with migrated_pg_engine.begin() as conn:
+            conn.execute(
+                text(
+                    "INSERT INTO user_type (id, name, allowed_menus, role) "
+                    "VALUES (:id, 'Duplicate Director', '[]', 'DIRECTOR')"
+                ),
+                {"id": uuid.uuid4()},
+            )
+
+
+def test_user_type_role_unique_constraint_allows_multiple_null_roles(
+    migrated_pg_engine,
+):
+    """Multiple admin-created UserTypes with role=NULL are all allowed: a
+    UNIQUE constraint never treats two NULLs as duplicates of each other."""
+    id_a, id_b = uuid.uuid4(), uuid.uuid4()
+    with migrated_pg_engine.begin() as conn:
+        conn.execute(
+            text(
+                "INSERT INTO user_type (id, name, allowed_menus, role) "
+                "VALUES (:id, :name, '[]', NULL)"
+            ),
+            {"id": id_a, "name": f"Admin Type A {id_a}"},
+        )
+        conn.execute(
+            text(
+                "INSERT INTO user_type (id, name, allowed_menus, role) "
+                "VALUES (:id, :name, '[]', NULL)"
+            ),
+            {"id": id_b, "name": f"Admin Type B {id_b}"},
+        )
+
+    with migrated_pg_engine.connect() as conn:
+        count = conn.execute(
+            text(
+                "SELECT count(*) FROM user_type WHERE id = :a OR id = :b"
+            ),
+            {"a": id_a, "b": id_b},
+        ).scalar_one()
+    assert count == 2
+
+
+def test_user_type_role_downgrade_removes_seeded_rows_only(migrated_pg_engine):
+    """Downgrading 0018 removes exactly the 5 seeded role rows and the role
+    column, without touching admin-created (role IS NULL) types."""
+    survivor_id = uuid.uuid4()
+    survivor_name = f"Survivor {survivor_id}"
+    with migrated_pg_engine.begin() as conn:
+        conn.execute(
+            text(
+                "INSERT INTO user_type (id, name, allowed_menus, role) "
+                "VALUES (:id, :name, '[]', NULL)"
+            ),
+            {"id": survivor_id, "name": survivor_name},
+        )
+
+    _run_alembic("downgrade", "-1")
+
+    with migrated_pg_engine.connect() as conn:
+        columns = (
+            conn.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name = 'user_type'"
+                )
+            )
+            .scalars()
+            .all()
+        )
+        remaining_names = conn.execute(text("SELECT name FROM user_type")).scalars().all()
+
+    assert "role" not in columns
+    assert survivor_name in remaining_names
+    assert not any("(papel)" in name for name in remaining_names)
+
+    # Restore head so the module-scoped engine's state is unaffected for
+    # any other test relying on it.
+    _run_alembic("upgrade", "head")
+
+
 def test_downgrade_is_a_safe_noop(migrated_pg_engine):
     """Downgrading 0014 must not remove the enum value or fail (matching the
     precedent set by 0003_add_guest_to_userrole_enum.py: Postgres cannot drop

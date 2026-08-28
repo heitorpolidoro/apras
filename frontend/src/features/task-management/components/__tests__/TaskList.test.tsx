@@ -5,6 +5,7 @@ import TaskList from "../TaskList";
 import { TaskStatus, TaskPriority } from "../../types";
 import { UserRole } from "../../../../types/auth";
 import { useSimulation } from "../../../user-administration/context/SimulationContext";
+import { useUserTypes } from "../../../../hooks/useUserTypes";
 
 // TaskList reads its effective identity via useEffectiveIdentity, which
 // combines useAuth with useSimulation. Default both to a non-simulating,
@@ -29,6 +30,13 @@ vi.mock("../../../user-administration/context/SimulationContext", () => ({
     setSimulatedUserTypeIds: vi.fn(),
     stopSimulation: vi.fn(),
   })),
+}));
+
+// useEffectiveIdentity also calls useUserTypes (APRAS-9 role-type fold-in);
+// default to no UserTypes so behavior matches pre-APRAS-9 expectations.
+// Overridden per-test below for the role-type fallback assertions.
+vi.mock("../../../../hooks/useUserTypes", () => ({
+  useUserTypes: vi.fn(() => ({ data: [] })),
 }));
 
 const mockTasks = [
@@ -342,6 +350,45 @@ describe("TaskList", () => {
           filters={defaultFilters}
         />,
       );
+      expect(screen.getByText("Task 1")).toBeInTheDocument();
+      expect(screen.queryByText("Task 2")).not.toBeInTheDocument();
+    });
+
+    it("resolves visibility via the role-type fallback when simulating MANAGER with zero simulated UserTypes (APRAS-9)", () => {
+      vi.mocked(useSimulation).mockReturnValue({
+        simulatedRole: UserRole.MANAGER,
+        simulatedUserTypeIds: [],
+        isSimulating: true,
+        setSimulatedRole: vi.fn(),
+        setSimulatedUserTypeIds: vi.fn(),
+        stopSimulation: vi.fn(),
+      });
+      vi.mocked(useUserTypes).mockReturnValue({
+        data: [
+          {
+            id: "role-type-manager",
+            name: "Gerente (papel)",
+            allowed_menus: [],
+            role: "MANAGER",
+          },
+        ],
+      } as any); // skipcq: JS-0323
+      const tasksWithVisibility = [
+        { ...mockTasks[0], visible_to_id: "role-type-manager" },
+        { ...mockTasks[1], visible_to_id: "type-2" },
+      ];
+      render(
+        <TaskList
+          tasks={tasksWithVisibility as any} // skipcq: JS-0323
+          isLoading={false}
+          isError={false}
+          error={null}
+          filters={defaultFilters}
+        />,
+      );
+      // Task 1 is visible via the MANAGER role-type, with no explicit
+      // simulated UserType selected; Task 2 (targeted at an unrelated,
+      // non-role type) stays hidden.
       expect(screen.getByText("Task 1")).toBeInTheDocument();
       expect(screen.queryByText("Task 2")).not.toBeInTheDocument();
     });

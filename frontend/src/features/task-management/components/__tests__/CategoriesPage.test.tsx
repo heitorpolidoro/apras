@@ -46,6 +46,12 @@ vi.mock("../../../user-administration/context/SimulationContext", () => ({
   })),
 }));
 
+// useEffectiveIdentity also calls useUserTypes (APRAS-9 role-type fold-in);
+// mock it so these tests don't need a QueryClientProvider wrapper.
+vi.mock("../../../../hooks/useUserTypes", () => ({
+  useUserTypes: vi.fn(() => ({ data: [] })),
+}));
+
 const mockCategories = [
   { id: "cat-1", name: "General", color: "#808080", is_active: true },
   { id: "cat-2", name: "Jurídico", color: "#6366f1", is_active: true },

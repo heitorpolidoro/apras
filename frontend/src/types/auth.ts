@@ -12,6 +12,9 @@ export interface UserType {
   id: string;
   name: string;
   allowed_menus: string[];
+  /** Set only for the 5 role-linked types seeded by the APRAS-9 backend
+   * migration; undefined/null for regular admin-created types. */
+  role?: string | null;
 }
 
 export interface User {

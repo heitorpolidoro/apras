@@ -174,7 +174,8 @@
     "allowedMenus": "Menus permitidos",
     "menuTasks": "Tarefas",
     "menuCategories": "Categorias",
-    "errorUpdatingType": "Erro ao atualizar tipo."
+    "errorUpdatingType": "Erro ao atualizar tipo.",
+    "roleLinkedTypeCannotBeDeleted": "Tipo vinculado a um papel: não pode ser excluído."
   },
   "contactInfo": {
     "title": "Informações de Contato",

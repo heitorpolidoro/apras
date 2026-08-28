@@ -29,7 +29,7 @@ def get_token(client, username, password):
 # ---------------------------------------------------------------------------
 
 
-def test_assert_menu_access_administrator_always_passes():
+def test_assert_menu_access_administrator_always_passes(session: Session):
     """ADMINISTRATOR passes regardless of UserTypes/allowed_menus."""
     admin = User(
         id=uuid.uuid4(),
@@ -39,13 +39,15 @@ def test_assert_menu_access_administrator_always_passes():
         role=UserRole.ADMINISTRATOR,
         cpf="52998224725",
     )
-    assert_menu_access(admin, MenuKey.TASKS)  # should not raise
-    assert_menu_access(admin, MenuKey.CATEGORIES)  # should not raise
+    assert_menu_access(admin, MenuKey.TASKS, session)  # should not raise
+    assert_menu_access(admin, MenuKey.CATEGORIES, session)  # should not raise
 
 
-def test_assert_menu_access_matching_user_type_passes():
+def test_assert_menu_access_matching_user_type_passes(session: Session):
     """A non-admin with a UserType granting the menu key passes."""
     ut = UserType(name="Board", allowed_menus=["tasks"])
+    session.add(ut)
+    session.commit()
     director = User(
         id=uuid.uuid4(),
         email="director_menu@test.com",
@@ -55,12 +57,14 @@ def test_assert_menu_access_matching_user_type_passes():
         cpf="11144477735",
         user_types=[ut],
     )
-    assert_menu_access(director, MenuKey.TASKS)  # should not raise
+    assert_menu_access(director, MenuKey.TASKS, session)  # should not raise
 
 
-def test_assert_menu_access_non_matching_user_type_denied():
+def test_assert_menu_access_non_matching_user_type_denied(session: Session):
     """A non-admin whose UserTypes don't include the menu key is denied."""
     ut = UserType(name="Board", allowed_menus=["categories"])
+    session.add(ut)
+    session.commit()
     director = User(
         id=uuid.uuid4(),
         email="director_menu2@test.com",
@@ -71,11 +75,12 @@ def test_assert_menu_access_non_matching_user_type_denied():
         user_types=[ut],
     )
     with pytest.raises(ForbiddenError):
-        assert_menu_access(director, MenuKey.TASKS)
+        assert_menu_access(director, MenuKey.TASKS, session)
 
 
-def test_assert_menu_access_zero_user_types_denied():
-    """A non-admin with zero UserTypes assigned is denied."""
+def test_assert_menu_access_zero_user_types_denied(session: Session):
+    """A non-admin with zero UserTypes assigned (and no matching role-type
+    seeded in this test DB) is denied."""
     director = User(
         id=uuid.uuid4(),
         email="director_menu3@test.com",
@@ -85,13 +90,16 @@ def test_assert_menu_access_zero_user_types_denied():
         cpf="07491723040",
     )
     with pytest.raises(ForbiddenError):
-        assert_menu_access(director, MenuKey.TASKS)
+        assert_menu_access(director, MenuKey.TASKS, session)
 
 
-def test_assert_menu_access_at_least_one_matching_type_passes():
+def test_assert_menu_access_at_least_one_matching_type_passes(session: Session):
     """Access is granted if at least one of several UserTypes matches."""
     ut_no = UserType(name="No Access", allowed_menus=[])
     ut_yes = UserType(name="Has Access", allowed_menus=["tasks"])
+    session.add(ut_no)
+    session.add(ut_yes)
+    session.commit()
     director = User(
         id=uuid.uuid4(),
         email="director_menu4@test.com",
@@ -101,7 +109,7 @@ def test_assert_menu_access_at_least_one_matching_type_passes():
         cpf="70323955008",
         user_types=[ut_no, ut_yes],
     )
-    assert_menu_access(director, MenuKey.TASKS)  # should not raise
+    assert_menu_access(director, MenuKey.TASKS, session)  # should not raise
 
 
 # ---------------------------------------------------------------------------

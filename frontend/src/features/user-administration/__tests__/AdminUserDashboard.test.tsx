@@ -510,6 +510,39 @@ describe("AdminUserDashboard", () => {
     expect(apiClient.delete).not.toHaveBeenCalled();
   });
 
+  it("hides the delete button for a role-linked user type (APRAS-9)", async () => {
+    const mockUserTypesWithRole = [
+      ...mockUserTypes,
+      {
+        id: "type-role-director",
+        name: "Diretor (papel)",
+        allowed_menus: [],
+        role: "DIRECTOR",
+      },
+    ];
+    (apiClient.get as any).mockImplementation((url: string) => {
+      if (url === "/user-types/")
+        return Promise.resolve({ data: mockUserTypesWithRole });
+      return Promise.resolve({ data: mockUsers });
+    });
+
+    render(<AdminUserDashboard />, { wrapper: createWrapper() });
+
+    await waitFor(() =>
+      expect(screen.getByText("Diretor (papel)")).toBeInTheDocument(),
+    );
+
+    // Regular types keep their delete button...
+    expect(screen.getByLabelText("delete Manager")).toBeInTheDocument();
+    // ...but the role-linked type has no delete button, only a lock indicator.
+    expect(
+      screen.queryByLabelText("delete Diretor (papel)"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByLabelText("role-linked Diretor (papel)"),
+    ).toBeInTheDocument();
+  });
+
   it("shows error when deleting a type fails", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
     (apiClient.get as any).mockImplementation((url: string) => {
