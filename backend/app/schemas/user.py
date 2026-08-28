@@ -33,7 +33,6 @@ class UserBase(BaseModel):
     cpf: str
     phone: str | None = None
     address: str | None = None
-    block_lot: str | None = None
 
     @field_validator("cpf")
     @classmethod
@@ -91,7 +90,6 @@ class UserUpdate(BaseModel):
     cpf: str | None = None
     phone: str | None = None
     address: str | None = None
-    block_lot: str | None = None
 
     @field_validator("cpf")
     @classmethod
