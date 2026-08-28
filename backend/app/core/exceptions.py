@@ -486,6 +486,28 @@ class InvoiceFileTooLargeError(DomainError):
         super().__init__(message)
 
 
+class PackageNotFoundError(DomainError):
+    """Raised when a package is not found."""
+
+    def __init__(self, package_id: UUID | str = "") -> None:
+        msg = f"Encomenda {package_id} não encontrada." if package_id else "Encomenda não encontrada."
+        super().__init__(msg)
+
+
+class PackageAccessForbiddenError(DomainError):
+    """Raised when access to a package or lot's packages is forbidden."""
+
+    def __init__(self, message: str = "Acesso negado às encomendas deste lote.") -> None:
+        super().__init__(message)
+
+
+class PackageAlreadyPickedUpError(DomainError):
+    """Raised when attempting to mark an already-picked-up package as picked up again."""
+
+    def __init__(self, message: str = "Esta encomenda já foi retirada.") -> None:
+        super().__init__(message)
+
+
 
 
 

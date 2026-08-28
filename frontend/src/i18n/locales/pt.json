@@ -22,7 +22,8 @@
     "administration": "Administração",
     "announcements": "Comunicados",
     "finance": "Financeiro",
-    "contactInfo": "Informações de Contato"
+    "contactInfo": "Informações de Contato",
+    "packages": "Encomendas"
   },
   "accessControl": {
     "title": "Controle de Acesso",
@@ -883,5 +884,23 @@
       "notesLabel": "Observações",
       "save": "Salvar Orçamento"
     }
+  },
+  "packages": {
+    "title": "Encomendas",
+    "pageTitle": "Encomendas",
+    "pageSubtitle": "Acompanhe as encomendas recebidas para o seu lote.",
+    "logArrival": "Registrar Encomenda",
+    "description": "Descrição",
+    "carrier": "Transportadora",
+    "awaitingPickup": "Encomendas Aguardando Retirada",
+    "confirmPickup": "Confirmar Retirada",
+    "pickedUpBy": "Retirado por: ___",
+    "noPackages": "Nenhuma encomenda aguardando retirada.",
+    "iPickedThisUp": "Já retirei",
+    "status": {
+      "AWAITING_PICKUP": "Aguardando Retirada",
+      "PICKED_UP": "Retirada"
+    },
+    "noLinkedLots": "Você não está vinculado a nenhum lote."
   }
 }

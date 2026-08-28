@@ -22,7 +22,8 @@
     "administration": "Administration",
     "announcements": "Announcements",
     "finance": "Finance",
-    "contactInfo": "Contact Info"
+    "contactInfo": "Contact Info",
+    "packages": "Packages"
   },
   "accessControl": {
     "title": "Access Control",
@@ -883,5 +884,23 @@
       "notesLabel": "Notes",
       "save": "Save Budget Line"
     }
+  },
+  "packages": {
+    "title": "Packages",
+    "pageTitle": "Packages",
+    "pageSubtitle": "Track packages received for your lot.",
+    "logArrival": "Log Package Arrival",
+    "description": "Description",
+    "carrier": "Carrier",
+    "awaitingPickup": "Packages Awaiting Pickup",
+    "confirmPickup": "Confirm Pickup",
+    "pickedUpBy": "Picked up by: ___",
+    "noPackages": "No packages awaiting pickup.",
+    "iPickedThisUp": "I already picked this up",
+    "status": {
+      "AWAITING_PICKUP": "Awaiting Pickup",
+      "PICKED_UP": "Picked Up"
+    },
+    "noLinkedLots": "You are not linked to any lot."
   }
 }

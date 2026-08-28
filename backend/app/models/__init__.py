@@ -25,6 +25,7 @@ from .enums import (
     OccurrenceCategory,
     OccurrencePriority,
     OccurrenceStatus,
+    PackageStatus,
     PhotoApprovalStatus,
     ProjectStatus,
     ResidentRelationship,
@@ -40,6 +41,7 @@ from .finance import BudgetLine, FinanceCategory, FinancialTransaction
 from .lot import Lot, UserLotLink
 from .media_asset import MediaAsset
 from .occurrence import Occurrence, OccurrenceTimeline
+from .package import Package
 from .project import ConstructionProject, ProjectMilestone, ProjectUpdate
 from .resident import Resident
 from .task import Task, TaskHistory
@@ -85,6 +87,8 @@ __all__ = [
     "OccurrencePriority",
     "OccurrenceStatus",
     "OccurrenceTimeline",
+    "Package",
+    "PackageStatus",
     "PhotoApprovalStatus",
     "ProjectMilestone",
     "ProjectStatus",

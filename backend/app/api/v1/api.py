@@ -12,6 +12,7 @@ from app.api.v1.endpoints import (
     finance,
     lots,
     occurrences,
+    packages,
     projects,
     residents,
     tasks,
@@ -49,6 +50,7 @@ api_router.include_router(projects.router, prefix="/projects", tags=["projects"]
 api_router.include_router(announcements.router, prefix="/announcements", tags=["announcements"])
 api_router.include_router(finance.router, prefix="/finance", tags=["finance"])
 api_router.include_router(feedback.router, prefix="/feedback", tags=["feedback"])
+api_router.include_router(packages.router, prefix="/packages", tags=["packages"])
 
 
 
