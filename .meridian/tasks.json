@@ -121,7 +121,11 @@
     "status": "specreview",
     "justification": "Include user types in task visibility configuration and filtering. Picked up from backlog, exploring design.",
     "running": true,
-    "priority": "medium"
+    "priority": "medium",
+    "blockedBy": [
+      "APRAS-9"
+    ],
+    "spec_path": "docs/tasks/APRAS-11-spec.md"
   },
   {
     "id": "APRAS-12",
