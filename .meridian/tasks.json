@@ -395,7 +395,7 @@
   {
     "id": "APRAS-25",
     "title": "Canal de Críticas, Sugestões e Fale Conosco",
-    "status": "codereview",
+    "status": "done",
     "justification": "Feedback/suggestion/complaint channel to the board, mirroring the shipped Occurrence Book architecture. Spec approved after 1 revision round (fixed: role-restriction precedent error, wrong migration idiom cited, backend/frontend seen-flip gap). Implementation dispatched.",
     "expected_results": [
       "Feedback message model supporting anonymous options created",
@@ -411,7 +411,8 @@
     "updated_at": "2026-08-23T02:22:42-03:00",
     "running": false,
     "priority": "medium",
-    "moved_at": "2026-08-23T02:22:42-03:00"
+    "moved_at": "2026-08-23T02:22:42-03:00",
+    "completed_at": "2026-08-28T01:56:17.723521-03:00"
   },
   {
     "id": "APRAS-26",
@@ -504,7 +505,7 @@
   {
     "id": "APRAS-30",
     "title": "Fix UserRead 500 on non-canonical CPF during response serialization",
-    "status": "codereview",
+    "status": "done",
     "justification": "Discovered by independent QA while verifying APRAS-7: UserRead's cpf field validator re-runs on response serialization, so any user row with a non-canonical CPF format (e.g. a historically-seeded/imported value) causes a ResponseValidationError (500) on every endpoint that returns UserRead -- GET /users/, PATCH /users/{id}, and PATCH /users/{id}/contact-info all affected. Not introduced by APRAS-7, pre-existing since the cpf-validation task. Spec APPROVED on first review round (bug mechanism confirmed real via live repro, existing duplication-convention match confirmed, testing approach confirmed achievable against existing fixture patterns). Implementation dispatched.",
     "expected_results": [
       "Endpoints returning UserRead no longer 500 for a user with a non-canonical (but previously-accepted) CPF value",
@@ -519,7 +520,8 @@
     "updated_at": "2026-08-27T16:05:00-03:00",
     "running": false,
     "priority": "medium",
-    "moved_at": "2026-08-27T16:05:00-03:00"
+    "moved_at": "2026-08-27T16:05:00-03:00",
+    "completed_at": "2026-08-28T01:56:17.723521-03:00"
   },
   {
     "id": "APRAS-31",
