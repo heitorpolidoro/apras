@@ -20,7 +20,7 @@ Let a task be targeted at any number of UserTypes (zero or more), preserving the
 | Question | Decision |
 |---|---|
 | Multiple targets per task? | Yes — a task is visible to a Manager if it has no targets at all (current `null` behavior, unchanged) OR at least one of its targets is in the Manager's effective UserType ids (per APRAS-9). |
-| Manager's auto-default on task creation | When a Manager creates a task without specifying targets, default to their **full** effective UserType id set (not just the first one, which is today's behavior) — preserves the original intent (the task defaults to visible to the creator and their peers) while correctly generalizing to multiple targets. |
+| Manager's auto-default on task creation | When a Manager creates a task without specifying targets, default to their **explicit** UserType ids (i.e. `current_user.user_types`, not the APRAS-9 effective set) — falling back to their role-type id alone **only if they have zero explicit UserTypes**. Using the full effective set unconditionally would be wrong: after APRAS-9, every Manager's effective set always includes the single shared `MANAGER` role-type id, so defaulting to the full effective set would make every auto-defaulted task visible to *every* Manager in the org, not just the creator's peers — the opposite of the "visible to peers" intent. Restricting the default to explicit ids (with the role-type id only as a last resort) actually preserves that intent: a Manager with a real department/type defaults to visibility scoped to that type; only a Manager with no explicit type at all falls back to the broad role-type default, same as `null` did before. |
 | Manager's validation on setting targets | A Manager may only set targets that are a subset of their own effective UserType ids (cannot grant visibility to a type they don't belong to) — same restriction as today's single-value check, generalized to a list. |
 
 ## Data Model
@@ -30,15 +30,12 @@ Let a task be targeted at any number of UserTypes (zero or more), preserving the
 ```python
 class TaskVisibleToLink(SQLModel, table=True):
     __tablename__ = "task_visible_to_link"
-    __table_args__ = (
-        UniqueConstraint("task_id", "user_type_id", name="uq_task_visible_to_link"),
-    )
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
-    task_id: UUID = Field(foreign_key="task.id", ondelete="CASCADE", nullable=False, index=True)
-    user_type_id: UUID = Field(foreign_key="user_type.id", ondelete="CASCADE", nullable=False, index=True)
+
+    task_id: UUID = Field(foreign_key="task.id", primary_key=True)
+    user_type_id: UUID = Field(foreign_key="user_type.id", primary_key=True)
 ```
 
-Mirrors the existing `UserUserTypeLink` pattern exactly.
+This matches `backend/app/models/user_type_link.py`'s `UserUserTypeLink` exactly: composite primary key (`task_id`, `user_type_id`), no surrogate `id` column, no `ondelete`/`index` annotations. (An earlier draft of this spec added a surrogate `id`, a `UniqueConstraint`, `ondelete="CASCADE"`, and explicit `index=True` — none of that exists on `UserUserTypeLink`, so it was a spurious deviation, not a deliberate one; dropped in favor of consistency with the existing link-table convention.)
 
 ### `Task` model
 
@@ -75,14 +72,37 @@ if task.visible_to and not ({vt.id for vt in task.visible_to} & get_effective_us
 
 (An empty `task.visible_to` list is falsy, preserving "no targets = visible to everyone" exactly as `None` did before.)
 
-### `backend/app/api/v1/endpoints/tasks.py` — `list_tasks`'s SQL filter
+### `backend/app/api/v1/endpoints/tasks.py` — `list_tasks`
 
-The current `or_(Task.visible_to_id.is_(None), Task.visible_to_id.in_(user_type_ids))` becomes a query that includes tasks with **no** rows in `task_visible_to_link` OR **at least one** row whose `user_type_id` is in the Manager's effective ids — implement via an `EXISTS`/outer-join pattern appropriate for SQLModel/SQLAlchemy (the developer should follow this codebase's existing style for comparable list-filtering queries, e.g. how other many-to-many visibility/membership filters are written here, rather than inventing a new idiom).
+This codebase has no existing EXISTS/join-based membership filter to follow as precedent — the only comparable pattern (`user.user_types`) is always resolved by loading into a Python list and filtering with `.in_()`, never a SQL EXISTS. Since `Task.visible_to` is now many-to-many, a naive join in the main row-selecting query (like today's `.join(UserType, Task.visible_to_id == UserType.id, isouter=True)`) would fan out one row per `(task, target)` pair and corrupt the result set. The fix has two independent parts:
+
+**1. WHERE-clause filter (gating, not row assembly).** Drop the joined `UserType` column from the main `select(...)` entirely — the query goes back to selecting only `Task, creator_alias.full_name, assignee_alias.full_name, Category.name, Category.color` (no `UserType.name`, no `.join(UserType, ...)`). For the `UserRole.MANAGER` branch, replace the `or_(Task.visible_to_id.is_(None), Task.visible_to_id.in_(user_type_ids))` clause with a `NOT EXISTS(...) OR EXISTS(...)` pair built from `TaskVisibleToLink`, e.g.:
+
+```python
+from sqlalchemy import exists
+
+effective_ids = get_effective_user_type_ids(current_user, session)
+has_any_target = exists(
+    select(TaskVisibleToLink.task_id).where(TaskVisibleToLink.task_id == Task.id)
+)
+has_matching_target = exists(
+    select(TaskVisibleToLink.task_id).where(
+        TaskVisibleToLink.task_id == Task.id,
+        TaskVisibleToLink.user_type_id.in_(effective_ids),
+    )
+)
+statement = statement.where(or_(~has_any_target, has_matching_target))
+```
+
+(Adapt exact syntax to this repo's SQLModel/SQLAlchemy version — e.g. `sqlmodel.select` vs `sqlalchemy.select` for the inner subquery — but this is the concrete shape to implement, not a placeholder to redesign.)
+
+**2. Result assembly (batch-fetch, not per-row join).** After `results = session.exec(statement).all()` produces the filtered `(Task, creator_name, assignee_name, category_name, category_color)` tuples, collect the task ids, then run one follow-up query: `select(TaskVisibleToLink.task_id, UserType).join(UserType, TaskVisibleToLink.user_type_id == UserType.id).where(TaskVisibleToLink.task_id.in_(task_ids))`. Group the resulting `UserType` rows by `task_id` in Python (e.g. a `dict[UUID, list[UserType]]`), then for each task in the main loop set `task_data["visible_to"] = [UserTypeRead.model_validate(ut) for ut in grouped.get(db_task.id, [])]` instead of the old `task_data["visible_to_name"] = visible_to_name` assignment. Tasks with no targets simply get `visible_to = []`.
 
 ### `backend/app/services/task_service.py`
 
-- `create_task`: when a Manager doesn't specify `visible_to_ids` (empty/absent), default it to the **full** `get_effective_user_type_ids(current_user, session)` set (not just one id, per the Scope Decision above).
+- `create_task`: when a Manager doesn't specify `visible_to_ids` (empty/absent), default it to `{ut.id for ut in current_user.user_types}` (explicit ids only — **not** `get_effective_user_type_ids(current_user, session)`); if that set is empty (the Manager has zero explicit UserTypes), fall back to the role-type id alone, i.e. `get_effective_user_type_ids(current_user, session)` in that case reduces to exactly the role-type id since there are no explicit ids to combine with. See the Scope Decisions table above for the rationale.
 - `update_task`: when a Manager sets `visible_to_ids`, validate every id in the list is a member of `get_effective_user_type_ids(current_user, session)`; reject (existing `ForbiddenError` or equivalent) if any id falls outside that set.
+- **Call site updated — `get_task_with_names`** (~lines 160-172): currently does `session.get(UserType, db_task.visible_to_id)` and sets `task_data["visible_to_name"] = visible_to.name if visible_to else None`. This is used by both `create_task` and `update_task` in `tasks.py` to build their `TaskRead` responses, so it must change alongside them. Replace the `session.get(UserType, ...)` lookup with `db_task.visible_to` (the new `Relationship`) and set `task_data["visible_to"] = [UserTypeRead.model_validate(ut) for ut in db_task.visible_to]`. Since this reads the relationship off `db_task` directly (not a separate query), the caller must ensure `db_task.visible_to` is loaded/refreshed after `create_task`/`update_task` commits the link rows — use `session.refresh(db_task, attribute_names=["visible_to"])` (or equivalent) before calling `get_task_with_names` if it isn't already fresh.
 
 ## Frontend Changes
 
