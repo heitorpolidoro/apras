@@ -103,7 +103,7 @@
     "id": "APRAS-9",
     "title": "Treat UserRole as a UserType for permission evaluation",
     "status": "specreview",
-    "justification": "Include UserRole in permission evaluations alongside UserTypes. Picked up from backlog, exploring design.",
+    "justification": "Include UserRole in permission evaluations alongside UserTypes. Picked up from backlog, exploring design. Independent spec review round 1: NEEDS_REVISION -- missed task_service.py call sites (create_task/update_task auto-default and validate visible_to_id using raw user.user_types), simulatedPermissions.ts fold-in pointed at wrong location, understated Session-threading footprint (~12 call sites), AGENTS.md left stale. Redispatching spec-generator.",
     "running": true,
     "priority": "medium"
   },
