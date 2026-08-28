@@ -123,13 +123,11 @@
   {
     "id": "APRAS-11",
     "title": "Add UserTypes to task visibility configuration",
-    "status": "blocked",
-    "justification": "Multiple UserTypes per task visibility target, replacing single visible_to_id FK with a many-to-many relation. Spec approved after 2 revision rounds. Blocked on APRAS-9 (shares the same call sites: assert_manager_can_see_task, list_tasks filter, task_service.py, simulatedPermissions.ts) -- will move to implementation once APRAS-9 merges.",
-    "running": false,
+    "status": "inprogress",
+    "justification": "Multiple UserTypes per task visibility target, replacing single visible_to_id FK with a many-to-many relation. Spec approved after 2 revision rounds. Blocked on APRAS-9 (shares the same call sites: assert_manager_can_see_task, list_tasks filter, task_service.py, simulatedPermissions.ts) -- will move to implementation once APRAS-9 merges. APRAS-9 merged; unblocked, implementation dispatched.",
+    "running": true,
     "priority": "medium",
-    "blockedBy": [
-      "APRAS-9"
-    ],
+    "blockedBy": [],
     "spec_path": "docs/tasks/APRAS-11-spec.md",
     "spec_iterations": 2
   },
