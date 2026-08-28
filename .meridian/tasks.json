@@ -130,9 +130,9 @@
   {
     "id": "APRAS-12",
     "title": "Create PORTEIRO (Gatekeeper) user role and dedicated Portaria dashboard",
-    "status": "backlog",
-    "justification": "Dedicated role and interface for gatekeepers to check-in/check-out visitors and contractors.",
-    "running": false,
+    "status": "specreview",
+    "justification": "Dedicated role and interface for gatekeepers to check-in/check-out visitors and contractors. Picked up from backlog, exploring design.",
+    "running": true,
     "priority": "medium"
   },
   {
