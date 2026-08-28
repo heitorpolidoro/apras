@@ -1,6 +1,6 @@
 """add_space_reservation_tables
 
-Revision ID: 0023_add_space_reservation_tables
+Revision ID: 0023_add_reservation_tables
 Revises: 0022_add_package_table
 Create Date: 2026-08-28 03:00:00.000000
 
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = "0023_add_space_reservation_tables"
+revision: str = "0023_add_reservation_tables"
 down_revision: Union[str, Sequence[str], None] = "0022_add_package_table"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
