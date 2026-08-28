@@ -396,7 +396,7 @@
     "id": "APRAS-25",
     "title": "Canal de Críticas, Sugestões e Fale Conosco",
     "status": "specreview",
-    "justification": "Feedback/suggestion/complaint channel to the board, separate from operational Occurrences. Mirrors the shipped Occurrence Book architecture closely, simplified (no priority/assignment/multi-step workflow/public toggle). In-app-only unread notification (no email/push infra exists). Spec written, dispatched for review.",
+    "justification": "Feedback/suggestion/complaint channel to the board, separate from operational Occurrences. Mirrors the shipped Occurrence Book architecture closely, simplified (no priority/assignment/multi-step workflow/public toggle). In-app-only unread notification (no email/push infra exists). Spec written, dispatched for review. Independent spec review round 1: NEEDS_REVISION -- create_occurrence precedent actually has NO role restriction at all (GUEST included, verified via test fixtures), migration cited (0009) does not use native Postgres enums as claimed (plain strings), gap between backend seen-flip (only on single-item GET) and frontend list-only history view described. Redispatching spec-generator.",
     "expected_results": [
       "Feedback message model supporting anonymous options created",
       "Board response workflow and response notification system built",
