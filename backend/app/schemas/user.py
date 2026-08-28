@@ -30,9 +30,13 @@ class UserBase(BaseModel):
     email: EmailStr
     full_name: str
     role: UserRole = UserRole.DIRECTOR
-    cpf: str
     phone: str | None = None
     address: str | None = None
+
+
+class UserCreate(UserBase):
+    password: str = Field(..., min_length=8)
+    cpf: str
 
     @field_validator("cpf")
     @classmethod
@@ -43,10 +47,6 @@ class UserBase(BaseModel):
         if not _validate_cpf_digits(digits):
             raise ValueError("Invalid CPF")
         return digits
-
-
-class UserCreate(UserBase):
-    password: str = Field(..., min_length=8)
 
     @field_validator("password")
     @classmethod
@@ -63,6 +63,7 @@ class UserCreate(UserBase):
 class UserRead(UserBase):
     id: UUID
     is_active: bool
+    cpf: str
     user_types: list[UserTypeRead] = []
 
     model_config = ConfigDict(from_attributes=True)

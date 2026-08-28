@@ -67,6 +67,12 @@ def test_user_update_accepts_request_with_profile_fields():
     assert update.address == "Av. Paulista, 1000"
 
 
+def test_user_update_accepts_explicit_none_cpf():
+    """Explicitly passing cpf=None to UserUpdate is a no-op (APRAS-30)."""
+    update = UserUpdate(cpf=None)
+    assert update.cpf is None
+
+
 def test_user_read_serializes_profile_fields():
     """UserRead exposes phone/address when reading from a User model."""
     from app.models.user import User
