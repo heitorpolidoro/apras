@@ -548,7 +548,7 @@
   {
     "id": "APRAS-32",
     "title": "Implement package tracking (encomendas) for Gatekeeper",
-    "status": "inprogress",
+    "status": "codereview",
     "justification": "Package tracking (encomendas) for Gatekeeper. Spec approved after 1 revision round (fixed a stale migration number, a GUEST RBAC bypass gap, and a mischaracterized convention claim). Implementation dispatched.",
     "expected_results": [
       "Package model with AWAITING_PICKUP/PICKED_UP status",
@@ -562,7 +562,7 @@
     "last_review_findings": [],
     "created_at": "2026-08-27T23:45:00-03:00",
     "updated_at": "2026-08-27T23:45:00-03:00",
-    "running": true,
+    "running": false,
     "priority": "low"
   },
   {
