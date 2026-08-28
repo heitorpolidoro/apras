@@ -134,7 +134,7 @@
   {
     "id": "APRAS-12",
     "title": "Create PORTEIRO (Gatekeeper) user role and dedicated Portaria dashboard",
-    "status": "codereview",
+    "status": "done",
     "justification": "Dedicated role and interface for gatekeepers to check-in/check-out visitors and contractors. Picked up from backlog, exploring design. Independent spec review round 1: NEEDS_REVISION -- excluded-by-construction claim is false for /lots,/authorizations,/occurrences,/documents,/projects,/announcements (bare ProtectedRoute, zero backend role checks), GatekeeperDashboard itself needs lots.py read access or check-in breaks entirely, redirect-loop traced definitively (no loop, clean dead-end to generic message) but PORTEIRO-vs-generic-message choice left unresolved, missing blockedBy APRAS-10 (spec assumes its unmerged ProtectedRoute shape). Redispatching spec-generator. Independent spec review round 1: NEEDS_REVISION -- excluded-by-construction claim is false for /lots,/authorizations,/occurrences,/documents,/projects,/announcements (bare ProtectedRoute, zero backend role checks), GatekeeperDashboard itself needs lots.py read access or check-in breaks entirely, redirect-loop traced definitively (no loop, clean dead-end to generic message) but PORTEIRO-vs-generic-message choice left unresolved, missing blockedBy APRAS-10 (spec assumes its unmerged ProtectedRoute shape). Redispatching spec-generator. Spec approved after 3 revision rounds (finally closed: full backend+frontend gap coverage for 6 previously-unguarded routes, unconditional redirect resolution). APRAS-10 (its blocker) has now merged -- ready for implementation.",
     "running": false,
     "priority": "medium",
@@ -147,7 +147,8 @@
       "PORTEIRO lands on /gate after login and cannot reach any other authenticated route, including /gate-monitor"
     ],
     "blockedBy": [],
-    "spec_iterations": 3
+    "spec_iterations": 3,
+    "completed_at": "2026-08-28T01:57:00.752651-03:00"
   },
   {
     "id": "APRAS-13",
@@ -534,7 +535,7 @@
       "Resident-facing calendar/booking view per space"
     ],
     "blockedBy": [],
-    "spec_path": "docs/tasks/APRAS-26-analysis.md",
+    "spec_path": "docs/tasks/APRAS-31-spec.md",
     "spec_iterations": 0,
     "qa_iterations": 0,
     "last_review_findings": [],
@@ -554,7 +555,7 @@
       "Resident can see their own lot-scoped package status"
     ],
     "blockedBy": [],
-    "spec_path": "docs/tasks/APRAS-26-analysis.md",
+    "spec_path": "docs/tasks/APRAS-32-spec.md",
     "spec_iterations": 0,
     "qa_iterations": 0,
     "last_review_findings": [],
