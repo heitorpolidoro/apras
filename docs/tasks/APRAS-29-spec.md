@@ -16,13 +16,21 @@ Remove the field entirely:
 - `frontend/src/types/auth.ts`: remove `block_lot?: string` from the `User` interface.
 - New Alembic migration (check `alembic heads` for the actual current head — do not assume a number): `op.drop_column("user", "block_lot")`. Downgrade re-adds it as nullable (data is not recoverable on downgrade — acceptable, since the column has never been populated by any UI path).
 
+### Correction: the Problem section's "zero references outside declarations" claim is wrong
+
+Independent spec review found `block_lot` is actually constructed/asserted on directly in 7 backend test functions (not just the model/schema declarations):
+- `backend/tests/test_models.py`: `test_user_model_profile_fields_default_to_none`, `test_user_model_profile_fields_accept_strings`
+- `backend/tests/test_schemas.py`: `test_user_create_accepts_request_without_profile_fields`, `test_user_create_accepts_request_with_profile_fields`, `test_user_update_accepts_request_without_profile_fields`, `test_user_update_accepts_request_with_profile_fields`, `test_user_read_serializes_profile_fields`
+
+Update each of these 7 tests: remove the `block_lot` keyword argument and any assertion on it, keeping the rest of each test's `phone`/`address` coverage intact. Update any docstring/comment in these files that lists "phone, address, block_lot" to drop `block_lot`. Frontend has no such references (confirmed via grep) — this correction is backend-test-only.
+
 ## Non-Goals
 
 - Not touching `Lot`/`UserLotLink`/`Resident` — this task only removes the superseded field, it doesn't change the replacement system.
 
 ## Testing
 
-- **Backend**: existing test suite passes unmodified (no test should reference `block_lot` — if one does, that's a signal the grep-based "nothing reads it" claim was wrong and needs re-checking before removal). Migration upgrade/downgrade verified against real Postgres if Docker is available.
+- **Backend**: after updating the 7 tests listed above, the full suite passes with no remaining references to `block_lot` anywhere (`grep -r block_lot backend/` returns nothing). Migration upgrade/downgrade verified against real Postgres if Docker is available.
 - **Frontend**: existing test suite passes unmodified.
 
 ## Expected Results
