@@ -3,6 +3,10 @@
 **Date:** 2026-08-27
 **Status:** Approved for implementation
 
+## Dependency note
+
+**This task must be implemented after `APRAS-10` is merged**, not concurrently. The "Post-login landing" section below adds a `PORTEIRO` branch directly alongside APRAS-10's `GUEST` → `/welcome` branch in `ProtectedRoute.tsx` (the `requiredMenu`-gated redirect check) and relies on APRAS-10's root-redirect and `ProtectedRoute` shape already existing in the codebase. Building this concurrently with APRAS-10 risks two independent agents reshaping the same `ProtectedRoute.tsx` logic at once. Tracked via `blockedBy: ["APRAS-10"]` in `.meridian/tasks.json`.
+
 ## Problem
 
 Gatekeeper functionality (visitor/contractor check-in and check-out) exists (`/gate`, `GatekeeperDashboard.tsx`, `access_logs.py`'s `_assert_gatekeeper_or_admin`) but is only usable by staff already holding `ADMINISTRATOR`/`DIRECTOR`/`MANAGER` roles — there's no role for a front-desk/security employee whose *only* job is checking visitors in and out, with no legitimate need for task management, financial data, documents, or anything else in the app. Handing such a person a `MANAGER` account today over-provisions them with access to everything a Manager can see.
