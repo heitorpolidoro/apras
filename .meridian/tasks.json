@@ -119,7 +119,7 @@
     "id": "APRAS-11",
     "title": "Add UserTypes to task visibility configuration",
     "status": "specreview",
-    "justification": "Include user types in task visibility configuration and filtering. Picked up from backlog, exploring design.",
+    "justification": "Include user types in task visibility configuration and filtering. Picked up from backlog, exploring design. Independent spec review round 1: NEEDS_REVISION -- list_tasks result-assembly not addressed (only WHERE filter), get_task_with_names call site missed, no EXISTS precedent exists in this codebase (spec should specify the shape directly), TaskVisibleToLink doesnt actually mirror UserUserTypeLinks composite-PK pattern as claimed, Manager auto-default silently broadens visibility to every Manager org-wide once combined with APRAS-9s shared role-type (needs explicit resolution), AGENTS.md is already stale re: manager_visible not just visible_to_id. Redispatching spec-generator.",
     "running": true,
     "priority": "medium",
     "blockedBy": [
