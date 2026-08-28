@@ -527,8 +527,8 @@
   {
     "id": "APRAS-31",
     "title": "Implement space/amenity reservation system",
-    "status": "specreview",
-    "justification": "Architectural spec ready in docs/tasks/APRAS-26-analysis.md (Spec A) -- let residents book shared amenities against an availability calendar with server-side double-booking prevention. Identified as a COM21 parity gap.",
+    "status": "inprogress",
+    "justification": "Space/amenity reservation system (ReservableSpace + SpaceReservation). Spec approved after 1 revision round (fixed a stale migration number, a false CategoriesPage.tsx UI-pattern claim, and an underspecified query-param interaction). Implementation dispatched.",
     "expected_results": [
       "ReservableSpace admin-managed CRUD (Administrator/Director)",
       "SpaceReservation booking with server-side overlap/double-booking prevention",
@@ -536,7 +536,7 @@
     ],
     "blockedBy": [],
     "spec_path": "docs/tasks/APRAS-31-spec.md",
-    "spec_iterations": 0,
+    "spec_iterations": 1,
     "qa_iterations": 0,
     "last_review_findings": [],
     "created_at": "2026-08-27T23:45:00-03:00",
