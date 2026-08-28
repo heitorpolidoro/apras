@@ -12,12 +12,12 @@ O condomínio precisa deliberar formalmente (aprovação de orçamento, obras, d
 
 Esta task entrega duas coisas distintas:
 
-1. **Assembleia** — votação formal, um voto por lote, restrita a proprietários adimplentes, atribuída, agrupada por pauta, com geração de **minuta de ata**.
+1. **Assembleia** — votação formal, um voto por lote (lançável por qualquer elegível do lote — proprietário(s) ou cadastro manual extra), restrita a lotes adimplentes, atribuída, agrupada por pauta, com geração de **minuta de ata**.
 2. **Enquete** — consulta informal, um voto por usuário, aberta a qualquer morador, opcionalmente anônima, sem valor deliberativo.
 
 ## Scope
 
-**Entra:** modelo `Assembly` (container mínimo), `Vote`, `VoteOption`, `Ballot` (append-only), `BallotRejection`, flag de inadimplência no `Lot`, apuração com janela fechada, geração de minuta em HTML, salvamento da minuta no Document Center existente, RBAC, frontend das duas modalidades.
+**Entra:** modelo `Assembly` (container mínimo), `Vote`, `VoteOption`, `Ballot` (append-only, com retirada), `BallotRejection`, `LotVoterEligibility`, flag de inadimplência no `Lot`, apuração com janela fechada, geração de minuta em HTML, salvamento da minuta no Document Center existente, RBAC, frontend das duas modalidades.
 
 **Não entra:** ver **Non-Goals** ao final. Em especial: sem agendamento/calendário, sem quórum, sem presença/check-in, sem procuração, sem voto ponderado, sem voto secreto real, sem assinatura digital.
 
@@ -72,13 +72,16 @@ class BallotRejectionReason(StrEnum):
     NO_ACTIVE_LOT_LINK = "NO_ACTIVE_LOT_LINK"
     VOTE_NOT_OPEN = "VOTE_NOT_OPEN"
     ROLE_FORBIDDEN = "ROLE_FORBIDDEN"
+    LOT_ALREADY_VOTED = "LOT_ALREADY_VOTED"
 ```
+
+`LOT_ALREADY_VOTED` — adicionado após a revisão do usuário sobre múltiplos elegíveis por lote (ver seção Elegibilidade): tentativa de um elegível votar por um lote enquanto outro elegível do mesmo lote já tem cédula ativa.
 
 ⚠️ **diverge do scope doc:** não existe `VoteType.FREE_TEXT`. Foi cortado deliberadamente — texto livre não apura, não congela em snapshot, se autoidentifica em enquete anônima, e duplica o módulo de Feedback, que já faz texto livre com anonimato e resposta do board. **Não deixar campo, hook ou ponto de extensão preparado para texto livre**: se a necessidade aparecer, é decisão futura, não estrutura antecipada.
 
 ### `backend/app/models/voting.py` (arquivo novo)
 
-Um arquivo para os cinco modelos, seguindo o precedente de `finance.py`, que agrupa `FinanceCategory`/`BudgetLine`/`FinancialTransaction`.
+Um arquivo para os **seis** modelos, seguindo o precedente de `finance.py`, que agrupa `FinanceCategory`/`BudgetLine`/`FinancialTransaction`.
 
 ```python
 class Assembly(SQLModel, table=True):
@@ -157,11 +160,43 @@ class VoteOption(SQLModel, table=True):
     vote: Vote = Relationship(back_populates="options")
 
 
-class Ballot(SQLModel, table=True):
-    """Cédula. APPEND-ONLY: nunca sofre UPDATE nem DELETE.
+class LotVoterEligibility(SQLModel, table=True):
+    """Elegível extra de assembleia para um lote, além dos `UserLotLink` com
+    `association_type == PROPRIETARIO` (que já cobrem sozinhos o caso de
+    co-propriedade — o modelo já permite mais de um `PROPRIETARIO` por lote,
+    sem constraint que limite a um só).
 
-    Trocar o voto insere uma nova linha; a apuração considera a última linha
-    por `voter_key` (maior `cast_at`, desempate por `id`).
+    Cadastro manual porque depende de documento que o APRAS não verifica
+    (certidão de casamento, por exemplo): quem administra decide, fora do
+    sistema, se aquela pessoa realmente tem direito de representar o lote.
+    """
+
+    __tablename__ = "lot_voter_eligibility"
+    __table_args__ = (
+        UniqueConstraint("lot_id", "user_id", name="uq_lot_voter_eligibility"),
+    )
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    lot_id: UUID = Field(
+        foreign_key="lot.id", ondelete="CASCADE", nullable=False, index=True
+    )
+    user_id: UUID = Field(
+        foreign_key="user.id", ondelete="CASCADE", nullable=False, index=True
+    )
+    added_by_id: UUID | None = Field(
+        default=None, foreign_key="user.id", ondelete="SET NULL", nullable=True
+    )
+    added_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+
+
+class Ballot(SQLModel, table=True):
+    """Cédula. APPEND-ONLY: nunca sofre UPDATE nem DELETE — nem a retirada é
+    um UPDATE, é uma nova linha com `is_retraction=True`.
+
+    "Cédula ativa" de um `voter_key` = última linha por `cast_at` (desempate
+    por `id`). Se essa última linha tem `is_retraction=True`, o `voter_key`
+    está **sem voto ativo no momento** — não conta na apuração e (em
+    ASSEMBLEIA) libera o lote para qualquer outro elegível votar.
     """
 
     __tablename__ = "ballot"
@@ -178,13 +213,18 @@ class Ballot(SQLModel, table=True):
     lot_id: UUID | None = Field(
         default=None, foreign_key="lot.id", ondelete="SET NULL", nullable=True, index=True
     )
+    # Quem efetivamente lançou ESTA linha (não é "o lote", é a pessoa). Em
+    # ASSEMBLEIA, é quem detém a cédula ativa do lote enquanto ela não for
+    # retirada — só essa pessoa pode trocar ou retirar (ver Elegibilidade).
     voter_user_id: UUID | None = Field(
         default=None, foreign_key="user.id", ondelete="SET NULL", nullable=True, index=True
     )
     # Congela a fração ideal do lote no instante do voto. Voto ponderado não é
     # implementado no v1, mas fica recalculável depois mesmo que a fração mude.
     fraction_ideal_at_cast: float | None = Field(default=None, nullable=True)
-    selected_option_ids_json: str = Field(nullable=False)
+    is_retraction: bool = Field(default=False, nullable=False)
+    # Vazio/null quando is_retraction=True.
+    selected_option_ids_json: str | None = Field(default=None, nullable=True)
     cast_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
 
     vote: Vote = Relationship(back_populates="ballots")
@@ -193,6 +233,8 @@ class Ballot(SQLModel, table=True):
 ⚠️ **diverge do scope doc:** **não existe** `UniqueConstraint("vote_id", "voter_key")`. A troca de voto é permitida, então o mesmo votante gera N linhas legitimamente. A unicidade é regra de leitura ("a última por `voter_key`"), não de esquema. Um índice não-único cobre a consulta.
 
 ⚠️ **diverge do scope doc:** **não existe** `Ballot.free_text_response`.
+
+**Adicionado após revisão do usuário, além das seis perguntas originais:** `LotVoterEligibility` e `Ballot.is_retraction` — ver seção Elegibilidade para a mecânica completa de retirada/bloqueio de voto por lote.
 
 ```python
 class BallotRejection(SQLModel, table=True):
@@ -237,11 +279,11 @@ Três campos novos em `Lot`:
 
 ### Migration
 
-`backend/alembic/versions/0025_add_voting_tables.py` (a última existente é `0024_task_visible_to_m2m.py`).
+`backend/alembic/versions/0025_add_voting_tables.py` — **checar `alembic heads` no momento da implementação**; a última existente nesta revisão da spec é `0024_task_visible_to_m2m.py`, mas várias tasks concorrentes têm mexido no fim da cadeia de migrations neste repo, então não assumir o número sem checar.
 
-- Cria os seis enums (`AssemblyType`, `AssemblyStatus`, `VoteKind`, `VoteType`, `VoteStatus`, `BallotRejectionReason`) e as cinco tabelas: `assembly`, `vote`, `vote_option`, `ballot`, `ballot_rejection`.
+- Cria os seis enums (`AssemblyType`, `AssemblyStatus`, `VoteKind`, `VoteType`, `VoteStatus`, `BallotRejectionReason`) e as **seis** tabelas: `assembly`, `vote`, `vote_option`, `ballot`, `ballot_rejection`, `lot_voter_eligibility`.
 - `ALTER TABLE lot` adicionando `is_delinquent` (`server_default='false'`, `nullable=False`), `delinquency_updated_at`, `delinquency_updated_by_id`.
-- `downgrade()` derruba as cinco tabelas, as três colunas e os enums.
+- `downgrade()` derruba as seis tabelas, as três colunas e os enums.
 
 Enums como `sa.Enum(..., native_enum=False)` ou `sa.String`, conforme o que as migrations existentes já fazem — a suíte de testes cria o schema via `SQLModel.metadata.create_all()` contra SQLite em memória (ver o comentário em `user_type.py` sobre `ARRAY` não compilar em SQLite), então nada específico de Postgres.
 
@@ -251,20 +293,41 @@ Enums como `sa.Enum(..., native_enum=False)` ou `sa.String`, conforme o que as m
 
 Guard de service layer, seguindo o padrão de `_assert_gatekeeper_access` em `access_logs.py`.
 
-`_assert_can_cast(user, vote, lot_id)` avalia **nesta ordem**, e **toda recusa grava uma linha em `BallotRejection`** antes de levantar o erro:
+`_assert_can_cast(user, vote, lot_id)` avalia **nesta ordem**, e **toda recusa grava uma linha em `BallotRejection` com `session.commit()` explícito antes de levantar o erro** — mesmo padrão de `visitor_service.py` para expirar-e-recusar: se só desse `session.add` e a request abortasse depois, a linha de recusa sumiria com o rollback:
 
 1. **Janela** — `vote.status == OPEN` e `opens_at <= now < closes_at`. Senão `VOTE_NOT_OPEN`.
 2. **Papel** — `user.role` não pode ser `GUEST` nem `PORTEIRO`, em nenhuma das duas modalidades. Senão `ROLE_FORBIDDEN`.
 3. **Se `kind == ASSEMBLEIA`:**
    - `lot_id` é obrigatório no corpo da requisição.
-   - Existe `UserLotLink` para `(user, lot)` com `association_type == PROPRIETARIO`, ativo na data (`start_date` nulo ou `<= now`, e `end_date` nulo ou `> now`). Senão `NOT_OWNER`.
    - `lot.is_deleted == False`. Senão `NOT_OWNER`.
+   - O usuário está no **conjunto elegível do lote** (ver subseção abaixo). Senão `NOT_OWNER`. **Checar antes da adimplência** — quem nem é elegível não deve ver um erro de inadimplência, só de "não é elegível".
    - **`lot.is_delinquent == False`. Senão `DELINQUENT_LOT`.**
+   - **Trava por lote** (ver subseção "Um voto por lote, vários elegíveis" abaixo). Se já existe cédula ativa de OUTRO elegível para este lote nesta votação, recusa com `LOT_ALREADY_VOTED` — a menos que a requisição seja `retract=True` ou uma troca do próprio detentor da cédula ativa, tratadas à parte.
    - `voter_key = f"lot:{lot_id}"`, `fraction_ideal_at_cast = lot.fraction_ideal`.
 4. **Se `kind == ENQUETE`:**
    - Existe algum `UserLotLink` ativo para o usuário, de **qualquer** `association_type` — inclusive `INQUILINO`. Senão `NO_ACTIVE_LOT_LINK`.
    - Sem checagem de adimplência.
    - `voter_key = f"user:{user.id}"`, `lot_id` e `fraction_ideal_at_cast` ficam nulos.
+
+### Conjunto elegível do lote (`ASSEMBLEIA`)
+
+⚠️ **Adicionado após revisão do usuário** (não estava na primeira versão desta spec): elegível para votar por um lote em assembleia é a **união** de:
+
+1. Todo `UserLotLink` ativo com `association_type == PROPRIETARIO` para aquele lote — **cobre co-propriedade automaticamente**: o modelo já permite mais de um `PROPRIETARIO` por lote (sem constraint que limite a um só), então dois donos do mesmo lote já caem aqui sem nenhuma estrutura nova.
+2. Toda entrada em `LotVoterEligibility` para aquele lote (cadastro manual, para gente que representa o lote mas não está registrada como `PROPRIETARIO` no sistema — ex: cônjuge, por documento que o APRAS não verifica).
+
+Editar `LotVoterEligibility` (adicionar/remover elegível extra de um lote): `ADMINISTRATOR`, `DIRECTOR`, **`MANAGER`**.
+
+### Um voto por lote, vários elegíveis — mecânica de posse e retirada
+
+⚠️ **Adicionado após revisão do usuário.** O voto continua sendo **um por lote** (não um por pessoa do conjunto elegível), mas mais de uma pessoa pode ter o direito de lançá-lo. A mecânica:
+
+- **Ninguém do conjunto votou ainda para esta votação** → qualquer elegível do lote pode lançar a primeira cédula. Essa pessoa passa a ser a **detentora** da cédula ativa do lote.
+- **Alguém já votou** → só a **detentora** pode trocar a opção escolhida (nova linha, `is_retraction=False`) ou **retirar o voto** (nova linha, `is_retraction=True`, sem opções). Qualquer outro elegível do lote que tentar votar recebe `403 LOT_ALREADY_VOTED` — grava `BallotRejection` como qualquer outra recusa.
+- **Depois de retirada** → a última linha do `voter_key` do lote é `is_retraction=True`, então o lote está **sem cédula ativa**, e **qualquer** elegível do lote (inclusive quem retirou) pode lançar a próxima, tornando-se a nova detentora.
+- "Detentora" é lida dinamicamente: é `voter_user_id` da última linha não-retratada daquele `voter_key`. Não existe coluna separada de "dono da cédula" — cai direto de `get_latest_ballots`.
+
+Isso não muda a contagem: a apuração por lote (`voter_key = lot:<id>`) continua contando 1 por lote, é só que agora "quem pode lançar/trocar/retirar aquele 1 voto" é um conjunto de pessoas em vez de uma só.
 
 ### Momento da validação
 
@@ -279,7 +342,7 @@ Consequências, que caem todas da mesma regra e **não são exceções codificad
 
 ### Um proprietário, vários lotes
 
-Cai naturalmente do `voter_key`: um proprietário de dois lotes tem duas cédulas, `lot:<A>` e `lot:<B>`, e conta 2 na apuração. Nenhuma regra especial.
+Cai naturalmente do `voter_key`: um elegível de dois lotes (dono de ambos, ou dono de um e `LotVoterEligibility` no outro) tem duas cédulas possíveis, `lot:<A>` e `lot:<B>`, e conta até 2 na apuração — uma por lote em que ele efetivamente detém a cédula ativa. Nenhuma regra especial além da mecânica de posse já descrita.
 
 ---
 
@@ -292,12 +355,13 @@ Cai naturalmente do `voter_key`: um proprietário de dois lotes tem duas cédula
 | Criar votação com `kind == ENQUETE` | `ADMINISTRATOR`, `DIRECTOR`, `MANAGER` |
 | Editar votação | Mesmos da criação, **e só enquanto não houver nenhuma cédula**. Depois da primeira, a votação está congelada — resta fechar antecipadamente. |
 | Fechar votação antecipadamente | Mesmos da criação |
-| Votar em `ASSEMBLEIA` | Proprietário de lote ativo e adimplente (ver Elegibilidade) |
+| Votar em `ASSEMBLEIA` | Conjunto elegível do lote — `PROPRIETARIO` ativo ∪ `LotVoterEligibility` (ver Elegibilidade) |
 | Votar em `ENQUETE` | Qualquer vínculo ativo a lote, inclusive `INQUILINO` |
-| Ver apuração | Quem podia votar + `ADMINISTRATOR`/`DIRECTOR` — **só após o fechamento** |
+| Ver apuração | Quem podia votar + `ADMINISTRATOR`/`DIRECTOR`/**`MANAGER`** — **só após o fechamento** |
 | Ver contagem de participação | Os mesmos, a qualquer momento |
-| Ver o próprio voto | O próprio votante, sempre |
+| Ver o próprio voto | O próprio votante, sempre (ver Visibilidade, Regra 3, para a extensão a outros elegíveis do mesmo lote) |
 | Alterar `Lot.is_delinquent` | `ADMINISTRATOR`, `DIRECTOR` |
+| Editar `LotVoterEligibility` (elegível extra do lote) | `ADMINISTRATOR`, `DIRECTOR`, `MANAGER` |
 | Gerar / salvar minuta | `ADMINISTRATOR`, `DIRECTOR` |
 
 `GUEST` e `PORTEIRO` nunca votam, nas duas modalidades — mesmo carve-out que o gatekeeper já tem em ações de governança.
@@ -336,9 +400,17 @@ Quando `kind == ENQUETE and is_anonymous`, a resposta da apuração **não emite
 
 Isso **não** é sigilo criptográfico — o vínculo continua no banco, e quem tem acesso ao banco vê. A copy da UI deve dizer **"sua resposta não é exibida com seu nome"**, nunca "ninguém sabe quem votou".
 
-### Regra 3 — o próprio voto
+### Regra 3 — o próprio voto e o voto de quem divide o lote
 
-O votante sempre enxerga a própria cédula, aberta ou fechada, anônima ou não, via endpoint dedicado. É necessário para poder trocar o voto, e não é vazamento.
+O votante sempre enxerga a própria cédula, aberta ou fechada, via endpoint dedicado. É necessário para poder trocar/retirar o voto, e não é vazamento.
+
+⚠️ **Adicionado após revisão do usuário:** essa visibilidade se estende a **outros elegíveis do mesmo lote**, a qualquer momento (mesmo com a votação aberta) — transparência de "quem mora junto":
+
+- **`ASSEMBLEIA`**: trivial — o voto já é do lote, um único registro. Qualquer elegível do conjunto do lote (ver Elegibilidade) enxerga a cédula ativa via `GET /votes/{id}/my-ballot`, mesmo não tendo sido quem a lançou. Só a **detentora** (quem lançou a cédula ativa) pode trocar ou retirar.
+- **`ENQUETE`, `is_anonymous == False`**: cada pessoa vota individualmente (`voter_key = user:<id>`), mas qualquer morador (`UserLotLink` ativo) do **mesmo lote** de outro votante consegue ver o voto individual dele, mesmo antes do fechamento — não só o próprio. Só quem lançou aquela cédula específica pode trocá-la.
+- **`ENQUETE`, `is_anonymous == True`**: **não se aplica** — a Regra 2 (mascaramento no serializer) prevalece. Ninguém, nem morador do mesmo lote, vê a identidade por trás de um voto anônimo; só o próprio votante vê a própria cédula.
+
+Endpoint: `GET /votes/{id}/my-ballot` deixa de ser "só a minha", vira "a cédula que eu tenho direito de ver" — em `ASSEMBLEIA` é a cédula ativa do(s) lote(s) em que sou elegível; em `ENQUETE` não anônima é a lista de cédulas de quem divide lote comigo (incluindo a minha); em `ENQUETE` anônima é só a minha.
 
 ### Após o fechamento
 
@@ -361,9 +433,11 @@ Duas portas de entrada, **sem depender de scheduler** (não introduzir um nesta 
 1. **Fechamento explícito** — `POST /votes/{id}/close` por Administrator/Director antes de `closes_at`.
 2. **Materialização preguiçosa** — a primeira leitura de qualquer endpoint da votação depois de `closes_at` calcula o snapshot, grava, marca `status = CLOSED` e `closed_at`, e responde já com ele. Idempotente: se `tally_snapshot_json` não é nulo, apenas lê.
 
-Conteúdo do snapshot: contagem por opção, total de votantes, total de lotes ativos (denominador), e a lista atribuída (omitida quando enquete anônima).
+Conteúdo do snapshot: contagem por opção, total de votantes, e a lista atribuída (omitida quando enquete anônima). **Denominador só existe em `ASSEMBLEIA`.**
 
-**Denominador = total de lotes com `is_deleted == False`.** Com validação no ato, não existe "lista de aptos" no fechamento — a elegibilidade foi móvel a votação inteira. A apuração reporta "22 votos de 40 lotes"; inadimplência governa quem conseguiu votar, não o denominador.
+**`ASSEMBLEIA` — denominador = total de lotes com `is_deleted == False`.** Com validação no ato, não existe "lista de aptos" no fechamento — a elegibilidade foi móvel a votação inteira. A apuração reporta "22 votos de 40 lotes"; inadimplência governa quem conseguiu votar, não o denominador.
+
+⚠️ **Adicionado após revisão do usuário: `ENQUETE` não tem denominador.** A primeira versão desta spec generalizava "total de lotes ativos" para as duas modalidades, mas isso não faz sentido em enquete — o voto é por pessoa, não por lote, e um lote pode ter 1 (o proprietário, sempre) ou vários moradores elegíveis (cônjuge, inquilino), então "contar lotes" não responde "de quantos". Calcular "total de pessoas elegíveis" (soma de `UserLotLink` ativos distintos) foi cogitado e descartado — não agrega valor suficiente para o custo de calcular. `TallyRead` de enquete só tem `voters_count`, sem denominador nenhum: "12 pessoas votaram", ponto.
 
 ---
 
@@ -371,51 +445,62 @@ Conteúdo do snapshot: contagem por opção, total de votantes, total de lotes a
 
 ### `backend/app/core/exceptions.py` — adicionar
 
-`AssemblyNotFoundError`, `VoteNotFoundError`, `VoteNotOpenError`, `VoteAlreadyClosedError`, `VoteFrozenError` (edição após a primeira cédula), `DelinquentLotError`, `NotLotOwnerError`, `NoActiveLotLinkError`, `TallyNotAvailableError`, `AnonymousAssemblyError`. Todas herdam `DomainError`, seguindo o formato das existentes.
+`AssemblyNotFoundError`, `VoteNotFoundError`, `VoteNotOpenError`, `VoteAlreadyClosedError`, `VoteFrozenError` (edição após a primeira cédula), `DelinquentLotError`, `NotLotOwnerError`, `NoActiveLotLinkError`, `TallyNotAvailableError`, `AnonymousAssemblyError`, **`LotAlreadyVotedError`** (outro elegível já detém a cédula ativa do lote). Todas herdam `DomainError`, seguindo o formato das existentes.
 
 ### `backend/app/core/exception_handlers.py`
 
-Mapear: `*NotFoundError` → `404`; `DelinquentLotError`, `NotLotOwnerError`, `NoActiveLotLinkError`, `TallyNotAvailableError` → `403`; `VoteNotOpenError`, `VoteAlreadyClosedError`, `VoteFrozenError`, `AnonymousAssemblyError` → `400`.
+Mapear: `*NotFoundError` → `404`; `DelinquentLotError`, `NotLotOwnerError`, `NoActiveLotLinkError`, `TallyNotAvailableError`, `LotAlreadyVotedError` → `403`; `VoteNotOpenError`, `VoteAlreadyClosedError`, `VoteFrozenError`, `AnonymousAssemblyError` → `400`.
 
 ### `backend/app/schemas/voting.py` (arquivo novo)
 
-`AssemblyCreate/Update/Read`, `VoteCreate/Update/Read`, `VoteOptionCreate/Read`, `BallotCreate` (`lot_id: UUID | None`, `selected_option_ids: list[UUID]`), `BallotRead`, `TallyRead`.
+`AssemblyCreate/Update/Read`, `VoteCreate/Update/Read`, `VoteOptionCreate/Read`, `LotVoterEligibilityCreate/Read`, `BallotCreate` (`lot_id: UUID | None`, `selected_option_ids: list[UUID]`), `BallotRetract` (corpo vazio — a ação é o endpoint), `BallotRead` (inclui `is_retraction`), `MyBallotRead`, `TallyRead`.
+
+`MyBallotRead` — schema de resposta de `GET /votes/{id}/my-ballot`, **uma lista de `BallotRead`**, não um objeto único: em `ASSEMBLEIA` traz a cédula ativa do(s) lote(s) em que o usuário é elegível (0 ou 1 por lote, já que só existe uma cédula ativa por lote); em `ENQUETE` não anônima traz a própria cédula **e** a de quem mais divide algum lote com o usuário; em `ENQUETE` anônima traz só a própria. Cada item tem um campo `can_edit: bool` calculado pelo service (verdadeiro só para quem detém aquela cédula especificamente).
 
 `TallyRead` é **um schema com dois modos**, e o service escolhe qual preencher:
 
-- votação aberta → `status`, `voters_count`, `total_lots`; `results` e `attributions` **ausentes**.
+- votação aberta → `status`, `voters_count`, `total_lots` (**só presente quando `kind == ASSEMBLEIA`**, ausente em `ENQUETE`); `results` e `attributions` **ausentes**.
 - votação fechada → `results` (por opção) e `attributions` (omitido em enquete anônima).
 
-`MULTIPLE_CHOICE` valida `len(selected_option_ids) >= 1`; `SINGLE_CHOICE` valida `== 1`. Todos os ids têm que pertencer à votação.
+`MULTIPLE_CHOICE` valida `len(selected_option_ids) >= 1`; `SINGLE_CHOICE` valida `== 1`. Todos os ids têm que pertencer à votação. Não se aplica a uma retirada (`BallotRetract` não carrega opções).
 
 ### `backend/app/services/voting_service.py` (arquivo novo)
 
 - `_assert_board(user)` — Administrator/Director.
 - `_assert_can_create_vote(user, kind)` — inclui Manager quando `ENQUETE`.
-- `_assert_can_cast(user, vote, lot_id)` — a cadeia da seção Elegibilidade, gravando `BallotRejection` em toda recusa.
-- `cast_ballot(...)` — sempre `INSERT`, nunca `UPDATE`.
-- `get_latest_ballots(vote)` — última linha por `voter_key`.
-- `compute_tally(vote)` / `materialize_snapshot(vote)`.
+- `_assert_can_view_tally(user, vote)` — quem podia votar + Administrator/Director/Manager (ver RBAC).
+- `get_lot_eligible_user_ids(lot)` — união de `UserLotLink` ativo com `association_type == PROPRIETARIO` e `LotVoterEligibility` do lote. Usado tanto por `_assert_can_cast` quanto pela Regra 3 de visibilidade.
+- `get_active_ballot_holder(vote, lot_id)` — `voter_user_id` da última linha (por `cast_at`) do `voter_key` do lote, ou `None` se não existe ou a última é `is_retraction=True`. Base da trava por lote.
+- `_assert_can_cast(user, vote, lot_id, *, is_retraction=False)` — a cadeia da seção Elegibilidade, incluindo a trava por lote via `get_active_ballot_holder`, gravando `BallotRejection` (com commit explícito) em toda recusa.
+- `cast_ballot(...)` — sempre `INSERT`, nunca `UPDATE`; aceita `is_retraction` para a linha de retirada.
+- `get_latest_ballots(vote)` — última linha por `voter_key`, filtrando fora as `is_retraction=True` (essas representam "sem voto ativo", não contam).
+- `get_my_ballots(user, vote)` — implementa a Regra 3 estendida: monta a lista de `MyBallotRead` conforme `kind`/`is_anonymous`, calculando `can_edit` por item.
+- `compute_tally(vote)` / `materialize_snapshot(vote)` — denominador só para `ASSEMBLEIA`.
 - `render_minutes_html(assembly)`.
+- `set_lot_voter_eligibility(lot, user, added_by)` / `remove_lot_voter_eligibility(...)`.
 
 ### `backend/app/api/v1/endpoints/voting.py` (arquivo novo)
 
 Dois routers no mesmo módulo, como `reservations.py` já faz com `spaces_router`/`reservations_router`.
 
 `assemblies_router`:
-- `POST /` · `GET /` · `GET /{id}` · `PATCH /{id}` · `POST /{id}/close`
+- `POST /` · `GET /` · `GET /{id}` · `PATCH /{id}` (bloqueado depois de `status == CLOSED`, mesma lógica do congelamento de votação) · `POST /{id}/close`
 - `GET /{id}/minutes` → HTML da minuta
 - `POST /{id}/minutes/save` → grava no Document Center
 
 `votes_router`:
 - `POST /` · `GET /` (filtros `kind`, `status`, `assembly_id`) · `GET /{id}` · `PATCH /{id}` · `POST /{id}/close`
-- `POST /{id}/ballots` → votar
-- `GET /{id}/my-ballot` → a cédula do usuário autenticado
+- `POST /{id}/ballots` → votar ou trocar voto (corpo `BallotCreate`)
+- `POST /{id}/ballots/retract` → retirar a cédula ativa que o usuário detém (corpo `BallotRetract`, vazio) — `404`/`403` se o usuário não é a detentora de nenhuma cédula ativa nesta votação
+- `GET /{id}/my-ballot` → lista conforme a Regra 3 estendida (ver Backend Changes → schemas)
 - `GET /{id}/tally` → contagem se aberta, apuração se fechada
+
+**Materialização preguiçosa (ver Fechamento e snapshot) fica restrita a `GET /{id}` e `GET /{id}/tally`** — não dispara em `GET /` (listagem), para não gravar N snapshots numa única chamada de lista.
 
 ### `backend/app/api/v1/endpoints/lots.py`
 
 - `PATCH /lots/{id}/delinquency` (Administrator/Director) — altera `is_delinquent` e carimba `delinquency_updated_at` / `delinquency_updated_by_id`. Endpoint dedicado, não campo no `PATCH /lots/{id}` genérico, porque é ele que barra voto e merece superfície própria.
+- `POST /lots/{id}/voter-eligibility` / `DELETE /lots/{id}/voter-eligibility/{user_id}` (Administrator/Director/Manager) — gerencia `LotVoterEligibility`.
 
 ### `backend/app/api/v1/api.py`
 
@@ -442,7 +527,14 @@ Conteúdo, por `Assembly`:
 - **Lotes barrados por inadimplência**, lidos de `BallotRejection` com `reason == DELINQUENT_LOT`. Obrigatório — sem isso a minuta parece ter perdido gente, e é o que responde "por que a unidade 12 não consta".
 - Rodapé: espaço de assinatura e nota de que o documento foi gerado pelo sistema e não substitui ata registrada.
 
-**Salvamento:** `POST /assemblies/{id}/minutes/save` grava a minuta como `AssociationDocument` numa pasta do Document Center, com `mime_type = "text/html"`. O `AssociationDocument` já tem versionamento via `previous_version_id`, então o síndico pode subir a versão final assinada como nova versão do mesmo documento.
+**Salvamento — mecanismo exato** (não estava especificado na primeira versão desta spec, corrigido após review): `POST /assemblies/{id}/minutes/save` (sem corpo) segue o mesmo caminho que `media_service.py` já usa para persistir conteúdo gerado no servidor:
+
+1. `render_minutes_html(assembly)` gera a string HTML.
+2. Grava os bytes via `storage_service` (o mesmo `LocalStorageProvider.save_file` que `media_service.py` usa), recebendo de volta `file_url` e `file_size_bytes` — não inventar um mecanismo de storage novo.
+3. `folder_id`: `AssociationDocumentCreate.folder_id` é obrigatório e não existe convenção de pasta padrão hoje. Resolver com find-or-create: procurar (ou, na primeira vez, criar via `document_service.create_folder`) uma pasta de nome fixo `"Atas de Assembleia"` na raiz do Document Center, e usar o `id` dela. Não expor escolha de pasta ao usuário nesta task — é sempre essa.
+4. Cria o `AssociationDocument` com `mime_type = "text/html"`, `file_url`/`file_size_bytes` do passo 2, `folder_id` do passo 3.
+
+`AssociationDocument` já tem versionamento via `previous_version_id`, então o síndico pode subir a versão final assinada como nova versão do mesmo documento (fora desta task — a UI de upload de nova versão já existe no Document Center).
 
 ---
 
@@ -453,8 +545,9 @@ Conteúdo, por `Assembly`:
 - `frontend/src/features/assembly-voting/` — nova feature, seguindo a estrutura de `space-reservation-management/`:
   - lista de assembleias e enquetes;
   - criação de assembleia e de votação (Administrator/Director; Manager só enquete);
-  - tela de votação com as opções, o próprio voto destacado quando já votou, e botão de trocar enquanto a janela estiver aberta;
-  - tela de apuração, que durante a janela mostra **apenas** a contagem de votantes;
+  - gestão de `LotVoterEligibility` por lote (Administrator/Director/Manager) — tela simples de adicionar/remover elegível extra, na área de gestão de lotes ou dentro da própria feature de votação;
+  - tela de votação com as opções; quando o lote/usuário já tem cédula ativa, mostra quem votou (se `can_edit == true`, botões de trocar e **retirar voto**; se `can_edit == false` mas o usuário é elegível do mesmo lote, mostra o voto em modo leitura com aviso "votado por [nome], você também pode votar se ele retirar");
+  - tela de apuração, que durante a janela mostra **apenas** a contagem de votantes, sem denominador em enquete;
   - visualização da minuta.
 - `App.tsx` — rotas com `ProtectedRoute` gatilhado por papel; `PORTEIRO` e `GUEST` não alcançam nenhuma delas.
 - `Navbar.tsx` — item de menu.
@@ -469,7 +562,7 @@ Explicitamente fora, e a serem recusados se aparecerem no review:
 - **Voto secreto real.** Consequência declarada: **eleição e destituição de síndico por voto secreto não são suportadas pelo APRAS** — fazem-se no papel. Isto é limite conhecido, não bug.
 - Quórum: sem cálculo, sem enforcement, sem registro de presença ou check-in.
 - Agendamento e calendário compartilhado. `Assembly` tem `held_on` e nada mais; não existe view de calendário nem lembrete.
-- Procuração / voto por representante.
+- Procuração / voto por representante formal (documento de poderes para uma assembleia específica, por terceiro que não mora no lote). `LotVoterEligibility` é diferente: uma designação permanente de quem, dentro do próprio lote, pode representar o voto daquela unidade (ex: cônjuge) — não substitui procuração para casos como "meu advogado vota por mim nesta AGE".
 - Voto ponderado por `fraction_ideal`. O valor é congelado na cédula para permitir recálculo futuro, mas nenhuma apuração o utiliza no v1.
 - `FREE_TEXT` em votação, e **qualquer estrutura preparatória para ele**.
 - Geração de PDF no servidor e qualquer dependência de PDF.
@@ -488,7 +581,7 @@ Os testes abaixo cobrem as regras decididas e são obrigatórios. Cobertura gen�
 **Backend**
 
 1. Proprietário com dois lotes vota nos dois; a apuração conta 2.
-2. Segundo voto do mesmo lote substitui o primeiro; a apuração conta 1 e considera a cédula mais recente.
+2. Detentora da cédula ativa de um lote troca a opção escolhida (nova linha, mesmo `voter_key`); a apuração conta 1 e considera a cédula mais recente não-retratada.
 3. Inquilino é recusado em assembleia (`403`, `BallotRejection` com `NOT_OWNER`) e aceito em enquete.
 4. Lote inadimplente é recusado no ato (`403`) **e** grava `BallotRejection` com `DELINQUENT_LOT`.
 5. Votou adimplente → lote marcado inadimplente → tentativa de troca é recusada e **o voto original permanece na apuração**.
@@ -499,20 +592,29 @@ Os testes abaixo cobrem as regras decididas e são obrigatórios. Cobertura gen�
 10. Enquete anônima fechada: a resposta de `/tally` **não contém `voter_user_id` nem `lot_id`** — o teste que separa mascaramento no serializer de esconder no frontend.
 11. `GUEST` e `PORTEIRO` são recusados nas duas modalidades.
 12. A minuta inclui a lista de lotes barrados por inadimplência.
+13. **Lote com dois `PROPRIETARIO`** (co-propriedade, sem `LotVoterEligibility`): o segundo dono vota primeiro; o primeiro dono tentando votar depois recebe `403 LOT_ALREADY_VOTED`, gravando `BallotRejection`.
+14. **`LotVoterEligibility`**: usuário adicionado manualmente (não `PROPRIETARIO`) consegue votar pelo lote; removido da lista, um voto seu anterior permanece na apuração, mas uma nova tentativa de voto é recusada com `NOT_OWNER`.
+15. **Retirada libera o lote**: A vota pelo lote → A retira o voto (`POST /{id}/ballots/retract`) → B, outro elegível do mesmo lote, consegue votar em seguida. A tentando trocar depois de já ter retirado (sem votar de novo) recebe `403` (não é mais detentora de nenhuma cédula ativa).
+16. **`GET /votes/{id}/my-ballot`**: para `ASSEMBLEIA`, um segundo elegível do mesmo lote (que não votou) recebe a cédula ativa lançada pelo primeiro, com `can_edit=False`; para `ENQUETE` não anônima, um morador vê a lista incluindo o voto de outro morador do mesmo lote, também com `can_edit=False` no item alheio; para `ENQUETE` anônima, só o próprio item aparece.
+17. `MANAGER` sem nenhum vínculo a lote consegue `GET /votes/{id}/tally` e ver a contagem de uma `ENQUETE` que criou (mesmo antes do fechamento) e a apuração completa de uma `ASSEMBLEIA` (depois do fechamento).
+18. `ENQUETE` fechada: `TallyRead` não tem campo de denominador/`total_lots` (só `voters_count` e `results`).
 
-Complementares: `PATCH` em votação com cédula existente devolve `400` (`VoteFrozenError`); criar votação de assembleia com `is_anonymous=True` devolve `400`; `GET /my-ballot` devolve a própria cédula com a votação aberta; votar numa assembleia em `DRAFT` devolve `400` mesmo com a janela da votação aberta; `POST /assemblies/{id}/close` fecha em cascata as votações abertas e materializa o snapshot de cada uma; `GET /{id}/minutes` antes do fechamento devolve `400`.
+Complementares: `PATCH` em votação com cédula existente devolve `400` (`VoteFrozenError`); `PATCH` em `Assembly` com `status == CLOSED` devolve `400`; criar votação de assembleia com `is_anonymous=True` devolve `400`; votar numa assembleia em `DRAFT` devolve `400` mesmo com a janela da votação aberta; `POST /assemblies/{id}/close` fecha em cascata as votações abertas e materializa o snapshot de cada uma; `GET /{id}/minutes` antes do fechamento devolve `400`; `POST /{id}/ballots/retract` sem deter nenhuma cédula ativa devolve `404`/`403`; a materialização preguiçosa não dispara em `GET /votes/` (listagem), só em `GET /{id}` e `GET /{id}/tally`.
 
 **Frontend**
 
-Testes de componente para: a tela de apuração não renderizar resultado por opção com a votação aberta; o botão de trocar voto aparecer só dentro da janela; a rota ser inacessível a `PORTEIRO`.
+Testes de componente para: a tela de apuração não renderizar resultado por opção com a votação aberta; a tela de apuração de enquete não renderizar denominador; o botão de trocar/retirar voto aparecer só para quem detém a cédula (`can_edit=True`) e só dentro da janela; um segundo elegível do mesmo lote ver o voto em modo leitura quando `can_edit=False`; a rota ser inacessível a `PORTEIRO` e `GUEST`.
 
 ---
 
 ## Expected Results
 
 1. Administrator/Director cria uma assembleia (AGO/AGE) com N votações de pauta, e cada votação aceita exatamente um voto por lote.
-2. Proprietário de dois lotes vota duas vezes, uma por lote, e a apuração conta os dois.
+2. Elegível de dois lotes (dono de ambos, ou dono de um e cadastrado via `LotVoterEligibility` no outro) vota nos dois, uma cédula por lote, e a apuração conta os dois.
 3. Lote marcado como inadimplente é impedido de votar no momento do voto, com a recusa registrada e visível na minuta; se quitar durante a janela, passa a votar.
-4. Com a votação aberta, o endpoint de apuração devolve apenas a contagem de votantes para qualquer papel, incluindo Administrator; o resultado por opção só aparece depois do fechamento.
+4. Com a votação aberta, o endpoint de apuração devolve apenas a contagem de votantes para qualquer papel, incluindo Administrator, e em `ENQUETE` sem denominador; o resultado por opção só aparece depois do fechamento.
 5. Enquete com anonimato ligado não devolve identificação do votante na resposta da API nem depois de fechar, e o votante continua vendo o próprio voto.
-6. A minuta da assembleia é gerada em HTML com resultado por pauta, atribuição por Bloco/Lote, denominador de lotes ativos e lista de lotes barrados por inadimplência, e pode ser salva no Document Center.
+6. Um lote com mais de um elegível (co-proprietários, ou proprietário + `LotVoterEligibility`) tem exatamente um voto ativo por vez: qualquer elegível pode lançar o primeiro; depois disso, só quem lançou pode trocar ou retirar; a retirada libera o lote para qualquer elegível votar de novo; qualquer elegível do lote enxerga a cédula ativa mesmo sem ser quem a lançou.
+7. Em `ENQUETE` não anônima, moradores do mesmo lote enxergam o voto individual uns dos outros (não só o próprio), mesmo com a votação aberta; em `ENQUETE` anônima, ninguém vê a identidade de ninguém, nem morador do mesmo lote.
+8. `MANAGER` vê apuração e contagem de participação nas duas modalidades, mesmo sem vínculo a nenhum lote.
+9. A minuta da assembleia é gerada em HTML com resultado por pauta, atribuição por Bloco/Lote, denominador de lotes ativos e lista de lotes barrados por inadimplência, e é salva no Document Center numa pasta "Atas de Assembleia" criada automaticamente na primeira vez.
