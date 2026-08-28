@@ -225,6 +225,15 @@ class FeedbackStatus(StrEnum):
     ANSWERED = "ANSWERED"
 
 
+class ReservationStatus(StrEnum):
+    """Enumeration for space reservation status."""
+
+    PENDING = "PENDING"
+    CONFIRMED = "CONFIRMED"
+    CANCELLED = "CANCELLED"
+    REJECTED = "REJECTED"
+
+
 class PackageStatus(StrEnum):
     """Enumeration for package pickup status."""
 

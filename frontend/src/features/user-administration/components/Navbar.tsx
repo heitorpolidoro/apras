@@ -153,6 +153,35 @@ const Navbar: React.FC = () => {
 
         {effectiveRole !== UserRole.PORTEIRO && (
           <Link
+            to="/reservations"
+            className={cn(
+              "text-sm font-semibold transition-all hover:text-primary relative py-1",
+              location.pathname === "/reservations"
+                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
+                : "text-muted-foreground",
+            )}
+          >
+            {t("nav.reservations", "Reservas")}
+          </Link>
+        )}
+
+        {(effectiveRole === UserRole.ADMINISTRATOR ||
+          effectiveRole === UserRole.DIRECTOR) && (
+          <Link
+            to="/spaces"
+            className={cn(
+              "text-sm font-semibold transition-all hover:text-primary relative py-1",
+              location.pathname === "/spaces"
+                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
+                : "text-muted-foreground",
+            )}
+          >
+            {t("nav.manageSpaces", "Espaços")}
+          </Link>
+        )}
+
+        {effectiveRole !== UserRole.PORTEIRO && (
+          <Link
             to="/documents"
             className={cn(
               "text-sm font-semibold transition-all hover:text-primary relative py-1",

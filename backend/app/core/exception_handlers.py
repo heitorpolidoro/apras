@@ -47,8 +47,11 @@ from app.core.exceptions import (
     ProjectInvalidProgressError,
     ProjectNotFoundError,
     ProjectUpdateNotFoundError,
+    ReservableSpaceNotFoundError,
     ResidentCPFConflictError,
     ResidentNotFoundError,
+    SpaceReservationConflictError,
+    SpaceReservationNotFoundError,
     TaskNotFoundError,
     UserLotLinkNotFoundError,
     VisitorNotFoundError,
@@ -94,6 +97,8 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             BudgetLineNotFoundError,
             FinancialTransactionNotFoundError,
             FeedbackNotFoundError,
+            ReservableSpaceNotFoundError,
+            SpaceReservationNotFoundError,
             PackageNotFoundError,
         ),
     ):
@@ -119,6 +124,7 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             ResidentCPFConflictError,
             BudgetLineAlreadyExistsError,
             FinanceCategoryAlreadyExistsError,
+            SpaceReservationConflictError,
             PackageAlreadyPickedUpError,
         ),
     ):

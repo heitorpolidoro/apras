@@ -28,6 +28,7 @@ from .enums import (
     PackageStatus,
     PhotoApprovalStatus,
     ProjectStatus,
+    ReservationStatus,
     ResidentRelationship,
     ShiftType,
     StorageProvider,
@@ -43,6 +44,7 @@ from .media_asset import MediaAsset
 from .occurrence import Occurrence, OccurrenceTimeline
 from .package import Package
 from .project import ConstructionProject, ProjectMilestone, ProjectUpdate
+from .reservation import ReservableSpace, SpaceReservation
 from .resident import Resident
 from .task import Task, TaskHistory
 from .user import User
@@ -93,9 +95,12 @@ __all__ = [
     "ProjectMilestone",
     "ProjectStatus",
     "ProjectUpdate",
+    "ReservableSpace",
+    "ReservationStatus",
     "Resident",
     "ResidentRelationship",
     "ShiftType",
+    "SpaceReservation",
     "StorageProvider",
     "Task",
     "TaskHistory",

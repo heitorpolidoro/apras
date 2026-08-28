@@ -486,6 +486,27 @@ class InvoiceFileTooLargeError(DomainError):
         super().__init__(message)
 
 
+class ReservableSpaceNotFoundError(DomainError):
+    """Raised when a reservable space is not found."""
+
+    def __init__(self, space_id: UUID) -> None:
+        super().__init__(f"Reservable space with ID {space_id} not found")
+
+
+class SpaceReservationNotFoundError(DomainError):
+    """Raised when a space reservation is not found or not visible to the caller."""
+
+    def __init__(self, reservation_id: UUID) -> None:
+        super().__init__(f"Reservation with ID {reservation_id} not found")
+
+
+class SpaceReservationConflictError(DomainError):
+    """Raised when a reservation would overlap an existing CONFIRMED/PENDING booking."""
+
+    def __init__(self) -> None:
+        super().__init__("This space is already booked for the requested time window")
+
+
 class PackageNotFoundError(DomainError):
     """Raised when a package is not found."""
 
