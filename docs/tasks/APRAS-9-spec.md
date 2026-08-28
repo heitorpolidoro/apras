@@ -65,9 +65,24 @@ def get_effective_user_type_ids(user: User, session: Session) -> set[UUID]:
 
 ### Call sites updated to use effective ids instead of raw `user.user_types`
 
-- `assert_menu_access` (`backend/app/api/deps.py`, APRAS-8): replace its `ut.allowed_menus for ut in current_user.user_types` iteration with a check against `get_effective_user_type_ids`.
-- `assert_manager_can_see_task` (`backend/app/api/deps.py`): replace `[ut.id for ut in current_user.user_types]` with `get_effective_user_type_ids`.
-- `list_tasks`'s SQL visibility filter (`backend/app/api/v1/endpoints/tasks.py`): the `Task.visible_to_id.in_(user_type_ids)` clause's `user_type_ids` must be built from `get_effective_user_type_ids`, not a raw ORM traversal of `current_user.user_types`.
+`assert_menu_access` and `assert_manager_can_see_task` currently take no `Session` and are called as plain functions (not via `Depends`). Both must gain a `session: Session` parameter, and every call site must be updated to pass it. `session` is already in scope (as a FastAPI-injected parameter) at every one of these call sites — verified by reading the endpoint modules — so this is a mechanical signature change, no new dependency wiring needed:
+
+- `assert_menu_access(current_user, menu_key)` → `assert_menu_access(current_user, menu_key, session)` (or keyword; exact param order is an implementation detail). Body: replace its `ut.allowed_menus for ut in current_user.user_types` iteration with a check against `get_effective_user_type_ids(current_user, session)`.
+  - Update all 8 call sites in `backend/app/api/v1/endpoints/tasks.py` (`create_task`, `list_tasks`, `update_task`, `get_task_history`, `delete_task`, `list_comments`, `create_comment`, `update_comment`).
+  - Update all 4 call sites in `backend/app/api/v1/endpoints/categories.py` (`list_categories`, `create_category`, `update_category`, `delete_category`).
+- `assert_manager_can_see_task(current_user, task)` → `assert_manager_can_see_task(current_user, task, session)`. Body: replace `[ut.id for ut in current_user.user_types]` with `get_effective_user_type_ids(current_user, session)`.
+  - Update all 5 call sites in `backend/app/api/v1/endpoints/tasks.py` (`update_task`, `get_task_history`, `list_comments`, `create_comment`, `update_comment`).
+- `list_tasks`'s SQL visibility filter (`backend/app/api/v1/endpoints/tasks.py`, the `Task.visible_to_id.in_(user_type_ids)` clause guarding `UserRole.MANAGER`): `user_type_ids` must be built from `get_effective_user_type_ids(current_user, session)`, not the raw ORM traversal `[ut.id for ut in current_user.user_types]` it uses today.
+
+That's 8 + 5 + 4 + 1 = 18 call-site edits total across `tasks.py` (14) and `categories.py` (4), plus the two helper-function signature changes themselves. This is the real footprint of this change in `deps.py`/`tasks.py`/`categories.py` — size estimation and review effort should account for all of it, not just the one SQL-filter line.
+
+### `backend/app/services/task_service.py` — two more call sites needing the same fix
+
+`TaskService.create_task` (currently ~lines 33-35) auto-defaults a new task's `visible_to_id` to `current_user.user_types[0].id` when a `MANAGER` creates a task without specifying one. A Manager relying solely on their role-type (the exact scenario this task fixes — zero explicit UserTypes) gets no auto-default here, since `current_user.user_types` is empty for them. Replace the `if current_user.user_types: db_task.visible_to_id = current_user.user_types[0].id` block with logic built on `get_effective_user_type_ids(current_user, session)`: pick a stable, deterministic member of that set (e.g. sorted, or prefer an explicit id over the role-type id if both exist) rather than an arbitrary first element — either is acceptable as long as it's deterministic and covers the role-type-only case.
+
+`TaskService.update_task` (currently ~lines 51-57) validates a `MANAGER`'s new `visible_to_id` against `[ut.id for ut in current_user.user_types]` only — same gap: a Manager with only a role-type can never successfully set `visible_to_id` to their own role-type's id. Replace the `user_type_ids = [ut.id for ut in current_user.user_types]` line with `get_effective_user_type_ids(current_user, session)`.
+
+Both `create_task` and `update_task` are `@staticmethod`s that already receive both `session` and `current_user` as parameters — no signature change is needed on either method; only their internal bodies change to call `get_effective_user_type_ids(current_user, session)` instead of traversing `current_user.user_types` directly.
 
 No other RBAC logic changes — `assert_can_edit_task`, category write-role restrictions, etc. are untouched.
 
@@ -77,13 +92,17 @@ No other RBAC logic changes — `assert_can_edit_task`, category write-role rest
 
 `UserType` interface gains `role?: string | null`.
 
-### `useMenuAccess.ts` (`frontend/src/features/user-administration/context/`)
+### `useEffectiveIdentity.ts` (`frontend/src/features/user-administration/context/`) — the single fold-in point
 
-Currently checks the effective user's `userTypeIds` (from `useEffectiveIdentity`) against fetched `UserType` records' `allowed_menus`. Extend it to also treat the `UserType` whose `role` matches the effective role as implicitly included — mirroring the backend's `get_effective_user_type_ids`, without needing a new hook: the existing `useUserTypes()` data already includes the role-linked rows (they're real `UserType` records now), so this is a matter of also matching by `role` field, not introducing a new data source.
+This hook, not `useTaskFiltering.ts`/`useMenuAccess.ts`/`simulatedPermissions.ts` individually, is where the role-linked UserType id must be folded in. Rationale: `useEffectiveIdentity()`'s `userTypeIds` output is already consumed independently by three separate call sites — `useTaskFiltering.ts:48` (via a `simulation` prop built by its callers), and `TaskList.tsx:111` / `TaskBoard.tsx:130` (which call `canEditSimulatedTask` directly with `userTypeIds` destructured from `useEffectiveIdentity()` at `TaskList.tsx:34` / `TaskBoard.tsx:29`). Folding the role-type id in at the source means all three get correct behavior automatically, with **zero changes** to `useTaskFiltering.ts`, `TaskList.tsx`, or `TaskBoard.tsx` themselves.
+
+Change `useEffectiveIdentity()` so its returned `userTypeIds` already includes the id of the `UserType` whose `role` matches the effective `role` (real or simulated), in addition to the explicitly-assigned ids it returns today. This mirrors how `useMenuAccess` already combines `useEffectiveIdentity()` + `useUserTypes()` in the same file's neighborhood — `useEffectiveIdentity` can call `useUserTypes()` itself (or receive its data) to look up the role-matching row and add its id to the returned `userTypeIds` set, for both the real-identity branch and the `isSimulating` branch (a simulated role must also get its role-type id folded in, not just the real user's).
+
+Because `useMenuAccess.ts` already filters purely via `userTypeIds.includes(userType.id) && userType.allowed_menus.includes(menuKey)` (no other role-matching logic of its own), once `useEffectiveIdentity()` folds the role-type id into `userTypeIds`, **`useMenuAccess.ts` needs no code change at all** — it inherits the fix for free. This supersedes any earlier note about extending `useMenuAccess.ts` directly.
 
 ### `simulatedPermissions.ts` (`frontend/src/features/task-management/utils/`)
 
-Same treatment: `canSeeSimulatedTask`/`canEditSimulatedTask` currently take `userTypeIds: string[]` computed from the simulated identity's explicit assignments; the caller (wherever these are invoked, e.g. `useTaskFiltering`) must fold in the role-linked type's id the same way, before calling these functions — the functions' own signatures don't need to change, just what gets passed in.
+No changes needed to `canSeeSimulatedTask`/`canEditSimulatedTask` themselves, nor to their callers (`useTaskFiltering.ts`, `TaskList.tsx`, `TaskBoard.tsx`): since all of them source `userTypeIds` from `useEffectiveIdentity()` (real or simulated), the fold-in above flows through to every caller unchanged.
 
 ### `AdminUserDashboard.tsx` — UserType management UI
 
@@ -95,6 +114,12 @@ Same treatment: `canSeeSimulatedTask`/`canEditSimulatedTask` currently take `use
 
 No code change needed — it already lists whatever `useUserTypes()` returns, so the 5 seeded role-types appear automatically, labeled by their seeded `name` (e.g. "Gerente (papel)").
 
+## Documentation
+
+`AGENTS.md`'s `### UserType` section (added by APRAS-8) currently states: "A user with no UserTypes assigned has no access to gated menus." This becomes false once APRAS-9 ships: such a user's access is now determined by their role-type's `allowed_menus` (still empty by default, but administrator-configurable, and no longer hard-denied by the absence of an explicit UserType). Update this sentence to describe the role-type fallback and reference `get_effective_user_type_ids` as the mechanism, e.g.: "A user with no explicitly-assigned UserTypes falls back to the UserType implicitly linked to their own role (see APRAS-9); since that role-type starts with empty `allowed_menus`, the practical effect is the same until an Administrator configures it."
+
+Also review the `DIRECTOR`/`MANAGER` RBAC table rows (lines ~311-313) referencing "at least one of the [role]'s assigned UserTypes" — reword to "assigned or role-linked UserTypes" (or equivalent) so the table doesn't imply only explicit assignments count.
+
 ## Non-Goals
 
 - Not creating a UI to add role-types beyond the 5 seeded ones, or to link a role to more than one UserType.
@@ -105,7 +130,7 @@ No code change needed — it already lists whatever `useUserTypes()` returns, so
 ## Testing
 
 - **Backend**: `get_effective_user_type_ids` unit tests (explicit types only, role-type only, both combined, deduplication if a user happens to have both). Migration test: exactly 5 role-types seeded with the correct role values and empty `allowed_menus`; the unique-per-role constraint actually prevents a second row with the same `role`. Endpoint tests: a Director with zero explicit UserTypes still gets 403 on `/tasks/*` (role-type starts empty, so this is *not* a regression — assert this explicitly so a future change to the default doesn't silently break the test's intent unnoticed); after setting the "Diretor (papel)" type's `allowed_menus` to `["tasks"]` via `PATCH /user-types/{id}`, that same Director (still with zero explicit types) now succeeds on `/tasks/*`. A task with `visible_to_id` set to the "Gerente (papel)" id is visible to a Manager with zero explicit UserTypes. Attempting `DELETE /user-types/{id}` on a role-type returns 403/400 (not 204).
-- **Frontend**: `useMenuAccess` test for role-type-only access (no explicit UserType assigned); `simulatedPermissions.ts` tests confirming a simulated role with no simulated UserTypes selected still resolves the role-type's `allowed_menus`; `AdminUserDashboard` test confirming the delete button is disabled/absent for a role-linked type row.
+- **Frontend**: `useEffectiveIdentity` test confirming `userTypeIds` includes the role-matching `UserType` id for both the real-identity branch and the `isSimulating` branch, with no explicit UserTypes assigned/simulated. `useMenuAccess` test for role-type-only access (no explicit UserType assigned) — should pass unchanged once `useEffectiveIdentity` is fixed, proving no `useMenuAccess.ts` code change was needed. `useTaskFiltering`/`TaskList`/`TaskBoard` tests confirming a simulated role with no simulated UserTypes selected still resolves the role-type's visibility/edit rules via `simulatedPermissions.ts`, with no changes to those three files. `AdminUserDashboard` test confirming the delete button is disabled/absent for a role-linked type row.
 
 ## Expected Results
 
@@ -114,3 +139,4 @@ No code change needed — it already lists whatever `useUserTypes()` returns, so
 3. Role-type `allowed_menus` is editable via the existing `PATCH /user-types/{id}` endpoint and UI, and takes effect immediately for every user of that role with no explicit UserType.
 4. Role-types cannot be deleted via the API or UI.
 5. `Task.visible_to_id` can target a role-type, making a task visible to every Manager (or Director, etc.) without any explicit UserType assignment.
+6. `AGENTS.md`'s `### UserType` section and the `DIRECTOR`/`MANAGER` RBAC table rows no longer claim a user with zero explicit UserTypes has "no access"/"is blocked" outright — both now describe the role-type fallback.
