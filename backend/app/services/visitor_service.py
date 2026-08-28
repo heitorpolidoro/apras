@@ -267,6 +267,15 @@ class VisitorService:
         return auth
 
     @staticmethod
+    def get_authorization_for_user(
+        session: Session, auth_id: UUID, current_user: User
+    ) -> VisitorAuthorization:
+        """Get an authorization by ID, enforcing the same lot-scoping rule as the other routes."""
+        auth = VisitorService.get_authorization_by_id(session, auth_id)
+        VisitorService._check_lot_access(session, auth.lot_id, current_user)
+        return auth
+
+    @staticmethod
     def revoke_authorization(
         session: Session, auth_id: UUID, current_user: User
     ) -> VisitorAuthorization:

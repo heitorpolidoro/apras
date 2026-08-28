@@ -127,7 +127,11 @@ export const VisitorAuthPage: React.FC = () => {
       )}
 
       {/* QR Code Modal */}
-      <AuthorizationQrModal authorization={qrAuth} onClose={() => setQrAuth(null)} />
+      <AuthorizationQrModal
+        key={qrAuth?.id ?? "none"}
+        authorization={qrAuth}
+        onClose={() => setQrAuth(null)}
+      />
 
       {/* Creation Modal */}
       <AuthorizationFormModal

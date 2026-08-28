@@ -112,9 +112,15 @@ def get_authorization(
     session: Annotated[Session, Depends(deps.get_session)],
     current_user: Annotated[User, Depends(deps.get_current_user)],
 ) -> VisitorAuthorizationRead:
-    """Fetch a single visitor pre-authorization by ID."""
-    del current_user  # no role check for this endpoint; auth-only, matches module convention
-    auth = VisitorService.get_authorization_by_id(session, authorization_id)
+    """Fetch a single visitor pre-authorization by ID.
+
+    No extra *role* check beyond authentication (matches this module's
+    convention), but the requester must still have lot access, same as
+    every other route here (`_check_lot_access`) -- otherwise any
+    authenticated user could pull another lot's visitor PII by guessing
+    an authorization UUID.
+    """
+    auth = VisitorService.get_authorization_for_user(session, authorization_id, current_user)
     return _to_authorization_read(auth)
 
 
@@ -127,9 +133,13 @@ def get_authorization_qr_code(
     session: Annotated[Session, Depends(deps.get_session)],
     current_user: Annotated[User, Depends(deps.get_current_user)],
 ) -> Response:
-    """Return a PNG QR code encoding the authorization's ID."""
-    del current_user  # no role check for this endpoint; auth-only, matches module convention
-    auth = VisitorService.get_authorization_by_id(session, authorization_id)
+    """Return a PNG QR code encoding the authorization's ID.
+
+    Same lot-scoping rule as `get_authorization` above -- the QR image embeds
+    visitor PII by reference, so it must not be fetchable for a lot the
+    requester has no relationship to.
+    """
+    auth = VisitorService.get_authorization_for_user(session, authorization_id, current_user)
     image = qrcode.make(str(auth.id))
     buffer = io.BytesIO()
     image.save(buffer, format="PNG")

@@ -25,9 +25,6 @@ export const AuthorizationQrModal: React.FC<AuthorizationQrModalProps> = ({
     let objectUrl: string | null = null;
     let cancelled = false;
 
-    setImageUrl(null);
-    setError(null);
-
     // Bare <img src="..."> cannot carry the Bearer auth header this endpoint
     // requires, so the image bytes are fetched as a blob through apiClient
     // (which attaches the token) and rendered via an object URL instead.
