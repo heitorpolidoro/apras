@@ -160,10 +160,16 @@
   {
     "id": "APRAS-14",
     "title": "Generate dynamic QR code passes for visitor/contractor entry validation at turnstiles/gates",
-    "status": "backlog",
-    "justification": "Digital QR code pass generation for visitor access validation.",
-    "running": false,
-    "priority": "medium"
+    "status": "specreview",
+    "justification": "QR code passes for visitor check-in: scanned by Gatekeeper via device camera (not physical turnstile hardware). Spec written, dispatched for review.",
+    "running": true,
+    "priority": "medium",
+    "spec_path": "docs/tasks/APRAS-14-spec.md",
+    "expected_results": [
+      "Any visitor authorization has a corresponding QR code image viewable/downloadable",
+      "Gatekeeper can scan the QR with device camera and reach the check-in confirmation modal",
+      "All existing check-in validation rules remain unaffected -- scanning is a faster path, not a bypass"
+    ]
   },
   {
     "id": "APRAS-15",
