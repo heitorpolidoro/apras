@@ -133,7 +133,15 @@
     "status": "specreview",
     "justification": "Dedicated role and interface for gatekeepers to check-in/check-out visitors and contractors. Picked up from backlog, exploring design.",
     "running": true,
-    "priority": "medium"
+    "priority": "medium",
+    "spec_path": "docs/tasks/APRAS-12-spec.md",
+    "expected_results": [
+      "PORTEIRO role exists in the database enum (verified against real Postgres)",
+      "PORTEIRO can check visitors in and out via the existing /gate flow",
+      "ADMINISTRATOR/DIRECTOR/MANAGER retain unchanged access to /gate",
+      "/gate route is now properly role-gated (fixes pre-existing unguarded-route gap)",
+      "PORTEIRO lands on /gate after login and cannot reach any other authenticated route, including /gate-monitor"
+    ]
   },
   {
     "id": "APRAS-13",
