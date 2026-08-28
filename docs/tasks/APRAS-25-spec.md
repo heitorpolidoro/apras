@@ -100,7 +100,7 @@ New `feedback.*` namespace in `en.json`/`pt.json`.
 
 ## Testing
 
-- **Backend**: `create_feedback` (any authenticated user succeeds, including `GUEST` — no role rejection case, matching Occurrence's actual behavior); `list_feedback` (staff sees all, resident sees only their own); anonymous masking (reporter identity hidden from staff-facing read when `is_anonymous=True`, but the same resident can still see their own anonymous submission in their own history); `respond_to_feedback` (Administrator/Director only, non-staff rejected); `response_seen_by_reporter` flips correctly on reporter view, resets on a new response.
+- **Backend**: `create_feedback` (any authenticated user succeeds, including `GUEST` — no role rejection case, matching Occurrence's actual behavior); `list_feedback` (staff sees all, resident sees only their own); anonymous masking (reporter identity hidden in `FeedbackRead` for any non-Administrator/Director viewer — including the reporter viewing their own item — when `is_anonymous=True`, revealed only to Administrator/Director; the same resident can still find their own anonymous submission in their own history because `list_feedback`'s filter matches the raw, unmasked `reporter_user_id` column); `respond_to_feedback` (Administrator/Director only, non-staff rejected); `response_seen_by_reporter` flips correctly on reporter view, resets on a new response.
 - **Frontend**: `FeedbackChannelPage` renders the inbox view for staff and the submission/history view for others; unread badge reflects `response_seen_by_reporter`.
 
 ## Expected Results

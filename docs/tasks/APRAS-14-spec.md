@@ -57,10 +57,11 @@ Add a "Escanear QR" button opening a camera view. Use the `html5-qrcode` npm pac
 ## Testing
 
 - **Backend**: `GET /authorizations/{id}` returns the correct authorization / 404 for a missing one. `GET /authorizations/{id}/qr-code` returns a valid PNG (decode it in the test and confirm the embedded text matches the authorization's id) / 404 for a missing one.
-- **Frontend**: `VisitorAuthPage`'s QR modal renders the image element with the correct URL. `GatekeeperDashboard`'s scan flow: a successful scan of a valid UUID opens `GatekeeperEntryModal` pre-filled with the fetched authorization; a scan of a non-UUID string shows an error and does not attempt an API call; a scan of a well-formed but non-existent UUID shows a 404-appropriate error.
+- **Frontend**: `VisitorAuthPage`'s QR modal fetches the image via `apiClient.get(..., { responseType: 'blob' })` and renders the `<img>` with an object URL (mock the blob response and assert the `src` is set, not that a raw URL string is used). `GatekeeperDashboard`'s scan flow: a successful scan of a valid UUID opens `GatekeeperEntryModal` pre-filled with the fetched authorization, sets `selectedLotId` to the scanned authorization's `lot_id`, and confirming check-in calls `checkInMutation.mutateAsync` with the scanned `authorization_id` included; a scan of a non-UUID string shows an error and does not attempt an API call; a scan of a well-formed but non-existent UUID shows a 404-appropriate error; a scan followed by cancelling the modal clears the scanned state so a subsequent manual-search check-in does not pass a stale `authorization_id`.
 
 ## Expected Results
 
 1. Any existing visitor authorization has a corresponding QR code image, viewable/downloadable from `VisitorAuthPage`.
-2. A Gatekeeper can scan that QR code with their device camera in `GatekeeperDashboard` and reach the same check-in confirmation modal they'd reach via manual search.
+2. A Gatekeeper can scan that QR code with their device camera in `GatekeeperDashboard` and reach the same check-in confirmation modal they'd reach via manual search, with the lot selector automatically synced to the scanned authorization's lot.
 3. All existing check-in validation rules (day/shift window, single-vs-permanent, status) are unaffected — scanning is purely a faster path to the same confirmation step, not a bypass.
+4. Check-in submitted from a scan passes the scanned authorization's specific `authorization_id` to the check-in call, so a visitor with multiple active authorizations for the same lot is checked in against the one actually scanned, not an arbitrary most-recent one.
