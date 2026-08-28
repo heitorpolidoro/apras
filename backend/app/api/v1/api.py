@@ -21,6 +21,7 @@ from app.api.v1.endpoints import (
     user_types,
     users,
     visitors,
+    voting,
 )
 from fastapi import APIRouter
 
@@ -62,6 +63,10 @@ api_router.include_router(
     tags=["space-reservations"],
 )
 api_router.include_router(packages.router, prefix="/packages", tags=["packages"])
+api_router.include_router(
+    voting.assemblies_router, prefix="/assemblies", tags=["assemblies"]
+)
+api_router.include_router(voting.votes_router, prefix="/votes", tags=["votes"])
 
 
 

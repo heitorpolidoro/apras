@@ -29,6 +29,7 @@ import { AccessControlPage } from "./features/access-control/components/AccessCo
 import { GateMonitorPage } from "./features/access-control/components/GateMonitorPage";
 import ReservableSpacesPage from "./features/space-reservation-management/components/ReservableSpacesPage";
 import SpaceBookingPage from "./features/space-reservation-management/components/SpaceBookingPage";
+import AssemblyVotingPage from "./features/assembly-voting/components/AssemblyVotingPage";
 import { UserRole } from "./types/auth";
 import "./App.css";
 
@@ -332,6 +333,24 @@ function App() {
                     ]}
                   >
                     <PackageStatusPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Voting is closed to PORTEIRO and GUEST: they never vote,
+                  in either modality (APRAS-33). */}
+              <Route
+                path="/voting"
+                element={
+                  <ProtectedRoute
+                    requiredRoles={[
+                      UserRole.ADMINISTRATOR,
+                      UserRole.DIRECTOR,
+                      UserRole.MANAGER,
+                      UserRole.RESIDENT,
+                    ]}
+                  >
+                    <AssemblyVotingPage />
                   </ProtectedRoute>
                 }
               />

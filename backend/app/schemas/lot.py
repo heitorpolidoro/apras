@@ -45,10 +45,23 @@ class LotUpdate(BaseModel):
 class LotRead(LotBase):
     id: UUID
     is_deleted: bool
+    is_delinquent: bool = False
+    delinquency_updated_at: datetime | None = None
+    delinquency_updated_by_id: UUID | None = None
     created_at: datetime
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class LotDelinquencyUpdate(BaseModel):
+    """Body of ``PATCH /lots/{id}/delinquency``.
+
+    Dedicated endpoint rather than a field on the generic lot update: this
+    flag is what suspends the lot's assembly voting right (APRAS-33).
+    """
+
+    is_delinquent: bool
 
 
 class UserLotLinkCreate(BaseModel):

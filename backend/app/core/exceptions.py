@@ -533,3 +533,147 @@ class PackageAlreadyPickedUpError(DomainError):
 
 
 
+
+
+class AssemblyNotFoundError(DomainError):
+    """Raised when an assembly is not found."""
+
+    def __init__(self, assembly_id: UUID | str = "") -> None:
+        msg = (
+            f"Assembleia {assembly_id} não encontrada."
+            if assembly_id
+            else "Assembleia não encontrada."
+        )
+        super().__init__(msg)
+
+
+class AssemblyNotClosedError(DomainError):
+    """Raised when the minutes are requested for an assembly still running.
+
+    Minutes may only be generated or saved once the assembly is CLOSED
+    (see APRAS-33 spec, "Semântica de `Assembly.status`").
+    """
+
+    def __init__(
+        self,
+        message: str = "A minuta só pode ser gerada depois do fechamento da assembleia.",
+    ) -> None:
+        super().__init__(message)
+
+
+class AssemblyStatusTransitionError(DomainError):
+    """Raised when an edit tries to move an assembly to CLOSED.
+
+    Closing is not an attribute edit: it cascades into every open vote and
+    freezes each tally snapshot, which is what unlocks the minutes. Only
+    `POST /assemblies/{id}/close` may reach CLOSED — otherwise a plain
+    `PATCH` would be a carve-out around the closed-window gate (see
+    APRAS-33 spec, "Visibilidade e mascaramento", Regra 1).
+    """
+
+    def __init__(
+        self,
+        message: str = (
+            "A assembleia só pode ser fechada pelo endpoint de fechamento, "
+            "que apura e congela cada votação."
+        ),
+    ) -> None:
+        super().__init__(message)
+
+
+class VoteNotFoundError(DomainError):
+    """Raised when a vote is not found."""
+
+    def __init__(self, vote_id: UUID | str = "") -> None:
+        msg = (
+            f"Votação {vote_id} não encontrada." if vote_id else "Votação não encontrada."
+        )
+        super().__init__(msg)
+
+
+class VoteNotOpenError(DomainError):
+    """Raised when a ballot is cast outside the voting window."""
+
+    def __init__(self, message: str = "Esta votação não está aberta.") -> None:
+        super().__init__(message)
+
+
+class VoteAlreadyClosedError(DomainError):
+    """Raised when closing a vote that is already closed."""
+
+    def __init__(self, message: str = "Esta votação já está fechada.") -> None:
+        super().__init__(message)
+
+
+class VoteFrozenError(DomainError):
+    """Raised when editing a vote that already received at least one ballot."""
+
+    def __init__(
+        self,
+        message: str = "A votação não pode ser editada depois da primeira cédula.",
+    ) -> None:
+        super().__init__(message)
+
+
+class DelinquentLotError(DomainError):
+    """Raised when a delinquent lot attempts to cast an assembly ballot."""
+
+    def __init__(
+        self, message: str = "Lote inadimplente: direito de voto suspenso."
+    ) -> None:
+        super().__init__(message)
+
+
+class NotLotOwnerError(DomainError):
+    """Raised when the user is not in the lot's eligible voter set."""
+
+    def __init__(
+        self, message: str = "Você não pode votar em nome deste lote."
+    ) -> None:
+        super().__init__(message)
+
+
+class NoActiveLotLinkError(DomainError):
+    """Raised when a poll ballot is cast by someone with no active lot link."""
+
+    def __init__(
+        self, message: str = "É necessário ter vínculo ativo com um lote para votar."
+    ) -> None:
+        super().__init__(message)
+
+
+class TallyNotAvailableError(DomainError):
+    """Raised when the caller may not read a vote's tally."""
+
+    def __init__(
+        self, message: str = "Você não tem permissão para ver esta apuração."
+    ) -> None:
+        super().__init__(message)
+
+
+class AnonymousAssemblyError(DomainError):
+    """Raised when an assembly vote is created with anonymity enabled."""
+
+    def __init__(
+        self, message: str = "Votação de assembleia é sempre nominal."
+    ) -> None:
+        super().__init__(message)
+
+
+class LotAlreadyVotedError(DomainError):
+    """Raised when another eligible voter already holds the lot's active ballot."""
+
+    def __init__(
+        self,
+        message: str = "Outro elegível deste lote já lançou a cédula ativa.",
+    ) -> None:
+        super().__init__(message)
+
+
+class NoActiveBallotError(DomainError):
+    """Raised when retracting without an active ballot to retract."""
+
+    def __init__(
+        self, message: str = "Não há cédula ativa para retirar."
+    ) -> None:
+        super().__init__(message)

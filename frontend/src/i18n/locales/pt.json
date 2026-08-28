@@ -25,7 +25,8 @@
     "contactInfo": "Informações de Contato",
     "reservations": "Reservas",
     "manageSpaces": "Espaços",
-    "packages": "Encomendas"
+    "packages": "Encomendas",
+    "voting": "Assembleias"
   },
   "accessControl": {
     "title": "Controle de Acesso",
@@ -945,5 +946,123 @@
       "PICKED_UP": "Retirada"
     },
     "noLinkedLots": "Você não está vinculado a nenhum lote."
+  },
+  "voting": {
+    "title": "Assembleias e Enquetes",
+    "anonymityNotice": "Sua resposta não é exibida com seu nome.",
+    "kind": {
+      "ASSEMBLEIA": "Assembleia",
+      "ENQUETE": "Enquete"
+    },
+    "voteStatus": {
+      "OPEN": "Aberta",
+      "CLOSED": "Fechada"
+    },
+    "assemblies": {
+      "title": "Assembleias",
+      "new": "Nova Assembleia",
+      "titleLabel": "Título",
+      "type": "Tipo",
+      "typeAGO": "AGO — Assembleia Geral Ordinária",
+      "typeAGE": "AGE — Assembleia Geral Extraordinária",
+      "heldOn": "Data de realização",
+      "agenda": "Pauta",
+      "create": "Criar assembleia",
+      "cancel": "Cancelar",
+      "close": "Encerrar assembleia",
+      "empty": "Nenhuma assembleia cadastrada.",
+      "loading": "Carregando assembleias...",
+      "status": {
+        "DRAFT": "Rascunho",
+        "OPEN": "Aberta",
+        "CLOSED": "Encerrada"
+      },
+      "openHint": "Libere a pauta para que as votações passem a aceitar cédulas.",
+      "openAction": "Liberar pauta",
+      "errorCreating": "Erro ao criar assembleia.",
+      "errorOpening": "Erro ao liberar a pauta.",
+      "errorClosing": "Erro ao encerrar assembleia."
+    },
+    "votes": {
+      "title": "Votações",
+      "newAssemblyVote": "Nova votação de pauta",
+      "newPoll": "Nova enquete",
+      "titleLabel": "Título",
+      "description": "Descrição",
+      "voteType": "Tipo de resposta",
+      "singleChoice": "Escolha única",
+      "multipleChoice": "Múltipla escolha",
+      "closesAt": "Fecha em",
+      "anonymous": "Enquete anônima",
+      "options": "Opções",
+      "addOption": "Adicionar opção",
+      "optionPlaceholder": "Texto da opção",
+      "create": "Criar votação",
+      "cancel": "Cancelar",
+      "close": "Fechar votação",
+      "empty": "Nenhuma votação cadastrada.",
+      "loading": "Carregando votações...",
+      "errorCreating": "Erro ao criar votação.",
+      "errorClosing": "Erro ao fechar votação."
+    },
+    "ballot": {
+      "title": "Seu voto",
+      "chooseLot": "Votar pelo lote",
+      "cast": "Votar",
+      "change": "Trocar voto",
+      "retract": "Retirar voto",
+      "confirmChange": "Confirmar troca",
+      "cancelChange": "Cancelar",
+      "noBallot": "Nenhuma cédula ativa.",
+      "castBy": "Votado por {{name}}",
+      "readOnlyHint": "Votado por {{name}}. Você também pode votar se ele retirar a cédula.",
+      "windowClosed": "A votação está fechada.",
+      "errorCasting": "Erro ao registrar o voto.",
+      "errorRetracting": "Erro ao retirar o voto."
+    },
+    "tally": {
+      "title": "Apuração",
+      "loading": "Carregando apuração...",
+      "votersCount": "{{count}} votantes",
+      "denominator": "de {{total}} lotes ativos",
+      "resultsAfterClose": "O resultado por opção só aparece depois do fechamento.",
+      "results": "Resultado por opção",
+      "attributions": "Votos atribuídos",
+      "lot": "Bloco/Lote",
+      "voter": "Votante",
+      "choice": "Escolha",
+      "castAt": "Data-hora",
+      "anonymousAggregateOnly": "Enquete anônima: só o agregado é exibido."
+    },
+    "eligibility": {
+      "title": "Elegíveis extras do lote",
+      "add": "Adicionar elegível",
+      "remove": "Remover",
+      "empty": "Nenhum elegível extra cadastrado.",
+      "userIdPlaceholder": "ID do usuário",
+      "hint": "Proprietários já votam automaticamente. Cadastre aqui quem representa o lote sem estar registrado como proprietário.",
+      "errorAdding": "Erro ao adicionar elegível.",
+      "errorRemoving": "Erro ao remover elegível."
+    },
+    "minutes": {
+      "title": "Minuta de ata",
+      "loading": "Gerando minuta...",
+      "save": "Salvar na Central de Documentos",
+      "saved": "Minuta salva na Central de Documentos.",
+      "unavailable": "A minuta fica disponível depois do encerramento da assembleia.",
+      "errorSaving": "Erro ao salvar a minuta."
+    },
+    "lotAdmin": {
+      "title": "Administração de votos por lote",
+      "selectLot": "Lote"
+    },
+    "delinquency": {
+      "delinquent": "Lote inadimplente: voto suspenso.",
+      "settled": "Lote adimplente: pode votar.",
+      "markDelinquent": "Marcar como inadimplente",
+      "markSettled": "Marcar como adimplente",
+      "hint": "A inadimplência é verificada no ato de cada voto: quitando durante a janela, o lote volta a votar.",
+      "errorUpdating": "Erro ao atualizar a inadimplência do lote."
+    }
   }
 }

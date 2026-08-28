@@ -244,3 +244,50 @@ class PackageStatus(StrEnum):
 
 
 
+
+
+class AssemblyType(StrEnum):
+    """Enumeration for assembly type."""
+
+    AGO = "AGO"  # Assembleia Geral Ordinária
+    AGE = "AGE"  # Assembleia Geral Extraordinária
+
+
+class AssemblyStatus(StrEnum):
+    """Enumeration for assembly status."""
+
+    DRAFT = "DRAFT"
+    OPEN = "OPEN"
+    CLOSED = "CLOSED"
+
+
+class VoteKind(StrEnum):
+    """Enumeration for vote kind."""
+
+    ASSEMBLEIA = "ASSEMBLEIA"
+    ENQUETE = "ENQUETE"
+
+
+class VoteType(StrEnum):
+    """Enumeration for vote answer type."""
+
+    SINGLE_CHOICE = "SINGLE_CHOICE"
+    MULTIPLE_CHOICE = "MULTIPLE_CHOICE"
+
+
+class VoteStatus(StrEnum):
+    """Enumeration for vote status."""
+
+    OPEN = "OPEN"
+    CLOSED = "CLOSED"
+
+
+class BallotRejectionReason(StrEnum):
+    """Enumeration for why a ballot attempt was refused."""
+
+    DELINQUENT_LOT = "DELINQUENT_LOT"
+    NOT_OWNER = "NOT_OWNER"
+    NO_ACTIVE_LOT_LINK = "NO_ACTIVE_LOT_LINK"
+    VOTE_NOT_OPEN = "VOTE_NOT_OPEN"
+    ROLE_FORBIDDEN = "ROLE_FORBIDDEN"
+    LOT_ALREADY_VOTED = "LOT_ALREADY_VOTED"

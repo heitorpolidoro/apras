@@ -9,6 +9,7 @@ from app.models.enums import LotStatus, UserRole
 from app.models.user import User
 from app.schemas.lot import (
     LotCreate,
+    LotDelinquencyUpdate,
     LotDetailRead,
     LotRead,
     LotUpdate,
@@ -17,6 +18,8 @@ from app.schemas.lot import (
     UserLotLinkRead,
     UserSummaryRead,
 )
+from app.schemas.voting import LotVoterEligibilityCreate, LotVoterEligibilityRead
+from app.services import voting_service
 from app.services.lot_service import LotService
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlmodel import Session
@@ -162,3 +165,83 @@ def unlink_user_from_lot(
     """Unlink a user from a lot. ADMINISTRATOR and DIRECTOR only."""
     _require_lot_write_permission(current_user)
     LotService.unlink_user(session=session, lot_id=lot_id, user_id=user_id)
+
+
+@router.patch("/{lot_id}/delinquency", response_model=LotRead)
+def update_lot_delinquency(
+    lot_id: UUID,
+    delinquency_in: LotDelinquencyUpdate,
+    session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[User, Depends(api_deps.get_current_user)],
+) -> LotRead:
+    """Flip the manual delinquency flag. ADMINISTRATOR and DIRECTOR only.
+
+    Kept apart from the generic lot update because this is the flag that
+    bars the lot from voting in an assembly (APRAS-33).
+    """
+    db_lot = LotService.get_lot_by_id(session=session, lot_id=lot_id)
+    updated = voting_service.set_lot_delinquency(
+        session, current_user, db_lot, delinquency_in.is_delinquent
+    )
+    return LotRead.model_validate(updated)
+
+
+def _to_eligibility_read(
+    session: Session, eligibility
+) -> LotVoterEligibilityRead:
+    """Serialise a LotVoterEligibility row with the voter's display name."""
+    user = session.get(User, eligibility.user_id)
+    return LotVoterEligibilityRead(
+        id=eligibility.id,
+        lot_id=eligibility.lot_id,
+        user_id=eligibility.user_id,
+        user_name=user.full_name if user else None,
+        added_by_id=eligibility.added_by_id,
+        added_at=eligibility.added_at,
+    )
+
+
+@router.get(
+    "/{lot_id}/voter-eligibility", response_model=list[LotVoterEligibilityRead]
+)
+def list_lot_voter_eligibility(
+    lot_id: UUID,
+    session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[User, Depends(api_deps.get_current_user)],
+) -> list[LotVoterEligibilityRead]:
+    """List the extra assembly voters of a lot. ADMIN/DIRECTOR/MANAGER."""
+    rows = voting_service.list_lot_voter_eligibility(session, current_user, lot_id)
+    return [_to_eligibility_read(session, row) for row in rows]
+
+
+@router.post(
+    "/{lot_id}/voter-eligibility",
+    response_model=LotVoterEligibilityRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def add_lot_voter_eligibility(
+    lot_id: UUID,
+    eligibility_in: LotVoterEligibilityCreate,
+    session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[User, Depends(api_deps.get_current_user)],
+) -> LotVoterEligibilityRead:
+    """Register an extra assembly voter for a lot. ADMIN/DIRECTOR/MANAGER."""
+    eligibility = voting_service.set_lot_voter_eligibility(
+        session, current_user, lot_id, eligibility_in.user_id
+    )
+    return _to_eligibility_read(session, eligibility)
+
+
+@router.delete(
+    "/{lot_id}/voter-eligibility/{user_id}", status_code=status.HTTP_204_NO_CONTENT
+)
+def remove_lot_voter_eligibility(
+    lot_id: UUID,
+    user_id: UUID,
+    session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[User, Depends(api_deps.get_current_user)],
+) -> None:
+    """Remove an extra assembly voter from a lot. ADMIN/DIRECTOR/MANAGER."""
+    voting_service.remove_lot_voter_eligibility(
+        session, current_user, lot_id, user_id
+    )

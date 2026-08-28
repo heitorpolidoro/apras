@@ -56,6 +56,14 @@ class Lot(SQLModel, table=True):
     status: LotStatus = Field(default=LotStatus.VACANT, nullable=False)
     notes: str | None = Field(default=None)
     is_deleted: bool = Field(default=False, nullable=False)
+    # Delinquency flag governing assembly voting rights (APRAS-33). Kept by
+    # hand by ADMINISTRATOR/DIRECTOR: APRAS has no per-lot billing to derive
+    # it from.
+    is_delinquent: bool = Field(default=False, nullable=False, index=True)
+    delinquency_updated_at: datetime | None = Field(default=None, nullable=True)
+    delinquency_updated_by_id: UUID | None = Field(
+        default=None, foreign_key="user.id", ondelete="SET NULL", nullable=True
+    )
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
 

@@ -28,6 +28,9 @@ export interface Lot {
   status: LotStatus;
   notes?: string | null;
   is_deleted: boolean;
+  is_delinquent?: boolean;
+  delinquency_updated_at?: string | null;
+  delinquency_updated_by_id?: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -11,9 +11,14 @@ from app.core.exceptions import (
     AnnouncementMediaTooLargeError,
     AnnouncementNotFoundError,
     AnnouncementPermissionError,
+    AnonymousAssemblyError,
+    AssemblyNotClosedError,
+    AssemblyNotFoundError,
+    AssemblyStatusTransitionError,
     AuthorizationNotFoundError,
     BudgetLineAlreadyExistsError,
     BudgetLineNotFoundError,
+    DelinquentLotError,
     DocumentFolderNotFoundError,
     DocumentNotFoundError,
     DomainError,
@@ -32,9 +37,13 @@ from app.core.exceptions import (
     InvalidInvoiceFormatError,
     InvalidPhotoFormatError,
     InvoiceFileTooLargeError,
+    LotAlreadyVotedError,
     LotNotFoundError,
     MediaAssetNotFoundError,
     MilestoneNotFoundError,
+    NoActiveBallotError,
+    NoActiveLotLinkError,
+    NotLotOwnerError,
     OccurrenceAccessForbiddenError,
     OccurrenceNotFoundError,
     PackageAccessForbiddenError,
@@ -52,9 +61,14 @@ from app.core.exceptions import (
     ResidentNotFoundError,
     SpaceReservationConflictError,
     SpaceReservationNotFoundError,
+    TallyNotAvailableError,
     TaskNotFoundError,
     UserLotLinkNotFoundError,
     VisitorNotFoundError,
+    VoteAlreadyClosedError,
+    VoteFrozenError,
+    VoteNotFoundError,
+    VoteNotOpenError,
 )
 
 
@@ -100,6 +114,9 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             ReservableSpaceNotFoundError,
             SpaceReservationNotFoundError,
             PackageNotFoundError,
+            AssemblyNotFoundError,
+            VoteNotFoundError,
+            NoActiveBallotError,
         ),
     ):
         status_code = status.HTTP_404_NOT_FOUND
@@ -115,6 +132,11 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             FinanceAccessForbiddenError,
             FeedbackAccessForbiddenError,
             PackageAccessForbiddenError,
+            DelinquentLotError,
+            NotLotOwnerError,
+            NoActiveLotLinkError,
+            TallyNotAvailableError,
+            LotAlreadyVotedError,
         ),
     ):
         status_code = status.HTTP_403_FORBIDDEN
@@ -151,6 +173,12 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             ProjectInvalidProgressError,
             InvalidAnnouncementMediaFormatError,
             AnnouncementMediaTooLargeError,
+            VoteNotOpenError,
+            VoteAlreadyClosedError,
+            VoteFrozenError,
+            AnonymousAssemblyError,
+            AssemblyNotClosedError,
+            AssemblyStatusTransitionError,
         ),
     ):
         status_code = status.HTTP_400_BAD_REQUEST

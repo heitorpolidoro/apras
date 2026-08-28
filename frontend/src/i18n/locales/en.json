@@ -25,7 +25,8 @@
     "contactInfo": "Contact Info",
     "reservations": "Reservations",
     "manageSpaces": "Spaces",
-    "packages": "Packages"
+    "packages": "Packages",
+    "voting": "Assemblies"
   },
   "accessControl": {
     "title": "Access Control",
@@ -945,5 +946,123 @@
       "PICKED_UP": "Picked Up"
     },
     "noLinkedLots": "You are not linked to any lot."
+  },
+  "voting": {
+    "title": "Assemblies and Polls",
+    "anonymityNotice": "Your answer is not displayed with your name.",
+    "kind": {
+      "ASSEMBLEIA": "Assembly",
+      "ENQUETE": "Poll"
+    },
+    "voteStatus": {
+      "OPEN": "Open",
+      "CLOSED": "Closed"
+    },
+    "assemblies": {
+      "title": "Assemblies",
+      "new": "New assembly",
+      "titleLabel": "Title",
+      "type": "Type",
+      "typeAGO": "AGO — Ordinary General Assembly",
+      "typeAGE": "AGE — Extraordinary General Assembly",
+      "heldOn": "Held on",
+      "agenda": "Agenda",
+      "create": "Create assembly",
+      "cancel": "Cancel",
+      "close": "Close assembly",
+      "empty": "No assemblies yet.",
+      "loading": "Loading assemblies...",
+      "status": {
+        "DRAFT": "Draft",
+        "OPEN": "Open",
+        "CLOSED": "Closed"
+      },
+      "openHint": "Release the agenda so the votes start accepting ballots.",
+      "openAction": "Release agenda",
+      "errorCreating": "Could not create the assembly.",
+      "errorOpening": "Could not release the agenda.",
+      "errorClosing": "Could not close the assembly."
+    },
+    "votes": {
+      "title": "Votes",
+      "newAssemblyVote": "New agenda vote",
+      "newPoll": "New poll",
+      "titleLabel": "Title",
+      "description": "Description",
+      "voteType": "Answer type",
+      "singleChoice": "Single choice",
+      "multipleChoice": "Multiple choice",
+      "closesAt": "Closes at",
+      "anonymous": "Anonymous poll",
+      "options": "Options",
+      "addOption": "Add option",
+      "optionPlaceholder": "Option text",
+      "create": "Create vote",
+      "cancel": "Cancel",
+      "close": "Close vote",
+      "empty": "No votes yet.",
+      "loading": "Loading votes...",
+      "errorCreating": "Could not create the vote.",
+      "errorClosing": "Could not close the vote."
+    },
+    "ballot": {
+      "title": "Your ballot",
+      "chooseLot": "Vote for lot",
+      "cast": "Vote",
+      "change": "Change vote",
+      "retract": "Retract vote",
+      "confirmChange": "Confirm change",
+      "cancelChange": "Cancel",
+      "noBallot": "No active ballot.",
+      "castBy": "Cast by {{name}}",
+      "readOnlyHint": "Cast by {{name}}. You may vote if they retract the ballot.",
+      "windowClosed": "This vote is closed.",
+      "errorCasting": "Could not register the ballot.",
+      "errorRetracting": "Could not retract the ballot."
+    },
+    "tally": {
+      "title": "Tally",
+      "loading": "Loading tally...",
+      "votersCount": "{{count}} voters",
+      "denominator": "of {{total}} active lots",
+      "resultsAfterClose": "Per-option results only appear after closing.",
+      "results": "Results per option",
+      "attributions": "Attributed ballots",
+      "lot": "Block/Lot",
+      "voter": "Voter",
+      "choice": "Choice",
+      "castAt": "Cast at",
+      "anonymousAggregateOnly": "Anonymous poll: only the aggregate is shown."
+    },
+    "eligibility": {
+      "title": "Extra eligible voters of the lot",
+      "add": "Add voter",
+      "remove": "Remove",
+      "empty": "No extra eligible voters registered.",
+      "userIdPlaceholder": "User ID",
+      "hint": "Owners already vote automatically. Register here whoever represents the lot without being recorded as an owner.",
+      "errorAdding": "Could not add the voter.",
+      "errorRemoving": "Could not remove the voter."
+    },
+    "minutes": {
+      "title": "Minutes draft",
+      "loading": "Generating minutes...",
+      "save": "Save to Document Center",
+      "saved": "Minutes saved to the Document Center.",
+      "unavailable": "Minutes become available once the assembly is closed.",
+      "errorSaving": "Could not save the minutes."
+    },
+    "lotAdmin": {
+      "title": "Per-lot voting administration",
+      "selectLot": "Lot"
+    },
+    "delinquency": {
+      "delinquent": "Delinquent lot: voting right suspended.",
+      "settled": "Lot in good standing: may vote.",
+      "markDelinquent": "Mark as delinquent",
+      "markSettled": "Mark as settled",
+      "hint": "Delinquency is checked at the moment of each ballot: settling during the window restores the vote.",
+      "errorUpdating": "Could not update the lot's delinquency."
+    }
   }
 }

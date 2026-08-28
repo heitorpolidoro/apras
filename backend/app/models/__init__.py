@@ -12,8 +12,11 @@ from .document import AssociationDocument, DocumentDownloadLog, DocumentFolder
 from .enums import (
     AccessDeviceStatus,
     AnnouncementMediaType,
+    AssemblyStatus,
+    AssemblyType,
     AuthorizationStatus,
     AuthorizationType,
+    BallotRejectionReason,
     DayOfWeek,
     EntityType,
     FacialTemplateSyncStatus,
@@ -36,6 +39,9 @@ from .enums import (
     TaskStatus,
     TransactionType,
     UserRole,
+    VoteKind,
+    VoteStatus,
+    VoteType,
 )
 from .feedback import Feedback
 from .finance import BudgetLine, FinanceCategory, FinancialTransaction
@@ -51,6 +57,14 @@ from .user import User
 from .user_type import UserType
 from .user_type_link import UserUserTypeLink
 from .visitor import AccessLog, Visitor, VisitorAuthorization
+from .voting import (
+    Assembly,
+    Ballot,
+    BallotRejection,
+    LotVoterEligibility,
+    Vote,
+    VoteOption,
+)
 
 __all__ = [
     "AccessDevice",
@@ -61,9 +75,14 @@ __all__ = [
     "AnnouncementMedia",
     "AnnouncementMediaType",
     "AnnouncementReadReceipt",
+    "Assembly",
+    "AssemblyStatus",
+    "AssemblyType",
     "AssociationDocument",
     "AuthorizationStatus",
     "AuthorizationType",
+    "Ballot",
+    "BallotRejection",
     "BudgetLine",
     "Category",
     "ConstructionProject",
@@ -82,6 +101,7 @@ __all__ = [
     "Lot",
     "LotAssociationType",
     "LotStatus",
+    "LotVoterEligibility",
     "MediaAsset",
     "MilestoneStatus",
     "Occurrence",
@@ -114,6 +134,11 @@ __all__ = [
     "UserUserTypeLink",
     "Visitor",
     "VisitorAuthorization",
+    "Vote",
+    "VoteKind",
+    "VoteOption",
+    "VoteStatus",
+    "VoteType",
 ]
 
 
