@@ -136,9 +136,9 @@
   {
     "id": "APRAS-12",
     "title": "Create PORTEIRO (Gatekeeper) user role and dedicated Portaria dashboard",
-    "status": "inprogress",
+    "status": "codereview",
     "justification": "Dedicated role and interface for gatekeepers to check-in/check-out visitors and contractors. Picked up from backlog, exploring design. Independent spec review round 1: NEEDS_REVISION -- excluded-by-construction claim is false for /lots,/authorizations,/occurrences,/documents,/projects,/announcements (bare ProtectedRoute, zero backend role checks), GatekeeperDashboard itself needs lots.py read access or check-in breaks entirely, redirect-loop traced definitively (no loop, clean dead-end to generic message) but PORTEIRO-vs-generic-message choice left unresolved, missing blockedBy APRAS-10 (spec assumes its unmerged ProtectedRoute shape). Redispatching spec-generator. Independent spec review round 1: NEEDS_REVISION -- excluded-by-construction claim is false for /lots,/authorizations,/occurrences,/documents,/projects,/announcements (bare ProtectedRoute, zero backend role checks), GatekeeperDashboard itself needs lots.py read access or check-in breaks entirely, redirect-loop traced definitively (no loop, clean dead-end to generic message) but PORTEIRO-vs-generic-message choice left unresolved, missing blockedBy APRAS-10 (spec assumes its unmerged ProtectedRoute shape). Redispatching spec-generator. Spec approved after 3 revision rounds (finally closed: full backend+frontend gap coverage for 6 previously-unguarded routes, unconditional redirect resolution). APRAS-10 (its blocker) has now merged -- ready for implementation.",
-    "running": true,
+    "running": false,
     "priority": "medium",
     "spec_path": "docs/tasks/APRAS-12-spec.md",
     "expected_results": [
@@ -162,9 +162,9 @@
   {
     "id": "APRAS-14",
     "title": "Generate dynamic QR code passes for visitor/contractor entry validation at turnstiles/gates",
-    "status": "inprogress",
+    "status": "codereview",
     "justification": "QR code passes for visitor check-in, scanned by Gatekeeper via device camera. Spec approved after 1 revision round (fixed: JWT-protected image fetch mechanism, authorization_id threading through check-in, lot-selection overwrite on scan). Implementation dispatched.",
-    "running": true,
+    "running": false,
     "priority": "medium",
     "spec_path": "docs/tasks/APRAS-14-spec.md",
     "expected_results": [
@@ -397,7 +397,7 @@
   {
     "id": "APRAS-25",
     "title": "Canal de Críticas, Sugestões e Fale Conosco",
-    "status": "inprogress",
+    "status": "codereview",
     "justification": "Feedback/suggestion/complaint channel to the board, mirroring the shipped Occurrence Book architecture. Spec approved after 1 revision round (fixed: role-restriction precedent error, wrong migration idiom cited, backend/frontend seen-flip gap). Implementation dispatched.",
     "expected_results": [
       "Feedback message model supporting anonymous options created",
@@ -411,7 +411,7 @@
     "last_review_findings": [],
     "created_at": "2026-08-23T02:22:42-03:00",
     "updated_at": "2026-08-23T02:22:42-03:00",
-    "running": true,
+    "running": false,
     "priority": "medium",
     "moved_at": "2026-08-23T02:22:42-03:00"
   },
@@ -505,7 +505,7 @@
   {
     "id": "APRAS-30",
     "title": "Fix UserRead 500 on non-canonical CPF during response serialization",
-    "status": "inprogress",
+    "status": "codereview",
     "justification": "Discovered by independent QA while verifying APRAS-7: UserRead's cpf field validator re-runs on response serialization, so any user row with a non-canonical CPF format (e.g. a historically-seeded/imported value) causes a ResponseValidationError (500) on every endpoint that returns UserRead -- GET /users/, PATCH /users/{id}, and PATCH /users/{id}/contact-info all affected. Not introduced by APRAS-7, pre-existing since the cpf-validation task. Spec APPROVED on first review round (bug mechanism confirmed real via live repro, existing duplication-convention match confirmed, testing approach confirmed achievable against existing fixture patterns). Implementation dispatched.",
     "expected_results": [
       "Endpoints returning UserRead no longer 500 for a user with a non-canonical (but previously-accepted) CPF value",
@@ -518,7 +518,7 @@
     "last_review_findings": [],
     "created_at": "2026-08-27T16:05:00-03:00",
     "updated_at": "2026-08-27T16:05:00-03:00",
-    "running": true,
+    "running": false,
     "priority": "medium",
     "moved_at": "2026-08-27T16:05:00-03:00"
   },
