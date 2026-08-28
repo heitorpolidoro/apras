@@ -161,8 +161,8 @@
   {
     "id": "APRAS-14",
     "title": "Generate dynamic QR code passes for visitor/contractor entry validation at turnstiles/gates",
-    "status": "specreview",
-    "justification": "QR code passes for visitor check-in: scanned by Gatekeeper via device camera (not physical turnstile hardware). Spec written, dispatched for review. Independent spec review round 1: NEEDS_REVISION -- no working precedent exists for a JWT-protected <img> tag (must fetch as authenticated blob), scan flow never actually threads authorization_id into the check-in call (would silently check in against the wrong authorization if the visitor has multiple active ones), lot-selection mismatch on scan left unresolved. Redispatching spec-generator.",
+    "status": "inprogress",
+    "justification": "QR code passes for visitor check-in, scanned by Gatekeeper via device camera. Spec approved after 1 revision round (fixed: JWT-protected image fetch mechanism, authorization_id threading through check-in, lot-selection overwrite on scan). Implementation dispatched.",
     "running": true,
     "priority": "medium",
     "spec_path": "docs/tasks/APRAS-14-spec.md",
@@ -170,7 +170,8 @@
       "Any visitor authorization has a corresponding QR code image viewable/downloadable",
       "Gatekeeper can scan the QR with device camera and reach the check-in confirmation modal",
       "All existing check-in validation rules remain unaffected -- scanning is a faster path, not a bypass"
-    ]
+    ],
+    "spec_iterations": 2
   },
   {
     "id": "APRAS-15",
