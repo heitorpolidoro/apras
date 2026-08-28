@@ -17,6 +17,8 @@ from app.core.exceptions import (
     DocumentFolderNotFoundError,
     DocumentNotFoundError,
     DomainError,
+    FeedbackAccessForbiddenError,
+    FeedbackNotFoundError,
     FinanceAccessForbiddenError,
     FinanceCategoryAlreadyExistsError,
     FinanceCategoryNotFoundError,
@@ -88,6 +90,7 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             FinanceCategoryNotFoundError,
             BudgetLineNotFoundError,
             FinancialTransactionNotFoundError,
+            FeedbackNotFoundError,
         ),
     ):
         status_code = status.HTTP_404_NOT_FOUND
@@ -101,6 +104,7 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             ProjectAccessForbiddenError,
             AnnouncementPermissionError,
             FinanceAccessForbiddenError,
+            FeedbackAccessForbiddenError,
         ),
     ):
         status_code = status.HTTP_403_FORBIDDEN

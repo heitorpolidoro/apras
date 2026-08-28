@@ -395,8 +395,8 @@
   {
     "id": "APRAS-25",
     "title": "Canal de Críticas, Sugestões e Fale Conosco",
-    "status": "specreview",
-    "justification": "Feedback/suggestion/complaint channel to the board, separate from operational Occurrences. Mirrors the shipped Occurrence Book architecture closely, simplified (no priority/assignment/multi-step workflow/public toggle). In-app-only unread notification (no email/push infra exists). Spec written, dispatched for review. Independent spec review round 1: NEEDS_REVISION -- create_occurrence precedent actually has NO role restriction at all (GUEST included, verified via test fixtures), migration cited (0009) does not use native Postgres enums as claimed (plain strings), gap between backend seen-flip (only on single-item GET) and frontend list-only history view described. Redispatching spec-generator.",
+    "status": "codereview",
+    "justification": "Feedback/suggestion/complaint channel to the board, separate from operational Occurrences. Mirrors the shipped Occurrence Book architecture closely, simplified (no priority/assignment/multi-step workflow/public toggle). In-app-only unread notification (no email/push infra exists). Spec approved after 2 independent review rounds. Implemented: Feedback model + FeedbackCategory/FeedbackStatus enums (plain sa.String() migration columns, matching the corrected Occurrence precedent), feedback_service.py (create_feedback has no role restriction, matching create_occurrence exactly), feedback.py endpoints, Alembic migration 0018_add_feedback_table (chained after 0017, single head). Anonymous masking keyed on viewer role (admin/director) not on reporter identity, matching _build_occurrence_read. response_seen_by_reporter flips only via GET /feedback/{id} and resets on new response. Frontend feedback-management/ mirrors occurrence-management/ structure including a distinct useFeedbackDetail hook (separate from the list hook) so opening an item in the reporter's history actually calls the detail endpoint and triggers the seen-flip. New /feedback route (bare ProtectedRoute, any authenticated user) and Navbar link 'Fale Conosco'. Backend: 392 passed/3 skipped, 97.00% coverage (>90% gate), 100% coverage on all new feedback files. Frontend: 554 passed (52 test files, including the new FeedbackChannel.test.tsx), no regressions; pre-existing function-coverage gate failure (68.2% vs 75% threshold) confirmed present on baseline before this change via a controlled comparison, not introduced by it.",
     "expected_results": [
       "Feedback message model supporting anonymous options created",
       "Board response workflow and response notification system built",
@@ -404,14 +404,14 @@
     ],
     "blockedBy": [],
     "spec_path": "docs/tasks/APRAS-25-spec.md",
-    "spec_iterations": 1,
+    "spec_iterations": 2,
     "qa_iterations": 0,
     "last_review_findings": [],
     "created_at": "2026-08-23T02:22:42-03:00",
-    "updated_at": "2026-08-23T02:22:42-03:00",
-    "running": true,
+    "updated_at": "2026-08-27T23:50:00-03:00",
+    "running": false,
     "priority": "medium",
-    "moved_at": "2026-08-23T02:22:42-03:00"
+    "moved_at": "2026-08-27T23:50:00-03:00"
   },
   {
     "id": "APRAS-26",
