@@ -45,6 +45,17 @@ export interface CategoryRead {
 }
 
 /**
+ * Interface for reading user type data nested inside a TaskRead's
+ * `visible_to` list.
+ */
+export interface UserTypeRead {
+  id: string;
+  name: string;
+  allowed_menus: string[];
+  role?: string | null;
+}
+
+/**
  * Base interface for task data.
  */
 export interface TaskBase {
@@ -62,8 +73,6 @@ export interface TaskBase {
   assigned_to_id?: string | null;
   /** The UUID of the category this task belongs to. */
   category_id: string;
-  /** The UUID of the user type this task is targeted to. */
-  visible_to_id?: string | null;
 }
 
 /**
@@ -79,6 +88,9 @@ export interface TaskCreate extends Omit<
   due_date?: Date | string | null;
   assigned_to_id?: string | null;
   category_id: string;
+  /** UUIDs of the UserTypes this task is targeted to; empty means visible
+   * to every Manager. */
+  visible_to_ids?: string[];
 }
 
 /**
@@ -87,7 +99,9 @@ export interface TaskCreate extends Omit<
 export interface TaskUpdate extends Partial<TaskBase> {
   status?: TaskStatus;
   priority?: TaskPriority;
-  visible_to_id?: string | null;
+  /** UUIDs of the UserTypes this task is targeted to; empty means visible
+   * to every Manager. */
+  visible_to_ids?: string[];
 }
 
 /**
@@ -110,8 +124,9 @@ export interface TaskRead extends TaskBase {
   category_name?: string | null;
   /** The hex color of the category. */
   category_color?: string | null;
-  /** The name of the target user type. */
-  visible_to_name?: string | null;
+  /** The UserTypes this task is targeted to; empty means visible to every
+   * Manager. */
+  visible_to: UserTypeRead[];
 }
 
 /**

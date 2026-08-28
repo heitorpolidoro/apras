@@ -24,23 +24,32 @@ class TaskService:
         """Create a new task in the database."""
         from app.api.deps import get_effective_user_type_ids
         from app.models.enums import UserRole
+        from app.models.user_type import UserType
+
+        visible_to_ids = list(task_in.visible_to_ids)
+        # If MANAGER is creating a task and hasn't specified any targets,
+        # default to their *explicit* UserType ids (current_user.user_types)
+        # only — not the full APRAS-9 effective set, which always includes
+        # the shared role-type id and would make every auto-defaulted task
+        # visible to every Manager org-wide. Fall back to the role-type id
+        # alone only when the Manager has zero explicit UserTypes.
+        if current_user.role == UserRole.MANAGER and not visible_to_ids:
+            explicit_ids = {ut.id for ut in current_user.user_types}
+            if explicit_ids:
+                visible_to_ids = list(explicit_ids)
+            else:
+                visible_to_ids = list(
+                    get_effective_user_type_ids(current_user, session)
+                )
 
         db_task = Task.model_validate(
             task_in,
-            update={"created_by_id": created_by_id},
+            update={"created_by_id": created_by_id, "visible_to": []},
         )
-        # If MANAGER is creating a task and hasn't specified visible_to_id,
-        # default it to a stable, deterministic member of their effective
-        # UserType ids (explicitly-assigned or role-implicit, APRAS-9), so a
-        # Manager relying solely on their role-type still gets a default.
-        # An explicitly-assigned id is preferred over the role-implicit one
-        # when both are present, since it reflects a deliberate admin choice.
-        if current_user.role == UserRole.MANAGER and not db_task.visible_to_id:
-            explicit_ids = {ut.id for ut in current_user.user_types}
-            effective_ids = get_effective_user_type_ids(current_user, session)
-            candidates = explicit_ids or effective_ids
-            if candidates:
-                db_task.visible_to_id = min(candidates)
+        if visible_to_ids:
+            db_task.visible_to = session.exec(
+                select(UserType).where(UserType.id.in_(visible_to_ids))
+            ).all()
 
         session.add(db_task)
         session.commit()
@@ -53,18 +62,22 @@ class TaskService:
     ) -> Task:
         """Update a task with audit logging."""
         from app.api.deps import get_effective_user_type_ids
+        from app.core.exceptions import ForbiddenError
         from app.models.enums import UserRole
+        from app.models.user_type import UserType
 
         update_data = task_in.model_dump(exclude_unset=True)
+        visible_to_ids = update_data.pop("visible_to_ids", None)
 
-        # MANAGER cannot change visible_to_id to something they don't possess
-        # (explicitly-assigned or role-implicit, see APRAS-9).
-        if current_user.role == UserRole.MANAGER and "visible_to_id" in update_data:
-            new_visible_to = update_data["visible_to_id"]
-            if new_visible_to is not None:
-                user_type_ids = get_effective_user_type_ids(current_user, session)
-                if new_visible_to not in user_type_ids:
-                    update_data.pop("visible_to_id", None)
+        # MANAGER may only set targets that are a subset of their own
+        # effective UserType ids (explicitly-assigned or role-implicit, see
+        # APRAS-9) — cannot grant visibility to a type they don't belong to.
+        if visible_to_ids is not None and current_user.role == UserRole.MANAGER:
+            effective_ids = get_effective_user_type_ids(current_user, session)
+            if not set(visible_to_ids) <= effective_ids:
+                raise ForbiddenError(
+                    "Managers can only set visibility targets they belong to"
+                )
 
         for key, value in update_data.items():
             old_value = getattr(db_task, key)
@@ -79,6 +92,27 @@ class TaskService:
                 )
                 session.add(history)
                 setattr(db_task, key, value)
+
+        if visible_to_ids is not None:
+            old_ids = sorted(str(ut.id) for ut in db_task.visible_to)
+            new_ids = sorted(str(uid) for uid in visible_to_ids)
+            if old_ids != new_ids:
+                history = TaskHistory(
+                    task_id=db_task.id,
+                    changed_by_id=current_user.id,
+                    field_name="visible_to",
+                    old_value=",".join(old_ids) or None,
+                    new_value=",".join(new_ids) or None,
+                    timestamp=get_utc_now(),
+                )
+                session.add(history)
+            db_task.visible_to = (
+                session.exec(
+                    select(UserType).where(UserType.id.in_(visible_to_ids))
+                ).all()
+                if visible_to_ids
+                else []
+            )
 
         db_task.updated_at = get_utc_now()
         session.add(db_task)
@@ -159,6 +193,13 @@ class TaskService:
         from app.models.category import Category
         from app.models.user import User
         from app.schemas.task import TaskRead
+        from app.schemas.user_type import UserTypeRead
+
+        # `create_task`/`update_task` commit the `visible_to` link rows via
+        # the session, but `db_task.visible_to` may still reflect a stale
+        # (pre-commit) state on the Python object; refresh it explicitly so
+        # the response reflects the just-persisted targets.
+        session.refresh(db_task, attribute_names=["visible_to"])
 
         creator = session.get(User, db_task.created_by_id)
         assignee = (
@@ -167,19 +208,15 @@ class TaskService:
             else None
         )
         category = session.get(Category, db_task.category_id)
-        from app.models.user_type import UserType
-        visible_to = (
-            session.get(UserType, db_task.visible_to_id)
-            if db_task.visible_to_id
-            else None
-        )
 
         task_data = db_task.model_dump()
         task_data["created_by_name"] = creator.full_name if creator else None
         task_data["assigned_to_name"] = assignee.full_name if assignee else None
         task_data["category_name"] = category.name if category else None
         task_data["category_color"] = category.color if category else None
-        task_data["visible_to_name"] = visible_to.name if visible_to else None
+        task_data["visible_to"] = [
+            UserTypeRead.model_validate(ut) for ut in db_task.visible_to
+        ]
 
         return TaskRead.model_validate(task_data)
 

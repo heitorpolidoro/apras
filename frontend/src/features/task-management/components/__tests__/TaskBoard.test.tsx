@@ -203,8 +203,14 @@ describe("TaskBoard", () => {
         stopSimulation: vi.fn(),
       });
       const tasksWithVisibility = [
-        { ...mockTasks[0], visible_to_id: "type-1" },
-        { ...mockTasks[1], visible_to_id: "type-2" },
+        {
+          ...mockTasks[0],
+          visible_to: [{ id: "type-1", name: "type-1", allowed_menus: [] }],
+        },
+        {
+          ...mockTasks[1],
+          visible_to: [{ id: "type-2", name: "type-2", allowed_menus: [] }],
+        },
       ];
       render(
         <TaskBoard
@@ -239,8 +245,16 @@ describe("TaskBoard", () => {
         ],
       } as any); // skipcq: JS-0323
       const tasksWithVisibility = [
-        { ...mockTasks[0], visible_to_id: "role-type-manager" },
-        { ...mockTasks[1], visible_to_id: "type-2" },
+        {
+          ...mockTasks[0],
+          visible_to: [
+            { id: "role-type-manager", name: "Gerente (papel)", allowed_menus: [] },
+          ],
+        },
+        {
+          ...mockTasks[1],
+          visible_to: [{ id: "type-2", name: "type-2", allowed_menus: [] }],
+        },
       ];
       render(
         <TaskBoard

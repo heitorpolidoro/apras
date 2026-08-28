@@ -53,7 +53,10 @@ def list_tasks(
         return []
 
     from app.models.category import Category
+    from app.models.task import TaskVisibleToLink
     from app.models.user_type import UserType
+    from app.schemas.user_type import UserTypeRead
+    from sqlalchemy import exists, or_
     from sqlalchemy.orm import aliased
 
     creator_alias = aliased(User)
@@ -66,13 +69,11 @@ def list_tasks(
             assignee_alias.full_name,
             Category.name,
             Category.color,
-            UserType.name,
         )
         .where(Task.is_deleted.is_(False))
         .join(creator_alias, Task.created_by_id == creator_alias.id, isouter=True)
         .join(assignee_alias, Task.assigned_to_id == assignee_alias.id, isouter=True)
         .join(Category, Task.category_id == Category.id, isouter=True)
-        .join(UserType, Task.visible_to_id == UserType.id, isouter=True)
     )
 
     if assigned_to_id:
@@ -84,22 +85,44 @@ def list_tasks(
     if category_id:
         statement = statement.where(Task.category_id == category_id)
     if current_user.role == UserRole.MANAGER:
-        from sqlalchemy import or_
-
-        user_type_ids = api_deps.get_effective_user_type_ids(current_user, session)
-        statement = statement.where(
-            or_(Task.visible_to_id.is_(None), Task.visible_to_id.in_(user_type_ids))
+        effective_ids = api_deps.get_effective_user_type_ids(current_user, session)
+        has_any_target = exists(
+            select(TaskVisibleToLink.task_id).where(
+                TaskVisibleToLink.task_id == Task.id
+            )
         )
+        has_matching_target = exists(
+            select(TaskVisibleToLink.task_id).where(
+                TaskVisibleToLink.task_id == Task.id,
+                TaskVisibleToLink.user_type_id.in_(effective_ids),
+            )
+        )
+        statement = statement.where(or_(~has_any_target, has_matching_target))
 
     results = session.exec(statement).all()
+    task_ids = [db_task.id for db_task, *_ in results]
+
+    visible_to_by_task: dict[UUID, list[UserType]] = {}
+    if task_ids:
+        link_statement = (
+            select(TaskVisibleToLink.task_id, UserType)
+            .join(UserType, TaskVisibleToLink.user_type_id == UserType.id)
+            .where(TaskVisibleToLink.task_id.in_(task_ids))
+        )
+        for task_id, user_type in session.exec(link_statement).all():
+            visible_to_by_task.setdefault(task_id, []).append(user_type)
+
     tasks = []
-    for db_task, creator_name, assignee_name, category_name, category_color, visible_to_name in results:
+    for db_task, creator_name, assignee_name, category_name, category_color in results:
         task_data = db_task.model_dump()
         task_data["created_by_name"] = creator_name
         task_data["assigned_to_name"] = assignee_name
         task_data["category_name"] = category_name
         task_data["category_color"] = category_color
-        task_data["visible_to_name"] = visible_to_name
+        task_data["visible_to"] = [
+            UserTypeRead.model_validate(ut)
+            for ut in visible_to_by_task.get(db_task.id, [])
+        ]
         tasks.append(TaskRead.model_validate(task_data))
     return tasks
 

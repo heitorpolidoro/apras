@@ -4,6 +4,7 @@ from datetime import datetime
 from uuid import UUID
 
 from app.models.enums import TaskPriority, TaskStatus
+from app.schemas.user_type import UserTypeRead
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -17,11 +18,12 @@ class TaskBase(BaseModel):
     due_date: datetime | None = None
     assigned_to_id: UUID | None = None
     category_id: UUID | None = None
-    visible_to_id: UUID | None = None
 
 
 class TaskCreate(TaskBase):
     """Schema for creating a new task."""
+
+    visible_to_ids: list[UUID] = []
 
 
 class TaskUpdate(BaseModel):
@@ -34,7 +36,7 @@ class TaskUpdate(BaseModel):
     due_date: datetime | None = None
     assigned_to_id: UUID | None = None
     category_id: UUID | None = None
-    visible_to_id: UUID | None = None
+    visible_to_ids: list[UUID] = []
 
 
 class TaskRead(TaskBase):
@@ -48,7 +50,7 @@ class TaskRead(TaskBase):
     assigned_to_name: str | None = None
     category_name: str | None = None
     category_color: str | None = None
-    visible_to_name: str | None = None
+    visible_to: list[UserTypeRead] = []
 
     model_config = ConfigDict(from_attributes=True)
 

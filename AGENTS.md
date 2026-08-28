@@ -12,7 +12,7 @@ Building administrators and HOA boards juggle dozens of operational tasks — ma
 |-----------------|--------------------------------------------------------------------------------------------------|
 | **Administrador** (Administrator) | Full system access: manages users, categories, all tasks, and visibility settings.            |
 | **Diretor** (Director)            | Can create, view, and edit any task; cannot manage users.                                      |
-| **Gerente** (Manager)             | Sees only tasks explicitly marked as `manager_visible`; can edit only unassigned or self-assigned tasks. |
+| **Gerente** (Manager)             | Sees tasks with no visibility targets, or at least one target matching one of the Manager's effective UserTypes; can edit only unassigned or self-assigned tasks. |
 | **Convidado** (Guest)             | Read-only role (effectively blocked from task interaction).                                    |
 
 ## Key Capabilities
@@ -282,7 +282,7 @@ The central entity. Represents an administrative work item (e.g., "Fix elevator 
 - **Assignment**: A task can be assigned to a specific user (`assigned_to_id`).
 - **Due Date**: Optional deadline.
 - **Soft Delete**: Tasks are never physically deleted; `is_deleted` is set to `True`.
-- **Manager Visibility** (`manager_visible`): Controls whether users with the Manager role can see this task. Only Administrators and Directors can toggle this flag.
+- **Visibility Targets** (`visible_to: list[UserType]`): Zero or more UserType targets a task is visible to. An empty list means the task is visible to every Manager (the same practical effect the old `null`/`manager_visible` state had); one or more targets restrict Manager visibility to Managers whose effective UserTypes intersect the list. Settable by Administrators, Directors, and self-scoped Managers (subject to the existing per-role rules for who may edit a given task).
 
 ### TaskHistory (Audit Trail)
 
@@ -308,14 +308,14 @@ This table is not exhaustive — e.g. it does not yet have a `RESIDENT` row (a p
 
 | Role            | Tasks                                           | Users & Categories       |
 |-----------------|------------------------------------------------|--------------------------|
-| `ADMINISTRATOR` | Full CRUD on all tasks; toggle `manager_visible`. The only role unconditionally exempt from the UserType menu gate below. | Full user and category management |
-| `DIRECTOR`      | Full CRUD on all tasks; toggle `manager_visible` — **but only if at least one of the Director's assigned or role-linked UserTypes has `"tasks"`/`"categories"` in `allowed_menus`** (see UserType below). A Director with no qualifying UserType is blocked from Tarefas/Categorias entirely, same as any other non-Administrator role. | Can manage categories, subject to the same UserType gate |
-| `MANAGER`       | View only `manager_visible` tasks; edit only unassigned or self-assigned tasks; cannot toggle visibility. Also subject to the UserType menu gate (assigned or role-linked UserTypes). | Read-only on categories, subject to the UserType menu gate |
+| `ADMINISTRATOR` | Full CRUD on all tasks; set/edit `visible_to` targets. The only role unconditionally exempt from the UserType menu gate below. | Full user and category management |
+| `DIRECTOR`      | Full CRUD on all tasks; set/edit `visible_to` targets — **but only if at least one of the Director's assigned or role-linked UserTypes has `"tasks"`/`"categories"` in `allowed_menus`** (see UserType below). A Director with no qualifying UserType is blocked from Tarefas/Categorias entirely, same as any other non-Administrator role. | Can manage categories, subject to the same UserType gate |
+| `MANAGER`       | Sees tasks with no `visible_to` targets, or at least one target matching one of their effective UserTypes; edit only unassigned or self-assigned tasks; may set/edit `visible_to` targets only as a subset of their own effective UserTypes. Also subject to the UserType menu gate (assigned or role-linked UserTypes). | Read-only on categories, subject to the UserType menu gate |
 | `GUEST`         | No task access                                  | No access                |
 
 ### UserType
 
-An administrator-managed label (e.g., "Board Member", "Building Staff") assigned to users for classification. Since APRAS-8, it also gates feature-level access via `allowed_menus: list[str]` (valid keys: `"tasks"`, `"categories"`): a non-Administrator user can access a gated menu only if at least one of their assigned UserTypes includes that key. This is an additional coarse gate layered in front of the existing role-based RBAC above, not a replacement for it — it does not affect fine-grained rules like `Task.visible_to_id` filtering or category write-role restrictions.
+An administrator-managed label (e.g., "Board Member", "Building Staff") assigned to users for classification. Since APRAS-8, it also gates feature-level access via `allowed_menus: list[str]` (valid keys: `"tasks"`, `"categories"`): a non-Administrator user can access a gated menu only if at least one of their assigned UserTypes includes that key. This is an additional coarse gate layered in front of the existing role-based RBAC above, not a replacement for it — it does not affect fine-grained rules like `Task.visible_to` filtering or category write-role restrictions.
 
 Since APRAS-9, one real `UserType` row is seeded per `UserRole` value (identified by a nullable, unique `role` column, e.g. "Diretor (papel)"), and a user's own role acts as an implicit UserType membership for every permission check — computed on every request via `get_effective_user_type_ids` (`backend/app/api/deps.py`), never stored as a row in the `UserUserTypeLink` join table, so a role change takes effect immediately. A user with no explicitly-assigned UserTypes falls back to the UserType implicitly linked to their own role (see APRAS-9); since that role-type starts with empty `allowed_menus`, the practical effect is the same until an Administrator configures it. Role-linked UserTypes can have their `allowed_menus` edited like any other UserType (restoring baseline-by-role access), but cannot be deleted or renamed-to-a-different-role via the API/UI — the `role` column is set once, at seed time, by the `0018_add_role_to_user_type` migration.
 
