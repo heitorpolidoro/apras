@@ -102,12 +102,13 @@
   {
     "id": "APRAS-9",
     "title": "Treat UserRole as a UserType for permission evaluation",
-    "status": "inprogress",
+    "status": "done",
     "justification": "UserRole treated as implicit UserType (computed, not stored) for both APRAS-8 menu gate and Task.visible_to_id targeting. Role-types start empty, same disruptive philosophy as APRAS-8. Spec approved after 2 revision rounds. Implementation dispatched.",
-    "running": true,
+    "running": false,
     "priority": "medium",
     "spec_iterations": 2,
-    "spec_path": "docs/tasks/APRAS-9-spec.md"
+    "spec_path": "docs/tasks/APRAS-9-spec.md",
+    "completed_at": "2026-08-27T23:59:00-03:00"
   },
   {
     "id": "APRAS-10",
