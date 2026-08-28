@@ -5,6 +5,7 @@ import React from "react";
 import * as visitorsApi from "../../../api/visitors";
 import {
   useAccessLogs,
+  useAuthorization,
   useCheckIn,
   useCheckOut,
   useCreateAuthorization,
@@ -131,6 +132,31 @@ describe("useVisitors hooks", () => {
     });
     checkOutResult.current.mutate({ access_log_id: "log-1" });
     await waitFor(() => expect(checkOutResult.current.isSuccess).toBe(true));
+  });
+
+  it("useAuthorization fetches a single authorization by id", async () => {
+    vi.mocked(visitorsApi.getAuthorization).mockResolvedValue({
+      id: "auth-1",
+      lot_id: "lot-1",
+      status: "ACTIVE",
+    } as any);
+
+    const { result } = renderHook(() => useAuthorization("auth-1"), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(visitorsApi.getAuthorization).toHaveBeenCalledWith("auth-1");
+    expect(result.current.data?.lot_id).toBe("lot-1");
+  });
+
+  it("useAuthorization does not fetch when id is undefined", () => {
+    const { result } = renderHook(() => useAuthorization(undefined), {
+      wrapper: createWrapper(),
+    });
+
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(visitorsApi.getAuthorization).not.toHaveBeenCalled();
   });
 
   it("useAccessLogs fetches access logs timeline", async () => {

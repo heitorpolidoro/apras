@@ -1,8 +1,13 @@
 """API endpoints for Visitor pre-authorization management."""
 
+import io
 import json
 from typing import Annotated
 from uuid import UUID
+
+import qrcode
+from fastapi import APIRouter, Depends, Response, status
+from sqlmodel import Session
 
 from app.api import deps
 from app.models.enums import AuthorizationStatus, DayOfWeek, ShiftType
@@ -16,8 +21,6 @@ from app.schemas.visitor import (
     VisitorRead,
 )
 from app.services.visitor_service import VisitorService
-from fastapi import APIRouter, Depends, status
-from sqlmodel import Session
 
 router = APIRouter()
 
@@ -97,3 +100,37 @@ def revoke_authorization(
     """Revoke an active pre-authorization immediately."""
     auth = VisitorService.revoke_authorization(session, auth_id, current_user)
     return _to_authorization_read(auth)
+
+
+@router.get(
+    "/authorizations/{authorization_id}",
+    response_model=VisitorAuthorizationRead,
+    status_code=status.HTTP_200_OK,
+)
+def get_authorization(
+    authorization_id: UUID,
+    session: Annotated[Session, Depends(deps.get_session)],
+    current_user: Annotated[User, Depends(deps.get_current_user)],
+) -> VisitorAuthorizationRead:
+    """Fetch a single visitor pre-authorization by ID."""
+    del current_user  # no role check for this endpoint; auth-only, matches module convention
+    auth = VisitorService.get_authorization_by_id(session, authorization_id)
+    return _to_authorization_read(auth)
+
+
+@router.get(
+    "/authorizations/{authorization_id}/qr-code",
+    status_code=status.HTTP_200_OK,
+)
+def get_authorization_qr_code(
+    authorization_id: UUID,
+    session: Annotated[Session, Depends(deps.get_session)],
+    current_user: Annotated[User, Depends(deps.get_current_user)],
+) -> Response:
+    """Return a PNG QR code encoding the authorization's ID."""
+    del current_user  # no role check for this endpoint; auth-only, matches module convention
+    auth = VisitorService.get_authorization_by_id(session, authorization_id)
+    image = qrcode.make(str(auth.id))
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return Response(content=buffer.getvalue(), media_type="image/png")

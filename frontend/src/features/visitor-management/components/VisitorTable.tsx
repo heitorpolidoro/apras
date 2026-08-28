@@ -1,18 +1,20 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { Car, Building, ShieldAlert, ShieldCheck, Clock } from "lucide-react";
+import { Car, Building, ShieldAlert, ShieldCheck, Clock, QrCode } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import type { VisitorAuthorization } from "../../../types/visitor";
 
 interface VisitorTableProps {
   authorizations: VisitorAuthorization[];
   onRevoke?: (auth: VisitorAuthorization) => void;
+  onShowQr?: (auth: VisitorAuthorization) => void;
   canRevoke?: boolean;
 }
 
 export const VisitorTable: React.FC<VisitorTableProps> = ({
   authorizations,
   onRevoke,
+  onShowQr,
   canRevoke = true,
 }) => {
   const { t } = useTranslation();
@@ -97,7 +99,18 @@ export const VisitorTable: React.FC<VisitorTableProps> = ({
                   </span>
                 </td>
                 <td className="px-4 py-3.5">{getStatusBadge(auth.status)}</td>
-                <td className="px-4 py-3.5 text-right">
+                <td className="px-4 py-3.5 text-right space-x-2 whitespace-nowrap">
+                  {onShowQr && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onShowQr(auth)}
+                      className="gap-1"
+                    >
+                      <QrCode className="size-3.5" />
+                      {t("authorizations.viewQr")}
+                    </Button>
+                  )}
                   {canRevoke && auth.status === "ACTIVE" && onRevoke && (
                     <Button
                       variant="outline"

@@ -161,9 +161,9 @@
   {
     "id": "APRAS-14",
     "title": "Generate dynamic QR code passes for visitor/contractor entry validation at turnstiles/gates",
-    "status": "specreview",
-    "justification": "QR code passes for visitor check-in: scanned by Gatekeeper via device camera (not physical turnstile hardware). Spec written, dispatched for review. Independent spec review round 1: NEEDS_REVISION -- no working precedent exists for a JWT-protected <img> tag (must fetch as authenticated blob), scan flow never actually threads authorization_id into the check-in call (would silently check in against the wrong authorization if the visitor has multiple active ones), lot-selection mismatch on scan left unresolved. Redispatching spec-generator.",
-    "running": true,
+    "status": "codereview",
+    "justification": "Implemented per approved spec: backend GET /authorizations/{id} and GET /authorizations/{id}/qr-code (PNG via qrcode package, no role check, matches module convention); frontend VisitorAuthPage 'Ver QR' modal fetches the PNG as an authenticated blob via apiClient.get(..., {responseType:'blob'}) and renders it via URL.createObjectURL (revoked on close), since a bare <img src> cannot carry the Bearer token; GatekeeperDashboard 'Escanear QR' uses html5-qrcode to scan, validates the decoded text as a UUID, fetches the authorization, overwrites selectedLotId unconditionally, and now threads the scanned authorization_id explicitly through GatekeeperEntryModal into checkInMutation.mutateAsync (previously-dead authorizationId prop is now wired up); scanned state is cleared on modal close/cancel/complete. Backend: 396 passed, 3 skipped, 97.01% coverage. Frontend: 570 passed, 0 failed.",
+    "running": false,
     "priority": "medium",
     "spec_path": "docs/tasks/APRAS-14-spec.md",
     "expected_results": [

@@ -19,6 +19,7 @@ dependencies = [
     "sqlmodel>=0.0.38",
     "uvicorn>=0.44.0",
     "httpx>=0.28.1",
+    "qrcode>=8.2",
 ]
 
 [dependency-groups]
@@ -26,6 +27,7 @@ dev = [
     "httpx>=0.28.1",
     "pytest>=9.0.3",
     "pytest-cov>=7.1.0",
+    "zxing-cpp>=3.1.1",
 ]
 
 [tool.ruff]

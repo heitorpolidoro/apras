@@ -1,22 +1,33 @@
 """Unit and integration tests for Visitor pre-authorization management."""
 
-from datetime import datetime, timedelta
+import io
 import uuid
+from datetime import datetime, timedelta
+
 import pytest
+import zxingcpp
+from fastapi.testclient import TestClient
+from PIL import Image
+from sqlmodel import Session
+
 from app.core.exceptions import (
     AuthorizationNotFoundError,
     DomainError,
     LotNotFoundError,
 )
-from app.models.enums import AuthorizationStatus, AuthorizationType, DayOfWeek, LotStatus, ShiftType
+from app.models.enums import (
+    AuthorizationStatus,
+    AuthorizationType,
+    DayOfWeek,
+    LotStatus,
+    ShiftType,
+)
 from app.models.lot import Lot
 from app.models.user import User
 from app.schemas.lot import LotCreate
 from app.schemas.visitor import VisitorAuthorizationCreate, VisitorCreate
 from app.services.lot_service import LotService
 from app.services.visitor_service import VisitorService
-from fastapi.testclient import TestClient
-from sqlmodel import Session
 
 
 def test_create_single_authorization_success(session: Session, admin_user: User):
@@ -127,3 +138,63 @@ def test_api_lot_authorizations_flow(client: TestClient, admin_user: User, sessi
     res_revoke = client.put(f"/api/v1/authorizations/{auth_id}/revoke", json={}, headers=headers)
     assert res_revoke.status_code == 200
     assert res_revoke.json()["status"] == "REVOKED"
+
+
+def test_get_authorization_by_id_success(client: TestClient, admin_user: User, session: Session):
+    lot = LotService.create_lot(session, LotCreate(block="E", lot_number="50"))
+    visitor = VisitorService.create_visitor(session, VisitorCreate(full_name="Rafael Souza"))
+    auth_in = VisitorAuthorizationCreate(visitor_id=visitor.id)
+    auth = VisitorService.create_authorization(session, lot.id, auth_in, admin_user)
+
+    from app.core.security import create_access_token
+
+    token = create_access_token(admin_user.id)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    res = client.get(f"/api/v1/authorizations/{auth.id}", headers=headers)
+    assert res.status_code == 200
+    body = res.json()
+    assert body["id"] == str(auth.id)
+    assert body["visitor_id"] == str(visitor.id)
+    assert body["lot_id"] == str(lot.id)
+
+
+def test_get_authorization_by_id_not_found(client: TestClient, admin_user: User):
+    from app.core.security import create_access_token
+
+    token = create_access_token(admin_user.id)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    res = client.get(f"/api/v1/authorizations/{uuid.uuid4()}", headers=headers)
+    assert res.status_code == 404
+
+
+def test_get_authorization_qr_code_success(client: TestClient, admin_user: User, session: Session):
+    lot = LotService.create_lot(session, LotCreate(block="F", lot_number="60"))
+    visitor = VisitorService.create_visitor(session, VisitorCreate(full_name="Bianca Torres"))
+    auth_in = VisitorAuthorizationCreate(visitor_id=visitor.id)
+    auth = VisitorService.create_authorization(session, lot.id, auth_in, admin_user)
+
+    from app.core.security import create_access_token
+
+    token = create_access_token(admin_user.id)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    res = client.get(f"/api/v1/authorizations/{auth.id}/qr-code", headers=headers)
+    assert res.status_code == 200
+    assert res.headers["content-type"] == "image/png"
+
+    image = Image.open(io.BytesIO(res.content))
+    decoded = zxingcpp.read_barcodes(image)
+    assert len(decoded) == 1
+    assert decoded[0].text == str(auth.id)
+
+
+def test_get_authorization_qr_code_not_found(client: TestClient, admin_user: User):
+    from app.core.security import create_access_token
+
+    token = create_access_token(admin_user.id)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    res = client.get(f"/api/v1/authorizations/{uuid.uuid4()}/qr-code", headers=headers)
+    assert res.status_code == 404

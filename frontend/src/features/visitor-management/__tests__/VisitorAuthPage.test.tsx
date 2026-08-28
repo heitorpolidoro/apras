@@ -1,13 +1,19 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 import { VisitorAuthPage } from "../components/VisitorAuthPage";
 import * as visitorsApi from "../../../api/visitors";
 import * as lotsHook from "../../lot-management/hooks/useLots";
+import apiClient from "../../../api/client";
 
 vi.mock("../../../api/visitors");
 vi.mock("../../lot-management/hooks/useLots");
+vi.mock("../../../api/client", () => ({
+  default: {
+    get: vi.fn(),
+  },
+}));
 
 
 const mockLots = {
@@ -65,11 +71,21 @@ const renderComponent = () => {
 };
 
 describe("VisitorAuthPage", () => {
+  const originalCreateObjectURL = URL.createObjectURL;
+  const originalRevokeObjectURL = URL.revokeObjectURL;
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(lotsHook.useLots).mockReturnValue({ data: mockLots as any, isLoading: false } as any);
     vi.mocked(visitorsApi.getLotAuthorizations).mockResolvedValue(mockAuths as any);
     vi.mocked(visitorsApi.searchVisitors).mockResolvedValue({ items: [], total: 0, skip: 0, limit: 100 } as any);
+    URL.createObjectURL = vi.fn(() => "blob:mock-object-url");
+    URL.revokeObjectURL = vi.fn();
+  });
+
+  afterEach(() => {
+    URL.createObjectURL = originalCreateObjectURL;
+    URL.revokeObjectURL = originalRevokeObjectURL;
   });
 
 
@@ -110,5 +126,26 @@ describe("VisitorAuthPage", () => {
     await waitFor(() => {
       expect(visitorsApi.revokeAuthorization).toHaveBeenCalledWith("auth-1", undefined);
     });
+  });
+
+  it("opens the QR modal and fetches the image via apiClient as a blob, rendering an object URL src", async () => {
+    const mockBlob = new Blob(["fake-png-bytes"], { type: "image/png" });
+    vi.mocked(apiClient.get).mockResolvedValue({ data: mockBlob });
+
+    renderComponent();
+
+    expect(await screen.findByText("Carlos visitante")).toBeInTheDocument();
+
+    const viewQrButton = screen.getByRole("button", { name: /Ver QR/ });
+    fireEvent.click(viewQrButton);
+
+    await waitFor(() => {
+      expect(apiClient.get).toHaveBeenCalledWith("/authorizations/auth-1/qr-code", {
+        responseType: "blob",
+      });
+    });
+
+    const img = await screen.findByRole("img");
+    expect(img).toHaveAttribute("src", "blob:mock-object-url");
   });
 });
