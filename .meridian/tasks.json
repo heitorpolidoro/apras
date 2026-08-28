@@ -394,7 +394,7 @@
   {
     "id": "APRAS-25",
     "title": "Canal de Críticas, Sugestões e Fale Conosco",
-    "status": "backlog",
+    "status": "specreview",
     "justification": "Direct board feedback and contact channel separate from operational occurrences.",
     "expected_results": [
       "Feedback message model supporting anonymous options created",
@@ -408,7 +408,7 @@
     "last_review_findings": [],
     "created_at": "2026-08-23T02:22:42-03:00",
     "updated_at": "2026-08-23T02:22:42-03:00",
-    "running": false,
+    "running": true,
     "priority": "medium",
     "moved_at": "2026-08-23T02:22:42-03:00"
   },
