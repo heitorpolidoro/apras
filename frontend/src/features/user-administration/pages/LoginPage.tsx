@@ -35,7 +35,7 @@ const LoginPage: React.FC = () => {
       });
   }, []);
 
-  const from = location.state?.from?.pathname || "/dashboard";
+  const from = location.state?.from?.pathname || "/";
   const successMessage = location.state?.message;
 
   /**
