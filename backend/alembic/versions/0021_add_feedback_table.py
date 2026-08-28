@@ -1,7 +1,7 @@
 """add_feedback_table
 
-Revision ID: 0018_add_feedback_table
-Revises: 0017_add_user_type_allowed_menus
+Revision ID: 0021_add_feedback_table
+Revises: 0020_add_porteiro_userrole
 Create Date: 2026-08-27 13:00:00.000000
 
 """
@@ -11,8 +11,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = "0018_add_feedback_table"
-down_revision: Union[str, Sequence[str], None] = "0017_add_user_type_allowed_menus"
+revision: str = "0021_add_feedback_table"
+down_revision: Union[str, Sequence[str], None] = "0020_add_porteiro_userrole"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
