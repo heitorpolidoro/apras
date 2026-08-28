@@ -24,7 +24,8 @@
     "finance": "Financeiro",
     "contactInfo": "Informações de Contato",
     "reservations": "Reservas",
-    "manageSpaces": "Espaços"
+    "manageSpaces": "Espaços",
+    "packages": "Encomendas"
   },
   "accessControl": {
     "title": "Controle de Acesso",
@@ -474,7 +475,10 @@
     "dayTHU": "Qui",
     "dayFRI": "Sex",
     "daySAT": "Sáb",
-    "daySUN": "Dom"
+    "daySUN": "Dom",
+    "viewQr": "Ver QR",
+    "qrCodeTitle": "QR Code da Autorização",
+    "qrLoadError": "Erro ao carregar o QR Code."
   },
   "gatekeeper": {
     "title": "Portaria - Controle de Acesso",
@@ -490,7 +494,11 @@
     "activeListTitle": "Visitantes no Condomínio",
     "noActiveVisitors": "Nenhum visitante ativo no momento.",
     "validAccess": "Autorização Válida",
-    "invalidAccess": "Acesso Negado / Sem Autorização"
+    "invalidAccess": "Acesso Negado / Sem Autorização",
+    "scanQr": "Escanear QR",
+    "scanQrTitle": "Escanear QR Code do Visitante",
+    "scanInvalidQr": "Isso não parece ser um QR Code válido.",
+    "scanNotFound": "Nenhuma autorização encontrada para esse QR Code."
   },
   "accessLogs": {
     "title": "Histórico de Acessos",
@@ -919,5 +927,23 @@
       "errorApproving": "Erro ao aprovar reserva.",
       "errorRejecting": "Erro ao rejeitar reserva."
     }
+  },
+  "packages": {
+    "title": "Encomendas",
+    "pageTitle": "Encomendas",
+    "pageSubtitle": "Acompanhe as encomendas recebidas para o seu lote.",
+    "logArrival": "Registrar Encomenda",
+    "description": "Descrição",
+    "carrier": "Transportadora",
+    "awaitingPickup": "Encomendas Aguardando Retirada",
+    "confirmPickup": "Confirmar Retirada",
+    "pickedUpBy": "Retirado por: ___",
+    "noPackages": "Nenhuma encomenda aguardando retirada.",
+    "iPickedThisUp": "Já retirei",
+    "status": {
+      "AWAITING_PICKUP": "Aguardando Retirada",
+      "PICKED_UP": "Retirada"
+    },
+    "noLinkedLots": "Você não está vinculado a nenhum lote."
   }
 }

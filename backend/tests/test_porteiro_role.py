@@ -5,8 +5,13 @@ PORTEIRO is scoped to exactly the gate check-in/check-out flow:
   /lots/{id} (required for the GatekeeperDashboard lot selector),
   visitors.py (unrestricted for any authenticated user).
 - Forbidden: lot write endpoints, and every handler in occurrences.py,
-  documents.py, announcements.py, and authorizations.py (the four modules
-  that had zero role-based authorization before this task).
+  documents.py, announcements.py, and authorizations.py's original
+  list/create/revoke handlers (the four modules that had zero role-based
+  authorization before this task). The two single-authorization lookup
+  routes added later by APRAS-14 (GET /authorizations/{id} and its
+  /qr-code sibling) are a deliberate exception: PORTEIRO needs them for
+  the Gatekeeper QR-scan flow and is allowed through, condo-wide, same as
+  check-in/check-out.
 
 Every test also includes a regression check proving the same endpoint still
 works for a role that could call it before this task.
@@ -567,3 +572,24 @@ def test_porteiro_forbidden_on_all_authorization_handlers(
         ).status_code
         == 403
     )
+
+
+def test_porteiro_can_fetch_authorization_and_qr_for_any_lot(
+    client: TestClient, session: Session, porteiro_user: User, admin_user: User
+):
+    """PORTEIRO has no lot link at all, but the QR-scan flow must still work for any lot."""
+    lot = LotService.create_lot(session, LotCreate(block="P4", lot_number="01"))
+    visitor = VisitorService.create_visitor(session, VisitorCreate(full_name="Visitante QR"))
+    auth = VisitorService.create_authorization(
+        session, lot.id, VisitorAuthorizationCreate(visitor_id=visitor.id), admin_user
+    )
+
+    headers_porteiro = _auth_header(porteiro_user)
+
+    res_get = client.get(f"/api/v1/authorizations/{auth.id}", headers=headers_porteiro)
+    assert res_get.status_code == 200
+    assert res_get.json()["id"] == str(auth.id)
+
+    res_qr = client.get(f"/api/v1/authorizations/{auth.id}/qr-code", headers=headers_porteiro)
+    assert res_qr.status_code == 200
+    assert res_qr.headers["content-type"] == "image/png"

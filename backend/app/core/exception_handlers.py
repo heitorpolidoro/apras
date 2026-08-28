@@ -37,6 +37,9 @@ from app.core.exceptions import (
     MilestoneNotFoundError,
     OccurrenceAccessForbiddenError,
     OccurrenceNotFoundError,
+    PackageAccessForbiddenError,
+    PackageAlreadyPickedUpError,
+    PackageNotFoundError,
     PhotoApprovalPermissionError,
     PhotoFileTooLargeError,
     PhotoRejectionReasonRequiredError,
@@ -96,6 +99,7 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             FeedbackNotFoundError,
             ReservableSpaceNotFoundError,
             SpaceReservationNotFoundError,
+            PackageNotFoundError,
         ),
     ):
         status_code = status.HTTP_404_NOT_FOUND
@@ -110,6 +114,7 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             AnnouncementPermissionError,
             FinanceAccessForbiddenError,
             FeedbackAccessForbiddenError,
+            PackageAccessForbiddenError,
         ),
     ):
         status_code = status.HTTP_403_FORBIDDEN
@@ -120,6 +125,7 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             BudgetLineAlreadyExistsError,
             FinanceCategoryAlreadyExistsError,
             SpaceReservationConflictError,
+            PackageAlreadyPickedUpError,
         ),
     ):
         status_code = status.HTTP_409_CONFLICT

@@ -234,6 +234,13 @@ class ReservationStatus(StrEnum):
     REJECTED = "REJECTED"
 
 
+class PackageStatus(StrEnum):
+    """Enumeration for package pickup status."""
+
+    AWAITING_PICKUP = "AWAITING_PICKUP"
+    PICKED_UP = "PICKED_UP"
+
+
 
 
 

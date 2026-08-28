@@ -123,9 +123,9 @@
   {
     "id": "APRAS-11",
     "title": "Add UserTypes to task visibility configuration",
-    "status": "inprogress",
+    "status": "codereview",
     "justification": "Multiple UserTypes per task visibility target, replacing single visible_to_id FK with a many-to-many relation. Spec approved after 2 revision rounds. Blocked on APRAS-9 (shares the same call sites: assert_manager_can_see_task, list_tasks filter, task_service.py, simulatedPermissions.ts) -- will move to implementation once APRAS-9 merges. APRAS-9 merged; unblocked, implementation dispatched.",
-    "running": true,
+    "running": false,
     "priority": "medium",
     "blockedBy": [],
     "spec_path": "docs/tasks/APRAS-11-spec.md",
@@ -161,8 +161,8 @@
   {
     "id": "APRAS-14",
     "title": "Generate dynamic QR code passes for visitor/contractor entry validation at turnstiles/gates",
-    "status": "codereview",
-    "justification": "QR code passes for visitor check-in, scanned by Gatekeeper via device camera. Spec approved after 1 revision round (fixed: JWT-protected image fetch mechanism, authorization_id threading through check-in, lot-selection overwrite on scan). Implementation dispatched.",
+    "status": "done",
+    "justification": "Implemented per approved spec: backend GET /authorizations/{id} and GET /authorizations/{id}/qr-code (PNG via qrcode package, no role check, matches module convention); frontend VisitorAuthPage 'Ver QR' modal fetches the PNG as an authenticated blob via apiClient.get(..., {responseType:'blob'}) and renders it via URL.createObjectURL (revoked on close), since a bare <img src> cannot carry the Bearer token; GatekeeperDashboard 'Escanear QR' uses html5-qrcode to scan, validates the decoded text as a UUID, fetches the authorization, overwrites selectedLotId unconditionally, and now threads the scanned authorization_id explicitly through GatekeeperEntryModal into checkInMutation.mutateAsync (previously-dead authorizationId prop is now wired up); scanned state is cleared on modal close/cancel/complete. Independent review round 1: NEEDS_REVISION -- the two new endpoints discarded current_user and skipped the module's lot-scoping check (_check_lot_access), letting any authenticated user pull another lot's visitor PII by guessing an authorization UUID. Fixed via a new VisitorService.get_authorization_for_user that enforces the same lot check as the other routes, with an explicit PORTEIRO (Gatekeeper) bypass since the QR-scan flow's whole point is condo-wide lookup for a role with no lot linkage (mirrors check-in/check-out's existing gatekeeper carve-out). Also merged master (APRAS-9/29/12/25/30 + test fix) into this branch, resolving a real conflict in authorizations.py from APRAS-12's new PORTEIRO role-gate helper, and gave the two new endpoints an explicit PORTEIRO carve-out (with a regression test) so the Gatekeeper -- who has no lot linkage -- can still use the QR-scan flow post-merge. Backend (post-merge): 429 passed, 9 skipped, 97.32% coverage. Frontend (post-merge): 628 passed, 0 failed.",
     "running": false,
     "priority": "medium",
     "spec_path": "docs/tasks/APRAS-14-spec.md",
@@ -171,7 +171,8 @@
       "Gatekeeper can scan the QR with device camera and reach the check-in confirmation modal",
       "All existing check-in validation rules remain unaffected -- scanning is a faster path, not a bypass"
     ],
-    "spec_iterations": 2
+    "spec_iterations": 2,
+    "completed_at": "2026-08-28T02:34:43.764550-03:00"
   },
   {
     "id": "APRAS-15",
@@ -527,7 +528,7 @@
   {
     "id": "APRAS-31",
     "title": "Implement space/amenity reservation system",
-    "status": "inprogress",
+    "status": "codereview",
     "justification": "Space/amenity reservation system (ReservableSpace + SpaceReservation). Spec approved after 1 revision round (fixed a stale migration number, a false CategoriesPage.tsx UI-pattern claim, and an underspecified query-param interaction). Implementation dispatched.",
     "expected_results": [
       "ReservableSpace admin-managed CRUD (Administrator/Director)",
@@ -541,13 +542,13 @@
     "last_review_findings": [],
     "created_at": "2026-08-27T23:45:00-03:00",
     "updated_at": "2026-08-27T23:45:00-03:00",
-    "running": true,
+    "running": false,
     "priority": "low"
   },
   {
     "id": "APRAS-32",
     "title": "Implement package tracking (encomendas) for Gatekeeper",
-    "status": "inprogress",
+    "status": "done",
     "justification": "Package tracking (encomendas) for Gatekeeper. Spec approved after 1 revision round (fixed a stale migration number, a GUEST RBAC bypass gap, and a mischaracterized convention claim). Implementation dispatched.",
     "expected_results": [
       "Package model with AWAITING_PICKUP/PICKED_UP status",
@@ -561,8 +562,9 @@
     "last_review_findings": [],
     "created_at": "2026-08-27T23:45:00-03:00",
     "updated_at": "2026-08-27T23:45:00-03:00",
-    "running": true,
-    "priority": "low"
+    "running": false,
+    "priority": "low",
+    "completed_at": "2026-08-28T02:58:37.033900-03:00"
   },
   {
     "id": "APRAS-33",

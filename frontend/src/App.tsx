@@ -18,6 +18,7 @@ import SimulationBanner from "./features/user-administration/components/Simulati
 import { VisitorAuthPage } from "./features/visitor-management/components/VisitorAuthPage";
 import { GatekeeperDashboard } from "./features/visitor-management/components/GatekeeperDashboard";
 import { OccurrenceBookPage } from "./features/occurrence-management/components/OccurrenceBookPage";
+import { PackageStatusPage } from "./features/package-management/components/PackageStatusPage";
 import { FeedbackChannelPage } from "./features/feedback-management/components/FeedbackChannelPage";
 import { DocumentCenterPage } from "./features/document-management/components/DocumentCenterPage";
 import { ConstructionTrackerPage } from "./features/project-management/components/ConstructionTrackerPage";
@@ -315,6 +316,22 @@ function App() {
                     ]}
                   >
                     <SpaceBookingPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/packages"
+                element={
+                  <ProtectedRoute
+                    requiredRoles={[
+                      UserRole.ADMINISTRATOR,
+                      UserRole.DIRECTOR,
+                      UserRole.MANAGER,
+                      UserRole.RESIDENT,
+                    ]}
+                  >
+                    <PackageStatusPage />
                   </ProtectedRoute>
                 }
               />

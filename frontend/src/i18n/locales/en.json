@@ -24,7 +24,8 @@
     "finance": "Finance",
     "contactInfo": "Contact Info",
     "reservations": "Reservations",
-    "manageSpaces": "Spaces"
+    "manageSpaces": "Spaces",
+    "packages": "Packages"
   },
   "accessControl": {
     "title": "Access Control",
@@ -474,7 +475,10 @@
     "dayTHU": "Thu",
     "dayFRI": "Fri",
     "daySAT": "Sat",
-    "daySUN": "Sun"
+    "daySUN": "Sun",
+    "viewQr": "View QR",
+    "qrCodeTitle": "Authorization QR Code",
+    "qrLoadError": "Failed to load QR code."
   },
   "gatekeeper": {
     "title": "Gatekeeper Access Control",
@@ -490,7 +494,11 @@
     "activeListTitle": "Visitors On-Site",
     "noActiveVisitors": "No active visitors currently on-site.",
     "validAccess": "Valid Authorization",
-    "invalidAccess": "Access Denied / No Authorization"
+    "invalidAccess": "Access Denied / No Authorization",
+    "scanQr": "Scan QR",
+    "scanQrTitle": "Scan Visitor QR Code",
+    "scanInvalidQr": "That does not look like a valid QR code.",
+    "scanNotFound": "No authorization found for that QR code."
   },
   "accessLogs": {
     "title": "Access Log History",
@@ -919,5 +927,23 @@
       "errorApproving": "Error approving reservation.",
       "errorRejecting": "Error rejecting reservation."
     }
+  },
+  "packages": {
+    "title": "Packages",
+    "pageTitle": "Packages",
+    "pageSubtitle": "Track packages received for your lot.",
+    "logArrival": "Log Package Arrival",
+    "description": "Description",
+    "carrier": "Carrier",
+    "awaitingPickup": "Packages Awaiting Pickup",
+    "confirmPickup": "Confirm Pickup",
+    "pickedUpBy": "Picked up by: ___",
+    "noPackages": "No packages awaiting pickup.",
+    "iPickedThisUp": "I already picked this up",
+    "status": {
+      "AWAITING_PICKUP": "Awaiting Pickup",
+      "PICKED_UP": "Picked Up"
+    },
+    "noLinkedLots": "You are not linked to any lot."
   }
 }

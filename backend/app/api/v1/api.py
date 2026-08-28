@@ -12,6 +12,7 @@ from app.api.v1.endpoints import (
     finance,
     lots,
     occurrences,
+    packages,
     projects,
     reservations,
     residents,
@@ -60,6 +61,7 @@ api_router.include_router(
     prefix="/space-reservations",
     tags=["space-reservations"],
 )
+api_router.include_router(packages.router, prefix="/packages", tags=["packages"])
 
 
 

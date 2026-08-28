@@ -1,17 +1,26 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Search, LogIn, Users, Building2, History } from "lucide-react";
+import { Search, LogIn, Users, Building2, History, ScanLine, Package as PackageIcon } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { useLots } from "../../lot-management/hooks/useLots";
 import {
   useAccessLogs,
+  useAuthorization,
   useCheckIn,
   useCheckOut,
   useVisitors,
 } from "../hooks/useVisitors";
+import {
+  useCreatePackage,
+  useMarkPackagePickedUp,
+  usePackageQueue,
+} from "../hooks/usePackages";
 import { GatekeeperEntryModal } from "./GatekeeperEntryModal";
+import { QrScannerModal } from "./QrScannerModal";
 import { AccessLogTimeline } from "./AccessLogTimeline";
 import type { AccessLog, Visitor } from "../../../types/visitor";
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const GatekeeperDashboard: React.FC = () => {
   const { t } = useTranslation();
@@ -19,32 +28,80 @@ export const GatekeeperDashboard: React.FC = () => {
   const [selectedLotId, setSelectedLotId] = useState("");
   const [selectedVisitor, setSelectedVisitor] = useState<Visitor | null>(null);
   const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [scannedAuthorizationId, setScannedAuthorizationId] = useState<string | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
+
+  const [packageDescription, setPackageDescription] = useState("");
+  const [packageCarrier, setPackageCarrier] = useState("");
+  const [pickupNotes, setPickupNotes] = useState<Record<string, string>>({});
 
   const { data: visitorsData } = useVisitors(searchTerm);
   const { data: logsData } = useAccessLogs();
   const { data: lotsData } = useLots();
+  const { data: packageQueueData } = usePackageQueue();
 
   const checkInMutation = useCheckIn();
   const checkOutMutation = useCheckOut();
+  const createPackageMutation = useCreatePackage();
+  const markPickedUpMutation = useMarkPackagePickedUp();
+
+  const { data: scannedAuth, isError: isScannedAuthError } = useAuthorization(
+    scannedAuthorizationId ?? undefined
+  );
 
   const logs = logsData?.items || [];
   const activeLogs = logs.filter((l) => !l.exit_time);
   const lots = lotsData?.items || [];
+  const packageQueue = packageQueueData?.items || [];
+
+  // A scanned authorization is more specific/authoritative than whatever is
+  // currently selected in the manual lot dropdown, so it always overwrites it.
+  useEffect(() => {
+    if (scannedAuth) {
+      setSelectedLotId(scannedAuth.lot_id);
+      setSelectedVisitor(scannedAuth.visitor ?? null);
+      setIsEntryModalOpen(true);
+    }
+  }, [scannedAuth]);
+
+  useEffect(() => {
+    if (scannedAuthorizationId && isScannedAuthError) {
+      setScanError(t("gatekeeper.scanNotFound"));
+      setScannedAuthorizationId(null);
+    }
+  }, [isScannedAuthError, scannedAuthorizationId, t]);
 
   const handleSelectVisitorForCheckIn = (visitor: Visitor) => {
     setSelectedVisitor(visitor);
     setIsEntryModalOpen(true);
   };
 
-  const handleConfirmCheckIn = async (entryNotes: string) => {
+  const handleScanSuccess = (decodedText: string) => {
+    setIsScannerOpen(false);
+    const trimmed = decodedText.trim();
+    if (!UUID_PATTERN.test(trimmed)) {
+      setScanError(t("gatekeeper.scanInvalidQr"));
+      return;
+    }
+    setScanError(null);
+    setScannedAuthorizationId(trimmed);
+  };
+
+  const handleCloseEntryModal = () => {
+    setIsEntryModalOpen(false);
+    setSelectedVisitor(null);
+    setScannedAuthorizationId(null);
+  };
+
+  const handleConfirmCheckIn = async (entryNotes: string, authorizationId?: string | null) => {
     if (selectedVisitor && selectedLotId) {
       await checkInMutation.mutateAsync({
         visitor_id: selectedVisitor.id,
         lot_id: selectedLotId,
         entry_notes: entryNotes || undefined,
+        authorization_id: authorizationId || undefined,
       });
-      setSelectedVisitor(null);
-      setIsEntryModalOpen(false);
     }
   };
 
@@ -52,6 +109,25 @@ export const GatekeeperDashboard: React.FC = () => {
     await checkOutMutation.mutateAsync({
       access_log_id: log.id,
     });
+  };
+
+  const handleLogPackageArrival = async () => {
+    if (!selectedLotId) return;
+    await createPackageMutation.mutateAsync({
+      lot_id: selectedLotId,
+      description: packageDescription || undefined,
+      carrier: packageCarrier || undefined,
+    });
+    setPackageDescription("");
+    setPackageCarrier("");
+  };
+
+  const handleConfirmPickup = async (packageId: string) => {
+    await markPickedUpMutation.mutateAsync({
+      id: packageId,
+      data: { picked_up_by_notes: pickupNotes[packageId] || undefined },
+    });
+    setPickupNotes((prev) => ({ ...prev, [packageId]: "" }));
   };
 
   return (
@@ -68,19 +144,32 @@ export const GatekeeperDashboard: React.FC = () => {
           </p>
         </div>
 
-        {/* Active Visitors Counter */}
-        <div className="flex items-center gap-3 rounded-2xl bg-indigo-50 px-4 py-3 border border-indigo-100 dark:bg-indigo-950/40 dark:border-indigo-900/50">
-          <Users className="size-6 text-indigo-600 dark:text-indigo-400" />
-          <div>
-            <div className="text-2xl font-black text-indigo-700 dark:text-indigo-300 leading-none">
-              {activeLogs.length}
-            </div>
-            <div className="text-xs font-semibold text-indigo-600/80 dark:text-indigo-400">
-              {t("gatekeeper.activeVisitorsCount")}
+        <div className="flex items-center gap-3">
+          <Button variant="outline" onClick={() => setIsScannerOpen(true)} className="gap-2">
+            <ScanLine className="size-4" />
+            {t("gatekeeper.scanQr")}
+          </Button>
+
+          {/* Active Visitors Counter */}
+          <div className="flex items-center gap-3 rounded-2xl bg-indigo-50 px-4 py-3 border border-indigo-100 dark:bg-indigo-950/40 dark:border-indigo-900/50">
+            <Users className="size-6 text-indigo-600 dark:text-indigo-400" />
+            <div>
+              <div className="text-2xl font-black text-indigo-700 dark:text-indigo-300 leading-none">
+                {activeLogs.length}
+              </div>
+              <div className="text-xs font-semibold text-indigo-600/80 dark:text-indigo-400">
+                {t("gatekeeper.activeVisitorsCount")}
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      {scanError && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/50 dark:text-red-400">
+          {scanError}
+        </div>
+      )}
 
       {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -171,12 +260,123 @@ export const GatekeeperDashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* QR Scanner Modal */}
+      <QrScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onScanSuccess={handleScanSuccess}
+      />
+
+      {/* Encomendas Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column: Log Arrival Form */}
+        <div className="lg:col-span-1 space-y-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-4">
+            <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <PackageIcon className="size-4 text-indigo-600" />
+              {t("packages.title", "Encomendas")}
+            </h2>
+
+            <div>
+              <input
+                type="text"
+                value={packageDescription}
+                onChange={(e) => setPackageDescription(e.target.value)}
+                placeholder={t("packages.description", "Descrição")}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm bg-white dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-white"
+              />
+            </div>
+
+            <div>
+              <input
+                type="text"
+                value={packageCarrier}
+                onChange={(e) => setPackageCarrier(e.target.value)}
+                placeholder={t("packages.carrier", "Transportadora")}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm bg-white dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-white"
+              />
+            </div>
+
+            <Button
+              disabled={!selectedLotId || createPackageMutation.isPending}
+              onClick={handleLogPackageArrival}
+              className="w-full gap-1 bg-indigo-600 hover:bg-indigo-700 text-white"
+            >
+              <PackageIcon className="size-3.5" />
+              {t("packages.logArrival", "Registrar Encomenda")}
+            </Button>
+          </div>
+        </div>
+
+        {/* Right Column: Awaiting Pickup Queue */}
+        <div className="lg:col-span-2 space-y-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-4">
+              <PackageIcon className="size-5 text-indigo-600 dark:text-indigo-400" />
+              {t("packages.awaitingPickup", "Encomendas Aguardando Retirada")}
+            </h2>
+
+            {packageQueue.length === 0 ? (
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                {t("packages.noPackages", "Nenhuma encomenda aguardando retirada.")}
+              </p>
+            ) : (
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {packageQueue.map((pkg) => (
+                  <div
+                    key={pkg.id}
+                    className="flex flex-col gap-2 rounded-xl border border-slate-100 p-3 dark:border-slate-800/80"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-semibold text-slate-900 dark:text-white text-sm">
+                          {pkg.lot_summary
+                            ? `${t("lots.block")} ${pkg.lot_summary.block}, ${t("lots.lotNumber")} ${pkg.lot_summary.lot_number}`
+                            : ""}
+                        </div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400 flex gap-2">
+                          {pkg.description && <span>{pkg.description}</span>}
+                          {pkg.carrier && <span>{pkg.carrier}</span>}
+                        </div>
+                        <div className="text-xs text-slate-400 dark:text-slate-500">
+                          {new Date(pkg.received_at).toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={pickupNotes[pkg.id] || ""}
+                        onChange={(e) =>
+                          setPickupNotes((prev) => ({ ...prev, [pkg.id]: e.target.value }))
+                        }
+                        placeholder={t("packages.pickedUpBy", "Retirado por: ___")}
+                        className="flex-1 rounded-md border border-slate-300 px-3 py-1.5 text-xs bg-white dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-white"
+                      />
+                      <Button
+                        size="sm"
+                        disabled={markPickedUpMutation.isPending}
+                        onClick={() => handleConfirmPickup(pkg.id)}
+                        className="gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                      >
+                        {t("packages.confirmPickup", "Confirmar Retirada")}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Entry Modal */}
       <GatekeeperEntryModal
         isOpen={isEntryModalOpen}
-        onClose={() => setIsEntryModalOpen(false)}
+        onClose={handleCloseEntryModal}
         visitor={selectedVisitor}
         lotId={selectedLotId}
+        authorizationId={scannedAuthorizationId}
         onConfirmCheckIn={handleConfirmCheckIn}
         isLoading={checkInMutation.isPending}
       />
