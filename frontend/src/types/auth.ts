@@ -4,6 +4,7 @@ export const UserRole = {
   MANAGER: "MANAGER",
   GUEST: "GUEST",
   RESIDENT: "RESIDENT",
+  PORTEIRO: "PORTEIRO",
 } as const;
 
 export type UserRole = (typeof UserRole)[keyof typeof UserRole];
@@ -12,6 +13,9 @@ export interface UserType {
   id: string;
   name: string;
   allowed_menus: string[];
+  /** Set only for the 5 role-linked types seeded by the APRAS-9 backend
+   * migration; undefined/null for regular admin-created types. */
+  role?: string | null;
 }
 
 export interface User {
@@ -25,5 +29,4 @@ export interface User {
   cpf?: string;
   phone?: string;
   address?: string;
-  block_lot?: string;
 }

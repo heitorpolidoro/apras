@@ -30,6 +30,7 @@ class UserRole(StrEnum):
     MANAGER = "MANAGER"
     GUEST = "GUEST"
     RESIDENT = "RESIDENT"
+    PORTEIRO = "PORTEIRO"
 
 
 class LotStatus(StrEnum):
@@ -206,6 +207,22 @@ class MenuKey(StrEnum):
 
     TASKS = "tasks"
     CATEGORIES = "categories"
+
+
+class FeedbackCategory(StrEnum):
+    """Enumeration for feedback/suggestion/complaint categories."""
+
+    CRITICISM = "CRITICISM"
+    SUGGESTION = "SUGGESTION"
+    COMPLIMENT = "COMPLIMENT"
+    OTHER = "OTHER"
+
+
+class FeedbackStatus(StrEnum):
+    """Enumeration for feedback response status."""
+
+    PENDING = "PENDING"
+    ANSWERED = "ANSWERED"
 
 
 

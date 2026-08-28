@@ -8,6 +8,7 @@ from app.api.v1.endpoints import (
     authorizations,
     categories,
     documents,
+    feedback,
     finance,
     lots,
     occurrences,
@@ -47,6 +48,7 @@ api_router.include_router(access_control.router, prefix="/access-control", tags=
 api_router.include_router(projects.router, prefix="/projects", tags=["projects"])
 api_router.include_router(announcements.router, prefix="/announcements", tags=["announcements"])
 api_router.include_router(finance.router, prefix="/finance", tags=["finance"])
+api_router.include_router(feedback.router, prefix="/feedback", tags=["feedback"])
 
 
 

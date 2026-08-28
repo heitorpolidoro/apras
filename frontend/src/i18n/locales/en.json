@@ -14,6 +14,7 @@
     "authorizations": "Authorizations",
     "gate": "Gatekeeper",
     "occurrences": "Occurrence Book",
+    "feedback": "Contact Us",
     "documents": "Document Repository",
     "photoApprovals": "Photo Approvals",
     "accessControl": "Access Control",
@@ -132,7 +133,8 @@
     "ADMINISTRATOR": "Administrator",
     "DIRECTOR": "Director",
     "MANAGER": "Manager",
-    "GUEST": "Guest"
+    "GUEST": "Guest",
+    "PORTEIRO": "Gatekeeper"
   },
   "admin": {
     "title": "User Management",
@@ -178,7 +180,8 @@
     "allowedMenus": "Allowed menus",
     "menuTasks": "Tasks",
     "menuCategories": "Categories",
-    "errorUpdatingType": "Error updating type."
+    "errorUpdatingType": "Error updating type.",
+    "roleLinkedTypeCannotBeDeleted": "Role-linked type: cannot be deleted."
   },
   "contactInfo": {
     "title": "Contact Information",
@@ -582,6 +585,51 @@
       "internal_only_label": "Internal only (Management)",
       "select_status": "Keep current status",
       "send": "Send"
+    }
+  },
+  "feedback": {
+    "page_title": "Contact Us",
+    "page_subtitle": "Send criticisms, suggestions, and compliments directly to the board.",
+    "form_title": "Send Message",
+    "category": "Category",
+    "message": "Message",
+    "message_placeholder": "Write your criticism, suggestion, or compliment...",
+    "anonymous_toggle": "Send anonymously",
+    "anonymous_hint": "Hide your identity from the board.",
+    "anonymous": "Anonymous",
+    "submit": "Send",
+    "history_title": "My History",
+    "no_records_history": "No messages sent yet",
+    "no_records_inbox": "No messages received yet",
+    "unread_indicator": "New response",
+    "unread_badge": "New",
+    "view_details": "View Details",
+    "board_response": "Board Response",
+    "respond_title": "Respond",
+    "respond_placeholder": "Write the board's response...",
+    "send_response": "Send Response",
+    "category_labels": {
+      "CRITICISM": "Criticism",
+      "SUGGESTION": "Suggestion",
+      "COMPLIMENT": "Compliment",
+      "OTHER": "Other"
+    },
+    "status": {
+      "PENDING": "Pending",
+      "ANSWERED": "Answered"
+    },
+    "filters": {
+      "title": "Filters",
+      "all_categories": "All Categories",
+      "all_statuses": "All Statuses"
+    },
+    "table": {
+      "category": "Category",
+      "message": "Message",
+      "status": "Status",
+      "reporter": "Sender",
+      "date": "Date",
+      "actions": "Actions"
     }
   },
   "documents": {

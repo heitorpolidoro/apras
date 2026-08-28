@@ -25,7 +25,7 @@ def test_task_update_partial():
 
 
 def test_user_create_accepts_request_without_profile_fields():
-    """phone/address/block_lot are optional and default to None on UserCreate."""
+    """phone/address are optional and default to None on UserCreate."""
     user = UserCreate(
         email="noprofile@test.com",
         full_name="No Profile",
@@ -34,11 +34,10 @@ def test_user_create_accepts_request_without_profile_fields():
     )
     assert user.phone is None
     assert user.address is None
-    assert user.block_lot is None
 
 
 def test_user_create_accepts_request_with_profile_fields():
-    """phone/address/block_lot are accepted as free text on UserCreate."""
+    """phone/address are accepted as free text on UserCreate."""
     user = UserCreate(
         email="withprofile@test.com",
         full_name="With Profile",
@@ -46,35 +45,36 @@ def test_user_create_accepts_request_with_profile_fields():
         cpf="11144477735",
         phone="+55 11 91234-5678",
         address="Rua das Flores, 123",
-        block_lot="Bloco A, Lote 12",
     )
     assert user.phone == "+55 11 91234-5678"
     assert user.address == "Rua das Flores, 123"
-    assert user.block_lot == "Bloco A, Lote 12"
 
 
 def test_user_update_accepts_request_without_profile_fields():
-    """phone/address/block_lot remain optional (None) on UserUpdate."""
+    """phone/address remain optional (None) on UserUpdate."""
     update = UserUpdate(full_name="Renamed")
     assert update.phone is None
     assert update.address is None
-    assert update.block_lot is None
 
 
 def test_user_update_accepts_request_with_profile_fields():
-    """phone/address/block_lot are accepted as free text on UserUpdate."""
+    """phone/address are accepted as free text on UserUpdate."""
     update = UserUpdate(
         phone="+55 11 98888-0000",
         address="Av. Paulista, 1000",
-        block_lot="Bloco B, Lote 5",
     )
     assert update.phone == "+55 11 98888-0000"
     assert update.address == "Av. Paulista, 1000"
-    assert update.block_lot == "Bloco B, Lote 5"
+
+
+def test_user_update_accepts_explicit_none_cpf():
+    """Explicitly passing cpf=None to UserUpdate is a no-op (APRAS-30)."""
+    update = UserUpdate(cpf=None)
+    assert update.cpf is None
 
 
 def test_user_read_serializes_profile_fields():
-    """UserRead exposes phone/address/block_lot when reading from a User model."""
+    """UserRead exposes phone/address when reading from a User model."""
     from app.models.user import User
 
     user = User(
@@ -84,10 +84,8 @@ def test_user_read_serializes_profile_fields():
         cpf="52998224725",
         phone="+55 11 91234-5678",
         address="Rua das Flores, 123",
-        block_lot="Bloco A, Lote 12",
     )
     read = UserRead.model_validate(user)
     assert read.phone == "+55 11 91234-5678"
     assert read.address == "Rua das Flores, 123"
-    assert read.block_lot == "Bloco A, Lote 12"
     assert read.id == user.id

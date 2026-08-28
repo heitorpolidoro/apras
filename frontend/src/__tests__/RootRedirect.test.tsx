@@ -12,6 +12,7 @@ const renderRoot = () =>
         <Route path="/" element={<RootRedirect />} />
         <Route path="/dashboard" element={<div>Dashboard Page</div>} />
         <Route path="/welcome" element={<div>Welcome Page</div>} />
+        <Route path="/gate" element={<div>Gate Page</div>} />
       </Routes>
     </MemoryRouter>,
   );
@@ -36,6 +37,28 @@ describe("RootRedirect", () => {
 
     expect(screen.getByText("Welcome Page")).toBeInTheDocument();
     expect(screen.queryByText("Dashboard Page")).toBeNull();
+  });
+
+  it("sends an active PORTEIRO (real role) to /gate", () => {
+    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      user: {
+        id: "porteiro-1",
+        email: "porteiro@example.com",
+        full_name: "Porteiro User",
+        role: UserRole.PORTEIRO,
+        is_active: true,
+      } as any,
+      login: vi.fn() as any,
+      logout: vi.fn(),
+    });
+
+    renderRoot();
+
+    expect(screen.getByText("Gate Page")).toBeInTheDocument();
+    expect(screen.queryByText("Dashboard Page")).toBeNull();
+    expect(screen.queryByText("Welcome Page")).toBeNull();
   });
 
   it("sends every other real role to /dashboard (unchanged behavior)", () => {

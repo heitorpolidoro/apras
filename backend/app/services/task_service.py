@@ -22,6 +22,7 @@ class TaskService:
         current_user: "User",
     ) -> Task:
         """Create a new task in the database."""
+        from app.api.deps import get_effective_user_type_ids
         from app.models.enums import UserRole
 
         db_task = Task.model_validate(
@@ -29,10 +30,17 @@ class TaskService:
             update={"created_by_id": created_by_id},
         )
         # If MANAGER is creating a task and hasn't specified visible_to_id,
-        # default it to the manager's first user type.
+        # default it to a stable, deterministic member of their effective
+        # UserType ids (explicitly-assigned or role-implicit, APRAS-9), so a
+        # Manager relying solely on their role-type still gets a default.
+        # An explicitly-assigned id is preferred over the role-implicit one
+        # when both are present, since it reflects a deliberate admin choice.
         if current_user.role == UserRole.MANAGER and not db_task.visible_to_id:
-            if current_user.user_types:
-                db_task.visible_to_id = current_user.user_types[0].id
+            explicit_ids = {ut.id for ut in current_user.user_types}
+            effective_ids = get_effective_user_type_ids(current_user, session)
+            candidates = explicit_ids or effective_ids
+            if candidates:
+                db_task.visible_to_id = min(candidates)
 
         session.add(db_task)
         session.commit()
@@ -44,15 +52,17 @@ class TaskService:
         session: Session, db_task: Task, task_in: TaskUpdate, current_user: "User"
     ) -> Task:
         """Update a task with audit logging."""
+        from app.api.deps import get_effective_user_type_ids
         from app.models.enums import UserRole
 
         update_data = task_in.model_dump(exclude_unset=True)
 
         # MANAGER cannot change visible_to_id to something they don't possess
+        # (explicitly-assigned or role-implicit, see APRAS-9).
         if current_user.role == UserRole.MANAGER and "visible_to_id" in update_data:
             new_visible_to = update_data["visible_to_id"]
             if new_visible_to is not None:
-                user_type_ids = [ut.id for ut in current_user.user_types]
+                user_type_ids = get_effective_user_type_ids(current_user, session)
                 if new_visible_to not in user_type_ids:
                     update_data.pop("visible_to_id", None)
 

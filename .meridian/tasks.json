@@ -102,12 +102,13 @@
   {
     "id": "APRAS-9",
     "title": "Treat UserRole as a UserType for permission evaluation",
-    "status": "inprogress",
+    "status": "done",
     "justification": "UserRole treated as implicit UserType (computed, not stored) for both APRAS-8 menu gate and Task.visible_to_id targeting. Role-types start empty, same disruptive philosophy as APRAS-8. Spec approved after 2 revision rounds. Implementation dispatched.",
-    "running": true,
+    "running": false,
     "priority": "medium",
     "spec_iterations": 2,
-    "spec_path": "docs/tasks/APRAS-9-spec.md"
+    "spec_path": "docs/tasks/APRAS-9-spec.md",
+    "completed_at": "2026-08-27T23:59:00-03:00"
   },
   {
     "id": "APRAS-10",
@@ -122,22 +123,20 @@
   {
     "id": "APRAS-11",
     "title": "Add UserTypes to task visibility configuration",
-    "status": "blocked",
-    "justification": "Multiple UserTypes per task visibility target, replacing single visible_to_id FK with a many-to-many relation. Spec approved after 2 revision rounds. Blocked on APRAS-9 (shares the same call sites: assert_manager_can_see_task, list_tasks filter, task_service.py, simulatedPermissions.ts) -- will move to implementation once APRAS-9 merges.",
-    "running": false,
+    "status": "inprogress",
+    "justification": "Multiple UserTypes per task visibility target, replacing single visible_to_id FK with a many-to-many relation. Spec approved after 2 revision rounds. Blocked on APRAS-9 (shares the same call sites: assert_manager_can_see_task, list_tasks filter, task_service.py, simulatedPermissions.ts) -- will move to implementation once APRAS-9 merges. APRAS-9 merged; unblocked, implementation dispatched.",
+    "running": true,
     "priority": "medium",
-    "blockedBy": [
-      "APRAS-9"
-    ],
+    "blockedBy": [],
     "spec_path": "docs/tasks/APRAS-11-spec.md",
     "spec_iterations": 2
   },
   {
     "id": "APRAS-12",
     "title": "Create PORTEIRO (Gatekeeper) user role and dedicated Portaria dashboard",
-    "status": "inprogress",
+    "status": "done",
     "justification": "Dedicated role and interface for gatekeepers to check-in/check-out visitors and contractors. Picked up from backlog, exploring design. Independent spec review round 1: NEEDS_REVISION -- excluded-by-construction claim is false for /lots,/authorizations,/occurrences,/documents,/projects,/announcements (bare ProtectedRoute, zero backend role checks), GatekeeperDashboard itself needs lots.py read access or check-in breaks entirely, redirect-loop traced definitively (no loop, clean dead-end to generic message) but PORTEIRO-vs-generic-message choice left unresolved, missing blockedBy APRAS-10 (spec assumes its unmerged ProtectedRoute shape). Redispatching spec-generator. Independent spec review round 1: NEEDS_REVISION -- excluded-by-construction claim is false for /lots,/authorizations,/occurrences,/documents,/projects,/announcements (bare ProtectedRoute, zero backend role checks), GatekeeperDashboard itself needs lots.py read access or check-in breaks entirely, redirect-loop traced definitively (no loop, clean dead-end to generic message) but PORTEIRO-vs-generic-message choice left unresolved, missing blockedBy APRAS-10 (spec assumes its unmerged ProtectedRoute shape). Redispatching spec-generator. Spec approved after 3 revision rounds (finally closed: full backend+frontend gap coverage for 6 previously-unguarded routes, unconditional redirect resolution). APRAS-10 (its blocker) has now merged -- ready for implementation.",
-    "running": true,
+    "running": false,
     "priority": "medium",
     "spec_path": "docs/tasks/APRAS-12-spec.md",
     "expected_results": [
@@ -148,7 +147,8 @@
       "PORTEIRO lands on /gate after login and cannot reach any other authenticated route, including /gate-monitor"
     ],
     "blockedBy": [],
-    "spec_iterations": 3
+    "spec_iterations": 3,
+    "completed_at": "2026-08-28T01:57:00.752651-03:00"
   },
   {
     "id": "APRAS-13",
@@ -162,7 +162,7 @@
     "id": "APRAS-14",
     "title": "Generate dynamic QR code passes for visitor/contractor entry validation at turnstiles/gates",
     "status": "codereview",
-    "justification": "Implemented per approved spec: backend GET /authorizations/{id} and GET /authorizations/{id}/qr-code (PNG via qrcode package, no role check, matches module convention); frontend VisitorAuthPage 'Ver QR' modal fetches the PNG as an authenticated blob via apiClient.get(..., {responseType:'blob'}) and renders it via URL.createObjectURL (revoked on close), since a bare <img src> cannot carry the Bearer token; GatekeeperDashboard 'Escanear QR' uses html5-qrcode to scan, validates the decoded text as a UUID, fetches the authorization, overwrites selectedLotId unconditionally, and now threads the scanned authorization_id explicitly through GatekeeperEntryModal into checkInMutation.mutateAsync (previously-dead authorizationId prop is now wired up); scanned state is cleared on modal close/cancel/complete. Backend: 396 passed, 3 skipped, 97.01% coverage. Frontend: 570 passed, 0 failed.",
+    "justification": "Implemented per approved spec: backend GET /authorizations/{id} and GET /authorizations/{id}/qr-code (PNG via qrcode package, no role check, matches module convention); frontend VisitorAuthPage 'Ver QR' modal fetches the PNG as an authenticated blob via apiClient.get(..., {responseType:'blob'}) and renders it via URL.createObjectURL (revoked on close), since a bare <img src> cannot carry the Bearer token; GatekeeperDashboard 'Escanear QR' uses html5-qrcode to scan, validates the decoded text as a UUID, fetches the authorization, overwrites selectedLotId unconditionally, and now threads the scanned authorization_id explicitly through GatekeeperEntryModal into checkInMutation.mutateAsync (previously-dead authorizationId prop is now wired up); scanned state is cleared on modal close/cancel/complete. Independent review round 1: NEEDS_REVISION -- the two new endpoints discarded current_user and skipped the module's lot-scoping check (_check_lot_access), letting any authenticated user pull another lot's visitor PII by guessing an authorization UUID. Fixed via a new VisitorService.get_authorization_for_user that enforces the same lot check as the other routes, with an explicit PORTEIRO (Gatekeeper) bypass since the QR-scan flow's whole point is condo-wide lookup for a role with no lot linkage (mirrors check-in/check-out's existing gatekeeper carve-out). Also merged master (APRAS-9/29/12/25/30 + test fix) into this branch, resolving a real conflict in authorizations.py from APRAS-12's new PORTEIRO role-gate helper. Backend: 396 passed, 3 skipped, 97.01% coverage. Frontend: 570 passed, 0 failed.",
     "running": false,
     "priority": "medium",
     "spec_path": "docs/tasks/APRAS-14-spec.md",
@@ -170,7 +170,8 @@
       "Any visitor authorization has a corresponding QR code image viewable/downloadable",
       "Gatekeeper can scan the QR with device camera and reach the check-in confirmation modal",
       "All existing check-in validation rules remain unaffected -- scanning is a faster path, not a bypass"
-    ]
+    ],
+    "spec_iterations": 2
   },
   {
     "id": "APRAS-15",
@@ -395,8 +396,8 @@
   {
     "id": "APRAS-25",
     "title": "Canal de Críticas, Sugestões e Fale Conosco",
-    "status": "specreview",
-    "justification": "Feedback/suggestion/complaint channel to the board, separate from operational Occurrences. Mirrors the shipped Occurrence Book architecture closely, simplified (no priority/assignment/multi-step workflow/public toggle). In-app-only unread notification (no email/push infra exists). Spec written, dispatched for review. Independent spec review round 1: NEEDS_REVISION -- create_occurrence precedent actually has NO role restriction at all (GUEST included, verified via test fixtures), migration cited (0009) does not use native Postgres enums as claimed (plain strings), gap between backend seen-flip (only on single-item GET) and frontend list-only history view described. Redispatching spec-generator.",
+    "status": "done",
+    "justification": "Feedback/suggestion/complaint channel to the board, mirroring the shipped Occurrence Book architecture. Spec approved after 1 revision round (fixed: role-restriction precedent error, wrong migration idiom cited, backend/frontend seen-flip gap). Implementation dispatched.",
     "expected_results": [
       "Feedback message model supporting anonymous options created",
       "Board response workflow and response notification system built",
@@ -404,27 +405,28 @@
     ],
     "blockedBy": [],
     "spec_path": "docs/tasks/APRAS-25-spec.md",
-    "spec_iterations": 1,
+    "spec_iterations": 2,
     "qa_iterations": 0,
     "last_review_findings": [],
     "created_at": "2026-08-23T02:22:42-03:00",
     "updated_at": "2026-08-23T02:22:42-03:00",
-    "running": true,
+    "running": false,
     "priority": "medium",
-    "moved_at": "2026-08-23T02:22:42-03:00"
+    "moved_at": "2026-08-23T02:22:42-03:00",
+    "completed_at": "2026-08-28T01:56:17.723521-03:00"
   },
   {
     "id": "APRAS-26",
     "title": "Análise Comparativa e Recursos Avançados COM21",
-    "status": "backlog",
-    "justification": "Benchmarking against COM21 to incorporate package management, reservations, and assemblies.",
+    "status": "done",
+    "justification": "Sourced comparative analysis of COM21 (real product, via web search, sources cited in the document) against APRAS current features. APRAS matches/exceeds on occurrence-tracking and RBAC granularity; clear gaps are space reservations, package tracking, online assembly/voting (surfaced but not in original scope), and push notifications. Full architectural specs written for space reservations and package tracking (spun off as APRAS-31/APRAS-32 backlog tasks for future implementation). Push notifications and offline gatekeeper mode kept at roadmap level per their cross-cutting/security complexity, each needing its own future brainstorming pass.",
     "expected_results": [
       "COM21 parity matrix and gap analysis completed",
       "Architectural specifications for package tracking (encomendas) and area reservations created",
       "Roadmap for web push notifications and offline gatekeeper mode finalized"
     ],
     "blockedBy": [],
-    "spec_path": "docs/tasks/T012-spec.md",
+    "spec_path": "docs/tasks/APRAS-26-analysis.md",
     "spec_iterations": 0,
     "qa_iterations": 0,
     "last_review_findings": [],
@@ -432,7 +434,8 @@
     "updated_at": "2026-08-23T02:22:42-03:00",
     "running": false,
     "priority": "medium",
-    "moved_at": "2026-08-23T02:22:42-03:00"
+    "moved_at": "2026-08-23T02:22:42-03:00",
+    "completed_at": "2026-08-27T23:45:00-03:00"
   },
   {
     "id": "APRAS-27",
@@ -481,42 +484,99 @@
   {
     "id": "APRAS-29",
     "title": "Remove orphaned User.block_lot column",
-    "status": "backlog",
-    "justification": "block_lot was added to User (APRAS-6) before the Lot/Resident subsystem (APRAS-15/16) existed. Now that Lot/UserLotLink properly models which unit a user is associated with, block_lot is redundant and no UI writes to it (APRAS-7 was rescoped to drop it). Low priority cleanup: drop the column via migration once confirmed nothing reads it either.",
+    "status": "done",
+    "justification": "block_lot was added to User (APRAS-6) before the Lot/Resident subsystem (APRAS-15/16) existed. Now that Lot/UserLotLink properly models which unit a user is associated with, block_lot is redundant and no UI writes to it (APRAS-7 was rescoped to drop it). Low priority cleanup: drop the column via migration once confirmed nothing reads it either. Independent spec review round 1: NEEDS_REVISION -- 7 backend tests directly reference block_lot, contradicting the zero-references claim. Fixed inline (listed exact tests to update). Ready for a quick re-review or direct implementation given the fix was small and mechanical. Correction approved on re-review (all 7 test references confirmed exact match, instruction confirmed mechanically applicable). Implementation dispatched.",
     "expected_results": [
       "Confirm no code reads User.block_lot before removing it",
       "Alembic migration drops the block_lot column from the user table",
       "User model and schemas no longer reference block_lot"
     ],
     "blockedBy": [],
-    "spec_path": "",
-    "spec_iterations": 0,
-    "qa_iterations": 0,
+    "spec_path": "docs/tasks/APRAS-29-spec.md",
+    "spec_iterations": 2,
+    "qa_iterations": 1,
     "last_review_findings": [],
     "created_at": "2026-08-27T15:20:00-03:00",
     "updated_at": "2026-08-27T15:20:00-03:00",
     "running": false,
     "priority": "medium",
-    "moved_at": "2026-08-27T15:20:00-03:00"
+    "moved_at": "2026-08-27T15:20:00-03:00",
+    "completed_at": "2026-08-28T00:07:21.232381-03:00"
   },
   {
     "id": "APRAS-30",
     "title": "Fix UserRead 500 on non-canonical CPF during response serialization",
-    "status": "backlog",
-    "justification": "Discovered by independent QA while verifying APRAS-7: UserRead's cpf field validator re-runs on response serialization, so any user row with a non-canonical CPF format (e.g. a historically-seeded/imported value) causes a ResponseValidationError (500) on every endpoint that returns UserRead -- GET /users/, PATCH /users/{id}, and PATCH /users/{id}/contact-info all affected. Not introduced by APRAS-7, pre-existing since the cpf-validation task.",
+    "status": "done",
+    "justification": "Discovered by independent QA while verifying APRAS-7: UserRead's cpf field validator re-runs on response serialization, so any user row with a non-canonical CPF format (e.g. a historically-seeded/imported value) causes a ResponseValidationError (500) on every endpoint that returns UserRead -- GET /users/, PATCH /users/{id}, and PATCH /users/{id}/contact-info all affected. Not introduced by APRAS-7, pre-existing since the cpf-validation task. Spec APPROVED on first review round (bug mechanism confirmed real via live repro, existing duplication-convention match confirmed, testing approach confirmed achievable against existing fixture patterns). Implementation dispatched.",
     "expected_results": [
       "Endpoints returning UserRead no longer 500 for a user with a non-canonical (but previously-accepted) CPF value",
       "Existing CPF validation on write (signup, PATCH) is unaffected"
     ],
     "blockedBy": [],
-    "spec_path": "",
-    "spec_iterations": 0,
+    "spec_path": "docs/tasks/APRAS-30-spec.md",
+    "spec_iterations": 1,
     "qa_iterations": 0,
     "last_review_findings": [],
     "created_at": "2026-08-27T16:05:00-03:00",
     "updated_at": "2026-08-27T16:05:00-03:00",
     "running": false,
     "priority": "medium",
-    "moved_at": "2026-08-27T16:05:00-03:00"
+    "moved_at": "2026-08-27T16:05:00-03:00",
+    "completed_at": "2026-08-28T01:56:17.723521-03:00"
+  },
+  {
+    "id": "APRAS-31",
+    "title": "Implement space/amenity reservation system",
+    "status": "inprogress",
+    "justification": "Space/amenity reservation system (ReservableSpace + SpaceReservation). Spec approved after 1 revision round (fixed a stale migration number, a false CategoriesPage.tsx UI-pattern claim, and an underspecified query-param interaction). Implementation dispatched.",
+    "expected_results": [
+      "ReservableSpace admin-managed CRUD (Administrator/Director)",
+      "SpaceReservation booking with server-side overlap/double-booking prevention",
+      "Resident-facing calendar/booking view per space"
+    ],
+    "blockedBy": [],
+    "spec_path": "docs/tasks/APRAS-31-spec.md",
+    "spec_iterations": 1,
+    "qa_iterations": 0,
+    "last_review_findings": [],
+    "created_at": "2026-08-27T23:45:00-03:00",
+    "updated_at": "2026-08-27T23:45:00-03:00",
+    "running": true,
+    "priority": "low"
+  },
+  {
+    "id": "APRAS-32",
+    "title": "Implement package tracking (encomendas) for Gatekeeper",
+    "status": "inprogress",
+    "justification": "Package tracking (encomendas) for Gatekeeper. Spec approved after 1 revision round (fixed a stale migration number, a GUEST RBAC bypass gap, and a mischaracterized convention claim). Implementation dispatched.",
+    "expected_results": [
+      "Package model with AWAITING_PICKUP/PICKED_UP status",
+      "Gatekeeper (incl. PORTEIRO) can log arrival and mark pickup",
+      "Resident can see their own lot-scoped package status"
+    ],
+    "blockedBy": [],
+    "spec_path": "docs/tasks/APRAS-32-spec.md",
+    "spec_iterations": 1,
+    "qa_iterations": 0,
+    "last_review_findings": [],
+    "created_at": "2026-08-27T23:45:00-03:00",
+    "updated_at": "2026-08-27T23:45:00-03:00",
+    "running": true,
+    "priority": "low"
+  },
+  {
+    "id": "APRAS-33",
+    "title": "Scope online assembly/voting feature (COM21 parity gap)",
+    "status": "blocked",
+    "justification": "Scoping document written (not an implementation spec). Surfaces legal/governance open questions (vote anonymity vs attribution per Brazilian condo bylaws, whether output needs standing as ata de assembleia) that require explicit user decision before a real spec-review cycle can start. Blocked on user input, not on another task.",
+    "blockedBy": [],
+    "spec_path": "docs/tasks/APRAS-33-scope.md",
+    "spec_iterations": 0,
+    "qa_iterations": 0,
+    "last_review_findings": [],
+    "created_at": "2026-08-27T23:45:00-03:00",
+    "updated_at": "2026-08-27T23:45:00-03:00",
+    "running": false,
+    "priority": "low"
   }
 ]

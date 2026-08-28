@@ -63,6 +63,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/welcome" replace />;
   }
 
+  if (requiredMenu && effectiveRole === UserRole.PORTEIRO) {
+    return <Navigate to="/gate" replace />;
+  }
+
   if (requiredMenu && !hasMenuAccess) {
     return <RestrictedAccessMessage />;
   }

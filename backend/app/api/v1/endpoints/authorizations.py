@@ -6,11 +6,11 @@ from typing import Annotated
 from uuid import UUID
 
 import qrcode
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlmodel import Session
 
 from app.api import deps
-from app.models.enums import AuthorizationStatus, DayOfWeek, ShiftType
+from app.models.enums import AuthorizationStatus, DayOfWeek, ShiftType, UserRole
 from app.models.user import User
 from app.models.visitor import VisitorAuthorization
 from app.schemas.visitor import (
@@ -23,6 +23,15 @@ from app.schemas.visitor import (
 from app.services.visitor_service import VisitorService
 
 router = APIRouter()
+
+
+def _assert_not_porteiro(current_user: User) -> None:
+    """Raise 403 if the caller is PORTEIRO (gate-only role, no access here)."""
+    if current_user.role == UserRole.PORTEIRO:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough privileges",
+        )
 
 
 def _to_authorization_read(auth: VisitorAuthorization) -> VisitorAuthorizationRead:
@@ -63,6 +72,7 @@ def list_lot_authorizations(
     limit: int = 100,
 ) -> PaginatedAuthorizationRead:
     """List visitor pre-authorizations for a specific lot."""
+    _assert_not_porteiro(current_user)
     auths, total = VisitorService.get_lot_authorizations(
         session, lot_id, current_user, skip=skip, limit=limit, status=status_filter
     )
@@ -82,6 +92,7 @@ def create_lot_authorization(
     current_user: Annotated[User, Depends(deps.get_current_user)],
 ) -> VisitorAuthorizationRead:
     """Create a visitor pre-authorization for a lot."""
+    _assert_not_porteiro(current_user)
     auth = VisitorService.create_authorization(session, lot_id, auth_in, current_user)
     return _to_authorization_read(auth)
 
@@ -98,6 +109,7 @@ def revoke_authorization(
     payload: VisitorAuthorizationRevoke | None = None,
 ) -> VisitorAuthorizationRead:
     """Revoke an active pre-authorization immediately."""
+    _assert_not_porteiro(current_user)
     auth = VisitorService.revoke_authorization(session, auth_id, current_user)
     return _to_authorization_read(auth)
 
@@ -114,11 +126,14 @@ def get_authorization(
 ) -> VisitorAuthorizationRead:
     """Fetch a single visitor pre-authorization by ID.
 
-    No extra *role* check beyond authentication (matches this module's
-    convention), but the requester must still have lot access, same as
-    every other route here (`_check_lot_access`) -- otherwise any
-    authenticated user could pull another lot's visitor PII by guessing
-    an authorization UUID.
+    Unlike the other routes in this module, PORTEIRO is intentionally *not*
+    blocked here (no `_assert_not_porteiro`) -- this is the lookup the
+    Gatekeeper's QR-scan flow depends on to resolve a scanned authorization
+    before check-in, so it must stay condo-wide for that role (matching
+    check-in/check-out's `_assert_gatekeeper_access`), not lot-scoped.
+    Every other role still needs lot access, same as every other route here
+    (`_check_lot_access`) -- otherwise any authenticated resident could pull
+    another lot's visitor PII by guessing an authorization UUID.
     """
     auth = VisitorService.get_authorization_for_user(session, authorization_id, current_user)
     return _to_authorization_read(auth)
@@ -135,9 +150,10 @@ def get_authorization_qr_code(
 ) -> Response:
     """Return a PNG QR code encoding the authorization's ID.
 
-    Same lot-scoping rule as `get_authorization` above -- the QR image embeds
-    visitor PII by reference, so it must not be fetchable for a lot the
-    requester has no relationship to.
+    Same PORTEIRO carve-out and lot-scoping rule as `get_authorization`
+    above -- the QR image embeds visitor PII by reference, so it must not
+    be fetchable for a lot the requester has no relationship to, but the
+    Gatekeeper must still be able to fetch any lot's QR to act on a scan.
     """
     auth = VisitorService.get_authorization_for_user(session, authorization_id, current_user)
     image = qrcode.make(str(auth.id))

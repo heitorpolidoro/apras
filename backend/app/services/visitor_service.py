@@ -270,9 +270,18 @@ class VisitorService:
     def get_authorization_for_user(
         session: Session, auth_id: UUID, current_user: User
     ) -> VisitorAuthorization:
-        """Get an authorization by ID, enforcing the same lot-scoping rule as the other routes."""
+        """Get an authorization by ID, enforcing the same lot-scoping rule as the other routes.
+
+        PORTEIRO (Gatekeeper) bypasses the lot check: like check-in/check-out
+        (`_assert_gatekeeper_access` in access_logs.py), the gate operates
+        condo-wide and isn't linked to any specific lot, and this is exactly
+        the lookup the QR-scan flow depends on to resolve a scanned
+        authorization before check-in. Every other role must still be
+        linked to the authorization's lot, same as the other routes here.
+        """
         auth = VisitorService.get_authorization_by_id(session, auth_id)
-        VisitorService._check_lot_access(session, auth.lot_id, current_user)
+        if current_user.role != UserRole.PORTEIRO:
+            VisitorService._check_lot_access(session, auth.lot_id, current_user)
         return auth
 
     @staticmethod
