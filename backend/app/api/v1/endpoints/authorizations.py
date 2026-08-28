@@ -1,8 +1,13 @@
 """API endpoints for Visitor pre-authorization management."""
 
+import io
 import json
 from typing import Annotated
 from uuid import UUID
+
+import qrcode
+from fastapi import APIRouter, Depends, HTTPException, Response, status
+from sqlmodel import Session
 
 from app.api import deps
 from app.models.enums import AuthorizationStatus, DayOfWeek, ShiftType, UserRole
@@ -16,8 +21,6 @@ from app.schemas.visitor import (
     VisitorRead,
 )
 from app.services.visitor_service import VisitorService
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import Session
 
 router = APIRouter()
 
@@ -109,3 +112,51 @@ def revoke_authorization(
     _assert_not_porteiro(current_user)
     auth = VisitorService.revoke_authorization(session, auth_id, current_user)
     return _to_authorization_read(auth)
+
+
+@router.get(
+    "/authorizations/{authorization_id}",
+    response_model=VisitorAuthorizationRead,
+    status_code=status.HTTP_200_OK,
+)
+def get_authorization(
+    authorization_id: UUID,
+    session: Annotated[Session, Depends(deps.get_session)],
+    current_user: Annotated[User, Depends(deps.get_current_user)],
+) -> VisitorAuthorizationRead:
+    """Fetch a single visitor pre-authorization by ID.
+
+    Unlike the other routes in this module, PORTEIRO is intentionally *not*
+    blocked here (no `_assert_not_porteiro`) -- this is the lookup the
+    Gatekeeper's QR-scan flow depends on to resolve a scanned authorization
+    before check-in, so it must stay condo-wide for that role (matching
+    check-in/check-out's `_assert_gatekeeper_access`), not lot-scoped.
+    Every other role still needs lot access, same as every other route here
+    (`_check_lot_access`) -- otherwise any authenticated resident could pull
+    another lot's visitor PII by guessing an authorization UUID.
+    """
+    auth = VisitorService.get_authorization_for_user(session, authorization_id, current_user)
+    return _to_authorization_read(auth)
+
+
+@router.get(
+    "/authorizations/{authorization_id}/qr-code",
+    status_code=status.HTTP_200_OK,
+)
+def get_authorization_qr_code(
+    authorization_id: UUID,
+    session: Annotated[Session, Depends(deps.get_session)],
+    current_user: Annotated[User, Depends(deps.get_current_user)],
+) -> Response:
+    """Return a PNG QR code encoding the authorization's ID.
+
+    Same PORTEIRO carve-out and lot-scoping rule as `get_authorization`
+    above -- the QR image embeds visitor PII by reference, so it must not
+    be fetchable for a lot the requester has no relationship to, but the
+    Gatekeeper must still be able to fetch any lot's QR to act on a scan.
+    """
+    auth = VisitorService.get_authorization_for_user(session, authorization_id, current_user)
+    image = qrcode.make(str(auth.id))
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return Response(content=buffer.getvalue(), media_type="image/png")

@@ -127,3 +127,43 @@ def test_resident_access_logs_restricted_to_linked_lot(
     # Querying other lot logs -> 403
     res_other = client.get(f"/api/v1/access-logs?lot_id={lot_other.id}", headers=headers)
     assert res_other.status_code == 403
+
+
+def test_resident_cannot_fetch_or_scan_qr_for_unlinked_lot_authorization(
+    session: Session, client: TestClient, resident_user: User, admin_user: User
+):
+    lot_own = LotService.create_lot(session, LotCreate(block="R4", lot_number="401"))
+    lot_other = LotService.create_lot(session, LotCreate(block="R4", lot_number="402"))
+
+    LotService.link_user(
+        session,
+        lot_own.id,
+        UserLotLinkCreate(user_id=resident_user.id, association_type=LotAssociationType.PROPRIETARIO),
+    )
+
+    visitor = VisitorService.create_visitor(session, VisitorCreate(full_name="QR RBAC Visitor"))
+    auth_other = VisitorService.create_authorization(
+        session, lot_other.id, VisitorAuthorizationCreate(visitor_id=visitor.id), admin_user
+    )
+    auth_own = VisitorService.create_authorization(
+        session, lot_own.id, VisitorAuthorizationCreate(visitor_id=visitor.id), admin_user
+    )
+
+    from app.core.security import create_access_token
+    token = create_access_token(resident_user.id)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Forbidden: the authorization belongs to a lot the resident has no relationship to.
+    res_get_other = client.get(f"/api/v1/authorizations/{auth_other.id}", headers=headers)
+    assert res_get_other.status_code == 403
+
+    res_qr_other = client.get(f"/api/v1/authorizations/{auth_other.id}/qr-code", headers=headers)
+    assert res_qr_other.status_code == 403
+
+    # Allowed: the authorization belongs to the resident's own linked lot.
+    res_get_own = client.get(f"/api/v1/authorizations/{auth_own.id}", headers=headers)
+    assert res_get_own.status_code == 200
+
+    res_qr_own = client.get(f"/api/v1/authorizations/{auth_own.id}/qr-code", headers=headers)
+    assert res_qr_own.status_code == 200
+    assert res_qr_own.headers["content-type"] == "image/png"

@@ -11,7 +11,7 @@ interface GatekeeperEntryModalProps {
   lotId: string;
   authorizationId?: string | null;
   isValidAccess?: boolean;
-  onConfirmCheckIn: (notes: string) => Promise<void>;
+  onConfirmCheckIn: (notes: string, authorizationId?: string | null) => Promise<void>;
   isLoading?: boolean;
 }
 
@@ -19,6 +19,7 @@ export const GatekeeperEntryModal: React.FC<GatekeeperEntryModalProps> = ({
   isOpen,
   onClose,
   visitor,
+  authorizationId,
   isValidAccess = true,
   onConfirmCheckIn,
   isLoading = false,
@@ -34,7 +35,7 @@ export const GatekeeperEntryModal: React.FC<GatekeeperEntryModalProps> = ({
     setErrorMsg("");
 
     try {
-      await onConfirmCheckIn(entryNotes);
+      await onConfirmCheckIn(entryNotes, authorizationId);
       setEntryNotes("");
       onClose();
     } catch (err: any) {

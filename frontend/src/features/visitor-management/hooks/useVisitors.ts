@@ -5,6 +5,7 @@ import {
   createLotAuthorization,
   createVisitor,
   getAccessLogs,
+  getAuthorization,
   getLotAuthorizations,
   getVisitor,
   revokeAuthorization,
@@ -69,6 +70,18 @@ export const useLotAuthorizations = (
         ? getLotAuthorizations(lotId, statusFilter, skip, limit)
         : Promise.reject("No lot ID provided"),
     enabled: !!lotId,
+  });
+};
+
+export const useAuthorization = (authorizationId?: string) => {
+  return useQuery({
+    queryKey: ["authorization", authorizationId],
+    queryFn: () =>
+      authorizationId
+        ? getAuthorization(authorizationId)
+        : Promise.reject("No authorization ID provided"),
+    enabled: !!authorizationId,
+    retry: false,
   });
 };
 

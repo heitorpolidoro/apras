@@ -472,7 +472,10 @@
     "dayTHU": "Thu",
     "dayFRI": "Fri",
     "daySAT": "Sat",
-    "daySUN": "Sun"
+    "daySUN": "Sun",
+    "viewQr": "View QR",
+    "qrCodeTitle": "Authorization QR Code",
+    "qrLoadError": "Failed to load QR code."
   },
   "gatekeeper": {
     "title": "Gatekeeper Access Control",
@@ -488,7 +491,11 @@
     "activeListTitle": "Visitors On-Site",
     "noActiveVisitors": "No active visitors currently on-site.",
     "validAccess": "Valid Authorization",
-    "invalidAccess": "Access Denied / No Authorization"
+    "invalidAccess": "Access Denied / No Authorization",
+    "scanQr": "Scan QR",
+    "scanQrTitle": "Scan Visitor QR Code",
+    "scanInvalidQr": "That does not look like a valid QR code.",
+    "scanNotFound": "No authorization found for that QR code."
   },
   "accessLogs": {
     "title": "Access Log History",

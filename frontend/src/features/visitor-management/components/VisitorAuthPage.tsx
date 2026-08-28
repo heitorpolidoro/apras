@@ -10,6 +10,7 @@ import {
 } from "../hooks/useVisitors";
 import { VisitorTable } from "./VisitorTable";
 import { AuthorizationFormModal } from "./AuthorizationFormModal";
+import { AuthorizationQrModal } from "./AuthorizationQrModal";
 import type { VisitorAuthorization, VisitorAuthorizationCreate } from "../../../types/visitor";
 
 export const VisitorAuthPage: React.FC = () => {
@@ -21,6 +22,7 @@ export const VisitorAuthPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [revokingAuth, setRevokingAuth] = useState<VisitorAuthorization | null>(null);
+  const [qrAuth, setQrAuth] = useState<VisitorAuthorization | null>(null);
 
   // Auto select first lot if available
   const effectiveLotId = selectedLotId || (lots.length > 0 ? lots[0].id : "");
@@ -120,8 +122,16 @@ export const VisitorAuthPage: React.FC = () => {
         <VisitorTable
           authorizations={authsData.items}
           onRevoke={(auth) => setRevokingAuth(auth)}
+          onShowQr={(auth) => setQrAuth(auth)}
         />
       )}
+
+      {/* QR Code Modal */}
+      <AuthorizationQrModal
+        key={qrAuth?.id ?? "none"}
+        authorization={qrAuth}
+        onClose={() => setQrAuth(null)}
+      />
 
       {/* Creation Modal */}
       <AuthorizationFormModal

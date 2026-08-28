@@ -66,6 +66,11 @@ export async function createLotAuthorization(
   return response.data;
 }
 
+export async function getAuthorization(id: string): Promise<VisitorAuthorization> {
+  const response = await apiClient.get<VisitorAuthorization>(`/authorizations/${id}`);
+  return response.data;
+}
+
 export async function revokeAuthorization(
   authId: string,
   reason?: string

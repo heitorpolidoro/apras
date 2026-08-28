@@ -1,17 +1,21 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Search, LogIn, Users, Building2, History } from "lucide-react";
+import { Search, LogIn, Users, Building2, History, ScanLine } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { useLots } from "../../lot-management/hooks/useLots";
 import {
   useAccessLogs,
+  useAuthorization,
   useCheckIn,
   useCheckOut,
   useVisitors,
 } from "../hooks/useVisitors";
 import { GatekeeperEntryModal } from "./GatekeeperEntryModal";
+import { QrScannerModal } from "./QrScannerModal";
 import { AccessLogTimeline } from "./AccessLogTimeline";
 import type { AccessLog, Visitor } from "../../../types/visitor";
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const GatekeeperDashboard: React.FC = () => {
   const { t } = useTranslation();
@@ -19,6 +23,9 @@ export const GatekeeperDashboard: React.FC = () => {
   const [selectedLotId, setSelectedLotId] = useState("");
   const [selectedVisitor, setSelectedVisitor] = useState<Visitor | null>(null);
   const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [scannedAuthorizationId, setScannedAuthorizationId] = useState<string | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
 
   const { data: visitorsData } = useVisitors(searchTerm);
   const { data: logsData } = useAccessLogs();
@@ -27,24 +34,61 @@ export const GatekeeperDashboard: React.FC = () => {
   const checkInMutation = useCheckIn();
   const checkOutMutation = useCheckOut();
 
+  const { data: scannedAuth, isError: isScannedAuthError } = useAuthorization(
+    scannedAuthorizationId ?? undefined
+  );
+
   const logs = logsData?.items || [];
   const activeLogs = logs.filter((l) => !l.exit_time);
   const lots = lotsData?.items || [];
+
+  // A scanned authorization is more specific/authoritative than whatever is
+  // currently selected in the manual lot dropdown, so it always overwrites it.
+  useEffect(() => {
+    if (scannedAuth) {
+      setSelectedLotId(scannedAuth.lot_id);
+      setSelectedVisitor(scannedAuth.visitor ?? null);
+      setIsEntryModalOpen(true);
+    }
+  }, [scannedAuth]);
+
+  useEffect(() => {
+    if (scannedAuthorizationId && isScannedAuthError) {
+      setScanError(t("gatekeeper.scanNotFound"));
+      setScannedAuthorizationId(null);
+    }
+  }, [isScannedAuthError, scannedAuthorizationId, t]);
 
   const handleSelectVisitorForCheckIn = (visitor: Visitor) => {
     setSelectedVisitor(visitor);
     setIsEntryModalOpen(true);
   };
 
-  const handleConfirmCheckIn = async (entryNotes: string) => {
+  const handleScanSuccess = (decodedText: string) => {
+    setIsScannerOpen(false);
+    const trimmed = decodedText.trim();
+    if (!UUID_PATTERN.test(trimmed)) {
+      setScanError(t("gatekeeper.scanInvalidQr"));
+      return;
+    }
+    setScanError(null);
+    setScannedAuthorizationId(trimmed);
+  };
+
+  const handleCloseEntryModal = () => {
+    setIsEntryModalOpen(false);
+    setSelectedVisitor(null);
+    setScannedAuthorizationId(null);
+  };
+
+  const handleConfirmCheckIn = async (entryNotes: string, authorizationId?: string | null) => {
     if (selectedVisitor && selectedLotId) {
       await checkInMutation.mutateAsync({
         visitor_id: selectedVisitor.id,
         lot_id: selectedLotId,
         entry_notes: entryNotes || undefined,
+        authorization_id: authorizationId || undefined,
       });
-      setSelectedVisitor(null);
-      setIsEntryModalOpen(false);
     }
   };
 
@@ -68,19 +112,32 @@ export const GatekeeperDashboard: React.FC = () => {
           </p>
         </div>
 
-        {/* Active Visitors Counter */}
-        <div className="flex items-center gap-3 rounded-2xl bg-indigo-50 px-4 py-3 border border-indigo-100 dark:bg-indigo-950/40 dark:border-indigo-900/50">
-          <Users className="size-6 text-indigo-600 dark:text-indigo-400" />
-          <div>
-            <div className="text-2xl font-black text-indigo-700 dark:text-indigo-300 leading-none">
-              {activeLogs.length}
-            </div>
-            <div className="text-xs font-semibold text-indigo-600/80 dark:text-indigo-400">
-              {t("gatekeeper.activeVisitorsCount")}
+        <div className="flex items-center gap-3">
+          <Button variant="outline" onClick={() => setIsScannerOpen(true)} className="gap-2">
+            <ScanLine className="size-4" />
+            {t("gatekeeper.scanQr")}
+          </Button>
+
+          {/* Active Visitors Counter */}
+          <div className="flex items-center gap-3 rounded-2xl bg-indigo-50 px-4 py-3 border border-indigo-100 dark:bg-indigo-950/40 dark:border-indigo-900/50">
+            <Users className="size-6 text-indigo-600 dark:text-indigo-400" />
+            <div>
+              <div className="text-2xl font-black text-indigo-700 dark:text-indigo-300 leading-none">
+                {activeLogs.length}
+              </div>
+              <div className="text-xs font-semibold text-indigo-600/80 dark:text-indigo-400">
+                {t("gatekeeper.activeVisitorsCount")}
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      {scanError && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/50 dark:text-red-400">
+          {scanError}
+        </div>
+      )}
 
       {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -171,12 +228,20 @@ export const GatekeeperDashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* QR Scanner Modal */}
+      <QrScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onScanSuccess={handleScanSuccess}
+      />
+
       {/* Entry Modal */}
       <GatekeeperEntryModal
         isOpen={isEntryModalOpen}
-        onClose={() => setIsEntryModalOpen(false)}
+        onClose={handleCloseEntryModal}
         visitor={selectedVisitor}
         lotId={selectedLotId}
+        authorizationId={scannedAuthorizationId}
         onConfirmCheckIn={handleConfirmCheckIn}
         isLoading={checkInMutation.isPending}
       />
