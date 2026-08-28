@@ -112,10 +112,12 @@
   {
     "id": "APRAS-10",
     "title": "Create dedicated landing/welcome page for Guest users",
-    "status": "inprogress",
-    "justification": "Dedicated /welcome page for active GUEST users, replacing the generic APRAS-8 restricted-access message. Spec approved after 1 revision round (fixed: deep-link regression risk, unresolved redirect mechanism choice, simulation-identity handling). Frontend-only, no backend changes. Implementation dispatched.",
-    "running": true,
-    "priority": "medium"
+    "status": "done",
+    "justification": "Dedicated /welcome landing page for active GUEST users, replacing the generic APRAS-8 restricted-access message. Independent code review and QA both APPROVED with no blocking findings. 543/543 frontend tests passing. Merged to master (f007505) and pushed.",
+    "running": false,
+    "priority": "medium",
+    "qa_iterations": 1,
+    "completed_at": "2026-08-27T23:10:00-03:00"
   },
   {
     "id": "APRAS-11",
@@ -133,8 +135,8 @@
   {
     "id": "APRAS-12",
     "title": "Create PORTEIRO (Gatekeeper) user role and dedicated Portaria dashboard",
-    "status": "specreview",
-    "justification": "Dedicated role and interface for gatekeepers to check-in/check-out visitors and contractors. Picked up from backlog, exploring design. Independent spec review round 1: NEEDS_REVISION -- excluded-by-construction claim is false for /lots,/authorizations,/occurrences,/documents,/projects,/announcements (bare ProtectedRoute, zero backend role checks), GatekeeperDashboard itself needs lots.py read access or check-in breaks entirely, redirect-loop traced definitively (no loop, clean dead-end to generic message) but PORTEIRO-vs-generic-message choice left unresolved, missing blockedBy APRAS-10 (spec assumes its unmerged ProtectedRoute shape). Redispatching spec-generator. Independent spec review round 1: NEEDS_REVISION -- excluded-by-construction claim is false for /lots,/authorizations,/occurrences,/documents,/projects,/announcements (bare ProtectedRoute, zero backend role checks), GatekeeperDashboard itself needs lots.py read access or check-in breaks entirely, redirect-loop traced definitively (no loop, clean dead-end to generic message) but PORTEIRO-vs-generic-message choice left unresolved, missing blockedBy APRAS-10 (spec assumes its unmerged ProtectedRoute shape). Redispatching spec-generator.",
+    "status": "readytodo",
+    "justification": "Dedicated role and interface for gatekeepers to check-in/check-out visitors and contractors. Picked up from backlog, exploring design. Independent spec review round 1: NEEDS_REVISION -- excluded-by-construction claim is false for /lots,/authorizations,/occurrences,/documents,/projects,/announcements (bare ProtectedRoute, zero backend role checks), GatekeeperDashboard itself needs lots.py read access or check-in breaks entirely, redirect-loop traced definitively (no loop, clean dead-end to generic message) but PORTEIRO-vs-generic-message choice left unresolved, missing blockedBy APRAS-10 (spec assumes its unmerged ProtectedRoute shape). Redispatching spec-generator. Independent spec review round 1: NEEDS_REVISION -- excluded-by-construction claim is false for /lots,/authorizations,/occurrences,/documents,/projects,/announcements (bare ProtectedRoute, zero backend role checks), GatekeeperDashboard itself needs lots.py read access or check-in breaks entirely, redirect-loop traced definitively (no loop, clean dead-end to generic message) but PORTEIRO-vs-generic-message choice left unresolved, missing blockedBy APRAS-10 (spec assumes its unmerged ProtectedRoute shape). Redispatching spec-generator. Spec approved after 3 revision rounds (finally closed: full backend+frontend gap coverage for 6 previously-unguarded routes, unconditional redirect resolution). APRAS-10 (its blocker) has now merged -- ready for implementation.",
     "running": true,
     "priority": "medium",
     "spec_path": "docs/tasks/APRAS-12-spec.md",
@@ -145,9 +147,7 @@
       "/gate route is now properly role-gated (fixes pre-existing unguarded-route gap)",
       "PORTEIRO lands on /gate after login and cannot reach any other authenticated route, including /gate-monitor"
     ],
-    "blockedBy": [
-      "APRAS-10"
-    ]
+    "blockedBy": []
   },
   {
     "id": "APRAS-13",
