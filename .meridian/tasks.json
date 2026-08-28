@@ -120,14 +120,15 @@
   {
     "id": "APRAS-11",
     "title": "Add UserTypes to task visibility configuration",
-    "status": "specreview",
-    "justification": "Include user types in task visibility configuration and filtering. Picked up from backlog, exploring design. Independent spec review round 1: NEEDS_REVISION -- list_tasks result-assembly not addressed (only WHERE filter), get_task_with_names call site missed, no EXISTS precedent exists in this codebase (spec should specify the shape directly), TaskVisibleToLink doesnt actually mirror UserUserTypeLinks composite-PK pattern as claimed, Manager auto-default silently broadens visibility to every Manager org-wide once combined with APRAS-9s shared role-type (needs explicit resolution), AGENTS.md is already stale re: manager_visible not just visible_to_id. Redispatching spec-generator.",
-    "running": true,
+    "status": "blocked",
+    "justification": "Multiple UserTypes per task visibility target, replacing single visible_to_id FK with a many-to-many relation. Spec approved after 2 revision rounds. Blocked on APRAS-9 (shares the same call sites: assert_manager_can_see_task, list_tasks filter, task_service.py, simulatedPermissions.ts) -- will move to implementation once APRAS-9 merges.",
+    "running": false,
     "priority": "medium",
     "blockedBy": [
       "APRAS-9"
     ],
-    "spec_path": "docs/tasks/APRAS-11-spec.md"
+    "spec_path": "docs/tasks/APRAS-11-spec.md",
+    "spec_iterations": 2
   },
   {
     "id": "APRAS-12",
@@ -148,8 +149,8 @@
   {
     "id": "APRAS-13",
     "title": "Integrate WhatsApp API for sending QR passes, visitor entry alerts, and announcements",
-    "status": "backlog",
-    "justification": "Automated WhatsApp notifications for visitor entry, QR pass sharing, and urgent HOA notices.",
+    "status": "blocked",
+    "justification": "Automated WhatsApp notifications for visitor entry, QR pass sharing, and urgent HOA notices. BLOCKED: requires a real WhatsApp Business API provider account (Twilio, Meta Cloud API, etc.) and credentials, which do not exist yet. User confirmed on 2026-08-27 nothing is set up. Cannot spec or implement a real integration without this -- needs the user to choose a provider and provision an account first.",
     "running": false,
     "priority": "medium"
   },
