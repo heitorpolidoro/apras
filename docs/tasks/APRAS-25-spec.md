@@ -49,20 +49,20 @@ class Feedback(SQLModel, table=True):
     responded_by: Optional["User"] = Relationship(sa_relationship_kwargs={"foreign_keys": "[Feedback.responded_by_id]"})
 ```
 
-`is_anonymous=True` means `reporter_user_id` is still stored (so a resident can see their own submission history) but is never exposed to the board via the API response (`FeedbackRead` omits `reporter`/`reporter_user_id` when `is_anonymous` is true) — mirroring `Occurrence`'s anonymous-masking precedent (check `occurrence_service.py`'s handling of `is_anonymous` for the exact masking approach and replicate it).
+`is_anonymous=True` means `reporter_user_id` is still stored on the row, but `FeedbackRead` masks `reporter_user_id`/`reporter_name` (e.g. to `None`/"Anônimo") for any viewer who is not `ADMINISTRATOR`/`DIRECTOR` — mirroring `occurrence_service.py`'s `_build_occurrence_read`, which masks purely on "is the viewer admin/director," not "is the viewer the reporter." Even a reporter viewing their own anonymous submission gets a masked response. The reason a resident can still find "their own" items in their history is that `list_feedback`'s filtering query matches on the raw, unmasked `reporter_user_id` column server-side (same as Occurrence's list query) — not because the response reveals identity to them. Do not build a "reveal identity to self" branch; it has no analog in the mirrored precedent.
 
 `response_seen_by_reporter` is the "notification" mechanism per the task's expected results: **in-app only** — no email/push/SMS infrastructure exists in this app today (WhatsApp integration, APRAS-13, is blocked on missing provider setup), so "notification" means an unread-response indicator (e.g. a badge count) the reporter sees when they view their own feedback list, flipped to `true` once they open/view the answered item. This is a deliberate scope decision, not a placeholder — do not build any external notification channel.
 
 ### Migration
 
-New Alembic revision (check `alembic heads` for the actual current head at implementation time): creates the `feedback` table and the two new enum types, following the exact idiom of the `occurrence`-table migration (`0009_add_occurrence_tables.py`) for enum-type creation on Postgres.
+New Alembic revision (check `alembic heads` for the actual current head at implementation time): creates the `feedback` table. Follow `0009_add_occurrence_tables.py`'s actual approach for `category`/`status`: plain `sa.String()` columns (no native Postgres enum type, no `CREATE TYPE`/`op.execute`) with enum validation happening only at the Pydantic/application layer via the `FeedbackCategory`/`FeedbackStatus` `StrEnum`s defined above.
 
 ## Backend Changes
 
 ### `backend/app/services/feedback_service.py`
 
 Mirror `occurrence_service.py`'s structure:
-- `create_feedback(session, current_user, feedback_in)`: any authenticated user except `GUEST` can submit (mirror whatever role check `occurrence_service.py`'s create function uses for the reporter side — likely "any non-Guest role").
+- `create_feedback(session, current_user, feedback_in)`: matches `occurrence_service.py`'s `create_occurrence` exactly — no role restriction whatsoever; any authenticated user, including `GUEST`, can submit feedback (authorization is `Depends(get_current_user)`-only, same as Occurrence's create path).
 - `list_feedback(session, current_user, ...)`: `ADMINISTRATOR`/`DIRECTOR` see everything (the "categorized inbox"); anyone else sees only their own submissions (matched by `reporter_user_id`, regardless of `is_anonymous` — a user can always see their own history).
 - `get_feedback(session, current_user, feedback_id)`: same visibility rule as list; also marks `response_seen_by_reporter = True` when the reporter (not staff) views an already-`ANSWERED` item.
 - `respond_to_feedback(session, current_user, feedback_id, response_in)`: `ADMINISTRATOR`/`DIRECTOR` only, sets `board_response`, `responded_by_id`, `responded_at`, `status = ANSWERED`, and resets `response_seen_by_reporter = False` (so the reporter's next view triggers the "seen" flip and, in the meantime, they see an unread indicator).
@@ -80,12 +80,12 @@ Mirror `occurrence_service.py`'s structure:
 ### New feature directory `frontend/src/features/feedback-management/`
 
 Mirror `occurrence-management/`'s structure:
-- `FeedbackChannelPage.tsx`: for `ADMINISTRATOR`/`DIRECTOR`, a categorized inbox (filter by category/status) listing all feedback with a response modal; for everyone else, a simple submission form + their own feedback history with an unread-response badge.
-- `useFeedback.ts` hooks mirroring `useOccurrences.ts`'s query/mutation patterns.
+- `FeedbackChannelPage.tsx`: for `ADMINISTRATOR`/`DIRECTOR`, a categorized inbox (filter by category/status) listing all feedback with a response modal; for everyone else, a simple submission form + their own feedback history with an unread-response badge. Opening/expanding an item in the reporter's own history view must fetch it individually via `GET /feedback/{id}` — the list view must not render `board_response` inline from the list payload alone, since the seen-flip only happens on the detail fetch (see Backend Changes: `get_feedback`).
+- `useFeedback.ts` hooks mirroring `useOccurrences.ts`'s query/mutation patterns, plus a distinct `useFeedbackDetail`-style hook (calling a `getFeedbackById`-equivalent, separate from the list hook) mirroring `occurrence-management`'s actual `useOccurrenceDetail`/`getOccurrenceById` pattern — used specifically to trigger the `GET /feedback/{id}` seen-flip when a reporter opens an item.
 
 ### `App.tsx` / `Navbar.tsx`
 
-New route `/feedback`, bare `<ProtectedRoute>` (any authenticated user, `GUEST` excluded at the service layer already) — nav link labeled "Fale Conosco".
+New route `/feedback`, bare `<ProtectedRoute>` (any authenticated user, including `GUEST` — no role restriction, matching `create_feedback`'s service-layer rule) — nav link labeled "Fale Conosco".
 
 ### i18n
 
@@ -100,7 +100,7 @@ New `feedback.*` namespace in `en.json`/`pt.json`.
 
 ## Testing
 
-- **Backend**: `create_feedback` (non-Guest succeeds, Guest is rejected); `list_feedback` (staff sees all, resident sees only their own); anonymous masking (reporter identity hidden from staff-facing read when `is_anonymous=True`, but the same resident can still see their own anonymous submission in their own history); `respond_to_feedback` (Administrator/Director only, non-staff rejected); `response_seen_by_reporter` flips correctly on reporter view, resets on a new response.
+- **Backend**: `create_feedback` (any authenticated user succeeds, including `GUEST` — no role rejection case, matching Occurrence's actual behavior); `list_feedback` (staff sees all, resident sees only their own); anonymous masking (reporter identity hidden from staff-facing read when `is_anonymous=True`, but the same resident can still see their own anonymous submission in their own history); `respond_to_feedback` (Administrator/Director only, non-staff rejected); `response_seen_by_reporter` flips correctly on reporter view, resets on a new response.
 - **Frontend**: `FeedbackChannelPage` renders the inbox view for staff and the submission/history view for others; unread badge reflects `response_seen_by_reporter`.
 
 ## Expected Results
