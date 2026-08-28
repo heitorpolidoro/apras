@@ -395,15 +395,15 @@
     "id": "APRAS-25",
     "title": "Canal de Críticas, Sugestões e Fale Conosco",
     "status": "specreview",
-    "justification": "Direct board feedback and contact channel separate from operational occurrences.",
+    "justification": "Feedback/suggestion/complaint channel to the board, separate from operational Occurrences. Mirrors the shipped Occurrence Book architecture closely, simplified (no priority/assignment/multi-step workflow/public toggle). In-app-only unread notification (no email/push infra exists). Spec written, dispatched for review.",
     "expected_results": [
       "Feedback message model supporting anonymous options created",
       "Board response workflow and response notification system built",
       "Categorized inbox for administration and resident contact UI deployed"
     ],
     "blockedBy": [],
-    "spec_path": "docs/tasks/T011-spec.md",
-    "spec_iterations": 0,
+    "spec_path": "docs/tasks/APRAS-25-spec.md",
+    "spec_iterations": 1,
     "qa_iterations": 0,
     "last_review_findings": [],
     "created_at": "2026-08-23T02:22:42-03:00",
