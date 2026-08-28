@@ -483,7 +483,7 @@
   {
     "id": "APRAS-29",
     "title": "Remove orphaned User.block_lot column",
-    "status": "backlog",
+    "status": "specreview",
     "justification": "block_lot was added to User (APRAS-6) before the Lot/Resident subsystem (APRAS-15/16) existed. Now that Lot/UserLotLink properly models which unit a user is associated with, block_lot is redundant and no UI writes to it (APRAS-7 was rescoped to drop it). Low priority cleanup: drop the column via migration once confirmed nothing reads it either.",
     "expected_results": [
       "Confirm no code reads User.block_lot before removing it",
@@ -491,33 +491,33 @@
       "User model and schemas no longer reference block_lot"
     ],
     "blockedBy": [],
-    "spec_path": "",
+    "spec_path": "docs/tasks/APRAS-29-spec.md",
     "spec_iterations": 0,
     "qa_iterations": 0,
     "last_review_findings": [],
     "created_at": "2026-08-27T15:20:00-03:00",
     "updated_at": "2026-08-27T15:20:00-03:00",
-    "running": false,
+    "running": true,
     "priority": "medium",
     "moved_at": "2026-08-27T15:20:00-03:00"
   },
   {
     "id": "APRAS-30",
     "title": "Fix UserRead 500 on non-canonical CPF during response serialization",
-    "status": "backlog",
+    "status": "specreview",
     "justification": "Discovered by independent QA while verifying APRAS-7: UserRead's cpf field validator re-runs on response serialization, so any user row with a non-canonical CPF format (e.g. a historically-seeded/imported value) causes a ResponseValidationError (500) on every endpoint that returns UserRead -- GET /users/, PATCH /users/{id}, and PATCH /users/{id}/contact-info all affected. Not introduced by APRAS-7, pre-existing since the cpf-validation task.",
     "expected_results": [
       "Endpoints returning UserRead no longer 500 for a user with a non-canonical (but previously-accepted) CPF value",
       "Existing CPF validation on write (signup, PATCH) is unaffected"
     ],
     "blockedBy": [],
-    "spec_path": "",
+    "spec_path": "docs/tasks/APRAS-30-spec.md",
     "spec_iterations": 0,
     "qa_iterations": 0,
     "last_review_findings": [],
     "created_at": "2026-08-27T16:05:00-03:00",
     "updated_at": "2026-08-27T16:05:00-03:00",
-    "running": false,
+    "running": true,
     "priority": "medium",
     "moved_at": "2026-08-27T16:05:00-03:00"
   },
