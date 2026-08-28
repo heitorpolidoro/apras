@@ -110,9 +110,9 @@
   {
     "id": "APRAS-10",
     "title": "Create dedicated landing/welcome page for Guest users",
-    "status": "backlog",
-    "justification": "Add a dedicated initial page for users with GUEST role awaiting approval or guest access.",
-    "running": false,
+    "status": "specreview",
+    "justification": "Add a dedicated initial page for users with GUEST role awaiting approval or guest access. Picked up from backlog, exploring design.",
+    "running": true,
     "priority": "medium"
   },
   {
