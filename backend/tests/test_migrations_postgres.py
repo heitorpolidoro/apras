@@ -318,7 +318,7 @@ def test_downgrade_is_a_safe_noop(migrated_pg_engine):
 
 
 # ---------------------------------------------------------------------------
-# 0021_task_visible_to_m2m (APRAS-11) – Task.visible_to becomes many-to-many
+# 0024_task_visible_to_m2m (APRAS-11) – Task.visible_to becomes many-to-many
 # ---------------------------------------------------------------------------
 
 
@@ -326,7 +326,7 @@ def test_task_visible_to_id_backfilled_into_join_table(migrated_pg_engine):
     """A task's existing single `visible_to_id` becomes a one-row
     `task_visible_to_link` entry after upgrading past 0021, and the
     `visible_to_id` column itself is dropped."""
-    _run_alembic("downgrade", "0020_add_porteiro_userrole")
+    _run_alembic("downgrade", "0023_add_space_reservation_tables")
 
     user_type_id = uuid.uuid4()
     user_id = uuid.uuid4()
@@ -441,7 +441,7 @@ def test_task_visible_to_downgrade_backfills_one_arbitrary_target(migrated_pg_en
             {"task_id": task_id, "type_a": type_a, "type_b": type_b},
         )
 
-    _run_alembic("downgrade", "0020_add_porteiro_userrole")
+    _run_alembic("downgrade", "0023_add_space_reservation_tables")
 
     with migrated_pg_engine.connect() as conn:
         visible_to_id = conn.execute(

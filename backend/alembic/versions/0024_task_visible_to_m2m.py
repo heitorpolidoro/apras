@@ -1,7 +1,7 @@
 """Task.visible_to becomes many-to-many via task_visible_to_link
 
-Revision ID: 0021_task_visible_to_many_to_many
-Revises: 0020_add_porteiro_userrole
+Revision ID: 0024_task_visible_to_m2m
+Revises: 0023_add_space_reservation_tables
 Create Date: 2026-08-27
 
 Replaces the single nullable `task.visible_to_id` FK with a
@@ -18,8 +18,8 @@ from typing import Union
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0021_task_visible_to_m2m"
-down_revision: Union[str, Sequence[str], None] = "0020_add_porteiro_userrole"
+revision: str = "0024_task_visible_to_m2m"
+down_revision: Union[str, Sequence[str], None] = "0023_add_space_reservation_tables"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
