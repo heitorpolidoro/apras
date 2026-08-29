@@ -291,3 +291,36 @@ class BallotRejectionReason(StrEnum):
     VOTE_NOT_OPEN = "VOTE_NOT_OPEN"
     ROLE_FORBIDDEN = "ROLE_FORBIDDEN"
     LOT_ALREADY_VOTED = "LOT_ALREADY_VOTED"
+
+
+class AssetCategory(StrEnum):
+    """Enumeration for asset and inventory item categories."""
+
+    ELETRONICOS = "ELETRONICOS"
+    FERRAMENTAS = "FERRAMENTAS"
+    MOBILIARIO = "MOBILIARIO"
+    SEGURANCA = "SEGURANCA"
+    LIMPEZA = "LIMPEZA"
+    MANUTENCAO = "MANUTENCAO"
+    OUTROS = "OUTROS"
+
+
+class AssetCondition(StrEnum):
+    """Enumeration for physical condition of patrimonial assets."""
+
+    NOVO = "NOVO"
+    BOM = "BOM"
+    REGULAR = "REGULAR"
+    RUIM = "RUIM"
+    DANIFICADO = "DANIFICADO"
+    BAIXADO = "BAIXADO"
+
+
+class MovementType(StrEnum):
+    """Enumeration for inventory and asset movements."""
+
+    ENTRADA = "ENTRADA"
+    SAIDA = "SAIDA"
+    AJUSTE_INVENTARIO = "AJUSTE_INVENTARIO"
+    BAIXA_PATRIMONIAL = "BAIXA_PATRIMONIAL"
+

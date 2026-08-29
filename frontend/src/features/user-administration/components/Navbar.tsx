@@ -251,6 +251,23 @@ const Navbar: React.FC = () => {
         )}
 
         {(effectiveRole === UserRole.ADMINISTRATOR ||
+          effectiveRole === UserRole.DIRECTOR ||
+          effectiveRole === UserRole.MANAGER) && (
+          <Link
+            to="/assets"
+            className={cn(
+              "text-sm font-semibold transition-all hover:text-primary relative py-1",
+              location.pathname === "/assets"
+                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
+                : "text-muted-foreground",
+            )}
+          >
+            {t("nav.assets", "Patrimônio & Estoque")}
+          </Link>
+        )}
+
+
+        {(effectiveRole === UserRole.ADMINISTRATOR ||
           effectiveRole === UserRole.MANAGER) && (
           <Link
             to="/users/contact-info"

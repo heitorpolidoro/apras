@@ -26,7 +26,8 @@
     "reservations": "Reservations",
     "manageSpaces": "Spaces",
     "packages": "Packages",
-    "voting": "Assemblies"
+    "voting": "Assemblies",
+    "assets": "Assets & Inventory"
   },
   "accessControl": {
     "title": "Access Control",
@@ -1063,6 +1064,108 @@
       "markSettled": "Mark as settled",
       "hint": "Delinquency is checked at the moment of each ballot: settling during the window restores the vote.",
       "errorUpdating": "Could not update the lot's delinquency."
+    }
+  },
+  "assets": {
+    "pageTitle": "Assets & Inventory",
+    "pageSubtitle": "Condominium fixed asset management and consumable inventory tracking.",
+    "noAssetsFound": "No assets or items found.",
+    "lowStock": "Low Stock",
+    "lowStockWarning": "Stock below minimum recommended quantity",
+    "filterByCategory": "All Categories",
+    "filterByCondition": "All Conditions",
+    "searchPlaceholder": "Search by name, tag, serial or location...",
+    "deleteConfirmTitle": "Delete Asset Item",
+    "deleteConfirmMessage": "Are you sure you want to delete '{{name}}'? All associated movement records will also be removed.",
+    "summary": {
+      "totalAssets": "Fixed Assets",
+      "totalConsumables": "Consumable Items",
+      "lowStockCount": "Low Stock Alerts",
+      "totalValue": "Patrimonial Value"
+    },
+    "tabs": {
+      "all": "All Items",
+      "fixed": "Fixed Assets",
+      "consumable": "Consumables / Stock",
+      "lowStock": "Low Stock Alerts"
+    },
+    "table": {
+      "item": "Item / Identifier",
+      "category": "Category",
+      "location": "Location",
+      "condition": "Condition",
+      "quantity": "Balance / Quantity",
+      "actions": "Actions"
+    },
+    "actions": {
+      "newAsset": "New Item / Asset",
+      "recordMovement": "Record Movement",
+      "history": "History",
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "form": {
+      "createTitle": "New Asset / Inventory Item",
+      "editTitle": "Edit Asset / Item",
+      "name": "Item Name *",
+      "nameRequired": "Item name is required.",
+      "namePlaceholder": "E.g. Lawn mower, LED bulb",
+      "category": "Category *",
+      "location": "Location *",
+      "locationRequired": "Location is required.",
+      "locationPlaceholder": "E.g. Main warehouse, Gate 1, Janitor room",
+      "isConsumable": "This is a consumable inventory material (e.g. light bulbs, cement, cleaning supplies)",
+      "assetTag": "Asset Tag",
+      "serialNumber": "Serial Number",
+      "condition": "Condition",
+      "acquisitionDate": "Acquisition Date",
+      "acquisitionValue": "Acquisition Value",
+      "unitOfMeasure": "Unit of Measure",
+      "initialQuantity": "Initial Quantity",
+      "minQuantity": "Minimum Quantity (Alert)",
+      "notes": "Notes",
+      "notesPlaceholder": "Additional details, vendor, warranty...",
+      "createButton": "Register Item"
+    },
+    "movement": {
+      "title": "Record Stock Movement",
+      "type": "Movement Type *",
+      "quantity": "Quantity *",
+      "newBalance": "New Counted Balance *",
+      "documentNumber": "Document / Invoice / Req",
+      "reason": "Reason / Justification *",
+      "reasonRequired": "Reason is required.",
+      "reasonPlaceholder": "Describe purpose of movement, department or destination...",
+      "insufficientStock": "Exit quantity cannot exceed current available stock balance.",
+      "confirm": "Confirm Movement"
+    },
+    "history": {
+      "title": "Movement History",
+      "noMovements": "No movements recorded for this item.",
+      "by": "Recorded by:"
+    },
+    "categories": {
+      "ELETRONICOS": "Electronics",
+      "FERRAMENTAS": "Tools",
+      "MOBILIARIO": "Furniture",
+      "SEGURANCA": "Security",
+      "LIMPEZA": "Cleaning",
+      "MANUTENCAO": "Maintenance",
+      "OUTROS": "Other"
+    },
+    "conditions": {
+      "NOVO": "New",
+      "BOM": "Good",
+      "REGULAR": "Regular",
+      "RUIM": "Poor",
+      "DANIFICADO": "Damaged",
+      "BAIXADO": "Written Off"
+    },
+    "movementTypes": {
+      "ENTRADA": "Inflow / Entry",
+      "SAIDA": "Outflow / Exit",
+      "AJUSTE_INVENTARIO": "Inventory Adjustment",
+      "BAIXA_PATRIMONIAL": "Asset Write-Off"
     }
   }
 }

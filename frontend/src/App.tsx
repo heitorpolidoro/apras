@@ -30,6 +30,7 @@ import { GateMonitorPage } from "./features/access-control/components/GateMonito
 import ReservableSpacesPage from "./features/space-reservation-management/components/ReservableSpacesPage";
 import SpaceBookingPage from "./features/space-reservation-management/components/SpaceBookingPage";
 import AssemblyVotingPage from "./features/assembly-voting/components/AssemblyVotingPage";
+import AssetsInventoryPage from "./features/asset-management/components/AssetsInventoryPage";
 import { UserRole } from "./types/auth";
 import "./App.css";
 
@@ -355,6 +356,21 @@ function App() {
                 }
               />
 
+              <Route
+                path="/assets"
+                element={
+                  <ProtectedRoute
+                    requiredRoles={[
+                      UserRole.ADMINISTRATOR,
+                      UserRole.DIRECTOR,
+                      UserRole.MANAGER,
+                    ]}
+                  >
+                    <AssetsInventoryPage />
+                  </ProtectedRoute>
+                }
+              />
+
               <Route path="/" element={<RootRedirect />} />
             </Routes>
           </div>
@@ -365,3 +381,4 @@ function App() {
 }
 
 export default App;
+

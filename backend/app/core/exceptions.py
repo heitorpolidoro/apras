@@ -677,3 +677,33 @@ class NoActiveBallotError(DomainError):
         self, message: str = "Não há cédula ativa para retirar."
     ) -> None:
         super().__init__(message)
+
+
+class AssetNotFoundError(DomainError):
+    """Raised when an asset is not found."""
+
+    def __init__(self, asset_id: UUID | str = "") -> None:
+        msg = f"Ativo {asset_id} não encontrado." if asset_id else "Ativo não encontrado."
+        super().__init__(msg)
+
+
+class InsufficientStockError(DomainError):
+    """Raised when an inventory exit exceeds available stock balance."""
+
+    def __init__(self, message: str = "Saldo insuficiente em estoque.") -> None:
+        super().__init__(message)
+
+
+class AssetAccessForbiddenError(DomainError):
+    """Raised when access to an asset or inventory action is forbidden."""
+
+    def __init__(self, message: str = "Acesso ao ativo ou movimentação negado.") -> None:
+        super().__init__(message)
+
+
+class AssetTagAlreadyExistsError(DomainError):
+    """Raised when an asset tag is already in use."""
+
+    def __init__(self, asset_tag: str) -> None:
+        super().__init__(f"Já existe um ativo com a etiqueta patrimonial '{asset_tag}'.")
+

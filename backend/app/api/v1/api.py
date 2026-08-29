@@ -4,12 +4,14 @@ from app.api.v1.endpoints import (
     access_control,
     access_logs,
     announcements,
+    assets,
     auth,
     authorizations,
     categories,
     documents,
     feedback,
     finance,
+    inventory_movements,
     lots,
     occurrences,
     packages,
@@ -67,6 +69,13 @@ api_router.include_router(
     voting.assemblies_router, prefix="/assemblies", tags=["assemblies"]
 )
 api_router.include_router(voting.votes_router, prefix="/votes", tags=["votes"])
+api_router.include_router(assets.router, prefix="/assets", tags=["assets"])
+api_router.include_router(
+    inventory_movements.router,
+    prefix="/inventory-movements",
+    tags=["inventory-movements"],
+)
+
 
 
 

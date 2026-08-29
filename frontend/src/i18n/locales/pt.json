@@ -26,7 +26,8 @@
     "reservations": "Reservas",
     "manageSpaces": "Espaços",
     "packages": "Encomendas",
-    "voting": "Assembleias"
+    "voting": "Assembleias",
+    "assets": "Patrimônio & Estoque"
   },
   "accessControl": {
     "title": "Controle de Acesso",
@@ -1063,6 +1064,108 @@
       "markSettled": "Marcar como adimplente",
       "hint": "A inadimplência é verificada no ato de cada voto: quitando durante a janela, o lote volta a votar.",
       "errorUpdating": "Erro ao atualizar a inadimplência do lote."
+    }
+  },
+  "assets": {
+    "pageTitle": "Patrimônio & Estoque",
+    "pageSubtitle": "Gerenciamento de bens patrimoniais e controle de estoque do condomínio.",
+    "noAssetsFound": "Nenhum ativo ou item encontrado.",
+    "lowStock": "Estoque Baixo",
+    "lowStockWarning": "Estoque abaixo do mínimo recomendado",
+    "filterByCategory": "Todas as Categorias",
+    "filterByCondition": "Todos os Estados",
+    "searchPlaceholder": "Buscar por nome, tag, serial ou local...",
+    "deleteConfirmTitle": "Excluir Item do Patrimônio",
+    "deleteConfirmMessage": "Tem certeza de que deseja excluir o item '{{name}}'? Todo o histórico de movimentações também será removido.",
+    "summary": {
+      "totalAssets": "Ativos Patrimoniais",
+      "totalConsumables": "Itens de Consumo",
+      "lowStockCount": "Estoque Baixo",
+      "totalValue": "Valor do Patrimônio"
+    },
+    "tabs": {
+      "all": "Todos os Itens",
+      "fixed": "Bens Patrimoniais",
+      "consumable": "Itens de Consumo / Estoque",
+      "lowStock": "Alertas de Estoque Baixo"
+    },
+    "table": {
+      "item": "Item / Identificação",
+      "category": "Categoria",
+      "location": "Localização",
+      "condition": "Estado",
+      "quantity": "Saldo / Quantidade",
+      "actions": "Ações"
+    },
+    "actions": {
+      "newAsset": "Novo Item / Ativo",
+      "recordMovement": "Movimentar",
+      "history": "Histórico",
+      "edit": "Editar",
+      "delete": "Excluir"
+    },
+    "form": {
+      "createTitle": "Novo Ativo / Item de Estoque",
+      "editTitle": "Editar Ativo / Item",
+      "name": "Nome do Item *",
+      "nameRequired": "O nome do item é obrigatório.",
+      "namePlaceholder": "Ex: Cortador de grama, Lâmpada LED",
+      "category": "Categoria *",
+      "location": "Localização *",
+      "locationRequired": "A localização é obrigatória.",
+      "locationPlaceholder": "Ex: Almoxarifado, Portaria 1, DML",
+      "isConsumable": "Este item é material de consumo / estoque (ex: lâmpadas, sacos de cimento, limpeza)",
+      "assetTag": "Etiqueta / Tag Patrimonial",
+      "serialNumber": "Número de Série",
+      "condition": "Estado de Conservação",
+      "acquisitionDate": "Data de Aquisição",
+      "acquisitionValue": "Valor de Aquisição (R$)",
+      "unitOfMeasure": "Unidade de Medida",
+      "initialQuantity": "Quantidade Inicial",
+      "minQuantity": "Quantidade Mínima (Alerta)",
+      "notes": "Observações",
+      "notesPlaceholder": "Detalhes adicionais, fornecedor, garantia...",
+      "createButton": "Cadastrar Item"
+    },
+    "movement": {
+      "title": "Registrar Movimentação",
+      "type": "Tipo de Movimentação *",
+      "quantity": "Quantidade *",
+      "newBalance": "Novo Saldo Contado *",
+      "documentNumber": "Documento / NF / Requisição",
+      "reason": "Motivo / Justificativa *",
+      "reasonRequired": "O motivo/justificativa é obrigatório.",
+      "reasonPlaceholder": "Descreva a finalidade da movimentação, setor ou destino...",
+      "insufficientStock": "A quantidade de saída não pode ser maior que o saldo atual em estoque.",
+      "confirm": "Confirmar Movimentação"
+    },
+    "history": {
+      "title": "Histórico de Movimentações",
+      "noMovements": "Nenhuma movimentação registrada para este item.",
+      "by": "Registrado por:"
+    },
+    "categories": {
+      "ELETRONICOS": "Eletrônicos",
+      "FERRAMENTAS": "Ferramentas",
+      "MOBILIARIO": "Mobiliário",
+      "SEGURANCA": "Segurança",
+      "LIMPEZA": "Limpeza",
+      "MANUTENCAO": "Manutenção",
+      "OUTROS": "Outros"
+    },
+    "conditions": {
+      "NOVO": "Novo",
+      "BOM": "Bom",
+      "REGULAR": "Regular",
+      "RUIM": "Ruim",
+      "DANIFICADO": "Danificado",
+      "BAIXADO": "Baixado"
+    },
+    "movementTypes": {
+      "ENTRADA": "Entrada",
+      "SAIDA": "Saída",
+      "AJUSTE_INVENTARIO": "Ajuste de Inventário",
+      "BAIXA_PATRIMONIAL": "Baixa Patrimonial"
     }
   }
 }

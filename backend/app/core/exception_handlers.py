@@ -15,6 +15,9 @@ from app.core.exceptions import (
     AssemblyNotClosedError,
     AssemblyNotFoundError,
     AssemblyStatusTransitionError,
+    AssetAccessForbiddenError,
+    AssetNotFoundError,
+    AssetTagAlreadyExistsError,
     AuthorizationNotFoundError,
     BudgetLineAlreadyExistsError,
     BudgetLineNotFoundError,
@@ -31,6 +34,7 @@ from app.core.exceptions import (
     FinancialTransactionNotFoundError,
     FolderAccessDeniedError,
     ForbiddenError,
+    InsufficientStockError,
     InvalidAnnouncementMediaFormatError,
     InvalidDeviceKeyError,
     InvalidFolderHierarchyError,
@@ -117,6 +121,7 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             AssemblyNotFoundError,
             VoteNotFoundError,
             NoActiveBallotError,
+            AssetNotFoundError,
         ),
     ):
         status_code = status.HTTP_404_NOT_FOUND
@@ -137,6 +142,7 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             NoActiveLotLinkError,
             TallyNotAvailableError,
             LotAlreadyVotedError,
+            AssetAccessForbiddenError,
         ),
     ):
         status_code = status.HTTP_403_FORBIDDEN
@@ -148,6 +154,7 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             FinanceCategoryAlreadyExistsError,
             SpaceReservationConflictError,
             PackageAlreadyPickedUpError,
+            AssetTagAlreadyExistsError,
         ),
     ):
         status_code = status.HTTP_409_CONFLICT
@@ -179,6 +186,7 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             AnonymousAssemblyError,
             AssemblyNotClosedError,
             AssemblyStatusTransitionError,
+            InsufficientStockError,
         ),
     ):
         status_code = status.HTTP_400_BAD_REQUEST

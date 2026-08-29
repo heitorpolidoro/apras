@@ -7,6 +7,7 @@ from .announcement import (
     AnnouncementMedia,
     AnnouncementReadReceipt,
 )
+from .asset import Asset, InventoryMovement
 from .category import Category
 from .document import AssociationDocument, DocumentDownloadLog, DocumentFolder
 from .enums import (
@@ -14,6 +15,8 @@ from .enums import (
     AnnouncementMediaType,
     AssemblyStatus,
     AssemblyType,
+    AssetCategory,
+    AssetCondition,
     AuthorizationStatus,
     AuthorizationType,
     BallotRejectionReason,
@@ -25,6 +28,7 @@ from .enums import (
     LotAssociationType,
     LotStatus,
     MilestoneStatus,
+    MovementType,
     OccurrenceCategory,
     OccurrencePriority,
     OccurrenceStatus,
@@ -78,6 +82,9 @@ __all__ = [
     "Assembly",
     "AssemblyStatus",
     "AssemblyType",
+    "Asset",
+    "AssetCategory",
+    "AssetCondition",
     "AssociationDocument",
     "AuthorizationStatus",
     "AuthorizationType",
@@ -98,12 +105,14 @@ __all__ = [
     "FeedbackStatus",
     "FinanceCategory",
     "FinancialTransaction",
+    "InventoryMovement",
     "Lot",
     "LotAssociationType",
     "LotStatus",
     "LotVoterEligibility",
     "MediaAsset",
     "MilestoneStatus",
+    "MovementType",
     "Occurrence",
     "OccurrenceCategory",
     "OccurrencePriority",
@@ -140,6 +149,7 @@ __all__ = [
     "VoteStatus",
     "VoteType",
 ]
+
 
 
 
