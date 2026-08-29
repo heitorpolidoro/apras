@@ -1,7 +1,6 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import React from "react";
 import { PackageStatusPage } from "../components/PackageStatusPage";
 import * as packageHooks from "../hooks/usePackages";
 import * as visitorPackageHooks from "../../visitor-management/hooks/usePackages";

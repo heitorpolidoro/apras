@@ -54,7 +54,7 @@ const mockTasks = [
     category_id: "cat-1",
     category_name: "General",
     category_color: "#808080",
-    manager_visible: false,
+    visible_to: [],
   },
   {
     id: "2",
@@ -70,7 +70,7 @@ const mockTasks = [
     category_id: "cat-1",
     category_name: "General",
     category_color: "#808080",
-    manager_visible: false,
+    visible_to: [],
   },
 ];
 

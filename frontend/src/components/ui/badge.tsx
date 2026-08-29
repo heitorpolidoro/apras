@@ -31,6 +31,9 @@ const badgeVariants = cva(
         // User status
         active: "bg-emerald-100 text-emerald-800",
         inactive: "bg-red-100 text-red-800",
+        // Semantic
+        destructive: "bg-red-100 text-red-800",
+        warning: "bg-amber-100 text-amber-800",
       },
     },
     defaultVariants: {

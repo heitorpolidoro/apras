@@ -5,7 +5,6 @@ import {
   FolderPlus,
   Plus,
   Search,
-  Filter,
   RefreshCw,
 } from "lucide-react";
 import { useEffectiveIdentity } from "../../user-administration/context/useEffectiveIdentity";
@@ -50,7 +49,7 @@ export const DocumentCenterPage: React.FC = () => {
   const [parentFolderIdForNew, setParentFolderIdForNew] = useState<string | null>(null);
 
   // Queries & Mutations
-  const { data: folders = [], isLoading: isLoadingFolders } = useDocumentFolders();
+  const { data: folders = [] } = useDocumentFolders();
   const { data: documentsData, isLoading: isLoadingDocs, refetch: refetchDocs } = useDocuments({
     folder_id: selectedFolderId || undefined,
     search: searchQuery || undefined,

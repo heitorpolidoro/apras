@@ -2,7 +2,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { Edit2, Link as LinkIcon, Mail, Phone, Trash2, Unlink, User as UserIcon } from "lucide-react";
 import { Button } from "../../../components/ui/button";
-import { ResidentDetail, ResidentRelationship } from "../../../types/resident";
+import { type ResidentDetail, ResidentRelationship } from "../../../types/resident";
 
 interface ResidentTableProps {
   residents: ResidentDetail[];

@@ -80,12 +80,14 @@ describe("voting queries", () => {
     });
   });
 
-  it.each([
+  const queryHookCases: Array<[string, () => { isSuccess: boolean }]> = [
     ["/votes/vote-1/my-ballot", () => useMyBallot("vote-1")],
     ["/votes/vote-1/eligible-lots", () => useEligibleLots("vote-1")],
     ["/votes/vote-1/tally", () => useTally("vote-1")],
     ["/lots/lot-1/voter-eligibility", () => useLotVoterEligibility("lot-1")],
-  ])("fetches %s", async (url, hook) => {
+  ];
+
+  it.each(queryHookCases)("fetches %s", async (url, hook) => {
     vi.mocked(apiClient.get).mockResolvedValue({ data: [] });
     const { wrapper } = createWrapper();
     const { result } = renderHook(hook, { wrapper });

@@ -10,7 +10,7 @@ import {
   useUnlinkResidentUser,
   useUpdateResident,
 } from "../hooks/useResidents";
-import {
+import type {
   ResidentCreatePayload,
   ResidentDetail,
   ResidentUpdatePayload,

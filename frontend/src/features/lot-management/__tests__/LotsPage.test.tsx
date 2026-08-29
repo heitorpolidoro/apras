@@ -116,7 +116,7 @@ describe("LotsPage", () => {
     vi.mocked(lotsApi.getLots).mockResolvedValue(mockLotsData);
     vi.mocked(lotsApi.getLotDetail).mockResolvedValue(mockLotDetailData);
     vi.mocked(usersHook.useUsers).mockReturnValue({
-      users: [
+      data: [
         {
           id: "user-1",
           email: "carlos@test.com",

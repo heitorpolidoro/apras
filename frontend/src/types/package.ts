@@ -1,7 +1,9 @@
-export enum PackageStatus {
-  AWAITING_PICKUP = "AWAITING_PICKUP",
-  PICKED_UP = "PICKED_UP",
-}
+export const PackageStatus = {
+  AWAITING_PICKUP: "AWAITING_PICKUP",
+  PICKED_UP: "PICKED_UP",
+} as const;
+
+export type PackageStatus = (typeof PackageStatus)[keyof typeof PackageStatus];
 
 export interface LotSummary {
   id: string;

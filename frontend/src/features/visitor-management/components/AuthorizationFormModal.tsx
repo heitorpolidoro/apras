@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { X, UserPlus, Calendar, ShieldCheck } from "lucide-react";
+import { X, UserPlus, ShieldCheck } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { useCreateVisitor, useVisitors } from "../hooks/useVisitors";
 import type {

@@ -4,10 +4,10 @@ import {
   useApprovePhoto,
   useRejectPhoto,
 } from '../hooks/useMediaAssets';
-import { MediaAssetRead } from '../../../types/media_asset';
+import type { MediaAssetRead } from '../../../types/media_asset';
 
 export const PhotoApprovalQueuePage: React.FC = () => {
-  const [page, setPage] = useState(1);
+  const [page] = useState(1);
   const [rejectingPhotoId, setRejectingPhotoId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [previewAsset, setPreviewAsset] = useState<MediaAssetRead | null>(null);

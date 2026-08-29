@@ -1,7 +1,6 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import React from "react";
 import { VisitorAuthPage } from "../components/VisitorAuthPage";
 import * as visitorsApi from "../../../api/visitors";
 import * as lotsHook from "../../lot-management/hooks/useLots";

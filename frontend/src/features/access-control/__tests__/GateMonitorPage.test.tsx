@@ -1,7 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import React from "react";
 import { GateMonitorPage } from "../components/GateMonitorPage";
 import * as accessControlApi from "../../../api/accessControl";
 

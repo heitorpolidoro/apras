@@ -1,5 +1,5 @@
 import React from 'react';
-import { PhotoApprovalStatus } from '../../../types/media_asset';
+import type { PhotoApprovalStatus } from '../../../types/media_asset';
 
 interface AvatarWithFallbackProps {
   name?: string;

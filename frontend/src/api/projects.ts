@@ -1,12 +1,12 @@
 import apiClient from './client';
 import type {
+  ConstructionProject,
   MilestoneCreatePayload,
   MilestoneUpdatePayload,
   PaginatedProjects,
   ProjectCreatePayload,
   ProjectDetail,
   ProjectMilestone,
-  ProjectRead,
   ProjectStatus,
   ProjectUpdate,
   ProjectUpdateCreatePayload,
@@ -35,16 +35,16 @@ export const getProjectDetail = async (id: string): Promise<ProjectDetail> => {
 
 export const createProject = async (
   payload: ProjectCreatePayload
-): Promise<ProjectRead> => {
-  const response = await apiClient.post<ProjectRead>('/projects', payload);
+): Promise<ConstructionProject> => {
+  const response = await apiClient.post<ConstructionProject>('/projects', payload);
   return response.data;
 };
 
 export const updateProject = async (
   id: string,
   payload: ProjectUpdatePayload
-): Promise<ProjectRead> => {
-  const response = await apiClient.put<ProjectRead>(`/projects/${id}`, payload);
+): Promise<ConstructionProject> => {
+  const response = await apiClient.put<ConstructionProject>(`/projects/${id}`, payload);
   return response.data;
 };
 

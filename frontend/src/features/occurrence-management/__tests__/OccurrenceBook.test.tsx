@@ -4,11 +4,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 import { OccurrenceBookPage } from "../components/OccurrenceBookPage";
 import { OccurrenceTable } from "../components/OccurrenceTable";
-import { NewOccurrenceModal } from "../components/NewOccurrenceModal";
 import { OccurrenceDetailsView } from "../components/OccurrenceDetailsView";
 import { OccurrenceTimelineLog } from "../components/OccurrenceTimelineLog";
 import * as occurrencesApi from "../../../api/occurrences";
-import type { Occurrence, OccurrenceDetail, PaginatedOccurrencesResponse } from "../../../types/occurrence";
+import type { OccurrenceDetail, PaginatedOccurrencesResponse } from "../../../types/occurrence";
 
 vi.mock("../../../api/occurrences");
 vi.mock("../../user-administration/context/useEffectiveIdentity", () => ({

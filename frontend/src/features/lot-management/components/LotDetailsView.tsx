@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, UserPlus, Trash2, User as UserIcon, Shield, Mail } from "lucide-react";
+import { ArrowLeft, UserPlus, Trash2, Mail } from "lucide-react";
 import { useLotDetail, useUnlinkUserLot } from "../hooks/useLots";
 import { LotAssociationType, LotStatus } from "../../../types/lot";
 import { Button } from "../../../components/ui/button";

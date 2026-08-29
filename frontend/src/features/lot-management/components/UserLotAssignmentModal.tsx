@@ -25,7 +25,7 @@ export const UserLotAssignmentModal: React.FC<UserLotAssignmentModalProps> = ({
   isLoading,
 }) => {
   const { t } = useTranslation();
-  const { users, isLoading: isLoadingUsers } = useUsers();
+  const { data: users = [], isLoading: isLoadingUsers } = useUsers();
 
   const [selectedUserId, setSelectedUserId] = useState("");
   const [associationType, setAssociationType] = useState<LotAssociationType>(

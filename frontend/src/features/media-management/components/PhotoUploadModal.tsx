@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { EntityType } from '../../../types/media_asset';
+import type { EntityType } from '../../../types/media_asset';
 import { useUploadPhoto } from '../hooks/useMediaAssets';
 import AvatarCropEditor from './AvatarCropEditor';
 import WebcamCaptureDialog from './WebcamCaptureDialog';

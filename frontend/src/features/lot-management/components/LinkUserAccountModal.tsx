@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Search, User as UserIcon } from "lucide-react";
+import { Search } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { useUsers } from "../../../hooks/useUsers";
-import { ResidentDetail } from "../../../types/resident";
+import type { ResidentDetail } from "../../../types/resident";
 
 interface LinkUserAccountModalProps {
   isOpen: boolean;
@@ -21,7 +21,7 @@ export const LinkUserAccountModal: React.FC<LinkUserAccountModalProps> = ({
   isLoading = false,
 }) => {
   const { t } = useTranslation();
-  const { users, isLoading: isUsersLoading } = useUsers();
+  const { data: users = [], isLoading: isUsersLoading } = useUsers();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUserId, setSelectedUserId] = useState("");

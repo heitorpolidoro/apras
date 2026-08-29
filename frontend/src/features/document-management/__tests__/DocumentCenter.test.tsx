@@ -3,14 +3,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 import { DocumentCenterPage } from "../components/DocumentCenterPage";
-import { FolderTreeSidebar } from "../components/FolderTreeSidebar";
 import { DocumentGridTable } from "../components/DocumentGridTable";
-import { PDFViewerModal } from "../components/PDFViewerModal";
-import { DocumentUploadModal } from "../components/DocumentUploadModal";
-import { FolderFormModal } from "../components/FolderFormModal";
 import * as documentsApi from "../../../api/documents";
 import type {
-  AssociationDocument,
   DocumentFolderTree,
   PaginatedDocumentResponse,
 } from "../../../types/document";

@@ -1,13 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AvatarWithFallback from '../components/AvatarWithFallback';
 import PhotoUploadModal from '../components/PhotoUploadModal';
 import AvatarCropEditor from '../components/AvatarCropEditor';
 import WebcamCaptureDialog from '../components/WebcamCaptureDialog';
 import PhotoApprovalQueuePage from '../components/PhotoApprovalQueuePage';
-import { MediaAssetRead } from '../../../types/media_asset';
+import type { MediaAssetRead } from '../../../types/media_asset';
 import * as uploadsApi from '../../../api/uploads';
 
 vi.mock('../../../api/uploads', () => ({

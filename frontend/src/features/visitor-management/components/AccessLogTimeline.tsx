@@ -1,6 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { LogIn, LogOut, Clock, User, FileText } from "lucide-react";
+import { LogIn, LogOut, Clock, FileText } from "lucide-react";
 import type { AccessLog } from "../../../types/visitor";
 
 interface AccessLogTimelineProps {

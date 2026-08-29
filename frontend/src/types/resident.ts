@@ -1,11 +1,14 @@
-export enum ResidentRelationship {
-  TITULAR = "TITULAR",
-  CONJUGE = "CONJUGE",
-  FILHO_DEPENDENTE = "FILHO_DEPENDENTE",
-  INQUILINO = "INQUILINO",
-  PARENTE = "PARENTE",
-  OUTRO = "OUTRO",
-}
+export const ResidentRelationship = {
+  TITULAR: "TITULAR",
+  CONJUGE: "CONJUGE",
+  FILHO_DEPENDENTE: "FILHO_DEPENDENTE",
+  INQUILINO: "INQUILINO",
+  PARENTE: "PARENTE",
+  OUTRO: "OUTRO",
+} as const;
+
+export type ResidentRelationship =
+  (typeof ResidentRelationship)[keyof typeof ResidentRelationship];
 
 export interface ResidentUserSummary {
   id: string;

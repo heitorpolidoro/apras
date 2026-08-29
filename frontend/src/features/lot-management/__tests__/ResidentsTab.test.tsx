@@ -80,7 +80,7 @@ describe("ResidentsTab", () => {
     vi.clearAllMocks();
     vi.mocked(residentsApi.getLotResidents).mockResolvedValue(mockResidentsData as any);
     vi.mocked(usersHook.useUsers).mockReturnValue({
-      users: [
+      data: [
         {
           id: "user-2",
           email: "user2@test.com",

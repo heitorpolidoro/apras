@@ -1,6 +1,5 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import React from "react";
 import { QrScannerModal } from "../components/QrScannerModal";
 import { Html5Qrcode } from "html5-qrcode";
 

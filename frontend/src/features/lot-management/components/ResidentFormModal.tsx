@@ -2,10 +2,10 @@ import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../../components/ui/button";
 import {
-  ResidentCreatePayload,
-  ResidentDetail,
+  type ResidentCreatePayload,
+  type ResidentDetail,
   ResidentRelationship,
-  ResidentUpdatePayload,
+  type ResidentUpdatePayload,
 } from "../../../types/resident";
 
 interface ResidentFormModalProps {

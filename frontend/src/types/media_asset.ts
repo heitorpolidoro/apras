@@ -23,7 +23,7 @@ export interface MediaAssetRead {
   entity_id: string | null;
   storage_provider: StorageProvider;
   file_path: string;
-  url: str;
+  url: string;
   thumbnail_url: string | null;
   file_size_bytes: number;
   mime_type: string;

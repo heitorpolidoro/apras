@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, ShieldCheck, Filter } from "lucide-react";
+import { Plus, ShieldCheck } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { useLots } from "../../lot-management/hooks/useLots";
 import {

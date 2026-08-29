@@ -65,7 +65,6 @@ export const useUpdateResident = () => {
   return useMutation({
     mutationFn: ({
       residentId,
-      lotId,
       data,
     }: {
       residentId: string;
@@ -88,7 +87,6 @@ export const useDeactivateResident = () => {
   return useMutation({
     mutationFn: ({
       residentId,
-      lotId,
     }: {
       residentId: string;
       lotId: string;
@@ -110,7 +108,6 @@ export const useLinkResidentUser = () => {
     mutationFn: ({
       residentId,
       userId,
-      lotId,
     }: {
       residentId: string;
       userId: string;
@@ -132,7 +129,6 @@ export const useUnlinkResidentUser = () => {
   return useMutation({
     mutationFn: ({
       residentId,
-      lotId,
     }: {
       residentId: string;
       lotId: string;

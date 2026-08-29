@@ -7,7 +7,7 @@ import {
   deletePhoto,
   getPhotoMetadata,
 } from '../../../api/uploads';
-import { EntityType } from '../../../types/media_asset';
+import type { EntityType } from '../../../types/media_asset';
 
 export function usePendingPhotos(page: number = 1, limit: number = 20) {
   return useQuery({

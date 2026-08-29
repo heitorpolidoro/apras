@@ -1,6 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import React from "react";
 import { AuthorizationQrModal } from "../components/AuthorizationQrModal";
 import apiClient from "../../../api/client";
 
