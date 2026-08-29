@@ -24,11 +24,14 @@ export default mergeConfig(
           "**/*.test.tsx",
           "**/*.test.ts",
         ],
+        // Ratcheted by APRAS-36 to lock in the coverage gained there.
+        // Measured on that run: 88.26 lines / 83.37 functions /
+        // 79.16 branches / 87.41 statements.
         thresholds: {
-          lines: 75,
-          functions: 75,
-          branches: 70,
-          statements: 75,
+          lines: 80,
+          functions: 78,
+          branches: 76,
+          statements: 80,
         },
       },
     },
