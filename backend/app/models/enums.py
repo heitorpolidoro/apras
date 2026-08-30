@@ -324,3 +324,10 @@ class MovementType(StrEnum):
     AJUSTE_INVENTARIO = "AJUSTE_INVENTARIO"
     BAIXA_PATRIMONIAL = "BAIXA_PATRIMONIAL"
 
+
+class PurchaseRequestStatus(StrEnum):
+    """Enumeration for purchase request lifecycle status."""
+
+    OPEN = "OPEN"
+    DECIDED = "DECIDED"
+    CANCELLED = "CANCELLED"

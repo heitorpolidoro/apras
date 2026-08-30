@@ -60,6 +60,11 @@ from app.core.exceptions import (
     ProjectInvalidProgressError,
     ProjectNotFoundError,
     ProjectUpdateNotFoundError,
+    PurchaseAccessForbiddenError,
+    PurchaseQuoteFrozenError,
+    PurchaseQuoteNotFoundError,
+    PurchaseRequestNotFoundError,
+    PurchaseRequestNotOpenError,
     ReservableSpaceNotFoundError,
     ResidentCPFConflictError,
     ResidentNotFoundError,
@@ -122,6 +127,8 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             VoteNotFoundError,
             NoActiveBallotError,
             AssetNotFoundError,
+            PurchaseRequestNotFoundError,
+            PurchaseQuoteNotFoundError,
         ),
     ):
         status_code = status.HTTP_404_NOT_FOUND
@@ -143,6 +150,7 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             TallyNotAvailableError,
             LotAlreadyVotedError,
             AssetAccessForbiddenError,
+            PurchaseAccessForbiddenError,
         ),
     ):
         status_code = status.HTTP_403_FORBIDDEN
@@ -155,6 +163,7 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             SpaceReservationConflictError,
             PackageAlreadyPickedUpError,
             AssetTagAlreadyExistsError,
+            PurchaseQuoteFrozenError,
         ),
     ):
         status_code = status.HTTP_409_CONFLICT
@@ -187,6 +196,7 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             AssemblyNotClosedError,
             AssemblyStatusTransitionError,
             InsufficientStockError,
+            PurchaseRequestNotOpenError,
         ),
     ):
         status_code = status.HTTP_400_BAD_REQUEST

@@ -16,6 +16,7 @@ from app.api.v1.endpoints import (
     occurrences,
     packages,
     projects,
+    purchases,
     reservations,
     residents,
     tasks,
@@ -74,6 +75,9 @@ api_router.include_router(
     inventory_movements.router,
     prefix="/inventory-movements",
     tags=["inventory-movements"],
+)
+api_router.include_router(
+    purchases.router, prefix="/purchase-requests", tags=["purchase-requests"]
 )
 
 

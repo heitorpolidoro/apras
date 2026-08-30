@@ -27,7 +27,8 @@
     "manageSpaces": "Spaces",
     "packages": "Packages",
     "voting": "Assemblies",
-    "assets": "Assets & Inventory"
+    "assets": "Assets & Inventory",
+    "purchases": "Purchase Quotations"
   },
   "accessControl": {
     "title": "Access Control",
@@ -1166,6 +1167,122 @@
       "SAIDA": "Outflow / Exit",
       "AJUSTE_INVENTARIO": "Inventory Adjustment",
       "BAIXA_PATRIMONIAL": "Asset Write-Off"
+    }
+  },
+  "purchases": {
+    "pageTitle": "Purchase Quotations",
+    "pageSubtitle": "Purchase requests, supplier quotes and the justified choice.",
+    "noRequestsFound": "No purchase requests found.",
+    "searchPlaceholder": "Search by title or description...",
+    "loading": "Loading...",
+    "requestedBy": "Opened by",
+    "quoteCount": "quotes",
+    "lowestTotal": "Lowest quote",
+    "selectedTotal": "Chosen quote",
+    "deleteConfirmTitle": "Delete Purchase Request",
+    "deleteConfirmMessage": "Are you sure you want to delete the request '{{title}}'? Its quotes and recorded justifications will be removed as well.",
+    "cancelConfirmTitle": "Cancel Purchase Request",
+    "cancelConfirmMessage": "Are you sure you want to cancel the request '{{title}}'? It cannot be reopened.",
+    "summary": {
+      "open": "Open Requests",
+      "decided": "Decided Requests",
+      "cancelled": "Cancelled Requests",
+      "totalSelected": "Chosen Value"
+    },
+    "tabs": {
+      "all": "All Requests",
+      "open": "Open",
+      "decided": "Decided",
+      "cancelled": "Cancelled"
+    },
+    "status": {
+      "OPEN": "Open",
+      "DECIDED": "Decided",
+      "CANCELLED": "Cancelled"
+    },
+    "actions": {
+      "newRequest": "New Request",
+      "openDetail": "View Quotes",
+      "edit": "Edit",
+      "delete": "Delete",
+      "cancelRequest": "Cancel Request",
+      "addQuote": "New Quote",
+      "editQuote": "Edit Quote",
+      "deleteQuote": "Delete Quote",
+      "chooseQuote": "Choose this Quote",
+      "close": "Close",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "form": {
+      "createTitle": "New Purchase Request",
+      "editTitle": "Edit Purchase Request",
+      "title": "Request title *",
+      "titleRequired": "The request title is required.",
+      "titlePlaceholder": "E.g. Replace the water pumps",
+      "description": "Description of what will be bought",
+      "descriptionPlaceholder": "Specifications, quantities, accepted brands...",
+      "generalNotes": "General notes",
+      "generalNotesPlaceholder": "Deadlines, contacts, board remarks...",
+      "submit": "Save Request"
+    },
+    "quote": {
+      "createTitle": "New Quote",
+      "editTitle": "Edit Quote",
+      "supplierName": "Supplier *",
+      "supplierNameRequired": "The supplier name is required.",
+      "supplierNamePlaceholder": "E.g. Central Plumbing Ltd",
+      "supplierContact": "Supplier contact",
+      "supplierContactPlaceholder": "Phone, e-mail or sales rep",
+      "unitPrice": "Unit price (R$) *",
+      "quantity": "Quantity *",
+      "quantityInvalid": "Quantity must be greater than zero.",
+      "unitPriceInvalid": "Unit price cannot be negative.",
+      "total": "Quote total",
+      "notes": "Quote notes",
+      "notesPlaceholder": "Payment terms, proposal validity...",
+      "submit": "Save Quote",
+      "noQuotes": "No quotes recorded for this request.",
+      "lowestBadge": "Lowest price",
+      "selectedBadge": "Chosen",
+      "frozen": "The quotes of this request are frozen."
+    },
+    "extraFields": {
+      "title": "Extra fields",
+      "hint": "Add free-form information for this quote (up to 20 fields).",
+      "label": "Label",
+      "labelPlaceholder": "E.g. Delivery time",
+      "value": "Value",
+      "valuePlaceholder": "E.g. 15 days",
+      "add": "Add field",
+      "remove": "Remove field",
+      "labelRequired": "Every extra field needs a label.",
+      "duplicateLabel": "There are duplicate labels among the extra fields.",
+      "maxReached": "A quote accepts at most 20 extra fields."
+    },
+    "decision": {
+      "title": "Choose a Quote",
+      "panelTitle": "Recorded decision",
+      "noDecision": "No quote has been chosen yet.",
+      "justification": "Justification for the choice *",
+      "justificationPlaceholder": "Explain why this quote was chosen...",
+      "justificationHint": "The justification must be at least 10 characters long.",
+      "confirm": "Confirm Choice",
+      "decidedBy": "Decided by",
+      "supersededTitle": "Previous decisions",
+      "current": "Current",
+      "superseded": "Superseded"
+    },
+    "detail": {
+      "title": "Purchase Request",
+      "generalNotes": "General notes",
+      "description": "Description",
+      "quotes": "Quotes",
+      "supplier": "Supplier",
+      "unitPrice": "Unit price",
+      "quantity": "Qty.",
+      "totalPrice": "Total",
+      "actions": "Actions"
     }
   }
 }

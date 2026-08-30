@@ -27,7 +27,8 @@
     "manageSpaces": "Espaços",
     "packages": "Encomendas",
     "voting": "Assembleias",
-    "assets": "Patrimônio & Estoque"
+    "assets": "Patrimônio & Estoque",
+    "purchases": "Cotações de Compra"
   },
   "accessControl": {
     "title": "Controle de Acesso",
@@ -1166,6 +1167,122 @@
       "SAIDA": "Saída",
       "AJUSTE_INVENTARIO": "Ajuste de Inventário",
       "BAIXA_PATRIMONIAL": "Baixa Patrimonial"
+    }
+  },
+  "purchases": {
+    "pageTitle": "Cotações de Compra",
+    "pageSubtitle": "Pedidos de compra, orçamentos de fornecedores e a escolha justificada.",
+    "noRequestsFound": "Nenhum pedido de compra encontrado.",
+    "searchPlaceholder": "Buscar por título ou descrição...",
+    "loading": "Carregando...",
+    "requestedBy": "Aberto por",
+    "quoteCount": "orçamentos",
+    "lowestTotal": "Menor orçamento",
+    "selectedTotal": "Orçamento escolhido",
+    "deleteConfirmTitle": "Excluir Pedido de Compra",
+    "deleteConfirmMessage": "Tem certeza de que deseja excluir o pedido '{{title}}'? Os orçamentos e as justificativas registradas também serão removidos.",
+    "cancelConfirmTitle": "Cancelar Pedido de Compra",
+    "cancelConfirmMessage": "Tem certeza de que deseja cancelar o pedido '{{title}}'? Não será possível reabri-lo.",
+    "summary": {
+      "open": "Pedidos Abertos",
+      "decided": "Pedidos Decididos",
+      "cancelled": "Pedidos Cancelados",
+      "totalSelected": "Valor Escolhido"
+    },
+    "tabs": {
+      "all": "Todos os Pedidos",
+      "open": "Abertos",
+      "decided": "Decididos",
+      "cancelled": "Cancelados"
+    },
+    "status": {
+      "OPEN": "Aberto",
+      "DECIDED": "Decidido",
+      "CANCELLED": "Cancelado"
+    },
+    "actions": {
+      "newRequest": "Novo Pedido",
+      "openDetail": "Ver Orçamentos",
+      "edit": "Editar",
+      "delete": "Excluir",
+      "cancelRequest": "Cancelar Pedido",
+      "addQuote": "Novo Orçamento",
+      "editQuote": "Editar Orçamento",
+      "deleteQuote": "Excluir Orçamento",
+      "chooseQuote": "Escolher este Orçamento",
+      "close": "Fechar",
+      "cancel": "Cancelar",
+      "save": "Salvar"
+    },
+    "form": {
+      "createTitle": "Novo Pedido de Compra",
+      "editTitle": "Editar Pedido de Compra",
+      "title": "Título do Pedido *",
+      "titleRequired": "O título do pedido é obrigatório.",
+      "titlePlaceholder": "Ex: Troca das bombas d'água",
+      "description": "Descrição do que será comprado",
+      "descriptionPlaceholder": "Especificações, quantidades, marcas aceitas...",
+      "generalNotes": "Anotações gerais do pedido",
+      "generalNotesPlaceholder": "Prazos, contatos, observações da diretoria...",
+      "submit": "Salvar Pedido"
+    },
+    "quote": {
+      "createTitle": "Novo Orçamento",
+      "editTitle": "Editar Orçamento",
+      "supplierName": "Fornecedor *",
+      "supplierNameRequired": "O nome do fornecedor é obrigatório.",
+      "supplierNamePlaceholder": "Ex: Hidráulica Central Ltda",
+      "supplierContact": "Contato do fornecedor",
+      "supplierContactPlaceholder": "Telefone, e-mail ou vendedor",
+      "unitPrice": "Preço unitário (R$) *",
+      "quantity": "Quantidade *",
+      "quantityInvalid": "A quantidade deve ser maior que zero.",
+      "unitPriceInvalid": "O preço unitário não pode ser negativo.",
+      "total": "Total do orçamento",
+      "notes": "Observações do orçamento",
+      "notesPlaceholder": "Condições de pagamento, validade da proposta...",
+      "submit": "Salvar Orçamento",
+      "noQuotes": "Nenhum orçamento registrado neste pedido.",
+      "lowestBadge": "Menor preço",
+      "selectedBadge": "Escolhido",
+      "frozen": "Os orçamentos deste pedido estão congelados."
+    },
+    "extraFields": {
+      "title": "Campos extras",
+      "hint": "Adicione informações livres deste orçamento (até 20 campos).",
+      "label": "Rótulo",
+      "labelPlaceholder": "Ex: Prazo de entrega",
+      "value": "Valor",
+      "valuePlaceholder": "Ex: 15 dias",
+      "add": "Adicionar campo",
+      "remove": "Remover campo",
+      "labelRequired": "Todo campo extra precisa de um rótulo.",
+      "duplicateLabel": "Há rótulos repetidos entre os campos extras.",
+      "maxReached": "Um orçamento aceita no máximo 20 campos extras."
+    },
+    "decision": {
+      "title": "Escolher Orçamento",
+      "panelTitle": "Decisão registrada",
+      "noDecision": "Nenhum orçamento escolhido até agora.",
+      "justification": "Justificativa da escolha *",
+      "justificationPlaceholder": "Explique por que este orçamento foi escolhido...",
+      "justificationHint": "A justificativa precisa ter ao menos 10 caracteres.",
+      "confirm": "Confirmar Escolha",
+      "decidedBy": "Decidido por",
+      "supersededTitle": "Decisões anteriores",
+      "current": "Atual",
+      "superseded": "Substituída"
+    },
+    "detail": {
+      "title": "Pedido de Compra",
+      "generalNotes": "Anotações gerais",
+      "description": "Descrição",
+      "quotes": "Orçamentos",
+      "supplier": "Fornecedor",
+      "unitPrice": "Preço unitário",
+      "quantity": "Qtd.",
+      "totalPrice": "Total",
+      "actions": "Ações"
     }
   }
 }

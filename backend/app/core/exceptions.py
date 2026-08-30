@@ -707,3 +707,56 @@ class AssetTagAlreadyExistsError(DomainError):
     def __init__(self, asset_tag: str) -> None:
         super().__init__(f"Já existe um ativo com a etiqueta patrimonial '{asset_tag}'.")
 
+
+class PurchaseRequestNotFoundError(DomainError):
+    """Raised when a purchase request is not found."""
+
+    def __init__(self, request_id: UUID | str = "") -> None:
+        msg = (
+            f"Pedido de compra {request_id} não encontrado."
+            if request_id
+            else "Pedido de compra não encontrado."
+        )
+        super().__init__(msg)
+
+
+class PurchaseQuoteNotFoundError(DomainError):
+    """Raised when a quote is unknown or belongs to another purchase request."""
+
+    def __init__(self, quote_id: UUID | str = "") -> None:
+        msg = (
+            f"Orçamento {quote_id} não encontrado neste pedido."
+            if quote_id
+            else "Orçamento não encontrado neste pedido."
+        )
+        super().__init__(msg)
+
+
+class PurchaseAccessForbiddenError(DomainError):
+    """Raised when a role or ownership rule blocks a purchase action."""
+
+    def __init__(
+        self, message: str = "Acesso à cotação de compras negado."
+    ) -> None:
+        super().__init__(message)
+
+
+class PurchaseRequestNotOpenError(DomainError):
+    """Raised when an action requires a purchase request that is still open."""
+
+    def __init__(
+        self, message: str = "O pedido de compra não está aberto."
+    ) -> None:
+        super().__init__(message)
+
+
+class PurchaseQuoteFrozenError(DomainError):
+    """Raised when quotes are edited on a request that is no longer open."""
+
+    def __init__(
+        self,
+        message: str = (
+            "Os orçamentos deste pedido estão congelados e não podem ser alterados."
+        ),
+    ) -> None:
+        super().__init__(message)

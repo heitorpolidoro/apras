@@ -31,6 +31,7 @@ import ReservableSpacesPage from "./features/space-reservation-management/compon
 import SpaceBookingPage from "./features/space-reservation-management/components/SpaceBookingPage";
 import AssemblyVotingPage from "./features/assembly-voting/components/AssemblyVotingPage";
 import AssetsInventoryPage from "./features/asset-management/components/AssetsInventoryPage";
+import PurchaseRequestsPage from "./features/purchase-management/components/PurchaseRequestsPage";
 import { UserRole } from "./types/auth";
 import "./App.css";
 
@@ -367,6 +368,24 @@ function App() {
                     ]}
                   >
                     <AssetsInventoryPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Purchase quotations are an internal board/manager workflow:
+                  supplier prices under negotiation are not published to
+                  residents (APRAS-37). */}
+              <Route
+                path="/purchases"
+                element={
+                  <ProtectedRoute
+                    requiredRoles={[
+                      UserRole.ADMINISTRATOR,
+                      UserRole.DIRECTOR,
+                      UserRole.MANAGER,
+                    ]}
+                  >
+                    <PurchaseRequestsPage />
                   </ProtectedRoute>
                 }
               />

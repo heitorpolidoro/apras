@@ -266,6 +266,22 @@ const Navbar: React.FC = () => {
           </Link>
         )}
 
+        {(effectiveRole === UserRole.ADMINISTRATOR ||
+          effectiveRole === UserRole.DIRECTOR ||
+          effectiveRole === UserRole.MANAGER) && (
+          <Link
+            to="/purchases"
+            className={cn(
+              "text-sm font-semibold transition-all hover:text-primary relative py-1",
+              location.pathname === "/purchases"
+                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
+                : "text-muted-foreground",
+            )}
+          >
+            {t("nav.purchases", "Cotações de Compra")}
+          </Link>
+        )}
+
 
         {(effectiveRole === UserRole.ADMINISTRATOR ||
           effectiveRole === UserRole.MANAGER) && (
