@@ -23,6 +23,10 @@ from app.schemas.access_control import (
 from app.services.access_control_service import AccessControlService
 
 router = APIRouter()
+# Mounted separately, without the tenant-scoped dependency: a physical device
+# authenticates with `X-Device-Key` and has no user JWT, so it resolves its
+# acting tenant from the device row itself (APRAS-42 §6.4).
+webhook_router = APIRouter()
 
 
 def _to_device_key_read(device: AccessDevice) -> AccessDeviceKeyRead:
@@ -134,7 +138,7 @@ def get_facial_template(
     return FacialTemplateRead.model_validate(template) if template else None
 
 
-@router.post(
+@webhook_router.post(
     "/webhook/verification",
     response_model=FacialAccessEventRead,
     status_code=status.HTTP_201_CREATED,

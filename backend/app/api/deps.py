@@ -7,20 +7,25 @@ from typing import Annotated
 from uuid import UUID
 
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import ValidationError
 from sqlmodel import Session, select
 
+from app.core import tenant_context
 from app.core.config import settings
 from app.core.exceptions import ForbiddenError
 from app.db import get_session
 from app.models.enums import MenuKey, UserRole
 from app.models.task import Task
+from app.models.tenant import DEFAULT_TENANT_ID, Tenant, UserTenantLink
 from app.models.user import User
 from app.models.user_type import UserType
 
 reusable_oauth2 = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+
+#: Name of the header carrying the acting tenant id.
+TENANT_HEADER = "X-Tenant-Id"
 
 
 def get_current_user(
@@ -144,7 +149,16 @@ def get_effective_user_type_ids(user: User, session: Session) -> set[UUID]:
         set[UUID]: The union of explicit and role-implicit UserType ids.
     """
     explicit_ids = {ut.id for ut in user.user_types}
-    role_type = session.exec(select(UserType).where(UserType.role == user.role)).first()
+    # The acting tenant of the request session, or the default tenant when
+    # the caller is not a request (unit tests, `app/seed.py`). The fallback
+    # is what keeps `.first()` deterministic now that a role can have one
+    # UserType row *per tenant* (APRAS-42 §7.1).
+    tenant_id = tenant_context.acting_tenant_id(session) or DEFAULT_TENANT_ID
+    role_type = session.exec(
+        select(UserType).where(
+            UserType.role == user.role, UserType.tenant_id == tenant_id
+        )
+    ).first()
     if role_type:
         explicit_ids.add(role_type.id)
     return explicit_ids
@@ -226,3 +240,119 @@ def assert_can_edit_task(current_user: User, task: Task) -> None:
             raise ForbiddenError(
                 "Managers can only edit unassigned or self-assigned tasks"
             )
+
+
+# ---------------------------------------------------------------------------
+# Tenant resolution (APRAS-42 §3)
+# ---------------------------------------------------------------------------
+
+
+def _tenant_memberships(session: Session, user: User) -> list[UUID]:
+    """Tenant ids the user is explicitly linked to, in insertion order."""
+    links = session.exec(
+        select(UserTenantLink).where(UserTenantLink.user_id == user.id)
+    ).all()
+    return [link.tenant_id for link in links]
+
+
+def _resolve_from_header(
+    session: Session, current_user: User, raw_header: str
+) -> Tenant:
+    """Resolve the acting tenant from an explicit `X-Tenant-Id` value."""
+    try:
+        tenant_id = uuid.UUID(raw_header)
+    except ValueError as err:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid X-Tenant-Id header",
+        ) from err
+
+    tenant = session.get(Tenant, tenant_id)
+    is_admin = current_user.role == UserRole.ADMINISTRATOR
+    if tenant is None:
+        # Never confirm the existence of a tenant to a non-administrator.
+        if is_admin:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found"
+            )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not a member of the requested tenant",
+        )
+    if not tenant.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Tenant is inactive"
+        )
+    if is_admin or tenant_id in _tenant_memberships(session, current_user):
+        return tenant
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Not a member of the requested tenant",
+    )
+
+
+def _resolve_without_header(session: Session, current_user: User) -> Tenant:
+    """Resolve the acting tenant of a caller that sent no header.
+
+    400 is reserved for genuine ambiguity: the frontend does not send the
+    header until APRAS-38, and migration 0028 gave every pre-existing user
+    exactly one membership.
+    """
+    memberships = _tenant_memberships(session, current_user)
+    if len(memberships) > 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="X-Tenant-Id header is required: user belongs to multiple tenants",
+        )
+
+    tenant_id = memberships[0] if memberships else DEFAULT_TENANT_ID
+    tenant = session.get(Tenant, tenant_id)
+    if tenant is None or not tenant.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="X-Tenant-Id header is required",
+        )
+    return tenant
+
+
+def get_current_tenant(
+    session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    x_tenant_id: Annotated[str | None, Header(alias=TENANT_HEADER)] = None,
+) -> Tenant:
+    """Resolve the acting tenant of the request and arm the session filter.
+
+    Attached at `include_router` level to every tenant-scoped router
+    (`app/api/v1/api.py`), so "is this route scoped?" is a property of the
+    mount rather than of the handler author's memory. Its only side effect
+    is `tenant_context.set_acting_tenant`.
+    """
+    if x_tenant_id is not None:
+        tenant = _resolve_from_header(session, current_user, x_tenant_id)
+    else:
+        tenant = _resolve_without_header(session, current_user)
+    tenant_context.set_acting_tenant(session, tenant.id)
+    return tenant
+
+
+def use_global_tenant_scope(
+    session: Annotated[Session, Depends(get_session)],
+) -> None:
+    """Mark the request session resolved with no acting tenant.
+
+    Attached to the routes of the global allowlist (§5.3) so the fail-closed
+    guard does not fire on them.
+    """
+    tenant_context.use_global_scope(session)
+
+
+def use_default_tenant_scope(
+    session: Annotated[Session, Depends(get_session)],
+) -> None:
+    """Act in the default tenant without consulting a user.
+
+    Used by `POST /api/v1/auth/signup` only: an unauthenticated caller must
+    not be able to place itself in an arbitrary tenant by guessing a UUID,
+    so any `X-Tenant-Id` header is ignored there.
+    """
+    tenant_context.set_acting_tenant(session, DEFAULT_TENANT_ID)

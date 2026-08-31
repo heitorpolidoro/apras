@@ -7,6 +7,7 @@ from app.core.security import get_password_hash
 from app.models.category import Category
 from app.models.enums import TaskPriority, TaskStatus, UserRole
 from app.models.task import Task
+from app.models.tenant import DEFAULT_TENANT_ID, UserTenantLink
 from app.models.user import User
 from app.models.user_type import UserType
 from sqlalchemy import text
@@ -118,6 +119,22 @@ def seed_db() -> None:
             cpf="07491723040",
         )
         session.add(manager)
+        session.commit()
+
+        # Explicit membership of the default tenant for every seeded user, so
+        # the dev environment matches what migration 0028 produced for real
+        # installs and `get_current_tenant` resolves through the
+        # one-membership branch rather than the zero-membership fallback
+        # (APRAS-42 §8.3). This session is a plain `Session(engine)`: it
+        # carries no request-scoped marker, so the tenant filter, the write
+        # stamp and the fail-closed guard are all inert here and every row
+        # still lands in the default tenant through the model default.
+        for seeded_user in [admin, *diretores, manager]:
+            session.add(
+                UserTenantLink(
+                    user_id=seeded_user.id, tenant_id=DEFAULT_TENANT_ID
+                )
+            )
         session.commit()
         print(f"✅ {1 + len(diretores) + 1} usuários criados.")
 

@@ -68,8 +68,12 @@ class VisitorService:
             return
 
         # Check if user is linked to lot via UserLotLink
+        # `.join(Lot)` so the scoped parent constrains a statement that is
+        # otherwise keyed only on ids (APRAS-42 §6.2).
         user_lot_link = session.exec(
-            select(UserLotLink).where(
+            select(UserLotLink)
+            .join(Lot)
+            .where(
                 UserLotLink.user_id == current_user.id,
                 UserLotLink.lot_id == lot_id,
             )

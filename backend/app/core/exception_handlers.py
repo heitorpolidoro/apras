@@ -21,6 +21,7 @@ from app.core.exceptions import (
     AuthorizationNotFoundError,
     BudgetLineAlreadyExistsError,
     BudgetLineNotFoundError,
+    CrossTenantWriteError,
     DelinquentLotError,
     DocumentFolderNotFoundError,
     DocumentNotFoundError,
@@ -157,6 +158,7 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             LotAlreadyVotedError,
             AssetAccessForbiddenError,
             PurchaseAccessForbiddenError,
+            CrossTenantWriteError,
         ),
     ):
         status_code = status.HTTP_403_FORBIDDEN

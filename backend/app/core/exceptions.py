@@ -801,3 +801,35 @@ class TenantMembershipNotFoundError(DomainError):
 
     def __init__(self, user_id: UUID, tenant_id: UUID) -> None:
         super().__init__(f"User {user_id} is not a member of tenant {tenant_id}")
+
+
+class CrossTenantWriteError(DomainError):
+    """Raised when a flush would persist a row belonging to another tenant.
+
+    The write stamp (``app/core/tenant_context.py``) overwrites ``tenant_id``
+    on every *new* scoped instance, so this can only fire for an already
+    persistent instance of a foreign tenant that was mutated — a state a
+    request session can never reach through the ambient read filter.
+    """
+
+    def __init__(self, model_name: str) -> None:
+        super().__init__(
+            f"Cannot write a {model_name} belonging to another tenant"
+        )
+
+
+class TenantScopeNotResolvedError(RuntimeError):
+    """Raised when a request-scoped session queries a tenant-scoped model
+    before its acting tenant has been resolved.
+
+    Deliberately **not** a :class:`DomainError`: this is a programming error
+    (a route that was never classified as tenant-scoped or global), so it
+    must surface as a 500 rather than as a tidy 4xx. The static route test
+    ``tests/test_tenant_route_scope.py`` catches the same mistake in CI,
+    before it can ever run.
+    """
+
+    def __init__(self, model_name: str) -> None:
+        super().__init__(
+            f"Tenant scope was not resolved before querying {model_name}"
+        )

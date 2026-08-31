@@ -4,12 +4,15 @@ The tenancy slice is only safe to ship ahead of request-scoped resolution
 (APRAS-42) if adding a second tenant is observationally inert. Two things
 have to hold, and both are asserted here rather than left to review:
 
-1. `get_effective_user_type_ids` is deliberately tenant-blind — it resolves a
-   role's UserType with `select(UserType).where(UserType.role == role).first()`.
-   That is only deterministic while there is exactly one role-linked row per
-   role, which is why `POST /api/v1/tenants` does **not** seed role-linked
-   `UserType` rows for a new tenant. If someone later adds that seeding here
-   instead of in APRAS-42, this test fails.
+1. `get_effective_user_type_ids` resolves a role's UserType deterministically.
+   APRAS-41 achieved that by being tenant-blind and by refusing to seed
+   role-linked `UserType` rows for a new tenant. **APRAS-42 is the slice that
+   flips both halves**, exactly as this module's tripwire anticipated: the
+   lookup is now filtered by the session's acting tenant (falling back to the
+   default tenant), and `POST /api/v1/tenants` seeds one role-linked row per
+   `UserRole` into the new tenant. The direct-call assertions below are
+   unchanged and still pass, because a plain `Session` resolves the default
+   tenant's row.
 2. Existing list endpoints keep returning exactly what they returned before
    a second tenant existed.
 """
@@ -82,19 +85,36 @@ def test_creating_a_second_tenant_leaves_effective_user_types_unchanged(
     assert after == {role_type.id, explicit_type.id}
 
 
-def test_creating_a_second_tenant_seeds_no_user_types(
+def test_creating_a_second_tenant_seeds_its_own_role_types(
     session: Session, client: TestClient, admin: User
 ):
-    """Per-tenant role-type seeding is APRAS-42's job, not this slice's."""
+    """APRAS-42 §7.2: a new tenant gets one role-linked UserType per role.
+
+    This inverts the APRAS-41 tripwire above by design — that assertion
+    existed to catch seeding landing *before* tenant-aware resolution, and
+    tenant-aware resolution is this slice. The rows all belong to the new
+    tenant, so the default tenant's role-type set is untouched and the
+    direct-call assertions above still resolve exactly one row.
+    """
     session.add(UserType(name="Gerente (papel)", allowed_menus=[], role=UserRole.MANAGER))
     session.commit()
-    before = len(session.query(UserType).all())
-
-    client.post(
-        "/api/v1/tenants", json={"name": "Terceiro Condomínio"}, headers=_headers(admin)
+    before_default_tenant = len(
+        session.query(UserType).filter(UserType.tenant_id == DEFAULT_TENANT_ID).all()
     )
 
-    assert len(session.query(UserType).all()) == before
+    response = client.post(
+        "/api/v1/tenants", json={"name": "Terceiro Condomínio"}, headers=_headers(admin)
+    )
+    assert response.status_code == 201
+    new_tenant_id = uuid.UUID(response.json()["id"])
+
+    session.expire_all()
+    seeded = session.query(UserType).filter(UserType.tenant_id == new_tenant_id).all()
+    assert {ut.role for ut in seeded} == set(UserRole)
+    assert (
+        len(session.query(UserType).filter(UserType.tenant_id == DEFAULT_TENANT_ID).all())
+        == before_default_tenant
+    )
 
 
 def test_existing_list_endpoints_are_unchanged_by_a_second_tenant(

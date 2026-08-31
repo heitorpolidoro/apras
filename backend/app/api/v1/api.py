@@ -27,9 +27,21 @@ from app.api.v1.endpoints import (
     visitors,
     voting,
 )
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+
+from app.api import deps
 
 api_router = APIRouter()
+
+#: Attached to every router whose tables are tenant-scoped. Resolving the
+#: acting tenant at *mount* time rather than in ~170 handler signatures is
+#: what makes "is this route scoped?" reviewable in one diff (APRAS-42 §5.1).
+TENANT_SCOPED = [Depends(deps.get_current_tenant)]
+
+#: Attached to the routers whose whole surface is unscoped (`user`,
+#: `tenant`, `user_tenant_link`) or device-authenticated, so the fail-closed
+#: guard of `app.core.tenant_context` does not fire on them.
+GLOBAL_SCOPED = [Depends(deps.use_global_tenant_scope)]
 
 
 @api_router.get("/health", tags=["health"])
@@ -38,48 +50,72 @@ def health_check() -> dict[str, str]:
     return {"status": "healthy"}
 
 
-api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
-api_router.include_router(tasks.router, prefix="/tasks", tags=["tasks"])
-api_router.include_router(users.router, prefix="/users", tags=["users"])
-api_router.include_router(categories.router, prefix="/categories", tags=["categories"])
-api_router.include_router(user_types.router, prefix="/user-types", tags=["user-types"])
-api_router.include_router(tenants.router, prefix="/tenants", tags=["tenants"])
-api_router.include_router(lots.router, prefix="/lots", tags=["lots"])
-api_router.include_router(residents.router, tags=["residents"])
-api_router.include_router(visitors.router, prefix="/visitors", tags=["visitors"])
-api_router.include_router(authorizations.router, tags=["authorizations"])
-api_router.include_router(access_logs.router, prefix="/access-logs", tags=["access-logs"])
-api_router.include_router(occurrences.router, prefix="/occurrences", tags=["occurrences"])
-api_router.include_router(documents.router, prefix="/documents", tags=["documents"])
-api_router.include_router(uploads.router)
-api_router.include_router(access_control.router, prefix="/access-control", tags=["access-control"])
-api_router.include_router(projects.router, prefix="/projects", tags=["projects"])
-api_router.include_router(announcements.router, prefix="/announcements", tags=["announcements"])
-api_router.include_router(finance.router, prefix="/finance", tags=["finance"])
-api_router.include_router(feedback.router, prefix="/feedback", tags=["feedback"])
+api_router.include_router(auth.router, prefix="/auth", tags=["auth"], dependencies=GLOBAL_SCOPED)
+api_router.include_router(tasks.router, prefix="/tasks", tags=["tasks"], dependencies=TENANT_SCOPED)
+api_router.include_router(users.router, prefix="/users", tags=["users"], dependencies=TENANT_SCOPED)
+api_router.include_router(categories.router, prefix="/categories", tags=["categories"], dependencies=TENANT_SCOPED)
+api_router.include_router(user_types.router, prefix="/user-types", tags=["user-types"], dependencies=TENANT_SCOPED)
+api_router.include_router(tenants.router, prefix="/tenants", tags=["tenants"], dependencies=GLOBAL_SCOPED)
+api_router.include_router(lots.router, prefix="/lots", tags=["lots"], dependencies=TENANT_SCOPED)
+api_router.include_router(residents.router, tags=["residents"], dependencies=TENANT_SCOPED)
+api_router.include_router(visitors.router, prefix="/visitors", tags=["visitors"], dependencies=TENANT_SCOPED)
+api_router.include_router(authorizations.router, tags=["authorizations"], dependencies=TENANT_SCOPED)
+api_router.include_router(access_logs.router, prefix="/access-logs", tags=["access-logs"], dependencies=TENANT_SCOPED)
+api_router.include_router(occurrences.router, prefix="/occurrences", tags=["occurrences"], dependencies=TENANT_SCOPED)
+api_router.include_router(documents.router, prefix="/documents", tags=["documents"], dependencies=TENANT_SCOPED)
+api_router.include_router(uploads.router, dependencies=TENANT_SCOPED)
+api_router.include_router(
+    access_control.router,
+    prefix="/access-control",
+    tags=["access-control"],
+    dependencies=TENANT_SCOPED,
+)
+# The device webhook authenticates an `X-Device-Key`, not a JWT, so it cannot
+# inherit `get_current_tenant` (which depends on `get_current_user`). It is
+# mounted separately in global scope and resolves its own acting tenant from
+# the device it authenticates (APRAS-42 §6.4).
+api_router.include_router(
+    access_control.webhook_router,
+    prefix="/access-control",
+    tags=["access-control"],
+    dependencies=GLOBAL_SCOPED,
+)
+api_router.include_router(projects.router, prefix="/projects", tags=["projects"], dependencies=TENANT_SCOPED)
+api_router.include_router(announcements.router, prefix="/announcements", tags=["announcements"], dependencies=TENANT_SCOPED)
+api_router.include_router(finance.router, prefix="/finance", tags=["finance"], dependencies=TENANT_SCOPED)
+api_router.include_router(feedback.router, prefix="/feedback", tags=["feedback"], dependencies=TENANT_SCOPED)
 api_router.include_router(
     reservations.spaces_router,
     prefix="/reservable-spaces",
     tags=["reservable-spaces"],
+    dependencies=TENANT_SCOPED,
 )
 api_router.include_router(
     reservations.reservations_router,
     prefix="/space-reservations",
     tags=["space-reservations"],
+    dependencies=TENANT_SCOPED,
 )
-api_router.include_router(packages.router, prefix="/packages", tags=["packages"])
+api_router.include_router(packages.router, prefix="/packages", tags=["packages"], dependencies=TENANT_SCOPED)
 api_router.include_router(
-    voting.assemblies_router, prefix="/assemblies", tags=["assemblies"]
+    voting.assemblies_router,
+    prefix="/assemblies",
+    tags=["assemblies"],
+    dependencies=TENANT_SCOPED,
 )
-api_router.include_router(voting.votes_router, prefix="/votes", tags=["votes"])
-api_router.include_router(assets.router, prefix="/assets", tags=["assets"])
+api_router.include_router(voting.votes_router, prefix="/votes", tags=["votes"], dependencies=TENANT_SCOPED)
+api_router.include_router(assets.router, prefix="/assets", tags=["assets"], dependencies=TENANT_SCOPED)
 api_router.include_router(
     inventory_movements.router,
     prefix="/inventory-movements",
     tags=["inventory-movements"],
+    dependencies=TENANT_SCOPED,
 )
 api_router.include_router(
-    purchases.router, prefix="/purchase-requests", tags=["purchase-requests"]
+    purchases.router,
+    prefix="/purchase-requests",
+    tags=["purchase-requests"],
+    dependencies=TENANT_SCOPED,
 )
 
 

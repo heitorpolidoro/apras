@@ -227,6 +227,10 @@ class ProjectService:
         milestone_in: MilestoneUpdate,
     ) -> ProjectMilestone:
         """Updates milestone status, dates, or display order."""
+        # `ProjectMilestone` inherits its tenant; loading the scoped parent
+        # through the filtered session is what 404s a cross-tenant id
+        # (APRAS-42 §6.1).
+        cls.get_project_by_id(session, project_id)
         milestone = session.get(ProjectMilestone, milestone_id)
         if not milestone or milestone.project_id != project_id:
             raise MilestoneNotFoundError(milestone_id)
@@ -256,6 +260,7 @@ class ProjectService:
         cls, session: Session, project_id: UUID, milestone_id: UUID
     ) -> None:
         """Deletes a milestone."""
+        cls.get_project_by_id(session, project_id)
         milestone = session.get(ProjectMilestone, milestone_id)
         if not milestone or milestone.project_id != project_id:
             raise MilestoneNotFoundError(milestone_id)
@@ -323,6 +328,7 @@ class ProjectService:
         cls, session: Session, project_id: UUID, update_id: UUID
     ) -> None:
         """Deletes a project update."""
+        cls.get_project_by_id(session, project_id)
         update = session.get(ProjectUpdate, update_id)
         if not update or update.project_id != project_id:
             raise ProjectUpdateNotFoundError(update_id)

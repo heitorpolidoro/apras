@@ -6,6 +6,7 @@ from uuid import UUID
 
 from sqlmodel import Session, func, select
 
+from app.core import tenant_context
 from app.core.exceptions import (
     AccessDeviceNotFoundError,
     DuplicateDeviceNameError,
@@ -175,10 +176,21 @@ class AccessControlService:
     def get_facial_template(
         session: Session, resident_id: UUID, current_user: User
     ) -> FacialTemplate | None:
-        """Return the resident's current facial template, or None if not synced."""
+        """Return the resident's current facial template, or None if not synced.
+
+        `FacialTemplate` inherits its tenant from `Resident`, so the parent
+        must be loaded through the (tenant-filtered) session before the
+        template is read; without it this route hands a tenant-A caller a
+        tenant-B resident's template (APRAS-42 §6.2). A consequence, and a
+        deliberate one: an unknown resident id is now a 404 instead of
+        `200 null`, matching the sibling `.../facial-template/sync` route.
+        """
         _assert_admin_director_or_manager(current_user)
+        resident = session.get(Resident, resident_id)
+        if not resident:
+            raise ResidentNotFoundError(resident_id)
         return session.exec(
-            select(FacialTemplate).where(FacialTemplate.resident_id == resident_id)
+            select(FacialTemplate).where(FacialTemplate.resident_id == resident.id)
         ).first()
 
     # -------------------------------------------------------------------------
@@ -193,11 +205,15 @@ class AccessControlService:
         if not device_key:
             raise InvalidDeviceKeyError
 
+        # The device key is globally unique on purpose (APRAS-41 §2.3), and
+        # this route has no JWT, so the lookup runs in global scope and the
+        # device itself is what resolves the acting tenant (APRAS-42 §6.4).
         device = session.exec(
             select(AccessDevice).where(AccessDevice.device_key == device_key)
         ).first()
         if not device:
             raise InvalidDeviceKeyError
+        tenant_context.set_acting_tenant(session, device.tenant_id)
 
         now = datetime.utcnow()
         device.status = AccessDeviceStatus.ONLINE
@@ -209,21 +225,29 @@ class AccessControlService:
         resident: Resident | None = None
 
         if payload.resident_id is not None:
+            # Ambient-filtered by the device's tenant, so a resident of
+            # another condominium reads back as `None`. Gating the template
+            # lookup on it is what stops a tenant-A device matching against a
+            # tenant-B template: `FacialTemplate` is an inherited table the
+            # filter cannot constrain on its own (APRAS-42 §6.4). The answer
+            # is a denial, not a 404, so the webhook never becomes an
+            # existence oracle for another condominium's resident ids.
             resident = session.get(Resident, payload.resident_id)
-            template = session.exec(
-                select(FacialTemplate).where(
-                    FacialTemplate.resident_id == payload.resident_id,
-                    FacialTemplate.sync_status == FacialTemplateSyncStatus.SYNCED,
-                )
-            ).first()
-            if template:
-                matched = True
-                if resident is not None and resident.is_active:
-                    access_granted = True
+            if resident is not None:
+                template = session.exec(
+                    select(FacialTemplate).where(
+                        FacialTemplate.resident_id == resident.id,
+                        FacialTemplate.sync_status == FacialTemplateSyncStatus.SYNCED,
+                    )
+                ).first()
+                if template:
+                    matched = True
+                    if resident.is_active:
+                        access_granted = True
 
         event = FacialAccessEvent(
             device_id=device.id,
-            resident_id=payload.resident_id,
+            resident_id=resident.id if resident is not None else None,
             matched=matched,
             confidence_score=payload.confidence_score,
             access_granted=access_granted,
@@ -247,7 +271,9 @@ class AccessControlService:
         """List facial access events, most recent first, with optional filters."""
         _assert_admin_director_or_manager(current_user)
 
-        query = select(FacialAccessEvent)
+        # `FacialAccessEvent` inherits its tenant from `AccessDevice`; the
+        # join is what puts a scoped entity in the statement (APRAS-42 §6.2).
+        query = select(FacialAccessEvent).join(AccessDevice)
         if device_id:
             query = query.where(FacialAccessEvent.device_id == device_id)
         if resident_id:

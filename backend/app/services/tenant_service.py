@@ -11,21 +11,36 @@ from app.core.exceptions import (
     TenantMembershipNotFoundError,
     TenantNotFoundError,
 )
+from app.core.tenant_context import acting_tenant_scope
 from app.models.enums import UserRole
 from app.models.tenant import Tenant, UserTenantLink
 from app.models.user import User
+from app.models.user_type import UserType
 from app.schemas.tenant import TenantCreate, TenantMemberRead, TenantUpdate
+
+# Human-readable names of the role-linked UserType rows seeded into every new
+# tenant, matching the five migration 0018 seeded into the default tenant plus
+# PORTEIRO, the role added afterwards by 0020.
+ROLE_TYPE_NAMES: dict[UserRole, str] = {
+    UserRole.ADMINISTRATOR: "Administrador (papel)",
+    UserRole.DIRECTOR: "Diretor (papel)",
+    UserRole.MANAGER: "Gerente (papel)",
+    UserRole.GUEST: "Convidado (papel)",
+    UserRole.RESIDENT: "Morador (papel)",
+    UserRole.PORTEIRO: "Porteiro (papel)",
+}
 
 
 class TenantService:
     """Service class for tenant and tenant-membership operations.
 
-    This slice deliberately does **not** seed role-linked ``UserType`` rows
-    for a newly created tenant. ``get_effective_user_type_ids``
-    (``app/api/deps.py``) resolves a role's UserType with a tenant-blind
-    ``.first()``; seeding per-tenant role types here would immediately make
-    that call non-deterministic. Doing both — tenant-aware resolution and
-    per-tenant seeding — is APRAS-42's job.
+    ``create_tenant`` seeds one role-linked ``UserType`` per ``UserRole``
+    into the new tenant (APRAS-42 §7.2). APRAS-41 deliberately did not,
+    because ``get_effective_user_type_ids`` resolved a role's UserType with a
+    tenant-blind ``.first()``; now that resolution is tenant-scoped the
+    opposite holds — without these rows a non-``ADMINISTRATOR`` member of a
+    new tenant has an empty effective-UserType set and is 403'd by
+    ``assert_menu_access`` on every gated menu.
     """
 
     @staticmethod
@@ -59,6 +74,23 @@ class TenantService:
         tenant = Tenant(name=tenant_in.name, is_active=tenant_in.is_active)
         session.add(tenant)
         session.commit()
+        session.refresh(tenant)
+
+        # The request itself acts in a *different* tenant (or in none at all,
+        # `/tenants` being a global route), so the acting tenant is swapped
+        # for the duration of the seed and the write stamp puts the new
+        # tenant's id on every row. `ix_user_type_tenant_role` guarantees at
+        # most one row per (tenant, role). This is the one production caller
+        # of `acting_tenant_scope`.
+        with acting_tenant_scope(session, tenant.id):
+            session.add_all(
+                [
+                    UserType(name=name, role=role, allowed_menus=[])
+                    for role, name in ROLE_TYPE_NAMES.items()
+                ]
+            )
+            session.commit()
+
         session.refresh(tenant)
         return tenant
 

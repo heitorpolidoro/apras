@@ -12,7 +12,7 @@ from app.core.exceptions import (
     ResidentNotFoundError,
 )
 from app.models.enums import UserRole
-from app.models.lot import UserLotLink
+from app.models.lot import Lot, UserLotLink
 from app.models.resident import Resident
 from app.models.user import User
 from app.schemas.resident import ResidentCreate, ResidentUpdate
@@ -34,8 +34,12 @@ class ResidentService:
             return
 
         # Check if user is linked to lot via UserLotLink
+        # `.join(Lot)` so the scoped parent constrains a statement that is
+        # otherwise keyed only on ids (APRAS-42 §6.2).
         user_lot_link = session.exec(
-            select(UserLotLink).where(
+            select(UserLotLink)
+            .join(Lot)
+            .where(
                 UserLotLink.user_id == current_user.id,
                 UserLotLink.lot_id == lot_id,
             )

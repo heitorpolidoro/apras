@@ -8,6 +8,7 @@ from app.core.config import settings
 from app.core.limiter import limiter
 from app.db import get_session
 from app.models.enums import UserRole
+from app.models.tenant import DEFAULT_TENANT_ID, UserTenantLink
 from app.models.user import User
 from app.schemas.token import Token
 from app.schemas.user import UserCreate, UserRead
@@ -18,7 +19,11 @@ from sqlmodel import Session, select
 router = APIRouter()
 
 
-@router.post("/signup", response_model=UserRead)
+@router.post(
+    "/signup",
+    response_model=UserRead,
+    dependencies=[Depends(api_deps.use_default_tenant_scope)],
+)
 def signup(
     session: Annotated[Session, Depends(get_session)],
     user_in: UserCreate,
@@ -56,6 +61,13 @@ def signup(
     session.add(db_obj)
     session.commit()
     session.refresh(db_obj)
+
+    # An explicit membership of the default tenant, so a signed-up user does
+    # not rely on the zero-membership fallback of `get_current_tenant`
+    # (APRAS-42 §8.1). Self-selecting a tenant at signup is deliberately not
+    # possible; invite-based signup is APRAS-43/38 work.
+    session.add(UserTenantLink(user_id=db_obj.id, tenant_id=DEFAULT_TENANT_ID))
+    session.commit()
 
     from app.services.resident_service import ResidentService
     ResidentService.auto_link_user(session, db_obj)

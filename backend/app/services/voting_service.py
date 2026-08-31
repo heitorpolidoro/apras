@@ -134,8 +134,11 @@ def _is_link_active(link: UserLotLink, now: datetime) -> bool:
 def _active_lot_ids(session: Session, user: User) -> set[UUID]:
     """Lot ids the user is currently linked to, whatever the association."""
     now = datetime.utcnow()
+    # `.join(Lot)` puts a scoped entity in a statement that is otherwise
+    # keyed only on `user_id` — a user who is a member of two tenants would
+    # otherwise see both tenants' links (APRAS-42 §6.2).
     links = session.exec(
-        select(UserLotLink).where(UserLotLink.user_id == user.id)
+        select(UserLotLink).join(Lot).where(UserLotLink.user_id == user.id)
     ).all()
     return {link.lot_id for link in links if _is_link_active(link, now)}
 
@@ -168,7 +171,7 @@ def get_user_eligible_lot_ids(session: Session, user: User) -> set[UUID]:
     """Non-deleted lots the user may cast an assembly ballot for."""
     now = datetime.utcnow()
     links = session.exec(
-        select(UserLotLink).where(UserLotLink.user_id == user.id)
+        select(UserLotLink).join(Lot).where(UserLotLink.user_id == user.id)
     ).all()
     lot_ids = {
         link.lot_id
@@ -177,7 +180,9 @@ def get_user_eligible_lot_ids(session: Session, user: User) -> set[UUID]:
         and _is_link_active(link, now)
     }
     extras = session.exec(
-        select(LotVoterEligibility).where(LotVoterEligibility.user_id == user.id)
+        select(LotVoterEligibility)
+        .join(Lot)
+        .where(LotVoterEligibility.user_id == user.id)
     ).all()
     lot_ids.update(extra.lot_id for extra in extras)
 
@@ -196,7 +201,7 @@ def _co_resident_user_ids(session: Session, user: User) -> set[UUID]:
         return {user.id}
     now = datetime.utcnow()
     links = session.exec(
-        select(UserLotLink).where(UserLotLink.lot_id.in_(lot_ids))
+        select(UserLotLink).join(Lot).where(UserLotLink.lot_id.in_(lot_ids))
     ).all()
     peers = {link.user_id for link in links if _is_link_active(link, now)}
     peers.add(user.id)
@@ -927,8 +932,15 @@ def remove_lot_voter_eligibility(
     session: Session, user: User, lot_id: UUID, target_user_id: UUID
 ) -> None:
     _assert_can_manage_eligibility(user)
+    # `.join(Lot)` as in `list_lot_voter_eligibility`: `LotVoterEligibility` is
+    # an inherited table with no `tenant_id`, so without a scoped entity in the
+    # statement the ambient filter has nothing to constrain and a cross-tenant
+    # `(lot, user)` pair would be deleted. Joined, it yields `existing is None`
+    # → the 404 below (APRAS-42 §6.2).
     existing = session.exec(
-        select(LotVoterEligibility).where(
+        select(LotVoterEligibility)
+        .join(Lot)
+        .where(
             LotVoterEligibility.lot_id == lot_id,
             LotVoterEligibility.user_id == target_user_id,
         )
@@ -943,9 +955,15 @@ def list_lot_voter_eligibility(
     session: Session, user: User, lot_id: UUID
 ) -> list[LotVoterEligibility]:
     _assert_can_manage_eligibility(user)
+    # `.join(Lot)` rather than a `get_lot_by_id` 404: this route never loaded
+    # its `Lot`, and preserving the `200 []` answer for an unknown lot id is
+    # deliberate. The cross-tenant answer becomes 200-with-zero-rows instead
+    # of a leak (APRAS-42 §6.2).
     return list(
         session.exec(
-            select(LotVoterEligibility).where(LotVoterEligibility.lot_id == lot_id)
+            select(LotVoterEligibility)
+            .join(Lot)
+            .where(LotVoterEligibility.lot_id == lot_id)
         ).all()
     )
 

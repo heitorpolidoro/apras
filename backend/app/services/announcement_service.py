@@ -248,6 +248,14 @@ def upload_media(
 def delete_media(session: Session, user: User, announcement_id: UUID, media_id: UUID) -> None:
     _check_publisher(user)
 
+    # Load the scoped parent through the (tenant-filtered) session first:
+    # `AnnouncementMedia` inherits its tenant and both ids here are
+    # attacker-supplied, so comparing them to each other proves nothing
+    # about the tenant boundary (APRAS-42 §6.1).
+    announcement = session.get(Announcement, announcement_id)
+    if not announcement or announcement.is_deleted:
+        raise AnnouncementMediaNotFoundError(media_id)
+
     media = session.get(AnnouncementMedia, media_id)
     if not media or media.announcement_id != announcement_id:
         raise AnnouncementMediaNotFoundError(media_id)
@@ -297,7 +305,14 @@ def add_comment(
 
 
 def delete_comment(session: Session, user: User, comment_id: UUID) -> None:
-    comment = session.get(AnnouncementComment, comment_id)
+    # This route has no parent id in its path, so the comment is reached
+    # through a join to its scoped `Announcement` — the join is what applies
+    # the tenant filter (APRAS-42 §6.1).
+    comment = session.exec(
+        select(AnnouncementComment)
+        .join(Announcement)
+        .where(AnnouncementComment.id == comment_id)
+    ).first()
     if not comment:
         raise AnnouncementCommentNotFoundError(comment_id)
 

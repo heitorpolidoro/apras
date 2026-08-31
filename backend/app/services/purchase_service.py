@@ -324,9 +324,24 @@ class PurchaseService:
         for purchase_request in requests:
             counts[purchase_request.status] += 1
 
-        quotes = {q.id: q for q in session.exec(select(PurchaseQuote)).all()}
+        # Quotes and decisions inherit their tenant from `PurchaseRequest`,
+        # so they are constrained by the ids of the already-filtered
+        # `requests` above rather than read wholesale (APRAS-42 §6.2).
+        request_ids = [r.id for r in requests]
+        quotes = {
+            q.id: q
+            for q in session.exec(
+                select(PurchaseQuote).where(
+                    PurchaseQuote.purchase_request_id.in_(request_ids)
+                )
+            ).all()
+        }
         decisions_by_request: dict[UUID, list[PurchaseQuoteDecision]] = {}
-        for decision in session.exec(select(PurchaseQuoteDecision)).all():
+        for decision in session.exec(
+            select(PurchaseQuoteDecision).where(
+                PurchaseQuoteDecision.purchase_request_id.in_(request_ids)
+            )
+        ).all():
             decisions_by_request.setdefault(
                 decision.purchase_request_id, []
             ).append(decision)
