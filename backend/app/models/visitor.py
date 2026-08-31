@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 from sqlmodel import Field, Relationship, SQLModel
 
 from .enums import AuthorizationStatus, AuthorizationType
+from .tenant import tenant_id_field
 
 if TYPE_CHECKING:
     from .lot import Lot
@@ -17,6 +18,10 @@ class Visitor(SQLModel, table=True):
     __tablename__ = "visitor"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
+    # Tenant boundary (APRAS-41). Defaults to DEFAULT_TENANT_ID so ORM
+    # inserts that omit it keep working; APRAS-42 replaces this with a
+    # request-scoped acting tenant.
+    tenant_id: UUID = tenant_id_field()
     full_name: str = Field(nullable=False, index=True)
     cpf: str | None = Field(default=None, index=True)
     rg: str | None = Field(default=None)
@@ -37,6 +42,10 @@ class VisitorAuthorization(SQLModel, table=True):
     __tablename__ = "visitor_authorization"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
+    # Tenant boundary (APRAS-41). Defaults to DEFAULT_TENANT_ID so ORM
+    # inserts that omit it keep working; APRAS-42 replaces this with a
+    # request-scoped acting tenant.
+    tenant_id: UUID = tenant_id_field()
     visitor_id: UUID = Field(
         foreign_key="visitor.id", ondelete="CASCADE", nullable=False, index=True
     )
@@ -73,6 +82,10 @@ class AccessLog(SQLModel, table=True):
     __tablename__ = "access_log"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
+    # Tenant boundary (APRAS-41). Defaults to DEFAULT_TENANT_ID so ORM
+    # inserts that omit it keep working; APRAS-42 replaces this with a
+    # request-scoped acting tenant.
+    tenant_id: UUID = tenant_id_field()
     authorization_id: UUID | None = Field(
         default=None, foreign_key="visitor_authorization.id", ondelete="SET NULL", nullable=True, index=True
     )

@@ -7,6 +7,7 @@ from app.main import app
 from app.models.enums import UserRole
 from app.models.user import User
 from app.models.category import Category
+from app.models.tenant import DEFAULT_TENANT_ID, DEFAULT_TENANT_NAME, Tenant
 from app.models.user_type import UserType
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, StaticPool, create_engine
@@ -25,6 +26,22 @@ def session_fixture():
     with Session(engine) as session:
         yield session
     SQLModel.metadata.drop_all(engine)
+
+
+@pytest.fixture(name="default_tenant", autouse=True)
+def default_tenant_fixture(session: Session):
+    """Seed the well-known default tenant into every test database (APRAS-41).
+
+    Autouse and depending only on `session`, so it runs before any other
+    fixture that inserts rows. Every tenant-scoped model defaults its
+    `tenant_id` to `DEFAULT_TENANT_ID`, so without this row the foreign key
+    would have no target and joins would be meaningless. No other existing
+    test module needs to know tenants exist.
+    """
+    tenant = Tenant(id=DEFAULT_TENANT_ID, name=DEFAULT_TENANT_NAME)
+    session.add(tenant)
+    session.commit()
+    return tenant
 
 
 @pytest.fixture(name="client")

@@ -4,9 +4,11 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
+from sqlalchemy import Index
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.models.enums import OccurrenceCategory, OccurrencePriority, OccurrenceStatus
+from app.models.tenant import tenant_id_field
 
 if TYPE_CHECKING:
     from app.models.lot import Lot
@@ -17,9 +19,20 @@ class Occurrence(SQLModel, table=True):
     """SQLModel representing an occurrence ticket."""
 
     __tablename__ = "occurrence"
+    # Protocol numbers are unique per tenant (APRAS-41): the generator is
+    # date+sequence based, so two condominiums would otherwise collide.
+    __table_args__ = (
+        Index(
+            "ix_occurrence_tenant_protocol", "tenant_id", "protocol_number", unique=True
+        ),
+    )
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    protocol_number: str = Field(index=True, unique=True, nullable=False)
+    # Tenant boundary (APRAS-41). Defaults to DEFAULT_TENANT_ID so ORM
+    # inserts that omit it keep working; APRAS-42 replaces this with a
+    # request-scoped acting tenant.
+    tenant_id: UUID = tenant_id_field()
+    protocol_number: str = Field(index=True, nullable=False)
     lot_id: UUID | None = Field(
         default=None, foreign_key="lot.id", ondelete="SET NULL", nullable=True, index=True
     )

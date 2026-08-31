@@ -7,6 +7,7 @@ from sqlalchemy import JSON, Column
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.models.enums import PurchaseRequestStatus
+from app.models.tenant import tenant_id_field
 
 
 class PurchaseRequest(SQLModel, table=True):
@@ -15,6 +16,10 @@ class PurchaseRequest(SQLModel, table=True):
     __tablename__ = "purchase_request"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
+    # Tenant boundary (APRAS-41). Defaults to DEFAULT_TENANT_ID so ORM
+    # inserts that omit it keep working; APRAS-42 replaces this with a
+    # request-scoped acting tenant.
+    tenant_id: UUID = tenant_id_field()
     title: str = Field(nullable=False, index=True)
     description: str | None = Field(default=None, nullable=True)
     # "Anotações gerais do pedido" — free-text scratchpad for the request as a

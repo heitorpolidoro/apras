@@ -19,6 +19,7 @@ from app.models.enums import (
     VoteStatus,
     VoteType,
 )
+from app.models.tenant import tenant_id_field
 
 if TYPE_CHECKING:
     from app.models.user import User
@@ -30,6 +31,10 @@ class Assembly(SQLModel, table=True):
     __tablename__ = "assembly"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
+    # Tenant boundary (APRAS-41). Defaults to DEFAULT_TENANT_ID so ORM
+    # inserts that omit it keep working; APRAS-42 replaces this with a
+    # request-scoped acting tenant.
+    tenant_id: UUID = tenant_id_field()
     title: str = Field(nullable=False, index=True)
     type: AssemblyType = Field(nullable=False, index=True)
     held_on: date = Field(nullable=False, index=True)
@@ -54,6 +59,10 @@ class Vote(SQLModel, table=True):
     __tablename__ = "vote"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
+    # Tenant boundary (APRAS-41). Defaults to DEFAULT_TENANT_ID so ORM
+    # inserts that omit it keep working; APRAS-42 replaces this with a
+    # request-scoped acting tenant.
+    tenant_id: UUID = tenant_id_field()
     assembly_id: UUID | None = Field(
         default=None,
         foreign_key="assembly.id",

@@ -8,6 +8,7 @@ from sqlalchemy import Index, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.models.enums import TransactionType
+from app.models.tenant import tenant_id_field
 
 if TYPE_CHECKING:
     from app.models.user import User
@@ -18,10 +19,17 @@ class FinanceCategory(SQLModel, table=True):
 
     __tablename__ = "finance_category"
     __table_args__ = (
-        UniqueConstraint("name", "type", name="uq_finance_category_name_type"),
+        # Per-tenant, not global (APRAS-41).
+        UniqueConstraint(
+            "tenant_id", "name", "type", name="uq_finance_category_tenant_name_type"
+        ),
     )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    # Tenant boundary (APRAS-41). Defaults to DEFAULT_TENANT_ID so ORM
+    # inserts that omit it keep working; APRAS-42 replaces this with a
+    # request-scoped acting tenant.
+    tenant_id: uuid.UUID = tenant_id_field()
     name: str = Field(nullable=False, index=True)
     type: TransactionType = Field(nullable=False, index=True)
     is_active: bool = Field(default=True, nullable=False)
@@ -45,6 +53,10 @@ class BudgetLine(SQLModel, table=True):
     )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    # Tenant boundary (APRAS-41). Defaults to DEFAULT_TENANT_ID so ORM
+    # inserts that omit it keep working; APRAS-42 replaces this with a
+    # request-scoped acting tenant.
+    tenant_id: uuid.UUID = tenant_id_field()
     category_id: uuid.UUID = Field(
         foreign_key="finance_category.id",
         ondelete="RESTRICT",
@@ -78,6 +90,10 @@ class FinancialTransaction(SQLModel, table=True):
     )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    # Tenant boundary (APRAS-41). Defaults to DEFAULT_TENANT_ID so ORM
+    # inserts that omit it keep working; APRAS-42 replaces this with a
+    # request-scoped acting tenant.
+    tenant_id: uuid.UUID = tenant_id_field()
     type: TransactionType = Field(nullable=False, index=True)
     category_id: uuid.UUID = Field(
         foreign_key="finance_category.id",

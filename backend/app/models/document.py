@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 from sqlmodel import Field, Relationship, SQLModel
+from app.models.tenant import tenant_id_field
 
 if TYPE_CHECKING:
     from app.models.user import User
@@ -11,6 +12,10 @@ class DocumentFolder(SQLModel, table=True):
     __tablename__ = "document_folder"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    # Tenant boundary (APRAS-41). Defaults to DEFAULT_TENANT_ID so ORM
+    # inserts that omit it keep working; APRAS-42 replaces this with a
+    # request-scoped acting tenant.
+    tenant_id: uuid.UUID = tenant_id_field()
     name: str = Field(nullable=False, index=True)
     description: str | None = Field(default=None, nullable=True)
     parent_id: uuid.UUID | None = Field(
@@ -45,6 +50,10 @@ class AssociationDocument(SQLModel, table=True):
     __tablename__ = "association_document"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    # Tenant boundary (APRAS-41). Defaults to DEFAULT_TENANT_ID so ORM
+    # inserts that omit it keep working; APRAS-42 replaces this with a
+    # request-scoped acting tenant.
+    tenant_id: uuid.UUID = tenant_id_field()
     folder_id: uuid.UUID = Field(
         foreign_key="document_folder.id",
         ondelete="CASCADE",

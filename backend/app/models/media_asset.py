@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Optional
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.models.enums import EntityType, StorageProvider, PhotoApprovalStatus
+from app.models.tenant import tenant_id_field
 
 if TYPE_CHECKING:
     from app.models.user import User
@@ -15,6 +16,10 @@ class MediaAsset(SQLModel, table=True):
     __tablename__ = "media_asset"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    # Tenant boundary (APRAS-41). Defaults to DEFAULT_TENANT_ID so ORM
+    # inserts that omit it keep working; APRAS-42 replaces this with a
+    # request-scoped acting tenant.
+    tenant_id: uuid.UUID = tenant_id_field()
     entity_type: EntityType = Field(index=True, nullable=False)
     entity_id: Optional[uuid.UUID] = Field(default=None, index=True, nullable=True)
     storage_provider: StorageProvider = Field(default=StorageProvider.LOCAL_DISK, nullable=False)

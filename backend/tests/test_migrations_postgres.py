@@ -457,3 +457,403 @@ def test_task_visible_to_downgrade_backfills_one_arbitrary_target(migrated_pg_en
 
     # Restore head so other tests in this module are unaffected by ordering.
     _run_alembic("upgrade", "head")
+
+
+# ---------------------------------------------------------------------------
+# 0028_add_tenant_and_membership (APRAS-41) – tenancy schema and backfill
+# ---------------------------------------------------------------------------
+#
+# Isolation, and why it is mandatory here rather than a nicety:
+# ``migrated_pg_engine`` is module-scoped and its consumers commit, so every
+# case in this module otherwise shares one database and inherits whatever an
+# earlier case left behind. Three of the six cases below are impossible on
+# that fixture:
+#
+# * ``test_tenant_table_has_exactly_one_default_row`` asserts
+#   ``count(*) FROM tenant == 1`` — order-dependent the moment any sibling
+#   commits a second tenant.
+# * ``test_existing_rows_are_backfilled`` must seed rows *at revision 0027*
+#   and then upgrade, but the shared database is already at ``head``.
+# * ``test_scoped_uniques_are_per_tenant`` commits two ``category`` rows with
+#   the same name; ``test_downgrade_removes_tenant_schema`` then has to
+#   restore the **global** unique index ``ix_category_name`` over exactly
+#   those duplicates, which real Postgres refuses with
+#   ``could not create unique index "ix_category_name"``.
+#
+# The two fixtures below reset the ``public`` schema on setup *and* teardown,
+# so no execution order is assumed in either direction, and teardown always
+# leaves the database at ``head`` — exactly the state ``migrated_pg_engine``'s
+# own setup produces, so the pre-existing cases are unaffected. Do not
+# optimise the resets away: a full ``base -> head`` run costs ~2 s, and this
+# whole module is skipped unless ``TEST_POSTGRES_URL`` is set.
+
+DEFAULT_TENANT_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
+
+# The 27 directly tenant-scoped tables (spec §2.1).
+TENANT_SCOPED_TABLES = (
+    "task",
+    "category",
+    "user_type",
+    "lot",
+    "resident",
+    "visitor",
+    "visitor_authorization",
+    "access_log",
+    "announcement",
+    "document_folder",
+    "association_document",
+    "occurrence",
+    "package",
+    "reservable_space",
+    "space_reservation",
+    "construction_project",
+    "purchase_request",
+    "asset",
+    "inventory_movement",
+    "access_device",
+    "finance_category",
+    "budget_line",
+    "financial_transaction",
+    "assembly",
+    "vote",
+    "feedback",
+    "media_asset",
+)
+
+# The 20 tables that inherit their tenant through a NOT NULL parent FK and
+# must therefore *not* carry a tenant_id (spec §2.2). Asserting the absence
+# is what stops a later drive-by from denormalising `ballot`.
+TENANT_INHERITED_TABLES = (
+    "taskcomment",
+    "taskhistory",
+    "task_visible_to_link",
+    "user_user_type_link",
+    "user_lot_link",
+    "announcement_media",
+    "announcement_comment",
+    "announcement_read_receipt",
+    "occurrence_timeline",
+    "document_download_log",
+    "project_milestone",
+    "project_update",
+    "purchase_quote",
+    "purchase_quote_decision",
+    "vote_option",
+    "ballot",
+    "ballot_rejection",
+    "lot_voter_eligibility",
+    "facial_template",
+    "facial_access_event",
+)
+
+
+def _current_revision(engine) -> str:
+    """Read the applied revision straight out of ``alembic_version``.
+
+    Queried rather than scraped from ``alembic current``'s stdout, which
+    mixes INFO logging with the revision and changes format between alembic
+    versions.
+    """
+    with engine.connect() as conn:
+        return conn.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
+
+
+def _reset_to(engine, target: str) -> None:
+    """Hard-reset ``public`` and re-run the migration chain up to ``target``."""
+    engine.dispose()  # drop pooled connections before the DDL
+    with engine.begin() as conn:
+        conn.execute(text("DROP SCHEMA public CASCADE"))
+        conn.execute(text("CREATE SCHEMA public"))
+    _run_alembic("upgrade", target)
+
+
+@pytest.fixture
+def isolated_pg_engine(migrated_pg_engine):
+    """A database at ``head`` containing nothing but what the migrations seed.
+
+    Resets on setup *and* on teardown, so a case using it neither inherits
+    another case's committed rows nor leaks its own — in either direction,
+    and regardless of execution order.
+    """
+    _reset_to(migrated_pg_engine, "head")
+    yield migrated_pg_engine
+    _reset_to(migrated_pg_engine, "head")
+
+
+@pytest.fixture
+def pg_engine_at_0027(migrated_pg_engine):
+    """Same reset, stopped one revision *before* 0028 so the test can seed
+    pre-migration rows and drive ``upgrade head`` itself."""
+    _reset_to(migrated_pg_engine, "0027_add_purchase_quotation")
+    yield migrated_pg_engine
+    _reset_to(migrated_pg_engine, "head")
+
+
+def test_tenant_table_has_exactly_one_default_row(isolated_pg_engine):
+    """The migration seeds exactly one tenant, whose id is the well-known
+    default — never a generated one, since the model default, the column
+    server_default and the backfill all have to agree on it without a
+    lookup."""
+    with isolated_pg_engine.connect() as conn:
+        rows = conn.execute(text("SELECT id, name, is_active FROM tenant")).all()
+
+    assert len(rows) == 1
+    assert rows[0].id == DEFAULT_TENANT_ID
+    assert rows[0].name == "Condomínio Padrão"
+    assert rows[0].is_active is True
+
+
+def test_every_scoped_table_has_not_null_tenant_id(isolated_pg_engine):
+    """All 27 directly-scoped tables carry a NOT NULL tenant_id defaulting to
+    the default tenant, with an ix_<table>_tenant_id index and a RESTRICT FK."""
+    with isolated_pg_engine.connect() as conn:
+        columns = {
+            (row.table_name, row.column_name): row
+            for row in conn.execute(
+                text(
+                    "SELECT table_name, column_name, is_nullable, column_default "
+                    "FROM information_schema.columns "
+                    "WHERE table_schema = 'public' AND column_name = 'tenant_id'"
+                )
+            ).all()
+        }
+        indexes = set(
+            conn.execute(
+                text(
+                    "SELECT indexname FROM pg_indexes WHERE schemaname = 'public'"
+                )
+            )
+            .scalars()
+            .all()
+        )
+        restrict_fks = set(
+            conn.execute(
+                text(
+                    "SELECT conname FROM pg_constraint "
+                    "WHERE contype = 'f' AND confdeltype = 'r'"
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+    for table in TENANT_SCOPED_TABLES:
+        column = columns.get((table, "tenant_id"))
+        assert column is not None, f"{table} has no tenant_id column"
+        assert column.is_nullable == "NO", f"{table}.tenant_id is nullable"
+        assert str(DEFAULT_TENANT_ID) in (column.column_default or ""), (
+            f"{table}.tenant_id default is {column.column_default!r}"
+        )
+        assert f"ix_{table}_tenant_id" in indexes, f"{table} lacks its tenant index"
+        assert f"fk_{table}_tenant_id" in restrict_fks, (
+            f"{table}'s tenant FK is missing or is not ON DELETE RESTRICT"
+        )
+
+
+def test_inherited_tables_have_no_tenant_id(isolated_pg_engine):
+    """The 20 inherited tables must stay free of a denormalised tenant_id."""
+    with isolated_pg_engine.connect() as conn:
+        scoped = set(
+            conn.execute(
+                text(
+                    "SELECT table_name FROM information_schema.columns "
+                    "WHERE table_schema = 'public' AND column_name = 'tenant_id'"
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+    for table in TENANT_INHERITED_TABLES:
+        assert table not in scoped, f"{table} was denormalised with a tenant_id"
+
+    # `user` is a global identity; `user_tenant_link` is the membership table.
+    assert "user" not in scoped
+    assert scoped == set(TENANT_SCOPED_TABLES) | {"user_tenant_link"}
+
+
+def test_existing_rows_are_backfilled(pg_engine_at_0027):
+    """Rows that exist *before* 0028 runs are migrated into the default
+    tenant, and every pre-existing user gets exactly one membership row."""
+    user_id = uuid.uuid4()
+    category_id = uuid.uuid4()
+    task_id = uuid.uuid4()
+
+    with pg_engine_at_0027.begin() as conn:
+        conn.execute(
+            text(
+                'INSERT INTO "user" '
+                "(id, email, hashed_password, full_name, role, is_active, cpf) "
+                "VALUES (:id, :email, 'x', 'Backfill Test', 'ADMINISTRATOR', "
+                "true, :cpf)"
+            ),
+            {
+                "id": user_id,
+                "email": f"backfill-{user_id}@test.com",
+                "cpf": str(user_id.int % 10**11).zfill(11),
+            },
+        )
+        conn.execute(
+            text(
+                "INSERT INTO category (id, name, color, is_active) "
+                "VALUES (:id, :name, '#808080', true)"
+            ),
+            {"id": category_id, "name": f"Backfill {category_id}"},
+        )
+        conn.execute(
+            text(
+                "INSERT INTO task "
+                "(id, title, status, priority, is_deleted, created_by_id, "
+                "created_at, updated_at) "
+                "VALUES (:id, 'Backfill Task', 'PENDING', 'MEDIUM', false, "
+                ":created_by_id, now(), now())"
+            ),
+            {"id": task_id, "created_by_id": user_id},
+        )
+
+    _run_alembic("upgrade", "head")
+
+    with pg_engine_at_0027.connect() as conn:
+        assert conn.execute(
+            text("SELECT tenant_id FROM category WHERE id = :id"), {"id": category_id}
+        ).scalar_one() == DEFAULT_TENANT_ID
+        assert conn.execute(
+            text("SELECT tenant_id FROM task WHERE id = :id"), {"id": task_id}
+        ).scalar_one() == DEFAULT_TENANT_ID
+        links = conn.execute(
+            text("SELECT tenant_id FROM user_tenant_link WHERE user_id = :id"),
+            {"id": user_id},
+        ).scalars().all()
+
+    assert links == [DEFAULT_TENANT_ID]
+
+
+def test_scoped_uniques_are_per_tenant(isolated_pg_engine):
+    """The relaxed uniques are per-tenant: the same category name in two
+    tenants is fine, the same name twice in one tenant is not."""
+    other_tenant = uuid.uuid4()
+    with isolated_pg_engine.begin() as conn:
+        conn.execute(
+            text(
+                "INSERT INTO tenant (id, name, is_active, created_at, updated_at) "
+                "VALUES (:id, 'Condomínio Beta', true, now(), now())"
+            ),
+            {"id": other_tenant},
+        )
+        conn.execute(
+            text(
+                "INSERT INTO category (id, tenant_id, name, color, is_active) "
+                "VALUES (:id, :tenant_id, 'Manutenção', '#808080', true)"
+            ),
+            {"id": uuid.uuid4(), "tenant_id": DEFAULT_TENANT_ID},
+        )
+        conn.execute(
+            text(
+                "INSERT INTO category (id, tenant_id, name, color, is_active) "
+                "VALUES (:id, :tenant_id, 'Manutenção', '#808080', true)"
+            ),
+            {"id": uuid.uuid4(), "tenant_id": other_tenant},
+        )
+
+    with isolated_pg_engine.connect() as conn:
+        assert (
+            conn.execute(
+                text("SELECT count(*) FROM category WHERE name = 'Manutenção'")
+            ).scalar_one()
+            == 2
+        )
+
+    with pytest.raises(Exception, match="duplicate key|unique constraint"):
+        with isolated_pg_engine.begin() as conn:
+            conn.execute(
+                text(
+                    "INSERT INTO category (id, tenant_id, name, color, is_active) "
+                    "VALUES (:id, :tenant_id, 'Manutenção', '#808080', true)"
+                ),
+                {"id": uuid.uuid4(), "tenant_id": DEFAULT_TENANT_ID},
+            )
+
+
+def test_downgrade_removes_tenant_schema(isolated_pg_engine):
+    """`alembic downgrade -1` from head undoes 0028 exactly: both tables
+    gone, no surviving tenant_id, and the 8 original global uniques back."""
+    _run_alembic("downgrade", "-1")
+
+    # `-1` is unambiguous while 0028 is head; asserting the landing revision
+    # is what makes it *stay* unambiguous once a later migration is chained
+    # on top (the same drift this module's older cases already document).
+    assert _current_revision(isolated_pg_engine) == "0027_add_purchase_quotation"
+
+    with isolated_pg_engine.connect() as conn:
+        tables = set(
+            conn.execute(
+                text(
+                    "SELECT table_name FROM information_schema.tables "
+                    "WHERE table_schema = 'public'"
+                )
+            )
+            .scalars()
+            .all()
+        )
+        scoped = set(
+            conn.execute(
+                text(
+                    "SELECT table_name FROM information_schema.columns "
+                    "WHERE table_schema = 'public' AND column_name = 'tenant_id'"
+                )
+            )
+            .scalars()
+            .all()
+        )
+        unique_indexes = set(
+            conn.execute(
+                text(
+                    "SELECT indexname FROM pg_indexes WHERE schemaname = 'public' "
+                    "AND indexdef LIKE '%UNIQUE%'"
+                )
+            )
+            .scalars()
+            .all()
+        )
+        unique_constraints = set(
+            conn.execute(
+                text(
+                    "SELECT c.conname FROM pg_constraint c "
+                    "JOIN pg_class cl ON cl.oid = c.conrelid "
+                    "JOIN pg_namespace n ON n.oid = cl.relnamespace "
+                    "WHERE c.contype = 'u' AND n.nspname = 'public'"
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+    assert "tenant" not in tables
+    assert "user_tenant_link" not in tables
+    assert scoped == set()
+
+    # The 8 relaxed uniques are global again.
+    assert {"ix_category_name", "ix_user_type_name", "ix_user_type_role"} <= (
+        unique_indexes
+    )
+    assert {
+        "uq_lot_block_lot_number",
+        "occurrence_protocol_number_key",
+        "reservable_space_name_key",
+        "uq_asset_asset_tag",
+        "uq_finance_category_name_type",
+    } <= unique_constraints
+    # ...and their tenant-composite replacements are gone.
+    assert not {
+        "ix_category_tenant_name",
+        "ix_user_type_tenant_name",
+        "ix_user_type_tenant_role",
+        "ix_occurrence_tenant_protocol",
+        "ix_reservable_space_tenant_name",
+        "ix_asset_tenant_asset_tag",
+    } & unique_indexes
+
+    # Re-applying must succeed, so the downgrade left a schema 0028 can
+    # migrate again (the fixture's teardown reset assumes nothing about it).
+    _run_alembic("upgrade", "head")
+    assert _current_revision(isolated_pg_engine) == "0028_add_tenant_and_membership"

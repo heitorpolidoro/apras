@@ -4,9 +4,11 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
+from sqlalchemy import Index
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.models.enums import ReservationStatus
+from app.models.tenant import tenant_id_field
 
 if TYPE_CHECKING:
     from app.models.lot import Lot
@@ -17,9 +19,18 @@ class ReservableSpace(SQLModel, table=True):
     """Admin-managed definition of a bookable shared amenity."""
 
     __tablename__ = "reservable_space"
+    # Per-tenant, not global (APRAS-41): every condominium is entitled to a
+    # "Salão de Festas".
+    __table_args__ = (
+        Index("ix_reservable_space_tenant_name", "tenant_id", "name", unique=True),
+    )
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    name: str = Field(index=True, unique=True, nullable=False)
+    # Tenant boundary (APRAS-41). Defaults to DEFAULT_TENANT_ID so ORM
+    # inserts that omit it keep working; APRAS-42 replaces this with a
+    # request-scoped acting tenant.
+    tenant_id: UUID = tenant_id_field()
+    name: str = Field(index=True, nullable=False)
     description: str | None = Field(default=None)
     capacity: int | None = Field(default=None)
     requires_approval: bool = Field(default=False, nullable=False)
@@ -36,6 +47,10 @@ class SpaceReservation(SQLModel, table=True):
     __tablename__ = "space_reservation"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
+    # Tenant boundary (APRAS-41). Defaults to DEFAULT_TENANT_ID so ORM
+    # inserts that omit it keep working; APRAS-42 replaces this with a
+    # request-scoped acting tenant.
+    tenant_id: UUID = tenant_id_field()
     space_id: UUID = Field(
         foreign_key="reservable_space.id",
         ondelete="CASCADE",

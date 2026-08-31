@@ -760,3 +760,44 @@ class PurchaseQuoteFrozenError(DomainError):
         ),
     ) -> None:
         super().__init__(message)
+
+
+class TenantNotFoundError(DomainError):
+    """Raised when a tenant is not found, or is hidden from a non-member.
+
+    Deliberately also used for the "exists but you are not a member" case on
+    `GET /api/v1/tenants/{id}`: a 403 there would leak the existence of a
+    tenant the caller has no business knowing about.
+    """
+
+    def __init__(self, tenant_id: UUID) -> None:
+        super().__init__(f"Tenant with ID {tenant_id} not found")
+
+
+class TenantAlreadyExistsError(DomainError):
+    """Raised when a tenant with the given name already exists.
+
+    `tenant.name` is globally unique on purpose, so the administrator's
+    tenant list is unambiguous.
+    """
+
+    def __init__(self, name: str) -> None:
+        super().__init__(f"Tenant with name '{name}' already exists")
+
+
+class TenantMembershipAlreadyExistsError(DomainError):
+    """Raised when a user is already linked to the given tenant.
+
+    Only the *same* (user, tenant) pair twice is a conflict — linking a user
+    to a second tenant is supported multi-membership, not an error.
+    """
+
+    def __init__(self, user_id: UUID, tenant_id: UUID) -> None:
+        super().__init__(f"User {user_id} is already a member of tenant {tenant_id}")
+
+
+class TenantMembershipNotFoundError(DomainError):
+    """Raised when a (user, tenant) membership does not exist."""
+
+    def __init__(self, user_id: UUID, tenant_id: UUID) -> None:
+        super().__init__(f"User {user_id} is not a member of tenant {tenant_id}")

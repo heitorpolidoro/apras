@@ -72,6 +72,10 @@ from app.core.exceptions import (
     SpaceReservationNotFoundError,
     TallyNotAvailableError,
     TaskNotFoundError,
+    TenantAlreadyExistsError,
+    TenantMembershipAlreadyExistsError,
+    TenantMembershipNotFoundError,
+    TenantNotFoundError,
     UserLotLinkNotFoundError,
     VisitorNotFoundError,
     VoteAlreadyClosedError,
@@ -129,6 +133,8 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             AssetNotFoundError,
             PurchaseRequestNotFoundError,
             PurchaseQuoteNotFoundError,
+            TenantNotFoundError,
+            TenantMembershipNotFoundError,
         ),
     ):
         status_code = status.HTTP_404_NOT_FOUND
@@ -164,6 +170,8 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             PackageAlreadyPickedUpError,
             AssetTagAlreadyExistsError,
             PurchaseQuoteFrozenError,
+            TenantAlreadyExistsError,
+            TenantMembershipAlreadyExistsError,
         ),
     ):
         status_code = status.HTTP_409_CONFLICT

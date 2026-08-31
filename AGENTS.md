@@ -89,6 +89,7 @@ Building administrators and HOA boards juggle dozens of operational tasks — ma
 | `/api/v1/users`  | Users           | `backend/app/api/v1/endpoints/users.py`  |
 | `/api/v1/categories` | Categories  | `backend/app/api/v1/endpoints/categories.py` |
 | `/api/v1/user-types` | User Types  | `backend/app/api/v1/endpoints/user_types.py` |
+| `/api/v1/tenants` | Tenants & membership | `backend/app/api/v1/endpoints/tenants.py` |
 | `/api/v1/health` | Health check    | `backend/app/api/v1/api.py`              |
 
 ## Data Layer
@@ -270,6 +271,51 @@ apras/
 ---
 
 # Domain Concepts
+
+### Tenant
+
+One condominium/association installation, and the **tenant boundary** for
+every other entity (APRAS-41). A `Tenant` has a globally unique `name` and an
+`is_active` soft-deactivation flag; there is deliberately no delete endpoint,
+because every tenant-scoped foreign key is `ON DELETE RESTRICT`.
+
+**Membership.** A `User` is a *global* identity — `user.email` and `user.cpf`
+stay unique across the whole install — and belongs to zero or more tenants
+through the `user_tenant_link` join table. Multi-membership is first class:
+only the same `(user, tenant)` pair twice is a conflict.
+
+**Direct vs inherited scope.** A table carries its own `tenant_id` when a
+tenant filter has to constrain it directly — i.e. it is reachable by a route
+that lists it or fetches it by its own id without a scoped parent's id in the
+path, or it has no NOT NULL FK to a scoped table. 27 tables are in that
+group. The other 20 (`taskcomment`, `ballot`, `announcement_comment`, …)
+**inherit** their tenant through a NOT NULL FK to a scoped parent and
+deliberately carry no `tenant_id`: duplicating it would create a second,
+forgeable source of truth that can disagree with the parent. The partition is
+asserted mechanically in `backend/tests/test_tenant_models.py`, so a table
+added by a future task cannot escape classification.
+
+**Per-tenant uniqueness.** Constraints that would otherwise collide across
+condominiums are keyed on `tenant_id`: `category.name`, `user_type.name`,
+`user_type.role`, `lot.(block, lot_number)`, `occurrence.protocol_number`,
+`reservable_space.name`, `asset.asset_tag` and
+`finance_category.(name, type)`. `user.email`, `user.cpf`, `tenant.name` and
+`access_device.device_key` stay global on purpose — the last of these
+authenticates a hardware credential, so one condominium's device must not be
+able to impersonate another's.
+
+**The default tenant.** Migration `0028_add_tenant_and_membership` seeds a
+single tenant with the fixed id `00000000-0000-0000-0000-000000000001` and
+backfills every existing row and every existing user's membership into it.
+The same literal is both the Python-side model default and each column's
+`server_default`, which is what keeps pre-tenant code and tests working
+unchanged.
+
+**Not yet done.** Request-scoped tenant resolution — an acting tenant per
+request and query filtering — is **APRAS-42**, not this slice; today every
+write still lands in the default tenant, and `get_effective_user_type_ids`
+is deliberately still tenant-blind. Per-tenant RBAC (`is_tenant_admin`) is
+APRAS-43, and the frontend tenant switcher is APRAS-38.
 
 ### Task
 

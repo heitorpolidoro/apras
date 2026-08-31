@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.models.enums import FeedbackCategory, FeedbackStatus
+from app.models.tenant import tenant_id_field
 
 if TYPE_CHECKING:
     from app.models.user import User
@@ -18,6 +19,10 @@ class Feedback(SQLModel, table=True):
     __tablename__ = "feedback"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
+    # Tenant boundary (APRAS-41). Defaults to DEFAULT_TENANT_ID so ORM
+    # inserts that omit it keep working; APRAS-42 replaces this with a
+    # request-scoped acting tenant.
+    tenant_id: UUID = tenant_id_field()
     reporter_user_id: UUID | None = Field(
         default=None, foreign_key="user.id", ondelete="SET NULL", nullable=True, index=True
     )

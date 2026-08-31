@@ -59,6 +59,12 @@ from .purchase import PurchaseQuote, PurchaseQuoteDecision, PurchaseRequest
 from .reservation import ReservableSpace, SpaceReservation
 from .resident import Resident
 from .task import Task, TaskHistory
+from .tenant import (
+    DEFAULT_TENANT_ID,
+    DEFAULT_TENANT_NAME,
+    Tenant,
+    UserTenantLink,
+)
 from .user import User
 from .user_type import UserType
 from .user_type_link import UserUserTypeLink
@@ -73,6 +79,8 @@ from .voting import (
 )
 
 __all__ = [
+    "DEFAULT_TENANT_ID",
+    "DEFAULT_TENANT_NAME",
     "AccessDevice",
     "AccessDeviceStatus",
     "AccessLog",
@@ -141,10 +149,12 @@ __all__ = [
     "TaskHistory",
     "TaskPriority",
     "TaskStatus",
+    "Tenant",
     "TransactionType",
     "User",
     "UserLotLink",
     "UserRole",
+    "UserTenantLink",
     "UserType",
     "UserUserTypeLink",
     "Visitor",

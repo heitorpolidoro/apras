@@ -20,6 +20,7 @@ from app.api.v1.endpoints import (
     reservations,
     residents,
     tasks,
+    tenants,
     uploads,
     user_types,
     users,
@@ -42,6 +43,7 @@ api_router.include_router(tasks.router, prefix="/tasks", tags=["tasks"])
 api_router.include_router(users.router, prefix="/users", tags=["users"])
 api_router.include_router(categories.router, prefix="/categories", tags=["categories"])
 api_router.include_router(user_types.router, prefix="/user-types", tags=["user-types"])
+api_router.include_router(tenants.router, prefix="/tenants", tags=["tenants"])
 api_router.include_router(lots.router, prefix="/lots", tags=["lots"])
 api_router.include_router(residents.router, tags=["residents"])
 api_router.include_router(visitors.router, prefix="/visitors", tags=["visitors"])

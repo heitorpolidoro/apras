@@ -3,21 +3,31 @@
 from datetime import UTC, date, datetime
 from uuid import UUID, uuid4
 
+from sqlalchemy import Index
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.models.enums import AssetCategory, AssetCondition, MovementType
+from app.models.tenant import tenant_id_field
 
 
 class Asset(SQLModel, table=True):
     """Asset or consumable inventory item."""
 
     __tablename__ = "asset"
+    # Asset tags are unique per tenant (APRAS-41). NULL tags never collide.
+    __table_args__ = (
+        Index("ix_asset_tenant_asset_tag", "tenant_id", "asset_tag", unique=True),
+    )
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
+    # Tenant boundary (APRAS-41). Defaults to DEFAULT_TENANT_ID so ORM
+    # inserts that omit it keep working; APRAS-42 replaces this with a
+    # request-scoped acting tenant.
+    tenant_id: UUID = tenant_id_field()
     name: str = Field(nullable=False, index=True)
     category: AssetCategory = Field(nullable=False, index=True)
     serial_number: str | None = Field(default=None, nullable=True, index=True)
-    asset_tag: str | None = Field(default=None, nullable=True, unique=True, index=True)
+    asset_tag: str | None = Field(default=None, nullable=True, index=True)
     location: str = Field(nullable=False, index=True)
     acquisition_date: date | None = Field(default=None, nullable=True)
     acquisition_value: float | None = Field(default=None, nullable=True)
@@ -52,6 +62,10 @@ class InventoryMovement(SQLModel, table=True):
     __tablename__ = "inventory_movement"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
+    # Tenant boundary (APRAS-41). Defaults to DEFAULT_TENANT_ID so ORM
+    # inserts that omit it keep working; APRAS-42 replaces this with a
+    # request-scoped acting tenant.
+    tenant_id: UUID = tenant_id_field()
     asset_id: UUID = Field(
         foreign_key="asset.id", nullable=False, index=True, ondelete="CASCADE"
     )

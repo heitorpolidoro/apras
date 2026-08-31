@@ -8,6 +8,7 @@ from sqlalchemy import Column, ForeignKey
 from sqlmodel import Field, Relationship, SQLModel
 
 from .enums import TaskPriority, TaskStatus
+from .tenant import tenant_id_field
 
 if TYPE_CHECKING:
     from .category import Category
@@ -59,6 +60,10 @@ class Task(SQLModel, table=True):
     """
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
+    # Tenant boundary (APRAS-41). Defaults to DEFAULT_TENANT_ID so ORM
+    # inserts that omit it keep working; APRAS-42 replaces this with a
+    # request-scoped acting tenant.
+    tenant_id: UUID = tenant_id_field()
     title: str = Field(index=True)
     description: str | None = None
     status: TaskStatus = Field(default=TaskStatus.PENDING, index=True)

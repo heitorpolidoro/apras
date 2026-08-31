@@ -8,6 +8,7 @@ from sqlalchemy import UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
 from .enums import LotAssociationType, LotStatus
+from .tenant import tenant_id_field
 
 if TYPE_CHECKING:
     from .resident import Resident
@@ -43,10 +44,21 @@ class UserLotLink(SQLModel, table=True):
 class Lot(SQLModel, table=True):
     __tablename__ = "lot"
     __table_args__ = (
-        UniqueConstraint("block", "lot_number", name="uq_lot_block_lot_number"),
+        # Per-tenant, not global (APRAS-41): two condominiums may both
+        # have a lot "A/12".
+        UniqueConstraint(
+            "tenant_id",
+            "block",
+            "lot_number",
+            name="uq_lot_tenant_block_lot_number",
+        ),
     )
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
+    # Tenant boundary (APRAS-41). Defaults to DEFAULT_TENANT_ID so ORM
+    # inserts that omit it keep working; APRAS-42 replaces this with a
+    # request-scoped acting tenant.
+    tenant_id: UUID = tenant_id_field()
     block: str = Field(index=True, nullable=False)
     lot_number: str = Field(index=True, nullable=False)
     address: str | None = Field(default=None)

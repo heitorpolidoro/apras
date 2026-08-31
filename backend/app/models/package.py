@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 from sqlmodel import Field, Relationship, SQLModel
 
 from .enums import PackageStatus
+from .tenant import tenant_id_field
 
 if TYPE_CHECKING:
     from .lot import Lot
@@ -19,6 +20,10 @@ class Package(SQLModel, table=True):
     __tablename__ = "package"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
+    # Tenant boundary (APRAS-41). Defaults to DEFAULT_TENANT_ID so ORM
+    # inserts that omit it keep working; APRAS-42 replaces this with a
+    # request-scoped acting tenant.
+    tenant_id: UUID = tenant_id_field()
     lot_id: UUID = Field(
         foreign_key="lot.id", ondelete="CASCADE", nullable=False, index=True
     )
