@@ -27,10 +27,13 @@ def read_user_types(
 def create_user_type(
     *,
     session: Annotated[Session, Depends(get_session)],
-    current_user: Annotated[User, Depends(api_deps.get_current_active_admin)],  # noqa: ARG001
+    current_user: Annotated[User, Depends(api_deps.get_current_tenant_admin)],  # noqa: ARG001
     user_type_in: UserTypeCreate,
 ) -> UserType:
-    """Create a new user type. Restricted to ADMINISTRATOR."""
+    """Create a new user type in the acting tenant.
+
+    ADMINISTRATOR, or a tenant_admin of the acting tenant (APRAS-43).
+    """
     existing = session.exec(
         select(UserType).where(UserType.name == user_type_in.name)
     ).first()
@@ -52,11 +55,15 @@ def create_user_type(
 def update_user_type(
     *,
     session: Annotated[Session, Depends(get_session)],
-    current_user: Annotated[User, Depends(api_deps.get_current_active_admin)],  # noqa: ARG001
+    current_user: Annotated[User, Depends(api_deps.get_current_tenant_admin)],  # noqa: ARG001
     user_type_id: UUID,
     user_type_in: UserTypeUpdate,
 ) -> UserType:
-    """Update a user type. Restricted to ADMINISTRATOR."""
+    """Update a user type. ADMINISTRATOR or a tenant_admin of its tenant.
+
+    A user type of another tenant is a 404 through the ambient filter, not a
+    403.
+    """
     db_type = session.get(UserType, user_type_id)
     if not db_type:
         raise HTTPException(
@@ -74,10 +81,10 @@ def update_user_type(
 def delete_user_type(
     *,
     session: Annotated[Session, Depends(get_session)],
-    current_user: Annotated[User, Depends(api_deps.get_current_active_admin)],  # noqa: ARG001
+    current_user: Annotated[User, Depends(api_deps.get_current_tenant_admin)],  # noqa: ARG001
     user_type_id: UUID,
 ) -> None:
-    """Delete a user type. Restricted to ADMINISTRATOR.
+    """Delete a user type. ADMINISTRATOR or a tenant_admin of its tenant.
 
     Role-linked types (seeded by the APRAS-9 migration, `role` is not None)
     cannot be deleted: the role column is the mechanism used to compute

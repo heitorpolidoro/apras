@@ -113,9 +113,9 @@ def update_lot(
 def delete_lot(
     lot_id: UUID,
     session: Annotated[Session, Depends(get_session)],
-    current_user: Annotated[User, Depends(api_deps.get_current_active_admin)],
+    current_user: Annotated[User, Depends(api_deps.get_current_tenant_admin)],
 ) -> None:
-    """Soft delete a lot. ADMINISTRATOR only."""
+    """Soft delete a lot. ADMINISTRATOR or a tenant_admin of the acting tenant."""
     db_lot = LotService.get_lot_by_id(session=session, lot_id=lot_id)
     LotService.delete_lot(session=session, db_lot=db_lot)
 

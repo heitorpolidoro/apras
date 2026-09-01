@@ -35,9 +35,13 @@ Hand-offs deliberately left open by this slice:
   role, so ``.first()`` returns exactly what it returns today. For the same
   reason ``POST /api/v1/tenants`` does **not** seed role-linked ``UserType``
   rows for a new tenant — that would make ``.first()`` non-deterministic.
-* **APRAS-43** adds an ``is_tenant_admin`` column to
-  :class:`UserTenantLink`; that is why the link table has a surrogate
-  ``id`` primary key (mirroring ``UserLotLink``) rather than a composite one.
+* **APRAS-43** added the ``is_tenant_admin`` column to
+  :class:`UserTenantLink` (migration ``0029``); that is why the link table
+  has a surrogate ``id`` primary key (mirroring ``UserLotLink``) rather than
+  a composite one. The capability is deliberately a property of the
+  *membership*, not of ``user.role``: one global identity needs a different
+  answer per tenant, and a new ``UserRole`` value would silently alter the
+  54 role comparisons spread over 22 service modules.
 """
 
 from datetime import datetime
@@ -124,3 +128,15 @@ class UserTenantLink(SQLModel, table=True):
         foreign_key="tenant.id", ondelete="CASCADE", nullable=False, index=True
     )
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    # Administrator-level permission restricted to this one tenant
+    # (APRAS-43). The ``server_default`` mirrors what ``tenant_id_field()``
+    # does and for the same reason: the SQLite schema built by
+    # ``SQLModel.metadata.create_all()`` in the test harness and the Postgres
+    # schema built by Alembic must agree, and no pre-existing writer of this
+    # row (``app/seed.py``, ``POST /auth/signup``, migration ``0028``) passes
+    # the field.
+    is_tenant_admin: bool = Field(
+        default=False,
+        nullable=False,
+        sa_column_kwargs={"server_default": text("false")},
+    )

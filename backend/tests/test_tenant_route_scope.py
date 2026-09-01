@@ -46,6 +46,10 @@ GLOBAL_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("GET", "/api/v1/tenants/{tenant_id}/members"),
         ("POST", "/api/v1/tenants/{tenant_id}/members"),
         ("DELETE", "/api/v1/tenants/{tenant_id}/members/{user_id}"),
+        # APRAS-43: grants/revokes the tenant_admin capability. Global on
+        # purpose — on a route with no acting tenant the capability is not
+        # even readable, so a tenant_admin cannot grant it to themselves.
+        ("PATCH", "/api/v1/tenants/{tenant_id}/members/{user_id}"),
         # Authenticated by X-Device-Key, not a JWT: resolves its tenant from
         # the device it authenticates.
         ("POST", "/api/v1/access-control/webhook/verification"),
@@ -96,9 +100,9 @@ def test_allowlist_has_no_stale_entries():
     assert existing >= GLOBAL_ROUTES, sorted(GLOBAL_ROUTES - existing)
 
 
-def test_allowlist_is_seventeen_routes():
+def test_allowlist_is_eighteen_routes():
     """The global surface is small and reviewed; growing it is a decision."""
-    assert len(GLOBAL_ROUTES) == 17
+    assert len(GLOBAL_ROUTES) == 18
 
 
 def test_route_count_is_fully_accounted_for():

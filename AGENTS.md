@@ -311,11 +311,48 @@ The same literal is both the Python-side model default and each column's
 `server_default`, which is what keeps pre-tenant code and tests working
 unchanged.
 
-**Not yet done.** Request-scoped tenant resolution — an acting tenant per
-request and query filtering — is **APRAS-42**, not this slice; today every
-write still lands in the default tenant, and `get_effective_user_type_ids`
-is deliberately still tenant-blind. Per-tenant RBAC (`is_tenant_admin`) is
-APRAS-43, and the frontend tenant switcher is APRAS-38.
+**Tenant administrator.** `user_tenant_link.is_tenant_admin` (APRAS-43) is a
+capability *layered on top of* `UserRole`, never a role of its own: it grants
+administrator-level permission **inside one tenant only**. It lives on the
+membership row because a user is one global identity in many tenants — a
+síndico who administers condominium A and merely lives in B needs a different
+answer per tenant — and because a new `UserRole` value would silently alter
+the 54 role comparisons spread across 22 service modules.
+
+* Read through `deps.is_acting_tenant_admin` / `deps.has_admin_capability`,
+  which resolve the acting tenant from `session.info`. **No acting tenant
+  grants nothing**: on a global route (every `/api/v1/tenants` route), in
+  `app/seed.py`, in Alembic or in a unit-test `Session`, the capability is
+  structurally absent.
+* It gates the seven tenant-scoped admin routes through
+  `deps.get_current_tenant_admin` /
+  `deps.get_current_tenant_admin_or_manager` (users list/patch/contact-info,
+  user-type create/patch/delete, task delete, lot delete), and exempts its
+  holder from the UserType menu gate **within that tenant** exactly as an
+  `ADMINISTRATOR` is exempt everywhere.
+* It does **not** grant the domain-service role sets (announcements,
+  finance, occurrences, voting, …), per-lot `UserLotLink` access, or any
+  tenant/membership management: granting and revoking it is
+  `PATCH /api/v1/tenants/{tenant_id}/members/{user_id}`, `ADMINISTRATOR`
+  only.
+* Privilege escalation is closed on `PATCH /api/v1/users/{id}` for every
+  caller that is not a global `ADMINISTRATOR`: they may not grant the
+  `ADMINISTRATOR` role, modify an `ADMINISTRATOR`, or modify a user who
+  holds a membership in another tenant.
+
+**The user directory is tenant-scoped.** `GET /api/v1/users/`,
+`PATCH /api/v1/users/{id}` and `PATCH /api/v1/users/{id}/contact-info` target
+the users visible in the acting tenant — linked to it, or link-less when it
+is the default tenant (`app/services/user_service.py`). The filter is uniform
+for **every** role: acting in tenant A, an `ADMINISTRATOR` gets 404 for a
+B-only user exactly as a tenant_admin of A does, and reaches that user by
+sending `X-Tenant-Id: B`. Global vision is a property of *sending the header*,
+not of the role.
+
+**Not yet done.** The frontend tenant switcher is **APRAS-38**; nothing under
+`frontend/` knows tenants exist yet. `GET /api/v1/auth/me` stays global and
+returns the caller's own `user_types` unfiltered, having no acting tenant to
+filter by.
 
 ### Task
 
@@ -354,7 +391,7 @@ This table is not exhaustive — e.g. it does not yet have a `RESIDENT` row (a p
 
 | Role            | Tasks                                           | Users & Categories       |
 |-----------------|------------------------------------------------|--------------------------|
-| `ADMINISTRATOR` | Full CRUD on all tasks; set/edit `visible_to` targets. The only role unconditionally exempt from the UserType menu gate below. | Full user and category management |
+| `ADMINISTRATOR` | Full CRUD on all tasks; set/edit `visible_to` targets. Unconditionally exempt from the UserType menu gate below, in every tenant. Since APRAS-43 it is no longer the *only* exemption: a user holding `is_tenant_admin` on the acting tenant (see Tenant above) is exempt too, but only there — the capability is not a role and never applies outside the tenant that granted it. | Full user and category management, on the users visible in the acting tenant |
 | `DIRECTOR`      | Full CRUD on all tasks; set/edit `visible_to` targets — **but only if at least one of the Director's assigned or role-linked UserTypes has `"tasks"`/`"categories"` in `allowed_menus`** (see UserType below). A Director with no qualifying UserType is blocked from Tarefas/Categorias entirely, same as any other non-Administrator role. | Can manage categories, subject to the same UserType gate |
 | `MANAGER`       | Sees tasks with no `visible_to` targets, or at least one target matching one of their effective UserTypes; edit only unassigned or self-assigned tasks; may set/edit `visible_to` targets only as a subset of their own effective UserTypes. Also subject to the UserType menu gate (assigned or role-linked UserTypes). | Read-only on categories, subject to the UserType menu gate |
 | `GUEST`         | No task access                                  | No access                |

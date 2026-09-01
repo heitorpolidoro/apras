@@ -169,9 +169,14 @@ def get_task_history(
 def delete_task(
     task_id: UUID,
     session: Annotated[Session, Depends(get_session)],
-    current_user: Annotated[User, Depends(api_deps.get_current_active_admin)],
+    current_user: Annotated[User, Depends(api_deps.get_current_tenant_admin)],
 ) -> None:
-    """Delete a task (Soft Delete). Only ADMINISTRATOR can delete tasks."""
+    """Delete a task (Soft Delete).
+
+    ADMINISTRATOR, or a tenant_admin of the acting tenant — which can only
+    ever reach that tenant's own tasks, a foreign id being a 404 through the
+    ambient filter (APRAS-43 §4.3).
+    """
     api_deps.assert_menu_access(current_user, MenuKey.TASKS, session)
     db_task = session.get(Task, task_id)
     if not db_task or db_task.is_deleted:

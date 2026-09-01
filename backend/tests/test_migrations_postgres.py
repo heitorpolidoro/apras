@@ -775,13 +775,13 @@ def test_scoped_uniques_are_per_tenant(isolated_pg_engine):
 
 
 def test_downgrade_removes_tenant_schema(isolated_pg_engine):
-    """`alembic downgrade -1` from head undoes 0028 exactly: both tables
-    gone, no surviving tenant_id, and the 8 original global uniques back."""
-    _run_alembic("downgrade", "-1")
+    """Downgrading past 0028 undoes it exactly: both tables gone, no
+    surviving tenant_id, and the 8 original global uniques back."""
+    # Target 0028's own down_revision explicitly rather than a relative
+    # "-1": APRAS-43 chained 0029 on top, so "-1" now undoes that instead —
+    # exactly the drift this module's older cases already document.
+    _run_alembic("downgrade", "0027_add_purchase_quotation")
 
-    # `-1` is unambiguous while 0028 is head; asserting the landing revision
-    # is what makes it *stay* unambiguous once a later migration is chained
-    # on top (the same drift this module's older cases already document).
     assert _current_revision(isolated_pg_engine) == "0027_add_purchase_quotation"
 
     with isolated_pg_engine.connect() as conn:
@@ -856,4 +856,78 @@ def test_downgrade_removes_tenant_schema(isolated_pg_engine):
     # Re-applying must succeed, so the downgrade left a schema 0028 can
     # migrate again (the fixture's teardown reset assumes nothing about it).
     _run_alembic("upgrade", "head")
-    assert _current_revision(isolated_pg_engine) == "0028_add_tenant_and_membership"
+    assert _current_revision(isolated_pg_engine) == "0029_add_is_tenant_admin"
+
+
+# ---------------------------------------------------------------------------
+# 0029_add_is_tenant_admin (APRAS-43) - the tenant_admin capability column
+# ---------------------------------------------------------------------------
+
+
+def test_is_tenant_admin_column_shape_and_backfill(pg_engine_at_0027):
+    """`is_tenant_admin` is boolean NOT NULL DEFAULT false at head, every
+    membership 0028 backfilled reads false, and downgrading to 0028 removes
+    the column again."""
+    user_id = uuid.uuid4()
+    with pg_engine_at_0027.begin() as conn:
+        conn.execute(
+            text(
+                'INSERT INTO "user" '
+                "(id, email, hashed_password, full_name, role, is_active, cpf) "
+                "VALUES (:id, :email, 'x', 'Capability Test', 'ADMINISTRATOR', "
+                "true, :cpf)"
+            ),
+            {
+                "id": user_id,
+                "email": f"capability-{user_id}@test.com",
+                "cpf": str(user_id.int % 10**11).zfill(11),
+            },
+        )
+
+    _run_alembic("upgrade", "head")
+    assert _current_revision(pg_engine_at_0027) == "0029_add_is_tenant_admin"
+
+    with pg_engine_at_0027.connect() as conn:
+        column = conn.execute(
+            text(
+                "SELECT data_type, is_nullable, column_default "
+                "FROM information_schema.columns "
+                "WHERE table_name = 'user_tenant_link' "
+                "AND column_name = 'is_tenant_admin'"
+            )
+        ).one()
+        flags = (
+            conn.execute(
+                text(
+                    "SELECT is_tenant_admin FROM user_tenant_link "
+                    "WHERE user_id = :id"
+                ),
+                {"id": user_id},
+            )
+            .scalars()
+            .all()
+        )
+
+    assert column.data_type == "boolean"
+    assert column.is_nullable == "NO"
+    assert column.column_default == "false"
+    # 0028 gave every pre-existing user exactly one membership; 0029 makes it
+    # a plain one, which is the only safe default.
+    assert flags == [False]
+
+    _run_alembic("downgrade", "0028_add_tenant_and_membership")
+
+    with pg_engine_at_0027.connect() as conn:
+        columns = (
+            conn.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name = 'user_tenant_link'"
+                )
+            )
+            .scalars()
+            .all()
+        )
+    assert "is_tenant_admin" not in columns
+
+    _run_alembic("upgrade", "head")

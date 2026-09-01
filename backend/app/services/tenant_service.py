@@ -76,23 +76,51 @@ class TenantService:
         session.commit()
         session.refresh(tenant)
 
-        # The request itself acts in a *different* tenant (or in none at all,
-        # `/tenants` being a global route), so the acting tenant is swapped
-        # for the duration of the seed and the write stamp puts the new
-        # tenant's id on every row. `ix_user_type_tenant_role` guarantees at
-        # most one row per (tenant, role). This is the one production caller
-        # of `acting_tenant_scope`.
-        with acting_tenant_scope(session, tenant.id):
-            session.add_all(
-                [
-                    UserType(name=name, role=role, allowed_menus=[])
-                    for role, name in ROLE_TYPE_NAMES.items()
-                ]
-            )
-            session.commit()
+        cls.ensure_role_types(session, tenant.id)
 
         session.refresh(tenant)
         return tenant
+
+    @staticmethod
+    def ensure_role_types(session: Session, tenant_id: UUID) -> int:
+        """Insert the role-linked ``UserType`` rows ``tenant_id`` is missing.
+
+        Idempotent by construction: it reads the roles already present and
+        inserts only the gap, so it is safe to call on every tenant of an
+        install (``app/seed.py``) and on a brand-new one
+        (``create_tenant``). Tenants created before APRAS-42 have no
+        role-linked rows at all, and without them a non-``ADMINISTRATOR``
+        member has an empty effective-UserType set and is 403'd by
+        ``assert_menu_access`` on every gated menu; ``python -m app.seed`` is
+        the documented recovery path rather than a data step inside an
+        otherwise reversible migration (APRAS-43 §7).
+
+        The acting tenant is swapped for the duration so both the read and
+        the write see exactly ``tenant_id``: the ambient filter constrains
+        the existence check and the write stamp puts the right id on every
+        inserted row. `ix_user_type_tenant_role` guarantees at most one row
+        per (tenant, role). This is the one production caller of
+        ``acting_tenant_scope``.
+
+        Returns:
+            int: how many rows were inserted (0 on a complete tenant).
+        """
+        with acting_tenant_scope(session, tenant_id):
+            existing = {
+                user_type.role
+                for user_type in session.exec(
+                    select(UserType).where(UserType.role.is_not(None))
+                ).all()
+            }
+            missing = [
+                UserType(name=name, role=role, allowed_menus=[])
+                for role, name in ROLE_TYPE_NAMES.items()
+                if role not in existing
+            ]
+            if missing:
+                session.add_all(missing)
+                session.commit()
+        return len(missing)
 
     @staticmethod
     def list_tenants(session: Session, current_user: User) -> list[Tenant]:
@@ -171,7 +199,11 @@ class TenantService:
 
     @classmethod
     def add_member(
-        cls, session: Session, tenant_id: UUID, user_id: UUID
+        cls,
+        session: Session,
+        tenant_id: UUID,
+        user_id: UUID,
+        is_tenant_admin: bool = False,
     ) -> TenantMemberRead:
         """Link a user to a tenant.
 
@@ -189,10 +221,46 @@ class TenantService:
         if cls.is_member(session, tenant_id, user_id):
             raise TenantMembershipAlreadyExistsError(user_id, tenant_id)
 
-        link = UserTenantLink(user_id=user_id, tenant_id=tenant_id)
+        link = UserTenantLink(
+            user_id=user_id, tenant_id=tenant_id, is_tenant_admin=is_tenant_admin
+        )
         session.add(link)
         session.commit()
         session.refresh(link)
+        return cls._to_member_read(link, user)
+
+    @classmethod
+    def set_member_admin(
+        cls,
+        session: Session,
+        tenant_id: UUID,
+        user_id: UUID,
+        is_tenant_admin: bool,
+    ) -> TenantMemberRead:
+        """Grant or revoke the tenant_admin capability on one membership.
+
+        An unknown tenant, an unknown user or a user with no membership in
+        the tenant are all the same 404 (``TenantMembershipNotFoundError``),
+        for the reason ``add_member`` already documents: the statement "user
+        X is not a member of tenant Y" is exactly true and it keeps this
+        route from becoming an id-enumeration oracle.
+        """
+        cls.get_tenant(session, tenant_id)
+        link = session.exec(
+            select(UserTenantLink).where(
+                UserTenantLink.tenant_id == tenant_id,
+                UserTenantLink.user_id == user_id,
+            )
+        ).first()
+        if not link:
+            raise TenantMembershipNotFoundError(user_id, tenant_id)
+
+        link.is_tenant_admin = is_tenant_admin
+        session.add(link)
+        session.commit()
+        session.refresh(link)
+
+        user = session.get(User, user_id)
         return cls._to_member_read(link, user)
 
     @classmethod
@@ -219,4 +287,5 @@ class TenantService:
             full_name=user.full_name,
             role=user.role,
             linked_at=link.created_at,
+            is_tenant_admin=link.is_tenant_admin,
         )

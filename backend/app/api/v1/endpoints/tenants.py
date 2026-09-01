@@ -21,6 +21,7 @@ from app.schemas.tenant import (
     TenantCreate,
     TenantMemberCreate,
     TenantMemberRead,
+    TenantMemberUpdate,
     TenantRead,
     TenantUpdate,
 )
@@ -104,7 +105,34 @@ def add_tenant_member(
     (user, tenant) pair twice is a 409.
     """
     return TenantService.add_member(
-        session=session, tenant_id=tenant_id, user_id=member_in.user_id
+        session=session,
+        tenant_id=tenant_id,
+        user_id=member_in.user_id,
+        is_tenant_admin=member_in.is_tenant_admin,
+    )
+
+
+@router.patch("/{tenant_id}/members/{user_id}", response_model=TenantMemberRead)
+def set_tenant_member_admin(
+    tenant_id: UUID,
+    user_id: UUID,
+    member_in: TenantMemberUpdate,
+    session: Annotated[Session, Depends(get_session)],
+    _: Annotated[User, Depends(api_deps.get_current_active_admin)],
+) -> TenantMemberRead:
+    """Grant or revoke the tenant_admin capability. ADMINISTRATOR only.
+
+    Deliberately behind the same role-only guard as its POST/DELETE
+    siblings, so a tenant_admin of that very tenant gets 403 here: this is a
+    global route, and the capability is only readable when an acting tenant
+    has been resolved (APRAS-43 §2.1.4). An unknown tenant, an unknown user
+    or a non-member are all 404.
+    """
+    return TenantService.set_member_admin(
+        session=session,
+        tenant_id=tenant_id,
+        user_id=user_id,
+        is_tenant_admin=member_in.is_tenant_admin,
     )
 
 

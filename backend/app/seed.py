@@ -7,11 +7,12 @@ from app.core.security import get_password_hash
 from app.models.category import Category
 from app.models.enums import TaskPriority, TaskStatus, UserRole
 from app.models.task import Task
-from app.models.tenant import DEFAULT_TENANT_ID, UserTenantLink
+from app.models.tenant import DEFAULT_TENANT_ID, Tenant, UserTenantLink
 from app.models.user import User
 from app.models.user_type import UserType
+from app.services.tenant_service import TenantService
 from sqlalchemy import text
-from sqlmodel import Session, create_engine
+from sqlmodel import Session, create_engine, select
 
 
 def seed_db() -> None:
@@ -260,6 +261,19 @@ def seed_db() -> None:
 
         session.commit()
         print(f"✅ {len(tasks_data)} tarefas criadas.")
+
+        # 6. Tipos de usuário ligados a papéis, para *todos* os tenants.
+        # The TRUNCATE above wipes the role-linked UserType rows migration
+        # 0018/0020 seeded, and tenants created before APRAS-42 never had
+        # them; without them a non-ADMINISTRATOR member has an empty
+        # effective-UserType set and is 403'd on every gated menu. This is
+        # the documented dev recovery path (APRAS-43 §7) — idempotent, so
+        # running the seed twice inserts nothing the second time.
+        seeded_role_types = 0
+        for tenant in session.exec(select(Tenant)).all():
+            seeded_role_types += TenantService.ensure_role_types(session, tenant.id)
+        print(f"✅ {seeded_role_types} tipos de usuário por papel garantidos.")
+
         print("🚀 Seed concluído com sucesso!")
 
 

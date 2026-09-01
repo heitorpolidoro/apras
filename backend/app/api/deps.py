@@ -132,6 +132,56 @@ def get_current_admin_or_manager(
     return current_user
 
 
+# ---------------------------------------------------------------------------
+# The tenant_admin capability (APRAS-43 §4.1)
+# ---------------------------------------------------------------------------
+
+
+def is_acting_tenant_admin(user: User, session: Session) -> bool:
+    """Return whether the session's acting tenant grants `user` the capability.
+
+    Deliberately **without** the `DEFAULT_TENANT_ID` fallback that
+    `get_effective_user_type_ids` uses: that function falls back so a unit
+    test session resolves deterministically, this one *grants power*, so an
+    unresolved session must grant nothing. A `Session(engine)` in
+    `app/seed.py`, in Alembic or in a unit test therefore never carries the
+    capability, and neither does a global route — which is what makes the
+    `/api/v1/tenants` 403s fall out of the design instead of out of a check
+    somebody has to remember.
+
+    The acting tenant is read from `session.info`, exactly as APRAS-42
+    established, so no call site grows a parameter. `UserTenantLink` is
+    excluded from `TENANT_SCOPED_MODELS`, so this query is not itself
+    filtered.
+
+    Args:
+        user: The user whose capability is being read.
+        session: Database session carrying (or not) an acting tenant.
+
+    Returns:
+        bool: True only when an acting tenant is resolved and grants it.
+    """
+    tenant_id = tenant_context.acting_tenant_id(session)
+    if tenant_id is None:
+        return False
+    link = session.exec(
+        select(UserTenantLink).where(
+            UserTenantLink.user_id == user.id,
+            UserTenantLink.tenant_id == tenant_id,
+        )
+    ).first()
+    return bool(link and link.is_tenant_admin)
+
+
+def has_admin_capability(user: User, session: Session) -> bool:
+    """Return whether `user` has administrator-level power *here*.
+
+    "Here" is the acting tenant: a global ADMINISTRATOR everywhere, a
+    tenant_admin only in the tenant that granted it.
+    """
+    return user.role == UserRole.ADMINISTRATOR or is_acting_tenant_admin(user, session)
+
+
 def get_effective_user_type_ids(user: User, session: Session) -> set[UUID]:
     """Return the user's effective UserType ids for permission evaluation.
 
@@ -148,12 +198,15 @@ def get_effective_user_type_ids(user: User, session: Session) -> set[UUID]:
     Returns:
         set[UUID]: The union of explicit and role-implicit UserType ids.
     """
-    explicit_ids = {ut.id for ut in user.user_types}
     # The acting tenant of the request session, or the default tenant when
     # the caller is not a request (unit tests, `app/seed.py`). The fallback
     # is what keeps `.first()` deterministic now that a role can have one
     # UserType row *per tenant* (APRAS-42 §7.1).
     tenant_id = tenant_context.acting_tenant_id(session) or DEFAULT_TENANT_ID
+    # Relationship loads are exempt from the ambient filter, so the explicit
+    # types are narrowed here too (APRAS-43 §5.2): without this, a dual-tenant
+    # user's tenant-B UserType rows compose into a tenant-A decision.
+    explicit_ids = {ut.id for ut in user.user_types if ut.tenant_id == tenant_id}
     role_type = session.exec(
         select(UserType).where(
             UserType.role == user.role, UserType.tenant_id == tenant_id
@@ -167,8 +220,10 @@ def get_effective_user_type_ids(user: User, session: Session) -> set[UUID]:
 def assert_menu_access(current_user: User, menu_key: MenuKey, session: Session) -> None:
     """Raise ForbiddenError unless the user can access the given menu/feature.
 
-    ADMINISTRATOR always passes. Every other role needs at least one
-    effective UserType (explicitly-assigned or role-implicit, see
+    A caller holding the admin capability in the acting tenant always
+    passes: a global ADMINISTRATOR anywhere, and a tenant_admin *within the
+    tenant that granted it* (APRAS-43 §5.1). Every other role needs at least
+    one effective UserType (explicitly-assigned or role-implicit, see
     `get_effective_user_type_ids`) with `menu_key` in its `allowed_menus`.
 
     Args:
@@ -179,7 +234,7 @@ def assert_menu_access(current_user: User, menu_key: MenuKey, session: Session) 
     Raises:
         ForbiddenError: If the user does not have access to the menu.
     """
-    if current_user.role == UserRole.ADMINISTRATOR:
+    if has_admin_capability(current_user, session):
         return
     effective_ids = get_effective_user_type_ids(current_user, session)
     if effective_ids:
@@ -279,16 +334,21 @@ def _resolve_from_header(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not a member of the requested tenant",
         )
+    # Membership *before* activity (APRAS-43 §7): answering "Tenant is
+    # inactive" to a non-member would confirm that the tenant exists, which
+    # is exactly the existence oracle the 404/403 split above exists to
+    # close. A member — and any ADMINISTRATOR — still gets the accurate
+    # "Tenant is inactive".
+    if not (is_admin or tenant_id in _tenant_memberships(session, current_user)):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not a member of the requested tenant",
+        )
     if not tenant.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Tenant is inactive"
         )
-    if is_admin or tenant_id in _tenant_memberships(session, current_user):
-        return tenant
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="Not a member of the requested tenant",
-    )
+    return tenant
 
 
 def _resolve_without_header(session: Session, current_user: User) -> Tenant:
@@ -333,6 +393,54 @@ def get_current_tenant(
         tenant = _resolve_without_header(session, current_user)
     tenant_context.set_acting_tenant(session, tenant.id)
     return tenant
+
+
+def get_current_tenant_admin(
+    session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    _tenant: Annotated[Tenant, Depends(get_current_tenant)],
+) -> User:
+    """Admin-level guard for a tenant-scoped route (APRAS-43 §4.2).
+
+    Passes for a global ADMINISTRATOR and for a tenant_admin of the acting
+    tenant. Keeps `get_current_active_admin`'s 403 detail verbatim, so no
+    existing assertion changes.
+
+    Depending on `get_current_tenant` here is deliberate rather than relying
+    on the router-level dependency having run first: router-level
+    dependencies resolve before the endpoint's own and a shared
+    sub-dependency is called once per request, so the guard is
+    self-sufficient *and* free. It also cannot be mounted on an unscoped
+    router by accident — `tests/test_tenant_admin.py` forbids that
+    combination outright.
+    """
+    if not has_admin_capability(current_user, session):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="The user doesn't have enough privileges",
+        )
+    return current_user
+
+
+def get_current_tenant_admin_or_manager(
+    session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    _tenant: Annotated[Tenant, Depends(get_current_tenant)],
+) -> User:
+    """`get_current_tenant_admin`, widened by the MANAGER role.
+
+    The tenant-aware counterpart of `get_current_admin_or_manager`, same 403
+    detail.
+    """
+    if not (
+        has_admin_capability(current_user, session)
+        or current_user.role == UserRole.MANAGER
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="The user doesn't have enough privileges",
+        )
+    return current_user
 
 
 def use_global_tenant_scope(

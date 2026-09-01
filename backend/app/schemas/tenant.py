@@ -44,9 +44,24 @@ class TenantRead(TenantBase):
 
 
 class TenantMemberCreate(BaseModel):
-    """Schema for linking an existing user to a tenant."""
+    """Schema for linking an existing user to a tenant.
+
+    ``is_tenant_admin`` is optional so a link and a grant can be one call
+    (APRAS-43); it defaults to ``False``, i.e. a plain member.
+    """
 
     user_id: UUID
+    is_tenant_admin: bool = False
+
+
+class TenantMemberUpdate(BaseModel):
+    """Schema for granting/revoking the tenant_admin capability (APRAS-43).
+
+    Exactly one field, on purpose: this route grants a capability and must
+    never become a general membership editor.
+    """
+
+    is_tenant_admin: bool
 
 
 class TenantMemberRead(BaseModel):
@@ -57,5 +72,6 @@ class TenantMemberRead(BaseModel):
     full_name: str
     role: UserRole
     linked_at: datetime
+    is_tenant_admin: bool
 
     model_config = ConfigDict(from_attributes=True)

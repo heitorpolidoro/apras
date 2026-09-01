@@ -78,3 +78,13 @@
 - Tornar explicita a dependencia global-scope do webhook no mount: a primeira query e select(AccessDevice) e access_device e escopada.
 - Adicionar o idioma de paginacao select(func.count()).select_from(<select>.subquery()) a tabela medida da 4.2 (verificado: e filtrado).
 - GLOBAL_ROUTES e nome enganoso; o predicado real e "nao depende de get_current_tenant" (contem signup e o webhook).
+
+## [APRAS-43] Add tenant_admin capability composed with the existing RBAC layers — 2026-08-31
+
+- ER-17 armazenado enfraquece o "ruff check is clean" do spec para "clean nos arquivos tocados"; mantido o mais fraco de propósito (o repo carrega ~1200 findings pre-existentes e o CI nao roda ruff) - alinhar o SPEC ao ER, nao o contrario.
+- test_migrations_postgres.py:302 (test_downgrade_is_a_safe_noop) tem um segundo downgrade -1 com docstring ja obsoleta; continua verde com a 0029 em cima, mas fixar o alvo remove o proximo drift.
+- O "small helper" da secao 6.2 que filtra UserRead.user_types pelo tenant ativo nao tem lar na lista de arquivos da 8.1 - nomear.
+- Acrescentar um ER para o caso header-less em formato de producao (membro unico do tenant default ve a mesma lista GET /users/ do master); hoje so implicito em "test_user_admin.py passes unmodified".
+- Levar a nota da regra 3 da 6.3 ("per-tenant roles are not in this chain") verbatim para a tarefa seguinte.
+- (rodada 1) TenantMemberCreate.is_tenant_admin sem ER proprio; ER-3 chama GET /users/ de "admin-gated" mas e aberto a autenticados; piso de cobertura 90% esta 8pt abaixo do baseline 98.21%; ensure_role_types e o item sem acoplamento causal com o resto da fatia.
+- (rodada 1) Racional da regra 4 da 6.3 contradito pelo codigo: signup sempre vincula ao DEFAULT_TENANT_ID e nao ha fluxo de convite, entao todo morador fora do tenant default e permanentemente dual-membership e imutavel pelo proprio sindico - regra segura, mas metade da capacidade fica inerte fora do default; corrigir o racional e nomear o follow-up.
