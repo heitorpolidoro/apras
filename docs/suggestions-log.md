@@ -88,3 +88,19 @@
 - Levar a nota da regra 3 da 6.3 ("per-tenant roles are not in this chain") verbatim para a tarefa seguinte.
 - (rodada 1) TenantMemberCreate.is_tenant_admin sem ER proprio; ER-3 chama GET /users/ de "admin-gated" mas e aberto a autenticados; piso de cobertura 90% esta 8pt abaixo do baseline 98.21%; ensure_role_types e o item sem acoplamento causal com o resto da fatia.
 - (rodada 1) Racional da regra 4 da 6.3 contradito pelo codigo: signup sempre vincula ao DEFAULT_TENANT_ID e nao ha fluxo de convite, entao todo morador fora do tenant default e permanentemente dual-membership e imutavel pelo proprio sindico - regra segura, mas metade da capacidade fica inerte fora do default; corrigir o racional e nomear o follow-up.
+
+## [APRAS-38] Integrate multi-tenancy end to end: tenant switcher UI — 2026-09-01
+
+- O sentinel do terceiro caso do TenantBootstrapOrder precisa de mecanismo definido: segundo mock (TaskDashboard), texto do proprio TaskDashboard, ou window.location.pathname - os tres dao o mesmo veredito; nomear um.
+- Dizer o que o mock do ER-18 responde para /users/ (o branch de erro do AdminUserDashboard so renderiza admin.errorLoadingUsers) e o que /user-types/ devolve no segundo caso do ER-17 com tenant nao-nulo (precisa carregar a linha que concede tasks).
+- O mock do ER-18 responde /tenants com A e B para fixture de membership unica - estado que o backend real nao produz; inofensivo, mas renderiza switcher de 2 opcoes para usuario de 1 tenant.
+- O frontend nao estende a isencao do menu-gate ao tenant_admin (useMenuAccess so curto-circuita ADMINISTRATOR); comportamento igual ao de hoje e a experiencia /admin/users fica intacta, mas e um follow-up nomeado - a cadeia IAM (F4) resolve por definicao (menus derivam de permissoes).
+- (rodada 2) staleTime de 5min pode servir linhas de outra identidade por ate 5 minutos apos login/logout; useActingTenantReady em TenantContext.tsx arrasta o grafo do modulo para useUserTypes; canto 'todas as memberships inativas' da escada sem nome; TenantContextValue.isLoading declarado e nunca consumido.
+
+## [APRAS-45] IAM F1: catálogo de permissões e grupos — 2026-09-01
+
+- O exemplo de partial da 6.5(a) e um TypeError como escrito (User chega posicional; bind session= por keyword colide). Regra correta: bind posicional para args antes do user, keyword so depois. Falha alto e todo reparo da o mesmo conjunto - nao bloqueante.
+- '~130 worlds' na 6.5(a) deveria ser ~152 (152 permissoes distintas no catalogo).
+- 7.3 deveria pinar o column_default exato do Postgres ('[]'::json) como o precedente da 0029 pina "false".
+- 5.2 teste 8 agrupa por primeira tag; ("GET","/") e a unica rota sem tags - agrupar defensivamente.
+- Nota opcional no AGENTS.md para o registry (precedente APRAS-43; o 'Nothing else' da secao 2 le como proibindo, embora o ER-6 nao proiba).

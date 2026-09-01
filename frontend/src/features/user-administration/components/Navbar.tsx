@@ -4,6 +4,8 @@ import { useTranslation } from "react-i18next";
 import { useAuth, UserRole } from "../context/AuthContext";
 import { useEffectiveIdentity } from "../context/useEffectiveIdentity";
 import { useMenuAccess } from "../context/useMenuAccess";
+import { useTenant } from "../context/useTenant";
+import { useEffectiveAdminCapability } from "../context/useAdminCapability";
 import { cn } from "../../../lib/utils";
 import SimulationControls from "./SimulationControls";
 
@@ -17,6 +19,8 @@ const Navbar: React.FC = () => {
   const { role: effectiveRole } = useEffectiveIdentity();
   const canAccessTasks = useMenuAccess("tasks");
   const canAccessCategories = useMenuAccess("categories");
+  const { tenants, actingTenantId, setActingTenant } = useTenant();
+  const hasEffectiveAdminCapability = useEffectiveAdminCapability();
   const location = useLocation();
   const { t, i18n } = useTranslation();
   const currentLang = i18n.resolvedLanguage ?? i18n.language;
@@ -283,7 +287,7 @@ const Navbar: React.FC = () => {
         )}
 
 
-        {(effectiveRole === UserRole.ADMINISTRATOR ||
+        {(hasEffectiveAdminCapability ||
           effectiveRole === UserRole.MANAGER) && (
           <Link
             to="/users/contact-info"
@@ -298,7 +302,7 @@ const Navbar: React.FC = () => {
           </Link>
         )}
 
-        {effectiveRole === UserRole.ADMINISTRATOR && (
+        {hasEffectiveAdminCapability && (
           <Link
             to="/admin/users"
             className={cn(
@@ -359,6 +363,30 @@ const Navbar: React.FC = () => {
       </div>
 
       <div className="flex items-center gap-5">
+        {/* The switcher renders only when there is something to switch
+            between. With exactly one option that tenant is already the
+            pre-selection, and with zero options the Navbar renders nothing at
+            all — no placeholder, no message — because the zero-option state is
+            also the state of every bare Navbar/ProtectedRoute test and of the
+            routing smoke test, where any new text would be a regression.
+            A native <select>, not Radix, for a stable combobox surface in
+            jsdom. */}
+        {tenants.length >= 2 && (
+          <select
+            aria-label={t("tenant.switcherLabel")}
+            value={actingTenantId ?? ""}
+            onChange={(event) => {
+              setActingTenant(event.target.value);
+            }}
+            className="text-sm font-semibold bg-background border border-border/50 rounded-md px-2 py-1.5 text-foreground"
+          >
+            {tenants.map((tenant) => (
+              <option key={tenant.id} value={tenant.id}>
+                {tenant.name}
+              </option>
+            ))}
+          </select>
+        )}
         {user?.role === UserRole.ADMINISTRATOR && <SimulationControls />}
         <div className="flex items-center gap-1 border border-border/50 rounded-md overflow-hidden">
           {LANGUAGES.map((lang) => (

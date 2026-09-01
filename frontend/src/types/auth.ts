@@ -18,6 +18,22 @@ export interface UserType {
   role?: string | null;
 }
 
+/** One membership of the *calling* user, as returned by `GET /auth/me`. */
+export interface TenantMembership {
+  tenant_id: string;
+  name: string;
+  is_active: boolean;
+  /** The APRAS-43 capability, scoped to this membership only. */
+  is_tenant_admin: boolean;
+}
+
+/** A tenant the caller may act in, as returned by `GET /tenants`. */
+export interface Tenant {
+  id: string;
+  name: string;
+  is_active: boolean;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -29,4 +45,7 @@ export interface User {
   cpf?: string;
   phone?: string;
   address?: string;
+  /** The caller's own tenant memberships (`GET /auth/me` only, APRAS-38).
+   *  Optional so every pre-existing `User` fixture keeps type-checking. */
+  tenants?: TenantMembership[];
 }

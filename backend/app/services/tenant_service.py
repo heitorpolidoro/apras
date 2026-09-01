@@ -16,7 +16,12 @@ from app.models.enums import UserRole
 from app.models.tenant import Tenant, UserTenantLink
 from app.models.user import User
 from app.models.user_type import UserType
-from app.schemas.tenant import TenantCreate, TenantMemberRead, TenantUpdate
+from app.schemas.tenant import (
+    TenantCreate,
+    TenantMemberRead,
+    TenantMembershipSummary,
+    TenantUpdate,
+)
 
 # Human-readable names of the role-linked UserType rows seeded into every new
 # tenant, matching the five migration 0018 seeded into the default tenant plus
@@ -140,6 +145,42 @@ class TenantService:
                 .order_by(Tenant.name)
             )
         return list(session.exec(statement).all())
+
+    @staticmethod
+    def list_memberships(
+        session: Session, user: User
+    ) -> list[TenantMembershipSummary]:
+        """List the *caller's own* memberships, ordered by tenant name.
+
+        Unlike :meth:`list_tenants`, this never widens for an
+        ``ADMINISTRATOR``: it answers "which tenants is this user a member
+        of, and where does the ``is_tenant_admin`` capability apply", which is
+        what ``GET /api/v1/auth/me`` needs (APRAS-38 §3.2). A user with no
+        memberships gets ``[]`` — never an error and never a synthesised
+        default-tenant entry, because a zero-membership user must keep the
+        backend's own header-less fallback rather than a client-invented one.
+
+        Ordered by ``Tenant.name``, the same order as :meth:`list_tenants`,
+        which is what makes the frontend's "first membership" pre-selection
+        deterministic. ``UserTenantLink`` is outside ``TENANT_SCOPED_MODELS``,
+        so this query is unaffected by the ambient filter and works on a
+        global route.
+        """
+        statement = (
+            select(Tenant, UserTenantLink)
+            .join(UserTenantLink, UserTenantLink.tenant_id == Tenant.id)
+            .where(UserTenantLink.user_id == user.id)
+            .order_by(Tenant.name)
+        )
+        return [
+            TenantMembershipSummary(
+                tenant_id=tenant.id,
+                name=tenant.name,
+                is_active=tenant.is_active,
+                is_tenant_admin=link.is_tenant_admin,
+            )
+            for tenant, link in session.exec(statement).all()
+        ]
 
     @classmethod
     def get_visible_tenant(

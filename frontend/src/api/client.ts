@@ -2,6 +2,7 @@ import axios from "axios";
 import type { InternalAxiosRequestConfig } from "axios";
 import i18n from "../i18n";
 import { getSimulationState } from "../features/user-administration/context/simulationState";
+import { getActingTenantId } from "../features/user-administration/context/tenantState";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
 
@@ -39,6 +40,14 @@ apiClient.interceptors.request.use(
       localStorage.getItem("accessToken");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    // The acting tenant, read from the module-level mirror because a React
+    // context cannot be reached from here (APRAS-38 §4.3). Attached
+    // unconditionally: the header is inert on the global routes (`/auth/*`,
+    // `/tenants*` do not declare it) and required on every scoped one.
+    const actingTenantId = getActingTenantId();
+    if (actingTenantId) {
+      config.headers["X-Tenant-Id"] = actingTenantId;
     }
     if (BYPASS_TOKEN) {
       config.headers["x-vercel-protection-bypass"] = BYPASS_TOKEN;

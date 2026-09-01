@@ -11,7 +11,8 @@ from app.models.enums import UserRole
 from app.models.tenant import DEFAULT_TENANT_ID, UserTenantLink
 from app.models.user import User
 from app.schemas.token import Token
-from app.schemas.user import UserCreate, UserRead
+from app.schemas.user import UserCreate, UserMeRead, UserRead
+from app.services.tenant_service import TenantService
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session, select
@@ -76,12 +77,29 @@ def signup(
 
 
 
-@router.get("/me", response_model=UserRead)
+# No `response_model=`: FastAPI derives the identical model from the return
+# annotation below, and pairing the two trips ruff FAST001. Wire body unchanged.
+@router.get("/me")
 def read_user_me(
+    session: Annotated[Session, Depends(get_session)],
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
-) -> User:
-    """Get current user."""
-    return current_user
+) -> UserMeRead:
+    """Get current user, plus the tenants they are a member of (APRAS-38).
+
+    The route stays on the global scope allowlist: `X-Tenant-Id` neither
+    narrows nor alters this body. `tenants` is the caller's *own* membership
+    graph — the frontend reads `is_tenant_admin` from it to decide, per
+    acting tenant, whether to offer the admin surfaces. The dropdown's option
+    list comes from `GET /api/v1/tenants` instead, which widens to every
+    tenant for an ADMINISTRATOR.
+
+    Adding a session dependency does not add `get_current_tenant`, so the
+    route's scope classification is unchanged.
+    """
+    return UserMeRead(
+        **UserRead.model_validate(current_user).model_dump(),
+        tenants=TenantService.list_memberships(session, current_user),
+    )
 
 
 @router.post("/login", response_model=Token)

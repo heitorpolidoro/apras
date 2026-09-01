@@ -75,3 +75,19 @@ class TenantMemberRead(BaseModel):
     is_tenant_admin: bool
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class TenantMembershipSummary(BaseModel):
+    """One membership of the *calling* user, for ``GET /api/v1/auth/me``.
+
+    Distinct from :class:`TenantMemberRead`, which describes *another* user's
+    membership of a named tenant and carries their email/role, and from
+    :class:`TenantRead`, which describes the tenant entity and must stay
+    caller-independent (it is also the response of ``POST``/``PATCH``/
+    ``GET {id}``, where a caller-relative field would be a category error).
+    """
+
+    tenant_id: UUID
+    name: str
+    is_active: bool
+    is_tenant_admin: bool

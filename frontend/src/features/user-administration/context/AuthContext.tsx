@@ -8,6 +8,12 @@ import React, {
 import apiClient from "../../../api/client";
 import { type User } from "../../../types/auth";
 import { triggerSimulationReset } from "./simulationState";
+import {
+  clearActingTenantId,
+  getActingTenantId,
+  resolveActingTenantId,
+  setActingTenantId,
+} from "./tenantState";
 export { UserRole } from "../../../types/auth";
 
 interface AuthContextType {
@@ -29,10 +35,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const fetchUser = useCallback(async () => {
     try {
       const response = await apiClient.get<User>("/auth/me");
+      // BEFORE setUser, deliberately: this closes the window in which a
+      // tenant-scoped query could fire without an X-Tenant-Id header. Writing
+      // the mirror first makes the invariant `user !== null implies acting
+      // tenant decided` hold, and — because TenantContext reads the mirror
+      // through useSyncExternalStore rather than copying it into state — there
+      // is no commit in which `user` is set, `isLoading` is false and the
+      // acting tenant is still the pre-boot value (APRAS-38 §4.4, §4.5).
+      setActingTenantId(
+        resolveActingTenantId(
+          response.data.tenants ?? [],
+          response.data.role,
+          getActingTenantId(),
+        ),
+      );
       setUser(response.data);
     } catch {
       localStorage.removeItem("accessToken");
       sessionStorage.removeItem("accessToken");
+      clearActingTenantId();
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -68,6 +89,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const logout = useCallback(() => {
     localStorage.removeItem("accessToken");
     sessionStorage.removeItem("accessToken");
+    clearActingTenantId();
     setUser(null);
     triggerSimulationReset();
   }, []);

@@ -13,6 +13,7 @@ import GuestWelcomePage from "./features/user-administration/pages/GuestWelcomeP
 import ProtectedRoute from "./features/user-administration/components/ProtectedRoute";
 import { AuthProvider, useAuth } from "./features/user-administration/context/AuthContext";
 import { SimulationProvider } from "./features/user-administration/context/SimulationContext";
+import { TenantProvider } from "./features/user-administration/context/TenantContext";
 import Navbar from "./features/user-administration/components/Navbar";
 import SimulationBanner from "./features/user-administration/components/SimulationBanner";
 import { VisitorAuthPage } from "./features/visitor-management/components/VisitorAuthPage";
@@ -56,345 +57,352 @@ export const RootRedirect: React.FC = () => {
 function App() {
   return (
     <AuthProvider>
-      <SimulationProvider>
-        <BrowserRouter>
-          <div className="App">
-            <Navbar />
-            <SimulationBanner />
-            <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/signup" element={<SignupPage />} />
-              <Route
-                path="/forgot-password"
-                element={<ForgotPasswordPage />}
-              />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
+      {/* Inside AuthProvider (it reads `user`/`isAuthenticated`) and outside
+          SimulationProvider/BrowserRouter (the acting tenant is not a routing
+          or simulation concern). It uses useQueryClient, which is satisfied
+          because App is always rendered inside a QueryClientProvider. */}
+      <TenantProvider>
+        <SimulationProvider>
+          <BrowserRouter>
+            <div className="App">
+              <Navbar />
+              <SimulationBanner />
+              <Routes>
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/signup" element={<SignupPage />} />
+                <Route
+                  path="/forgot-password"
+                  element={<ForgotPasswordPage />}
+                />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-              <Route
-                path="/dashboard"
-                element={
-                  <ProtectedRoute requiredMenu="tasks">
-                    <TaskDashboard />
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/dashboard"
+                  element={
+                    <ProtectedRoute requiredMenu="tasks">
+                      <TaskDashboard />
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/categories"
-                element={
-                  <ProtectedRoute requiredMenu="categories">
-                    <CategoriesPage />
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/categories"
+                  element={
+                    <ProtectedRoute requiredMenu="categories">
+                      <CategoriesPage />
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/welcome"
-                element={
-                  <ProtectedRoute>
-                    <GuestWelcomePage />
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/welcome"
+                  element={
+                    <ProtectedRoute>
+                      <GuestWelcomePage />
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/lots"
-                element={
-                  <ProtectedRoute
-                    requiredRoles={[
-                      UserRole.ADMINISTRATOR,
-                      UserRole.DIRECTOR,
-                      UserRole.MANAGER,
-                      UserRole.RESIDENT,
-                      UserRole.GUEST,
-                    ]}
-                  >
-                    <LotsPage />
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/lots"
+                  element={
+                    <ProtectedRoute
+                      requiredRoles={[
+                        UserRole.ADMINISTRATOR,
+                        UserRole.DIRECTOR,
+                        UserRole.MANAGER,
+                        UserRole.RESIDENT,
+                        UserRole.GUEST,
+                      ]}
+                    >
+                      <LotsPage />
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/authorizations"
-                element={
-                  <ProtectedRoute
-                    requiredRoles={[
-                      UserRole.ADMINISTRATOR,
-                      UserRole.DIRECTOR,
-                      UserRole.MANAGER,
-                      UserRole.RESIDENT,
-                      UserRole.GUEST,
-                    ]}
-                  >
-                    <VisitorAuthPage />
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/authorizations"
+                  element={
+                    <ProtectedRoute
+                      requiredRoles={[
+                        UserRole.ADMINISTRATOR,
+                        UserRole.DIRECTOR,
+                        UserRole.MANAGER,
+                        UserRole.RESIDENT,
+                        UserRole.GUEST,
+                      ]}
+                    >
+                      <VisitorAuthPage />
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/gate"
-                element={
-                  <ProtectedRoute
-                    requiredRoles={[
-                      UserRole.ADMINISTRATOR,
-                      UserRole.DIRECTOR,
-                      UserRole.MANAGER,
-                      UserRole.PORTEIRO,
-                    ]}
-                  >
-                    <GatekeeperDashboard />
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/gate"
+                  element={
+                    <ProtectedRoute
+                      requiredRoles={[
+                        UserRole.ADMINISTRATOR,
+                        UserRole.DIRECTOR,
+                        UserRole.MANAGER,
+                        UserRole.PORTEIRO,
+                      ]}
+                    >
+                      <GatekeeperDashboard />
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/occurrences"
-                element={
-                  <ProtectedRoute
-                    requiredRoles={[
-                      UserRole.ADMINISTRATOR,
-                      UserRole.DIRECTOR,
-                      UserRole.MANAGER,
-                      UserRole.RESIDENT,
-                      UserRole.GUEST,
-                    ]}
-                  >
-                    <OccurrenceBookPage />
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/occurrences"
+                  element={
+                    <ProtectedRoute
+                      requiredRoles={[
+                        UserRole.ADMINISTRATOR,
+                        UserRole.DIRECTOR,
+                        UserRole.MANAGER,
+                        UserRole.RESIDENT,
+                        UserRole.GUEST,
+                      ]}
+                    >
+                      <OccurrenceBookPage />
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/feedback"
-                element={
-                  <ProtectedRoute>
-                    <FeedbackChannelPage />
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/feedback"
+                  element={
+                    <ProtectedRoute>
+                      <FeedbackChannelPage />
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/documents"
-                element={
-                  <ProtectedRoute
-                    requiredRoles={[
-                      UserRole.ADMINISTRATOR,
-                      UserRole.DIRECTOR,
-                      UserRole.MANAGER,
-                      UserRole.RESIDENT,
-                      UserRole.GUEST,
-                    ]}
-                  >
-                    <DocumentCenterPage />
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/documents"
+                  element={
+                    <ProtectedRoute
+                      requiredRoles={[
+                        UserRole.ADMINISTRATOR,
+                        UserRole.DIRECTOR,
+                        UserRole.MANAGER,
+                        UserRole.RESIDENT,
+                        UserRole.GUEST,
+                      ]}
+                    >
+                      <DocumentCenterPage />
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/projects"
-                element={
-                  <ProtectedRoute
-                    requiredRoles={[
-                      UserRole.ADMINISTRATOR,
-                      UserRole.DIRECTOR,
-                      UserRole.MANAGER,
-                      UserRole.RESIDENT,
-                      UserRole.GUEST,
-                    ]}
-                  >
-                    <ConstructionTrackerPage />
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/projects"
+                  element={
+                    <ProtectedRoute
+                      requiredRoles={[
+                        UserRole.ADMINISTRATOR,
+                        UserRole.DIRECTOR,
+                        UserRole.MANAGER,
+                        UserRole.RESIDENT,
+                        UserRole.GUEST,
+                      ]}
+                    >
+                      <ConstructionTrackerPage />
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/announcements"
-                element={
-                  <ProtectedRoute
-                    requiredRoles={[
-                      UserRole.ADMINISTRATOR,
-                      UserRole.DIRECTOR,
-                      UserRole.MANAGER,
-                      UserRole.RESIDENT,
-                      UserRole.GUEST,
-                    ]}
-                  >
-                    <AnnouncementFeedPage />
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/announcements"
+                  element={
+                    <ProtectedRoute
+                      requiredRoles={[
+                        UserRole.ADMINISTRATOR,
+                        UserRole.DIRECTOR,
+                        UserRole.MANAGER,
+                        UserRole.RESIDENT,
+                        UserRole.GUEST,
+                      ]}
+                    >
+                      <AnnouncementFeedPage />
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/finance"
-                element={
-                  <ProtectedRoute
-                    requiredRoles={[
-                      UserRole.ADMINISTRATOR,
-                      UserRole.DIRECTOR,
-                      UserRole.MANAGER,
-                      UserRole.RESIDENT,
-                    ]}
-                  >
-                    <FinanceDashboardPage />
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/finance"
+                  element={
+                    <ProtectedRoute
+                      requiredRoles={[
+                        UserRole.ADMINISTRATOR,
+                        UserRole.DIRECTOR,
+                        UserRole.MANAGER,
+                        UserRole.RESIDENT,
+                      ]}
+                    >
+                      <FinanceDashboardPage />
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/admin/users"
-                element={
-                  <ProtectedRoute requiredRole={UserRole.ADMINISTRATOR}>
-                    <AdminUserDashboard />
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/admin/users"
+                  element={
+                    <ProtectedRoute requiredCapability="admin">
+                      <AdminUserDashboard />
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/users/contact-info"
-                element={
-                  <ProtectedRoute
-                    requiredRoles={[UserRole.ADMINISTRATOR, UserRole.MANAGER]}
-                  >
-                    <ContactInfoDashboard />
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/users/contact-info"
+                  element={
+                    <ProtectedRoute
+                      requiredRoles={[UserRole.MANAGER]}
+                      requiredCapability="admin"
+                    >
+                      <ContactInfoDashboard />
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/admin/photo-approvals"
-                element={
-                  <ProtectedRoute requiredRole={UserRole.DIRECTOR}>
-                    <PhotoApprovalQueuePage />
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/admin/photo-approvals"
+                  element={
+                    <ProtectedRoute requiredRole={UserRole.DIRECTOR}>
+                      <PhotoApprovalQueuePage />
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/admin/access-control"
-                element={
-                  <ProtectedRoute
-                    requiredRoles={[UserRole.ADMINISTRATOR, UserRole.DIRECTOR]}
-                  >
-                    <AccessControlPage />
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/admin/access-control"
+                  element={
+                    <ProtectedRoute
+                      requiredRoles={[UserRole.ADMINISTRATOR, UserRole.DIRECTOR]}
+                    >
+                      <AccessControlPage />
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/gate-monitor"
-                element={
-                  <ProtectedRoute
-                    requiredRoles={[
-                      UserRole.ADMINISTRATOR,
-                      UserRole.DIRECTOR,
-                      UserRole.MANAGER,
-                    ]}
-                  >
-                    <GateMonitorPage />
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/gate-monitor"
+                  element={
+                    <ProtectedRoute
+                      requiredRoles={[
+                        UserRole.ADMINISTRATOR,
+                        UserRole.DIRECTOR,
+                        UserRole.MANAGER,
+                      ]}
+                    >
+                      <GateMonitorPage />
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/spaces"
-                element={
-                  <ProtectedRoute
-                    requiredRoles={[UserRole.ADMINISTRATOR, UserRole.DIRECTOR]}
-                  >
-                    <ReservableSpacesPage />
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/spaces"
+                  element={
+                    <ProtectedRoute
+                      requiredRoles={[UserRole.ADMINISTRATOR, UserRole.DIRECTOR]}
+                    >
+                      <ReservableSpacesPage />
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/reservations"
-                element={
-                  <ProtectedRoute
-                    requiredRoles={[
-                      UserRole.ADMINISTRATOR,
-                      UserRole.DIRECTOR,
-                      UserRole.MANAGER,
-                      UserRole.RESIDENT,
-                      UserRole.GUEST,
-                    ]}
-                  >
-                    <SpaceBookingPage />
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/reservations"
+                  element={
+                    <ProtectedRoute
+                      requiredRoles={[
+                        UserRole.ADMINISTRATOR,
+                        UserRole.DIRECTOR,
+                        UserRole.MANAGER,
+                        UserRole.RESIDENT,
+                        UserRole.GUEST,
+                      ]}
+                    >
+                      <SpaceBookingPage />
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/packages"
-                element={
-                  <ProtectedRoute
-                    requiredRoles={[
-                      UserRole.ADMINISTRATOR,
-                      UserRole.DIRECTOR,
-                      UserRole.MANAGER,
-                      UserRole.RESIDENT,
-                    ]}
-                  >
-                    <PackageStatusPage />
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/packages"
+                  element={
+                    <ProtectedRoute
+                      requiredRoles={[
+                        UserRole.ADMINISTRATOR,
+                        UserRole.DIRECTOR,
+                        UserRole.MANAGER,
+                        UserRole.RESIDENT,
+                      ]}
+                    >
+                      <PackageStatusPage />
+                    </ProtectedRoute>
+                  }
+                />
 
-              {/* Voting is closed to PORTEIRO and GUEST: they never vote,
-                  in either modality (APRAS-33). */}
-              <Route
-                path="/voting"
-                element={
-                  <ProtectedRoute
-                    requiredRoles={[
-                      UserRole.ADMINISTRATOR,
-                      UserRole.DIRECTOR,
-                      UserRole.MANAGER,
-                      UserRole.RESIDENT,
-                    ]}
-                  >
-                    <AssemblyVotingPage />
-                  </ProtectedRoute>
-                }
-              />
+                {/* Voting is closed to PORTEIRO and GUEST: they never vote,
+                    in either modality (APRAS-33). */}
+                <Route
+                  path="/voting"
+                  element={
+                    <ProtectedRoute
+                      requiredRoles={[
+                        UserRole.ADMINISTRATOR,
+                        UserRole.DIRECTOR,
+                        UserRole.MANAGER,
+                        UserRole.RESIDENT,
+                      ]}
+                    >
+                      <AssemblyVotingPage />
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/assets"
-                element={
-                  <ProtectedRoute
-                    requiredRoles={[
-                      UserRole.ADMINISTRATOR,
-                      UserRole.DIRECTOR,
-                      UserRole.MANAGER,
-                    ]}
-                  >
-                    <AssetsInventoryPage />
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/assets"
+                  element={
+                    <ProtectedRoute
+                      requiredRoles={[
+                        UserRole.ADMINISTRATOR,
+                        UserRole.DIRECTOR,
+                        UserRole.MANAGER,
+                      ]}
+                    >
+                      <AssetsInventoryPage />
+                    </ProtectedRoute>
+                  }
+                />
 
-              {/* Purchase quotations are an internal board/manager workflow:
-                  supplier prices under negotiation are not published to
-                  residents (APRAS-37). */}
-              <Route
-                path="/purchases"
-                element={
-                  <ProtectedRoute
-                    requiredRoles={[
-                      UserRole.ADMINISTRATOR,
-                      UserRole.DIRECTOR,
-                      UserRole.MANAGER,
-                    ]}
-                  >
-                    <PurchaseRequestsPage />
-                  </ProtectedRoute>
-                }
-              />
+                {/* Purchase quotations are an internal board/manager workflow:
+                    supplier prices under negotiation are not published to
+                    residents (APRAS-37). */}
+                <Route
+                  path="/purchases"
+                  element={
+                    <ProtectedRoute
+                      requiredRoles={[
+                        UserRole.ADMINISTRATOR,
+                        UserRole.DIRECTOR,
+                        UserRole.MANAGER,
+                      ]}
+                    >
+                      <PurchaseRequestsPage />
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route path="/" element={<RootRedirect />} />
-            </Routes>
-          </div>
-        </BrowserRouter>
-      </SimulationProvider>
+                <Route path="/" element={<RootRedirect />} />
+              </Routes>
+            </div>
+          </BrowserRouter>
+        </SimulationProvider>
+      </TenantProvider>
     </AuthProvider>
   );
 }

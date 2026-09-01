@@ -1284,5 +1284,8 @@
       "totalPrice": "Total",
       "actions": "Ações"
     }
+  },
+  "tenant": {
+    "switcherLabel": "Condomínio"
   }
 }

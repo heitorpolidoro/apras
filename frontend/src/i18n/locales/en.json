@@ -1284,5 +1284,8 @@
       "totalPrice": "Total",
       "actions": "Actions"
     }
+  },
+  "tenant": {
+    "switcherLabel": "Building"
   }
 }

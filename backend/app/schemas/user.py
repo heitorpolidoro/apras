@@ -4,6 +4,7 @@ import re
 from uuid import UUID
 
 from app.models.enums import UserRole
+from app.schemas.tenant import TenantMembershipSummary
 from app.schemas.user_type import UserTypeRead
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, computed_field
 
@@ -72,6 +73,18 @@ class UserRead(UserBase):
     @property
     def username(self) -> str:
         return self.email.split("@")[0]
+
+
+class UserMeRead(UserRead):
+    """``GET /api/v1/auth/me`` only: identity plus the caller's own memberships.
+
+    An additive subclass on purpose, so ``UserRead`` — the response model of
+    ``/users/``, ``/auth/signup``, ``/auth/dev-users`` and every admin user
+    route — stays untouched and the membership graph is not exposed through
+    the user directory (APRAS-38 §3.3).
+    """
+
+    tenants: list[TenantMembershipSummary] = []
 
 
 class UserContactInfoUpdate(BaseModel):
