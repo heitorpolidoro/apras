@@ -856,7 +856,7 @@ def test_downgrade_removes_tenant_schema(isolated_pg_engine):
     # Re-applying must succeed, so the downgrade left a schema 0028 can
     # migrate again (the fixture's teardown reset assumes nothing about it).
     _run_alembic("upgrade", "head")
-    assert _current_revision(isolated_pg_engine) == "0029_add_is_tenant_admin"
+    assert _current_revision(isolated_pg_engine) == "0030_add_user_type_permissions"
 
 
 # ---------------------------------------------------------------------------
@@ -885,7 +885,7 @@ def test_is_tenant_admin_column_shape_and_backfill(pg_engine_at_0027):
         )
 
     _run_alembic("upgrade", "head")
-    assert _current_revision(pg_engine_at_0027) == "0029_add_is_tenant_admin"
+    assert _current_revision(pg_engine_at_0027) == "0030_add_user_type_permissions"
 
     with pg_engine_at_0027.connect() as conn:
         column = conn.execute(
@@ -931,3 +931,79 @@ def test_is_tenant_admin_column_shape_and_backfill(pg_engine_at_0027):
     assert "is_tenant_admin" not in columns
 
     _run_alembic("upgrade", "head")
+
+
+# ---------------------------------------------------------------------------
+# 0030_add_user_type_permissions (APRAS-45) - the role permission bundle
+# ---------------------------------------------------------------------------
+
+
+def test_permissions_column_shape_and_backfill(pg_engine_at_0027):
+    """`permissions` is json NOT NULL DEFAULT '[]' at head, a `user_type` row
+    seeded before the migration back-fills to `[]`, and downgrading to 0029
+    removes the column again."""
+    user_type_id = uuid.uuid4()
+    with pg_engine_at_0027.begin() as conn:
+        conn.execute(
+            text(
+                "INSERT INTO user_type (id, name, allowed_menus) "
+                "VALUES (:id, :name, '[]')"
+            ),
+            {"id": user_type_id, "name": f"Bundle Test {user_type_id}"},
+        )
+
+    _run_alembic("upgrade", "head")
+    assert _current_revision(pg_engine_at_0027) == "0030_add_user_type_permissions"
+
+    with pg_engine_at_0027.connect() as conn:
+        column = conn.execute(
+            text(
+                "SELECT data_type, is_nullable, column_default "
+                "FROM information_schema.columns "
+                "WHERE table_name = 'user_type' AND column_name = 'permissions'"
+            )
+        ).one()
+        bundles = (
+            conn.execute(
+                text("SELECT permissions::text FROM user_type WHERE id = :id"),
+                {"id": user_type_id},
+            )
+            .scalars()
+            .all()
+        )
+
+    assert column.data_type == "json"
+    assert column.is_nullable == "NO"
+    assert column.column_default == "'[]'::json"
+    # Nothing is seeded: the pre-existing row back-fills to the empty bundle.
+    assert bundles == ["[]"]
+
+    _run_alembic("downgrade", "0029_add_is_tenant_admin")
+
+    with pg_engine_at_0027.connect() as conn:
+        columns = (
+            conn.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name = 'user_type'"
+                )
+            )
+            .scalars()
+            .all()
+        )
+    assert "permissions" not in columns
+
+    _run_alembic("upgrade", "head")
+
+
+def test_no_user_type_row_has_permissions_after_migration(isolated_pg_engine):
+    """NOTHING is seeded, including by any earlier migration's seeded rows."""
+    with isolated_pg_engine.connect() as conn:
+        non_empty = conn.execute(
+            text(
+                "SELECT count(*) FROM user_type "
+                "WHERE permissions::text <> '[]'"
+            )
+        ).scalar_one()
+
+    assert non_empty == 0

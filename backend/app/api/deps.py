@@ -15,6 +15,7 @@ from sqlmodel import Session, select
 from app.core import tenant_context
 from app.core.config import settings
 from app.core.exceptions import ForbiddenError
+from app.core.permissions import LEGACY_ROLE_PERMISSIONS
 from app.db import get_session
 from app.models.enums import MenuKey, UserRole
 from app.models.task import Task
@@ -215,6 +216,46 @@ def get_effective_user_type_ids(user: User, session: Session) -> set[UUID]:
     if role_type:
         explicit_ids.add(role_type.id)
     return explicit_ids
+
+
+def get_effective_permissions(user: User, session: Session) -> frozenset[str]:
+    """Every permission `user` holds in the session's acting tenant.
+
+    Union of two sources, and only two:
+      1. the `permissions` of the user's effective roles in the acting tenant
+         (`get_effective_user_type_ids`, so a role change is immediate and a
+         role of another tenant never composes into this answer);
+      2. LEGACY_ROLE_PERMISSIONS[user.role] - the TRANSITIONAL fallback that
+         keeps F1..F4 meaningful while no role carries any permission.
+
+    No nesting (a role's permissions are a flat list), no per-user loose
+    permission, and deliberately NO is_superuser / is_tenant_admin shortcut:
+    those arrive in F3.
+
+    Strings stored in a role's `permissions` that are not in the catalogue (a
+    hand-edited row, or a permission a later slice deleted) are kept as is.
+    Silently dropping them would hide a data bug that F2's UI must be able to
+    show.
+
+    Zero production call sites in IAM F1 by design: this slice builds the
+    resolver, F4 enforces with it.
+
+    Args:
+        user: The user whose permissions are being resolved.
+        session: Database session carrying (or not) an acting tenant.
+
+    Returns:
+        frozenset[str]: The union of role bundles and the legacy fallback.
+    """
+    effective_ids = get_effective_user_type_ids(user, session)
+    granted: set[str] = set(LEGACY_ROLE_PERMISSIONS.get(user.role, frozenset()))
+    if effective_ids:
+        user_types = session.exec(
+            select(UserType).where(UserType.id.in_(effective_ids))
+        ).all()
+        for user_type in user_types:
+            granted.update(user_type.permissions)
+    return frozenset(granted)
 
 
 def assert_menu_access(current_user: User, menu_key: MenuKey, session: Session) -> None:

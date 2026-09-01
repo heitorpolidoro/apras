@@ -44,6 +44,15 @@ class UserType(SQLModel, table=True):
         default_factory=list,
         sa_column=Column(JSON, nullable=False, server_default="[]"),
     )
+    # A role's permission bundle (IAM F1). Portable JSON, NOT a Postgres
+    # ARRAY, for the same reason `allowed_menus` is: tests/conftest.py builds
+    # the schema with SQLModel.metadata.create_all() on sqlite://.
+    # NOTHING seeds this: every row - including the six role-linked rows
+    # TenantService.ensure_role_types creates - starts and stays [].
+    permissions: list[str] = Field(
+        default_factory=list,
+        sa_column=Column(JSON, nullable=False, server_default="[]"),
+    )
     # Identifies a UserType implicitly linked to a UserRole (APRAS-9): at
     # most one row per role value, enforced by `unique=True`. NULL (the
     # default, for regular admin-created types) is never counted as a
