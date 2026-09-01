@@ -1,8 +1,9 @@
 """Database model for User."""
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 from uuid import UUID, uuid4
 
+from sqlalchemy import text
 from sqlmodel import Field, Relationship, SQLModel
 
 from .enums import UserRole
@@ -25,6 +26,39 @@ class User(SQLModel, table=True):
     cpf: str = Field(unique=True, index=True)
     phone: str | None = Field(default=None)
     address: str | None = Field(default=None)
+    # Global, install-wide administrator (APRAS-47). The counterpart of
+    # `user_tenant_link.is_tenant_admin`, which is the same power scoped to
+    # one tenant (APRAS-43). `server_default` mirrors `is_tenant_admin`'s, and
+    # for the same reason: the SQLite schema `SQLModel.metadata.create_all()`
+    # builds in `backend/tests/conftest.py` and the Postgres schema Alembic
+    # builds must agree, and no pre-existing writer of this row passes the
+    # field.
+    is_superuser: bool = Field(
+        default=False,
+        nullable=False,
+        sa_column_kwargs={"server_default": text("false")},
+    )
+
+    def __init__(self, **data: Any) -> None:
+        """TRANSITIONAL (IAM F3 -> F5).
+
+        While `User.role` still exists, creating a user with role
+        ADMINISTRATOR defaults `is_superuser` to True — exactly the rule
+        migration 0031 applies to the rows that predate it, so the two paths
+        agree and the column is complete. An explicit `is_superuser=` always
+        wins, and SQLAlchemy does **not** call `__init__` when loading a row,
+        so the column stays the single source of truth for every reader: a row
+        stored with role ADMINISTRATOR and `is_superuser=False` reads back as a
+        non-superuser. F5 deletes this together with the enum.
+
+        `__init__` rather than a `before_insert` mapper event because it also
+        covers users built in memory and never flushed (unit-level calls into
+        `app.api.deps`), and because not being reached on DB load is exactly
+        what keeps the negative case constructible.
+        """
+        if "is_superuser" not in data and data.get("role") == UserRole.ADMINISTRATOR:
+            data["is_superuser"] = True
+        super().__init__(**data)
 
     @property
     def username(self) -> str:

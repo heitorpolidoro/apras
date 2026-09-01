@@ -120,6 +120,9 @@
 - O grep -c 'not\*\* grant the domain-service' do ER-9 e frouxo como BRE; parear com grep -in 'does not grant' sobre a secao extraida, enumerado no PR body.
 - Tabela 'Files touched' da secao 2 omite a linha condicional de test_permission_registry.py - marcar (conditional - deletion only).
 - Nota na secao 0 de que a F2 esta em voo e varios contratos ja confirmados contra a working tree (CONVERTED_COMPARE == 85, split 15/7/8, guards deletadas), mantendo o spec da F2 como contrato.
+- (QA) ruff nos 14 arquivos tocados reporta 25 findings, todos pre-existentes em aa8953d (arquivos novos limpos). Dois sao triviais e ja estao em linhas editadas pela F3: `typing.Optional` nao usado em models/user.py e I001 em users.py - dobrar na F5 ou numa tarefa de divida de lint.
+- (QA) PR body deve trazer os numeros exatos do ER-8: collected 2241 -> 2270, cobertura 98.443 -> 98.445 %, CONVERTED_COMPARE 85 -> 92, F2_SHA = aa8953d.
+- (QA) `_meta.regenerate` da baseline F2 fixa /tmp/apras-parity e /tmp/regen.json - parametrizar quando a F5 regenerar a baseline legitimamente.
 
 ## [APRAS-48] IAM F4: UI de grupos e gating por permissao — 2026-09-01
 
@@ -129,3 +132,22 @@
 - Parametrizar test_me_matches_get_effective_permissions tambem sobre superuser e tenant-admin.
 - Atualizar de fato matrix_world.py l.15 ('The ten UNGUARDED_ROUTES') em vez de deixar opcional.
 - Revisabilidade: 3 commits limpos dentro do PR (3; 4-5; 6-7).
+
+## [APRAS-49] IAM F5: rename para role, drop do enum — 2026-09-01
+
+- Acrescentar o rename forward da coluna de ACL como sub-passo numerado no 7.2 (rename -> rewrite -> server_default).
+- Heading '14 feature components' do 10.2 esta obsoleto (tabela tem 16); a tabela e o contrato.
+- ER-1 da RoleRead sem tenant_id?; 8.1 tem - leitura estrita de campos exaustivos flagraria.
+- 11.2 explicita is_superuser nas dez personas mas nao is_tenant_admin (falha alta, nao silenciosa) - uma linha fecha.
+- Honrar o split em dois commits (A=rename, B=drop do enum) e dizer no PR body qual e qual.
+- Gravar tests/data/legacy_role_bundles.json em commit proprio antes de qualquer delecao - depois desta fatia e a unica declaracao sobrevivente do que o enum significava.
+
+## [APRAS-39] Modularizar features por tenant — 2026-09-01
+
+- S1: ER-7 diz '5 -> 7' flat enquanto vizinhos usam 'predicted'; a 49 pode levar a base a 6 (PATCH superuser) - aplicar o mesmo hedge para 6 -> 8 nao ler como falha.
+- S2: dizer que GET /permissions/ fica sem strip (por construcao) e precisa, para o resend do 5.5.
+- S3: registrar que has_admin_capability nao esta em nenhum lado do split (le flags, nunca permissao; a 49 o deleta).
+- S4: docstring de assert_can_grant fica obsoleta apos o swap - incluir no diff do 5.5.
+- S5: 'referenced nowhere else' do ER-4 lido literalmente exclui o def; usar a forma precisa do 12.1.
+- S6: snippet do 5.1 reescreve o branch que o spec manda mover verbatim.
+- S7: pinar precedencia 404-vs-400 para PUT com tenant e modulo ambos desconhecidos.

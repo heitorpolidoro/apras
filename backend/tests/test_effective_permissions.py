@@ -17,7 +17,7 @@ from sqlmodel import Session, select
 
 from app.api import deps
 from app.core import tenant_context
-from app.core.permissions import LEGACY_ROLE_PERMISSIONS, TENANT_ADMIN_PERMISSIONS
+from app.core.permissions import LEGACY_ROLE_PERMISSIONS, PERMISSIONS
 from app.core.security import create_access_token
 from app.models.enums import UserRole
 from app.models.tenant import DEFAULT_TENANT_ID, Tenant, UserTenantLink
@@ -60,8 +60,14 @@ def _headers(user: User) -> dict[str, str]:
 
 @pytest.mark.parametrize("role", list(UserRole))
 def test_a_user_with_no_roles_gets_exactly_the_legacy_set(session: Session, role):
-    """The transitional fallback is the whole answer while nothing is seeded."""
-    user = _make_user(session, role)
+    """The transitional fallback is the whole answer while nothing is seeded.
+
+    `is_superuser=False` is explicit because APRAS-47 §3.3 defaults the flag
+    to True for role ADMINISTRATOR, and a superuser short-circuits straight to
+    `PERMISSIONS` (§4) — the subject of `test_superuser.py`, not of the legacy
+    fallback this case is about.
+    """
+    user = _make_user(session, role, is_superuser=False)
 
     assert deps.get_effective_permissions(user, session) == LEGACY_ROLE_PERMISSIONS[
         role
@@ -223,14 +229,14 @@ def test_the_column_defaults_to_an_empty_list(session: Session):
 
 
 # ---------------------------------------------------------------------------
-# The `is_tenant_admin` bridge (IAM F2, APRAS-46 §3.3) -- additive only
+# The `is_tenant_admin` capability (IAM F3, APRAS-47 §4.2)
 # ---------------------------------------------------------------------------
 
 
-def test_the_tenant_admin_bridge_adds_exactly_the_seven_apras43_permissions(
+def test_the_capability_resolves_to_the_whole_catalogue_in_the_granting_tenant(
     session: Session,
 ):
-    """A capability holder gains the seven routes APRAS-43 granted, and no more."""
+    """The capability means what its name says: every permission, here."""
     user = _make_user(session, UserRole.RESIDENT)
     session.add(
         UserTenantLink(
@@ -242,8 +248,8 @@ def test_the_tenant_admin_bridge_adds_exactly_the_seven_apras43_permissions(
 
     result = deps.get_effective_permissions(user, session)
 
-    assert result == LEGACY_ROLE_PERMISSIONS[UserRole.RESIDENT] | TENANT_ADMIN_PERMISSIONS
-    assert result - LEGACY_ROLE_PERMISSIONS[UserRole.RESIDENT] <= TENANT_ADMIN_PERMISSIONS
+    assert result == PERMISSIONS
+    assert LEGACY_ROLE_PERMISSIONS[UserRole.RESIDENT] <= result
 
 
 def test_the_bridge_grants_nothing_without_an_acting_tenant(session: Session):

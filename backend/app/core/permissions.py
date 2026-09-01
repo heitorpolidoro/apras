@@ -804,26 +804,25 @@ ADMIN_GAP_PERMISSIONS: frozenset[str] = frozenset(
     }
 )
 
-# TRANSITIONAL (IAM F2 -> F3). Exactly the seven tenant-scoped admin routes
-# APRAS-43 swapped to `get_current_tenant_admin` / `_or_manager`, expressed as
-# the permissions those routes now require. `get_effective_permissions` unions
-# this set in when `is_acting_tenant_admin` is true, which is what keeps a
-# RESIDENT tenant_admin passing `DELETE /lots/{id}` after the swap.
-#
-# It is deliberately **not** "every permission in the acting tenant": that is
-# F3's headline, and doing it here would hand a RESIDENT tenant_admin ~170
-# permissions they cannot reach today -- a widening the six-role matrix cannot
-# see. `test_tenant_admin_permissions_are_exactly_the_apras43_routes` pins it
-# to those seven routes through `ROUTE_PERMISSIONS`, so it cannot drift.
-TENANT_ADMIN_PERMISSIONS: frozenset[str] = frozenset(
+#: Permissions whose routes are gated by `deps.get_current_superuser` and not
+#: by a permission (IAM F3, APRAS-47 §6.1). They stay in the catalogue because
+#: they still *name* those routes:
+#: `test_permission_registry.py::test_every_catalogue_permission_is_reachable`
+#: asserts `set(ROUTE_PERMISSIONS.values()) == PERMISSIONS`, so removing them
+#: from the catalogue while their routes remain mapped would turn that test
+#: red. They can never be put into a group -- `user_type_service.assert_can_grant`
+#: refuses them to every author, superuser included -- because superuser is a
+#: column, not a bundle, and a group carrying them would be a lie.
+#:
+#: `tenants:read` and `tenants:members_read` are deliberately absent: they are
+#: ALL_ROLES in the legacy map and gate the two read routes every member
+#: reaches, so they stay ordinary, grantable (and inert) permissions.
+SUPERUSER_ONLY_PERMISSIONS: frozenset[str] = frozenset(
     {
-        "tasks:delete",
-        "lots:delete",
-        "users:update",
-        "users:update_contact",
-        "user_types:create",
-        "user_types:update",
-        "user_types:delete",
+        "tenants:create",
+        "tenants:update",
+        "tenants:members_manage",
+        "tenants:members_set_admin",
     }
 )
 

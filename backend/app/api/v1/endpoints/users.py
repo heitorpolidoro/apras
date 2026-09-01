@@ -3,14 +3,14 @@
 The directory is **tenant-scoped** since APRAS-43: `GET /`,
 `PATCH /{user_id}` and `PATCH /{user_id}/contact-info` all target the users
 visible in the acting tenant (`UserService`, §6.2), for every caller and
-every role — a global `ADMINISTRATOR` reaches another tenant's users by
-sending that tenant's `X-Tenant-Id`, not by being exempt from the filter.
+every role — a superuser reaches another tenant's users by sending that
+tenant's `X-Tenant-Id`, not by being exempt from the filter.
 
 The escalation guards of `update_user` are the complement of that rule: they
-are checked **only** for a caller that is not a global `ADMINISTRATOR`, and
+are checked **only** for a caller that is not a superuser (APRAS-47 §7), and
 they exist because `role`, `is_active` and `cpf` are global fields — handing
 this endpoint to a tenant-local administrator without them would let the
-tenant_admin of one condominium mint a global `ADMINISTRATOR`.
+tenant_admin of one condominium mint a superuser.
 """
 
 from typing import Annotated
@@ -77,16 +77,21 @@ def update_user(
     user_id: UUID,
     user_in: UserUpdate,
 ) -> UserRead:
-    """Update a user. ADMINISTRATOR, or a tenant_admin of the acting tenant.
+    """Update a user. Anyone holding `users:update` in the acting tenant.
 
-    Checks, in order (§6.3):
+    Checks, in order (APRAS-43 §6.3, re-expressed by APRAS-47 §7):
 
     0. every caller — the target must be visible in the acting tenant, else
        404. This is the lookup itself, not an added check;
-    1-3. only a caller that is **not** a global ADMINISTRATOR — may not grant
-       the ADMINISTRATOR role, may not touch an ADMINISTRATOR, and may not
-       touch a user who also belongs to another tenant (every writable field
-       here is global, so editing a shared user reaches across the boundary).
+    1-3. only a caller that is **not** a superuser — may not grant the
+       ADMINISTRATOR role, may not touch a superuser, and may not touch a
+       user who also belongs to another tenant (every writable field here is
+       global, so editing a shared user reaches across the boundary).
+
+    The detail strings are kept verbatim on purpose: two of them are asserted
+    literally by `tests/test_user_directory_scope.py`, and IAM F5 — which
+    retires the word "administrator" from the vocabulary — is the slice that
+    rewords them.
 
     The pre-existing self-protection checks (an administrator cannot
     deactivate themselves or change their own role) are untouched and still
@@ -99,13 +104,15 @@ def update_user(
             detail="User not found",
         )
 
-    if current_user.role != UserRole.ADMINISTRATOR:
+    if not current_user.is_superuser:
+        # A payload read, not an actor read — and with the role-change mirror
+        # below it *is* the superuser grant, so it must stay closed.
         if user_in.role == UserRole.ADMINISTRATOR:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Tenant administrators cannot grant the ADMINISTRATOR role",
             )
-        if db_user.role == UserRole.ADMINISTRATOR:
+        if db_user.is_superuser:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Tenant administrators cannot modify an administrator",
@@ -140,6 +147,22 @@ def update_user(
 
     for key, value in update_data.items():
         setattr(db_user, key, value)
+
+    # TRANSITIONAL (IAM F3 -> F5). While the enum still exists, ADMINISTRATOR
+    # and is_superuser must move together: promoting through this route is
+    # already superuser-only (rule 1), and *demoting* an administrator has
+    # always removed their global power immediately. Writing the column here
+    # is what keeps that true and what lets F5 drop the enum without losing or
+    # stranding a grant.
+    #
+    # `.get(...) is not None` and not `"role" in update_data` so that an
+    # explicit `{"role": null}` — which `exclude_unset` keeps, and which the
+    # loop above would refuse against a NOT NULL column anyway — cannot be
+    # read as "demote to non-superuser". Only a body naming a real role moves
+    # the column. `update_data["role"]` is a payload read, outside both AST
+    # rules.
+    if update_data.get("role") is not None:
+        db_user.is_superuser = update_data["role"] == UserRole.ADMINISTRATOR
 
     session.add(db_user)
     session.commit()

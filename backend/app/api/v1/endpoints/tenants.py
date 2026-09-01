@@ -1,9 +1,10 @@
 """Tenant administration API endpoints (APRAS-41).
 
 The only new observable surface of the data-layer slice. Every write is
-behind the existing `deps.get_current_active_admin` guard, which already
-returns 403 for every non-ADMINISTRATOR role — no new guard is invented
-here. There is deliberately no `DELETE /api/v1/tenants/{id}`: tenant-scoped
+behind `deps.get_current_superuser` (APRAS-47), which reads the global
+`user.is_superuser` column and returns 403 for everyone else — including a
+tenant_admin of the very tenant being written, since this router is global
+and resolves no acting tenant. There is deliberately no `DELETE /api/v1/tenants/{id}`: tenant-scoped
 foreign keys are `RESTRICT`, so deletion of a populated tenant could not
 succeed anyway. Deactivate with `PATCH {"is_active": false}` instead.
 """
@@ -44,9 +45,9 @@ def list_tenants(
 def create_tenant(
     tenant_in: TenantCreate,
     session: Annotated[Session, Depends(get_session)],
-    _: Annotated[User, Depends(api_deps.get_current_active_admin)],
+    _: Annotated[User, Depends(api_deps.get_current_superuser)],
 ) -> TenantRead:
-    """Create a tenant. ADMINISTRATOR only."""
+    """Create a tenant. Superuser only."""
     return TenantService.create_tenant(session=session, tenant_in=tenant_in)
 
 
@@ -67,9 +68,9 @@ def update_tenant(
     tenant_id: UUID,
     tenant_in: TenantUpdate,
     session: Annotated[Session, Depends(get_session)],
-    _: Annotated[User, Depends(api_deps.get_current_active_admin)],
+    _: Annotated[User, Depends(api_deps.get_current_superuser)],
 ) -> TenantRead:
-    """Rename or (de)activate a tenant. ADMINISTRATOR only."""
+    """Rename or (de)activate a tenant. Superuser only."""
     return TenantService.update_tenant(
         session=session, tenant_id=tenant_id, tenant_in=tenant_in
     )
@@ -96,9 +97,9 @@ def add_tenant_member(
     tenant_id: UUID,
     member_in: TenantMemberCreate,
     session: Annotated[Session, Depends(get_session)],
-    _: Annotated[User, Depends(api_deps.get_current_active_admin)],
+    _: Annotated[User, Depends(api_deps.get_current_superuser)],
 ) -> TenantMemberRead:
-    """Link a user to a tenant. ADMINISTRATOR only.
+    """Link a user to a tenant. Superuser only.
 
     A user already linked to a *different* tenant is linked again here
     without conflict — multi-membership is supported. Only the same
@@ -118,11 +119,11 @@ def set_tenant_member_admin(
     user_id: UUID,
     member_in: TenantMemberUpdate,
     session: Annotated[Session, Depends(get_session)],
-    _: Annotated[User, Depends(api_deps.get_current_active_admin)],
+    _: Annotated[User, Depends(api_deps.get_current_superuser)],
 ) -> TenantMemberRead:
-    """Grant or revoke the tenant_admin capability. ADMINISTRATOR only.
+    """Grant or revoke the tenant_admin capability. Superuser only.
 
-    Deliberately behind the same role-only guard as its POST/DELETE
+    Deliberately behind the same superuser guard as its POST/DELETE
     siblings, so a tenant_admin of that very tenant gets 403 here: this is a
     global route, and the capability is only readable when an acting tenant
     has been resolved (APRAS-43 §2.1.4). An unknown tenant, an unknown user
@@ -143,9 +144,9 @@ def remove_tenant_member(
     tenant_id: UUID,
     user_id: UUID,
     session: Annotated[Session, Depends(get_session)],
-    _: Annotated[User, Depends(api_deps.get_current_active_admin)],
+    _: Annotated[User, Depends(api_deps.get_current_superuser)],
 ) -> None:
-    """Unlink a user from a tenant. ADMINISTRATOR only."""
+    """Unlink a user from a tenant. Superuser only."""
     TenantService.remove_member(
         session=session, tenant_id=tenant_id, user_id=user_id
     )

@@ -856,7 +856,7 @@ def test_downgrade_removes_tenant_schema(isolated_pg_engine):
     # Re-applying must succeed, so the downgrade left a schema 0028 can
     # migrate again (the fixture's teardown reset assumes nothing about it).
     _run_alembic("upgrade", "head")
-    assert _current_revision(isolated_pg_engine) == "0030_add_user_type_permissions"
+    assert _current_revision(isolated_pg_engine) == "0031_add_user_is_superuser"
 
 
 # ---------------------------------------------------------------------------
@@ -885,7 +885,7 @@ def test_is_tenant_admin_column_shape_and_backfill(pg_engine_at_0027):
         )
 
     _run_alembic("upgrade", "head")
-    assert _current_revision(pg_engine_at_0027) == "0030_add_user_type_permissions"
+    assert _current_revision(pg_engine_at_0027) == "0031_add_user_is_superuser"
 
     with pg_engine_at_0027.connect() as conn:
         column = conn.execute(
@@ -953,7 +953,7 @@ def test_permissions_column_shape_and_backfill(pg_engine_at_0027):
         )
 
     _run_alembic("upgrade", "head")
-    assert _current_revision(pg_engine_at_0027) == "0030_add_user_type_permissions"
+    assert _current_revision(pg_engine_at_0027) == "0031_add_user_is_superuser"
 
     with pg_engine_at_0027.connect() as conn:
         column = conn.execute(
@@ -1007,3 +1007,113 @@ def test_no_user_type_row_has_permissions_after_migration(isolated_pg_engine):
         ).scalar_one()
 
     assert non_empty == 0
+
+
+# ---------------------------------------------------------------------------
+# 0031_add_user_is_superuser (APRAS-47) - the global superuser column
+# ---------------------------------------------------------------------------
+
+
+def test_is_superuser_column_shape_and_conversion(pg_engine_at_0027):
+    """`is_superuser` is boolean NOT NULL DEFAULT false at head, every row
+    that carried role ADMINISTRATOR before the migration converts to true and
+    every other role to false, and downgrading to 0030 removes the column."""
+    admin_id = uuid.uuid4()
+    director_id = uuid.uuid4()
+    with pg_engine_at_0027.begin() as conn:
+        for user_id, role in ((admin_id, "ADMINISTRATOR"), (director_id, "DIRECTOR")):
+            conn.execute(
+                text(
+                    'INSERT INTO "user" '
+                    "(id, email, hashed_password, full_name, role, is_active, cpf) "
+                    "VALUES (:id, :email, 'x', 'Superuser Test', :role, "
+                    "true, :cpf)"
+                ),
+                {
+                    "id": user_id,
+                    "email": f"superuser-{user_id}@test.com",
+                    "role": role,
+                    "cpf": str(user_id.int % 10**11).zfill(11),
+                },
+            )
+
+    _run_alembic("upgrade", "head")
+    assert _current_revision(pg_engine_at_0027) == "0031_add_user_is_superuser"
+
+    with pg_engine_at_0027.connect() as conn:
+        column = conn.execute(
+            text(
+                "SELECT data_type, is_nullable, column_default "
+                "FROM information_schema.columns "
+                "WHERE table_name = 'user' AND column_name = 'is_superuser'"
+            )
+        ).one()
+        flags = dict(
+            conn.execute(
+                text(
+                    'SELECT id, is_superuser FROM "user" WHERE id IN (:a, :d)'
+                ),
+                {"a": admin_id, "d": director_id},
+            ).all()
+        )
+
+    assert column.data_type == "boolean"
+    assert column.is_nullable == "NO"
+    assert column.column_default == "false"
+    # Every administrator that existed when 0031 ran *was* the global
+    # superuser at 0030, which is what makes the swap in `deps` a no-op.
+    assert flags[admin_id] is True
+    assert flags[director_id] is False
+
+    _run_alembic("downgrade", "0030_add_user_type_permissions")
+
+    with pg_engine_at_0027.connect() as conn:
+        columns = (
+            conn.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name = 'user'"
+                )
+            )
+            .scalars()
+            .all()
+        )
+    assert "is_superuser" not in columns
+
+    _run_alembic("upgrade", "head")
+
+    with pg_engine_at_0027.connect() as conn:
+        restored = (
+            conn.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name = 'user' AND column_name = 'is_superuser'"
+                )
+            )
+            .scalars()
+            .all()
+        )
+    assert restored == ["is_superuser"]
+
+
+def _is_tenant_admin_shape(engine):
+    with engine.connect() as conn:
+        return conn.execute(
+            text(
+                "SELECT data_type, is_nullable, column_default "
+                "FROM information_schema.columns "
+                "WHERE table_name = 'user_tenant_link' "
+                "AND column_name = 'is_tenant_admin'"
+            )
+        ).one()
+
+
+def test_0031_does_not_touch_is_tenant_admin(isolated_pg_engine):
+    """APRAS-47 changes what the capability *means*, never its column."""
+    before = _is_tenant_admin_shape(isolated_pg_engine)
+    assert before.data_type == "boolean"
+
+    _run_alembic("downgrade", "0030_add_user_type_permissions")
+    _run_alembic("upgrade", "head")
+
+    assert _is_tenant_admin_shape(isolated_pg_engine) == before

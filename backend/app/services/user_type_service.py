@@ -13,6 +13,7 @@ from sqlmodel import Session
 
 from app.api.deps import get_effective_permissions
 from app.core.exceptions import ForbiddenError
+from app.core.permissions import SUPERUSER_ONLY_PERMISSIONS
 from app.models.user import User
 from app.models.user_type import UserType
 
@@ -20,16 +21,19 @@ from app.models.user_type import UserType
 def assert_can_grant(
     session: Session, author: User, permissions: Iterable[str]
 ) -> None:
-    """The author may only put permissions they themselves hold into a group.
+    """The author may only put permissions they themselves hold into a group,
+    and nobody may put a superuser-only permission into one at all.
 
-    `is_tenant_admin` needs no special case: the author's *effective* set
-    already includes the §3.3 bridge, so a capability holder can grant
-    exactly what they hold -- and when F3 widens that bridge to the whole
-    tenant, this rule widens with it, with no edit here.
+    `is_tenant_admin` needs no special case: the author's *effective* set is
+    the whole catalogue of the granting tenant (APRAS-47 §4.2), so a
+    capability holder can grant exactly what they hold.
 
-    An ADMINISTRATOR holds `PERMISSIONS - ADMIN_GAP_PERMISSIONS`, so the only
-    string they cannot put in a group is `packages:my_lots_read` -- a real,
-    documented consequence of APRAS-45 §11.5.
+    The `SUPERUSER_ONLY_PERMISSIONS` branch runs **first** and applies to
+    every author, superuser included: those four strings name routes gated by
+    `deps.get_current_superuser`, so a group carrying them would grant
+    nothing. The point is that the group would be a lie, not that the author
+    is untrusted. They stay *valid* (422 is for unknown strings) and become
+    *un-grantable* (403), which is what makes the two answers distinguishable.
 
     Args:
         session: Database session carrying the acting tenant.
@@ -37,8 +41,15 @@ def assert_can_grant(
         permissions: The resulting permission bundle of the group.
 
     Raises:
-        ForbiddenError: If the bundle contains anything the author lacks.
+        ForbiddenError: If the bundle carries a superuser-only permission, or
+            anything the author lacks.
     """
+    forbidden = sorted(set(permissions) & SUPERUSER_ONLY_PERMISSIONS)
+    if forbidden:
+        raise ForbiddenError(
+            "These permissions are granted by is_superuser only: "
+            + ", ".join(forbidden)
+        )
     missing = sorted(set(permissions) - get_effective_permissions(author, session))
     if missing:
         raise ForbiddenError(

@@ -313,32 +313,61 @@ unchanged.
 
 **Tenant administrator.** `user_tenant_link.is_tenant_admin` (APRAS-43) is a
 capability *layered on top of* `UserRole`, never a role of its own: it grants
-administrator-level permission **inside one tenant only**. It lives on the
-membership row because a user is one global identity in many tenants — a
-síndico who administers condominium A and merely lives in B needs a different
-answer per tenant — and because a new `UserRole` value would silently alter
-the 54 role comparisons spread across 22 service modules.
+**every permission in the catalogue**, inside the granting tenant only.
+`deps.get_effective_permissions` returns `PERMISSIONS` for it (APRAS-47), and
+returns only the user's own role/group bundles in every other tenant and with
+no acting tenant. It lives on the membership row because a user is one global
+identity in many tenants — a síndico who administers condominium A and merely
+lives in B needs a different answer per tenant — and because a new `UserRole`
+value would silently alter the 54 role comparisons spread across 22 service
+modules.
 
 * Read through `deps.is_acting_tenant_admin` / `deps.has_admin_capability`,
   which resolve the acting tenant from `session.info`. **No acting tenant
   grants nothing**: on a global route (every `/api/v1/tenants` route), in
   `app/seed.py`, in Alembic or in a unit-test `Session`, the capability is
   structurally absent.
-* It gates the seven tenant-scoped admin routes through
-  `deps.get_current_tenant_admin` /
-  `deps.get_current_tenant_admin_or_manager` (users list/patch/contact-info,
-  user-type create/patch/delete, task delete, lot delete), and exempts its
-  holder from the UserType menu gate **within that tenant** exactly as an
-  `ADMINISTRATOR` is exempt everywhere.
-* It does **not** grant the domain-service role sets (announcements,
-  finance, occurrences, voting, …), per-lot `UserLotLink` access, or any
-  tenant/membership management: granting and revoking it is
-  `PATCH /api/v1/tenants/{tenant_id}/members/{user_id}`, `ADMINISTRATOR`
-  only.
+* The seven tenant-scoped admin routes it reaches (users list/patch/contact-info,
+  user-type create/patch/delete, task delete, lot delete) are gated by
+  `deps.require_permission(...)` against the route's entry in
+  `ROUTE_PERMISSIONS` (APRAS-46), not by a role guard. The capability exempts
+  its holder from the UserType menu gate **within that tenant** exactly as a
+  superuser is exempt everywhere.
+* It grants the domain-service permissions (announcements, finance,
+  occurrences, voting, …) inside the granting tenant. It does **not** grant
+  per-lot `UserLotLink` access, or any tenant/membership management: granting
+  and revoking it is
+  `PATCH /api/v1/tenants/{tenant_id}/members/{user_id}`, **superuser only**
+  (`deps.get_current_superuser`).
 * Privilege escalation is closed on `PATCH /api/v1/users/{id}` for every
-  caller that is not a global `ADMINISTRATOR`: they may not grant the
-  `ADMINISTRATOR` role, modify an `ADMINISTRATOR`, or modify a user who
-  holds a membership in another tenant.
+  caller that is not a superuser: they may not grant the `ADMINISTRATOR`
+  role, modify a superuser, or modify a user who holds a membership in
+  another tenant. The user-visible detail strings still say "administrator" —
+  deliberately, since `tests/test_user_directory_scope.py` asserts two of them
+  literally and IAM F5 is the slice that retires the word. Do not "fix" the
+  doc by renaming them.
+
+**Install superuser.** `user.is_superuser` (APRAS-47, migration `0031`) is the
+global counterpart of `is_tenant_admin`: every permission in **every** tenant
+and with no acting tenant at all — `deps.get_effective_permissions` answers it
+before any tenant is resolved. It is a column, not a role and not a group, so:
+
+* it is **not grantable through the groups API** — the four permissions naming
+  the superuser-gated routes are `SUPERUSER_ONLY_PERMISSIONS`
+  (`tenants:create`, `tenants:update`, `tenants:members_manage`,
+  `tenants:members_set_admin`), and `user_type_service.assert_can_grant`
+  refuses them to every author, superuser included;
+* it is **not settable through `UserUpdate`** — the schema has no
+  `is_superuser` field, so a body carrying one is inert;
+* it gates the five global `/api/v1/tenants` writes via
+  `deps.get_current_superuser`, which reads the column and no role.
+* **TRANSITIONAL (IAM F3 -> F5).** While `UserRole` still exists,
+  `ADMINISTRATOR` and `is_superuser` are kept in lockstep: `User.__init__`
+  defaults the flag for a new ADMINISTRATOR, migration `0031` set it for every
+  pre-existing ADMINISTRATOR row, and `PATCH /api/v1/users/{id}` mirrors it on
+  every role change. The column is nevertheless the single source of truth —
+  a row stored with `role=ADMINISTRATOR, is_superuser=false` reads back as a
+  non-superuser.
 
 **The user directory is tenant-scoped.** `GET /api/v1/users/`,
 `PATCH /api/v1/users/{id}` and `PATCH /api/v1/users/{id}/contact-info` target

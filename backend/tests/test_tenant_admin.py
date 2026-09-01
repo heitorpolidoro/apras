@@ -520,24 +520,25 @@ def test_is_acting_tenant_admin_reads_the_acting_tenant(
         assert deps.has_admin_capability(tenant_admin, session) is False
 
 
-def test_the_role_only_guards_stay_available_and_unchanged(
+def test_the_superuser_guard_stays_available_and_unchanged(
     session: Session, global_admin: User, plain_member: User
 ):
-    """`get_current_active_admin` / `get_current_admin_or_manager` are not
-    modified by this task: they remain correct role-only guards for the
-    global tenant surface, and `get_current_admin_or_manager` keeps the
-    MANAGER widening no tenant-scoped route uses any more."""
-    manager = _make_user(session, "ta-manager@test.com", UserRole.MANAGER)
+    """The global tenant surface keeps exactly one guard, with the same 403.
 
-    assert deps.get_current_active_admin(global_admin) is global_admin
-    assert deps.get_current_admin_or_manager(global_admin) is global_admin
-    assert deps.get_current_admin_or_manager(manager) is manager
+    APRAS-47 §5.1 converted `get_current_active_admin` into
+    `get_current_superuser` — it now reads `User.is_superuser`, and the
+    detail string is byte-identical — and deleted
+    `get_current_admin_or_manager`, whose last caller APRAS-46 removed.
+    `global_admin` is an ADMINISTRATOR, so §3.3's transitional default
+    carries the flag and this guard answers for them exactly as before.
+    """
+    assert global_admin.is_superuser is True
+    assert deps.get_current_superuser(global_admin) is global_admin
 
-    for guard in (deps.get_current_active_admin, deps.get_current_admin_or_manager):
-        with pytest.raises(HTTPException) as excinfo:
-            guard(plain_member)
-        assert excinfo.value.status_code == 403
-        assert excinfo.value.detail == "The user doesn't have enough privileges"
+    with pytest.raises(HTTPException) as excinfo:
+        deps.get_current_superuser(plain_member)
+    assert excinfo.value.status_code == 403
+    assert excinfo.value.detail == "The user doesn't have enough privileges"
 
 
 def test_has_admin_capability_is_true_for_an_administrator_anywhere(
@@ -687,7 +688,7 @@ def test_create_tenant_still_seeds_one_role_type_per_role(
 # §9 — the structural route assertion
 # ---------------------------------------------------------------------------
 
-#: The whole post-task `get_current_active_admin` surface: writes on the
+#: The whole post-task `get_current_superuser` surface: writes on the
 #: global `/api/v1/tenants` router, and nothing else.
 ADMIN_ONLY_ROUTES: frozenset[tuple[str, str]] = frozenset(
     {
@@ -714,24 +715,22 @@ def _api_routes() -> list[APIRoute]:
     return [route for route in app.routes if isinstance(route, APIRoute)]
 
 
-def test_no_tenant_scoped_route_keeps_a_role_only_admin_guard():
-    """`get_current_active_admin` survives only on the global tenant router."""
+def test_no_tenant_scoped_route_keeps_a_global_admin_guard():
+    """`get_current_superuser` survives only on the global tenant router."""
     offenders = []
     for route in _api_routes():
         if not _depends_on(route.dependant, deps.get_current_tenant):
             continue
-        if _depends_on(route.dependant, deps.get_current_active_admin) or _depends_on(
-            route.dependant, deps.get_current_admin_or_manager
-        ):
+        if _depends_on(route.dependant, deps.get_current_superuser):
             offenders.extend(_route_keys(route))
     assert not offenders, sorted(offenders)
 
 
-def test_get_current_active_admin_is_exactly_the_five_tenant_writes():
+def test_get_current_superuser_is_exactly_the_five_tenant_writes():
     found = {
         key
         for route in _api_routes()
-        if _depends_on(route.dependant, deps.get_current_active_admin)
+        if _depends_on(route.dependant, deps.get_current_superuser)
         for key in _route_keys(route)
     }
     assert found == ADMIN_ONLY_ROUTES

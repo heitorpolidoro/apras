@@ -1,17 +1,20 @@
-"""The structural proof of the enforcement swap (IAM F2, APRAS-46 §8).
+"""The structural proof of the enforcement swap (IAM F2, APRAS-46 §8),
+carried forward by the superuser swap (IAM F3, APRAS-47 §5.3).
 
 Two walks, both mechanical:
 
 * a **route walk** over `app.main.app`, built on the same `_depends_on` /
   `_api_routes` shape `test_tenant_route_scope.py` and `test_tenant_admin.py`
-  already use, asserting that the two tenant-admin role guards are gone, that
+  already use, asserting that the four deleted role guards are gone, that
   every `PermissionRequired` mounted on a route declares exactly
-  `ROUTE_PERMISSIONS[(method, path)]`, and that the is_superuser carve-out is
-  still exactly the five global tenant writes;
+  `ROUTE_PERMISSIONS[(method, path)]`, and that the `get_current_superuser`
+  carve-out is still exactly the five global tenant writes;
 * an **AST walk** over `backend/app/`, asserting that the actor-role reads
-  that survive the slice are *exactly* the twenty-two of §5.3 — a new read
-  fails, a removed read fails, a moved read fails — and that the arithmetic
-  `100 - 85 == 15` closes.
+  that survive the slice are *exactly* the thirteen of APRAS-47 §5.3 — a new
+  read fails, a removed read fails, a moved read fails — and that the
+  arithmetic `100 - 92 == 8` closes. A third walk runs the same two rules
+  over the three paths the second one excludes, so the exclusion is proved
+  empty rather than trusted.
 
 The counting rule is stated once, in §8.2 of the spec, and implemented once,
 here:
@@ -51,7 +54,7 @@ from fastapi.dependencies.models import Dependant
 from fastapi.routing import APIRoute
 
 from app.api import deps
-from app.core.permissions import ROUTE_PERMISSIONS, TENANT_ADMIN_PERMISSIONS
+from app.core.permissions import ROUTE_PERMISSIONS
 from app.main import app
 
 APP_ROOT = pathlib.Path(deps.__file__).resolve().parent.parent
@@ -64,8 +67,9 @@ ACTOR_NAMES = frozenset({"current_user", "user", "admin_user"})
 #: that changes either number has to change it deliberately.
 RULE_C_BASELINE = 100
 RULE_N_BASELINE = 7
-#: §5.4's per-module subtraction, aggregated.
-CONVERTED_COMPARE = 85
+#: §5.4's per-module subtraction, aggregated: 85 in F2 (APRAS-46) + the 7
+#: is_superuser-shaped reads F3 converted (APRAS-47, merge base aa8953d).
+CONVERTED_COMPARE = 92
 
 #: The seven routes APRAS-43 gated with `get_current_tenant_admin` /
 #: `get_current_tenant_admin_or_manager`, which IAM F2 swaps to
@@ -106,61 +110,14 @@ GLOBAL_EXTRA = frozenset({("GET", "/"), ("POST", "/api/v1/access-control/webhook
 # §5.3 -- the three allowlists, as two literals
 # ---------------------------------------------------------------------------
 
-#: Rule-C survivors: 15 reads in 15 functions.
+#: Rule-C survivors: 8 reads in 8 functions, all F5.
 #:
-#: A = is_superuser-marked / global scope (F3 replaces them);
+#: Group A -- the seven is_superuser-shaped / global-scope reads -- was
+#: converted by IAM F3 (APRAS-47 §5.1) and is gone. What remains is:
+#:
 #: B = object / visibility dimension (F5 owns);
 #: D = the resolver plumbing that cannot be converted without circularity.
 ROLE_READS_COMPARE: dict[str, tuple[int, str, str]] = {
-    # --- A: is_superuser-marked / global scope ---------------------------
-    "api/deps.py::get_current_active_admin": (
-        1,
-        "F3",
-        (
-            "still guards the 5 global /api/v1/tenants writes; no acting "
-            "tenant exists there, so no permission is resolvable"
-        ),
-    ),
-    "api/deps.py::get_current_admin_or_manager": (
-        1,
-        "F3",
-        (
-            "no route uses it; kept so test_tenant_admin.py's structural case "
-            "stays unmodified. F3 removes both together"
-        ),
-    ),
-    "api/deps.py::has_admin_capability": (
-        1,
-        "F3",
-        "feeds the allowed_menus gate and the §3.3 tenant_admin bridge",
-    ),
-    "api/deps.py::_resolve_from_header": (
-        1,
-        "F3",
-        (
-            "'an ADMINISTRATOR may act in any tenant' plus the 404/403 "
-            "existence oracle of APRAS-42"
-        ),
-    ),
-    "api/v1/endpoints/users.py::update_user": (
-        1,
-        "F3",
-        (
-            "the three escalation rules for non-global-administrators "
-            "(APRAS-43 §6.3); the target-role reads are payload reads and are "
-            "outside both rules by construction"
-        ),
-    ),
-    "services/tenant_service.py::list_tenants": (
-        1,
-        "F3",
-        "tenant visibility on the global GET /api/v1/tenants list",
-    ),
-    "services/tenant_service.py::get_visible_tenant": (
-        1,
-        "F3",
-        "the same tenant-visibility rule for GET /api/v1/tenants/{id}",
-    ),
     # --- B: object / visibility dimension --------------------------------
     "api/deps.py::assert_manager_can_see_task": (
         1,
@@ -255,7 +212,9 @@ ROLE_READS_NON_COMPARE: dict[str, tuple[int, str, str]] = {
     ),
 }
 
-VALID_SLICES = frozenset({"F3", "F5"})
+#: Narrowed by IAM F3: `"F3"` has shipped, so re-introducing the marker after
+#: the fact is a failure rather than a note.
+VALID_SLICES = frozenset({"F5"})
 
 
 # ---------------------------------------------------------------------------
@@ -299,11 +258,22 @@ def _function_index(tree: ast.AST) -> dict[int, str]:
     return index
 
 
-def walk_role_reads() -> tuple[dict[str, int], dict[str, int]]:
-    """The Rule-C and Rule-N mappings, `module::function -> count`."""
+def _declarative_paths() -> list[pathlib.Path]:
+    """The three paths `_in_scope` excludes: the declarative layer + the seeder."""
+    paths = [
+        path
+        for path in sorted(APP_ROOT.rglob("*.py"))
+        if path.relative_to(APP_ROOT).as_posix().startswith(EXCLUDED_PREFIXES)
+    ]
+    paths.append(APP_ROOT / "seed.py")
+    return paths
+
+
+def _walk_role_reads_over(paths) -> tuple[dict[str, int], dict[str, int]]:
+    """`walk_role_reads`'s two rules, over an arbitrary set of files."""
     compare: dict[str, int] = {}
     non_compare: dict[str, int] = {}
-    for path in _in_scope():
+    for path in paths:
         relative = path.relative_to(APP_ROOT).as_posix()
         tree = ast.parse(path.read_text(encoding="utf-8"))
         where = _function_index(tree)
@@ -320,6 +290,11 @@ def walk_role_reads() -> tuple[dict[str, int], dict[str, int]]:
                 key = f"{relative}::{where.get(id(node), '<module>')}"
                 non_compare[key] = non_compare.get(key, 0) + 1
     return compare, non_compare
+
+
+def walk_role_reads() -> tuple[dict[str, int], dict[str, int]]:
+    """The Rule-C and Rule-N mappings, `module::function -> count`."""
+    return _walk_role_reads_over(_in_scope())
 
 
 def _api_routes() -> list[APIRoute]:
@@ -353,16 +328,24 @@ def _permission_guards(dependant: Dependant) -> list[deps.PermissionRequired]:
 
 
 def test_no_route_depends_on_a_tenant_admin_role_guard():
-    """Both guards are deleted; re-adding either is a failure, not a warning."""
+    """Four guards are deleted; re-adding any of them is a failure.
+
+    The first two went in IAM F2 (APRAS-46); the last two in IAM F3
+    (APRAS-47 §5.1), where `get_current_active_admin` was converted and
+    renamed to `get_current_superuser` and `get_current_admin_or_manager`,
+    whose last caller F2 removed, was dropped outright.
+    """
     assert not hasattr(deps, "get_current_tenant_admin")
     assert not hasattr(deps, "get_current_tenant_admin_or_manager")
+    assert not hasattr(deps, "get_current_active_admin")
+    assert not hasattr(deps, "get_current_admin_or_manager")
 
 
-def test_get_current_active_admin_is_still_exactly_the_five_tenant_writes():
+def test_get_current_superuser_is_exactly_the_five_tenant_writes():
     found = {
         key
         for route in _api_routes()
-        if _depends_on(route.dependant, deps.get_current_active_admin)
+        if _depends_on(route.dependant, deps.get_current_superuser)
         for key in _route_keys(route)
     }
     assert found == ADMIN_ONLY_ROUTES
@@ -410,8 +393,8 @@ def test_every_route_is_still_tenant_classified():
     assert not unclassified, sorted(unclassified)
 
 
-def test_tenant_admin_permissions_are_exactly_the_apras43_routes():
-    """The bridge constant cannot drift from the routes it reproduces (§3.3)."""
+def test_the_permission_guarded_routes_are_exactly_the_apras43_seven():
+    """The seven routes APRAS-43 gated are the only route-level permissions."""
     apras43_admin_routes = [
         ("DELETE", "/api/v1/tasks/{task_id}"),
         ("DELETE", "/api/v1/lots/{lot_id}"),
@@ -421,9 +404,6 @@ def test_tenant_admin_permissions_are_exactly_the_apras43_routes():
         ("PATCH", "/api/v1/user-types/{user_type_id}"),
         ("DELETE", "/api/v1/user-types/{user_type_id}"),
     ]
-    assert {
-        ROUTE_PERMISSIONS[key] for key in apras43_admin_routes
-    } == TENANT_ADMIN_PERMISSIONS
     assert set(apras43_admin_routes) == PERMISSION_GUARDED_ROUTES
 
 
@@ -464,7 +444,13 @@ def test_every_allowlisted_role_read_has_a_reason():
 
 
 def test_role_read_arithmetic_closes():
-    """`100 - 85 == 15` and `7 - 0 == 7`, checkable rather than claimed."""
+    """`100 - 92 == 8` and `7 - 0 == 7`, checkable rather than claimed.
+
+    The ledger is cumulative across the chain and stays anchored to F1's
+    tree: `RULE_C_BASELINE` and `RULE_N_BASELINE` are historical statements
+    about the commit that landed APRAS-45 and are still true, so only
+    `CONVERTED_COMPARE` moves.
+    """
     compare, non_compare = walk_role_reads()
     surviving_compare = sum(count for count, _s, _r in ROLE_READS_COMPARE.values())
     surviving_non_compare = sum(
@@ -473,14 +459,14 @@ def test_role_read_arithmetic_closes():
 
     assert RULE_C_BASELINE == 100
     assert RULE_N_BASELINE == 7
-    assert CONVERTED_COMPARE == 85
-    assert surviving_compare == 15
+    assert CONVERTED_COMPARE == 92
+    assert surviving_compare == 8
     assert surviving_non_compare == 7
     assert surviving_compare == RULE_C_BASELINE - CONVERTED_COMPARE
     assert surviving_non_compare == RULE_N_BASELINE
     assert sum(compare.values()) == surviving_compare
     assert sum(non_compare.values()) == surviving_non_compare
-    assert len(ROLE_READS_COMPARE) == 15
+    assert len(ROLE_READS_COMPARE) == 8
     assert len(ROLE_READS_NON_COMPARE) == 5
 
 
@@ -499,9 +485,56 @@ def test_the_walk_scope_is_the_application_minus_the_declarative_layer():
 
 
 def test_the_surviving_reads_are_assigned_to_a_later_slice():
-    """Seven is_superuser-shaped (F3); the other fifteen are F5's."""
+    """Every survivor is F5's; F3 has shipped, so no `"F3"` marker remains."""
     by_slice: dict[str, int] = {}
     for allowlist in (ROLE_READS_COMPARE, ROLE_READS_NON_COMPARE):
         for count, slice_name, _reason in allowlist.values():
             by_slice[slice_name] = by_slice.get(slice_name, 0) + count
-    assert by_slice == {"F3": 7, "F5": 15}
+    assert by_slice == {"F5": 15}
+    assert set(by_slice) == VALID_SLICES
+
+
+# ---------------------------------------------------------------------------
+# APRAS-47 §5.3(e) -- the declarative layer, which the walk above excludes
+# ---------------------------------------------------------------------------
+
+
+def test_the_declarative_layer_has_no_actor_role_read():
+    """The scope exclusion stops being load-bearing.
+
+    `app/models/`, `app/schemas/` and `app/seed.py` are outside
+    `walk_role_reads` because they hold columns, payload shapes and the
+    seeder. Running the very same two rules over them proves the exclusion
+    hides nothing: an authorization decision cannot be smuggled into the
+    declarative layer to escape the allowlists above.
+    """
+    compare, non_compare = _walk_role_reads_over(_declarative_paths())
+
+    assert compare == {}
+    assert non_compare == {}
+
+
+def test_the_superuser_default_is_the_only_administrator_literal_in_models():
+    """APRAS-47 §3.3's transitional default is a declared, single exception.
+
+    `User.__init__` compares `data.get("role")` — a `Call`, not an actor
+    attribute — so the two rules above cannot see it. This pin does: it is
+    the *only* `UserRole.ADMINISTRATOR` reference under `app/models/`, and it
+    lives in exactly one function, which F5 deletes with the enum.
+    """
+    found: dict[str, int] = {}
+    for path in sorted((APP_ROOT / "models").rglob("*.py")):
+        relative = path.relative_to(APP_ROOT / "models").as_posix()
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        where = _function_index(tree)
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.Attribute)
+                and node.attr == "ADMINISTRATOR"
+                and isinstance(node.value, ast.Name)
+                and node.value.id == "UserRole"
+            ):
+                key = f"{relative}::{where.get(id(node), '<module>')}"
+                found[key] = found.get(key, 0) + 1
+
+    assert found == {"user.py::__init__": 1}

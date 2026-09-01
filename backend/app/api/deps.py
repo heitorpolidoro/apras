@@ -16,7 +16,7 @@ from sqlmodel import Session, select
 from app.core import tenant_context
 from app.core.config import settings
 from app.core.exceptions import ForbiddenError
-from app.core.permissions import LEGACY_ROLE_PERMISSIONS, TENANT_ADMIN_PERMISSIONS
+from app.core.permissions import LEGACY_ROLE_PERMISSIONS, PERMISSIONS
 from app.db import get_session
 from app.models.enums import MenuKey, UserRole
 from app.models.task import Task
@@ -88,45 +88,28 @@ get_current_active_user = get_current_user
 get_db = get_session
 
 
-def get_current_active_admin(
+def get_current_superuser(
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> User:
     """
-    Verify the current user has the ADMINISTRATOR role.
+    Verify the current user is a global superuser (APRAS-47 §5.1).
+
+    Reads `User.is_superuser`, the install-wide column, and not the
+    ADMINISTRATOR role it replaced. Deliberately role-free *and* tenant-free,
+    so the five global `/api/v1/tenants` writes it guards keep resolving with
+    no acting tenant — which is exactly why a tenant_admin, whose capability
+    is only readable once a tenant is resolved, gets 403 there.
 
     Args:
         current_user: The authenticated user.
 
     Returns:
-        User: The user if they have the administrator role.
+        User: The user if they carry the superuser flag.
 
     Raises:
-        HTTPException: If the user role is not ADMINISTRATOR.
+        HTTPException: If the user is not a superuser.
     """
-    if current_user.role != UserRole.ADMINISTRATOR:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="The user doesn't have enough privileges",
-        )
-    return current_user
-
-
-def get_current_admin_or_manager(
-    current_user: Annotated[User, Depends(get_current_user)],
-) -> User:
-    """
-    Verify the current user has the ADMINISTRATOR or MANAGER role.
-
-    Args:
-        current_user: The authenticated user.
-
-    Returns:
-        User: The user if they have the administrator or manager role.
-
-    Raises:
-        HTTPException: If the user role is neither ADMINISTRATOR nor MANAGER.
-    """
-    if current_user.role not in (UserRole.ADMINISTRATOR, UserRole.MANAGER):
+    if not current_user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="The user doesn't have enough privileges",
@@ -178,10 +161,10 @@ def is_acting_tenant_admin(user: User, session: Session) -> bool:
 def has_admin_capability(user: User, session: Session) -> bool:
     """Return whether `user` has administrator-level power *here*.
 
-    "Here" is the acting tenant: a global ADMINISTRATOR everywhere, a
+    "Here" is the acting tenant: a global superuser everywhere, a
     tenant_admin only in the tenant that granted it.
     """
-    return user.role == UserRole.ADMINISTRATOR or is_acting_tenant_admin(user, session)
+    return user.is_superuser or is_acting_tenant_admin(user, session)
 
 
 def get_effective_user_type_ids(user: User, session: Session) -> set[UUID]:
@@ -222,32 +205,50 @@ def get_effective_user_type_ids(user: User, session: Session) -> set[UUID]:
 def get_effective_permissions(user: User, session: Session) -> frozenset[str]:
     """Every permission `user` holds in the session's acting tenant.
 
-    Union of two sources, and only two:
+    Two short-circuits and a union (APRAS-47 §4):
+
+      0. `user.is_superuser` -> the **whole catalogue**, in every tenant and
+         with no acting tenant at all. The flag is global, so it is answered
+         before any tenant is resolved;
       1. the `permissions` of the user's effective roles in the acting tenant
          (`get_effective_user_type_ids`, so a role change is immediate and a
          role of another tenant never composes into this answer);
       2. LEGACY_ROLE_PERMISSIONS[user.role] - the TRANSITIONAL fallback that
-         keeps F1..F4 meaningful while no role carries any permission.
+         keeps F1..F4 meaningful while no role carries any permission;
+      3. `is_acting_tenant_admin` -> the whole catalogue as well, but only
+         while acting **in the tenant that granted the capability**.
 
-    No nesting (a role's permissions are a flat list), no per-user loose
-    permission, and deliberately NO is_superuser / is_tenant_admin shortcut:
-    those arrive in F3.
+    Both short-circuits return rather than union, because
+    `PERMISSIONS | anything == PERMISSIONS` and an early return says "this is
+    a short-circuit" instead of "this is one more contributor".
+
+    Scoping is what stops leakage: `is_acting_tenant_admin` reads the acting
+    tenant from `session.info` and looks up *that* tenant's `UserTenantLink`,
+    with no DEFAULT_TENANT_ID fallback. A síndico of A acting in B, a global
+    route, `app/seed.py`, Alembic and a bare unit-test `Session` therefore
+    resolve through the role/group bundles and nothing else.
+
+    No nesting (a role's permissions are a flat list) and no per-user loose
+    permission.
 
     Strings stored in a role's `permissions` that are not in the catalogue (a
     hand-edited row, or a permission a later slice deleted) are kept as is.
     Silently dropping them would hide a data bug that F2's UI must be able to
     show.
 
-    Zero production call sites in IAM F1 by design: this slice builds the
-    resolver, F4 enforces with it.
-
     Args:
         user: The user whose permissions are being resolved.
         session: Database session carrying (or not) an acting tenant.
 
     Returns:
-        frozenset[str]: The union of role bundles and the legacy fallback.
+        frozenset[str]: The catalogue for a superuser or an acting
+        tenant_admin; otherwise the union of role bundles and the legacy
+        fallback.
     """
+    # A superuser holds every permission there is, in every tenant, and with
+    # no acting tenant at all.
+    if user.is_superuser:
+        return PERMISSIONS
     effective_ids = get_effective_user_type_ids(user, session)
     granted: set[str] = set(LEGACY_ROLE_PERMISSIONS.get(user.role, frozenset()))
     if effective_ids:
@@ -256,12 +257,11 @@ def get_effective_permissions(user: User, session: Session) -> frozenset[str]:
         ).all()
         for user_type in user_types:
             granted.update(user_type.permissions)
-    # The tenant_admin bridge (APRAS-46 §3.3). It reads the *capability*,
-    # never a role, and `is_acting_tenant_admin` has no DEFAULT_TENANT_ID
-    # fallback, so on a global route, in `app/seed.py` or in a unit-test
-    # Session it grants nothing.
+    # Administrator-level power inside one tenant (APRAS-43): every
+    # permission, but only while acting in the tenant that granted it. It
+    # reads the *capability*, never a role.
     if is_acting_tenant_admin(user, session):
-        granted |= TENANT_ADMIN_PERMISSIONS
+        return PERMISSIONS
     return frozenset(granted)
 
 
@@ -401,10 +401,10 @@ def _resolve_from_header(
         ) from err
 
     tenant = session.get(Tenant, tenant_id)
-    is_admin = current_user.role == UserRole.ADMINISTRATOR
+    is_superuser = current_user.is_superuser
     if tenant is None:
-        # Never confirm the existence of a tenant to a non-administrator.
-        if is_admin:
+        # Never confirm the existence of a tenant to a non-superuser.
+        if is_superuser:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found"
             )
@@ -415,9 +415,9 @@ def _resolve_from_header(
     # Membership *before* activity (APRAS-43 §7): answering "Tenant is
     # inactive" to a non-member would confirm that the tenant exists, which
     # is exactly the existence oracle the 404/403 split above exists to
-    # close. A member — and any ADMINISTRATOR — still gets the accurate
+    # close. A member — and any superuser — still gets the accurate
     # "Tenant is inactive".
-    if not (is_admin or tenant_id in _tenant_memberships(session, current_user)):
+    if not (is_superuser or tenant_id in _tenant_memberships(session, current_user)):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not a member of the requested tenant",

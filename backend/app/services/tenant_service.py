@@ -131,11 +131,11 @@ class TenantService:
     def list_tenants(session: Session, current_user: User) -> list[Tenant]:
         """List tenants visible to the caller, ordered by name.
 
-        ADMINISTRATOR sees every tenant; every other role sees only the
-        tenants it is linked to. A user with no memberships gets an empty
-        list, not an error.
+        A superuser sees every tenant (APRAS-47 §5.1); everyone else sees only
+        the tenants they are linked to. A user with no memberships gets an
+        empty list, not an error.
         """
-        if current_user.role == UserRole.ADMINISTRATOR:
+        if current_user.is_superuser:
             statement = select(Tenant).order_by(Tenant.name)
         else:
             statement = (
@@ -188,12 +188,12 @@ class TenantService:
     ) -> Tenant:
         """Return a tenant the caller may read, or raise TenantNotFoundError.
 
-        A non-administrator that is not a member gets a 404, never a 403 —
-        the existence of another condominium's tenant is not information the
-        caller is entitled to.
+        A non-superuser that is not a member gets a 404, never a 403 — the
+        existence of another condominium's tenant is not information the
+        caller is entitled to (APRAS-47 §5.1).
         """
         tenant = cls.get_tenant(session, tenant_id)
-        if current_user.role == UserRole.ADMINISTRATOR:
+        if current_user.is_superuser:
             return tenant
         if not cls.is_member(session, tenant_id, current_user.id):
             raise TenantNotFoundError(tenant_id)

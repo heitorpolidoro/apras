@@ -25,7 +25,7 @@ from sqlmodel import Session
 
 from app.api import deps
 from app.core import tenant_context
-from app.core.permissions import ADMIN_GAP_PERMISSIONS
+from app.core.permissions import PERMISSIONS, SUPERUSER_ONLY_PERMISSIONS
 from app.core.security import create_access_token, get_password_hash
 from app.models.enums import UserRole
 from app.models.tenant import DEFAULT_TENANT_ID, UserTenantLink
@@ -41,7 +41,13 @@ GROUPS_MANAGE = ("user_types:create", "user_types:update")
 FINANCE_MANAGE = "finance:category_create"
 
 
-def _make_user(session: Session, role: UserRole, *, tenant_admin: bool) -> User:
+def _make_user(
+    session: Session,
+    role: UserRole,
+    *,
+    tenant_admin: bool,
+    is_superuser: bool = False,
+) -> User:
     user = User(
         id=uuid.uuid4(),
         email=f"{uuid.uuid4().hex[:12]}@escalation.example.com",
@@ -49,6 +55,7 @@ def _make_user(session: Session, role: UserRole, *, tenant_admin: bool) -> User:
         hashed_password=get_password_hash("password"),
         role=role,
         cpf=str(next(_cpf_counter)),
+        is_superuser=is_superuser,
     )
     session.add(user)
     session.commit()
@@ -71,18 +78,44 @@ def _headers(user: User) -> dict[str, str]:
     }
 
 
-def _tenant_admin(session: Session) -> User:
-    """A RESIDENT holding the tenant_admin capability.
+def _group_author(session: Session) -> User:
+    """A RESIDENT carrying a group that grants exactly the author's powers.
 
-    Through the §3.3 bridge they hold `user_types:create` /
-    `user_types:update` and, being a RESIDENT, they do **not** hold
-    `finance:category_create` — the board's named case, exactly.
+    APRAS-47 §4.2 widened `is_tenant_admin` to *every* permission of the
+    granting tenant, so the capability holder this module used at the F2
+    merge base can no longer be missing one — the case would pass vacuously
+    or invert. The replacement author is strictly better: it exercises the
+    group mechanism the feature is about, and it is still a RESIDENT, so it
+    does **not** hold `finance:category_create` — the board's named case,
+    exactly.
+
+    `users:update` rides along because `PATCH /api/v1/users/{id}`, the
+    assignment surface of §9.3, is route-guarded on it: without it case 4
+    would 403 before `assert_can_grant` ever ran, for the wrong reason.
     """
-    return _make_user(session, UserRole.RESIDENT, tenant_admin=True)
+    user = _make_user(session, UserRole.RESIDENT, tenant_admin=False)
+    group = UserType(
+        name=f"Autor {uuid.uuid4().hex[:8]}",
+        permissions=[*GROUPS_MANAGE, "users:update"],
+    )
+    session.add(group)
+    session.commit()
+    user.user_types.append(group)
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return user
 
 
-def _administrator(session: Session) -> User:
-    return _make_user(session, UserRole.ADMINISTRATOR, tenant_admin=False)
+def _superuser(session: Session) -> User:
+    """A DIRECTOR-role user carrying the global flag — never an ADMINISTRATOR.
+
+    Explicit, so the case is about `is_superuser` and not about the enum that
+    APRAS-47 §3.3 keeps in lockstep with it.
+    """
+    return _make_user(
+        session, UserRole.DIRECTOR, tenant_admin=False, is_superuser=True
+    )
 
 
 def _effective(session: Session, user: User) -> frozenset[str]:
@@ -99,7 +132,7 @@ def test_the_author_cannot_create_a_group_carrying_a_permission_they_lack(
     client: TestClient, session: Session
 ):
     """The board's named case, with the concrete strings of §12.4."""
-    author = _tenant_admin(session)
+    author = _group_author(session)
     held = _effective(session, author)
     assert all(permission in held for permission in GROUPS_MANAGE)
     assert FINANCE_MANAGE not in held
@@ -122,7 +155,7 @@ def test_the_author_can_create_a_group_carrying_only_what_they_hold(
     client: TestClient, session: Session
 ):
     """The positive control: without it, the case above could pass wrongly."""
-    author = _tenant_admin(session)
+    author = _group_author(session)
 
     response = client.post(
         "/api/v1/user-types/",
@@ -147,7 +180,7 @@ def test_the_author_can_create_a_group_carrying_only_what_they_hold(
 def test_patching_a_group_with_an_unheld_permission_is_403_and_writes_nothing(
     client: TestClient, session: Session
 ):
-    author = _tenant_admin(session)
+    author = _group_author(session)
     created = client.post(
         "/api/v1/user-types/",
         headers=_headers(author),
@@ -178,7 +211,7 @@ def test_patching_a_group_without_the_permissions_field_leaves_the_bundle(
     client: TestClient, session: Session
 ):
     """`UserTypeUpdate.permissions` is `None`-sentinelled on purpose (§9.1)."""
-    author = _administrator(session)
+    author = _superuser(session)
     created = client.post(
         "/api/v1/user-types/",
         headers=_headers(author),
@@ -206,7 +239,7 @@ def test_patching_a_group_without_the_permissions_field_leaves_the_bundle(
 def test_assigning_an_over_privileged_group_through_patch_users_is_403(
     client: TestClient, session: Session
 ):
-    author = _tenant_admin(session)
+    author = _group_author(session)
     over_privileged = UserType(name="Financeiro", permissions=[FINANCE_MANAGE])
     session.add(over_privileged)
     session.commit()
@@ -232,7 +265,7 @@ def test_assigning_an_over_privileged_group_through_patch_users_is_403(
 def test_assigning_a_group_the_author_can_grant_succeeds(
     client: TestClient, session: Session
 ):
-    author = _tenant_admin(session)
+    author = _group_author(session)
     allowed = UserType(name="Grupo permitido", permissions=["user_types:update"])
     session.add(allowed)
     session.commit()
@@ -251,31 +284,44 @@ def test_assigning_a_group_the_author_can_grant_succeeds(
 
 
 # ---------------------------------------------------------------------------
-# 5 -- the ADMINISTRATOR gap
+# 5 -- what a superuser may and may not grant (APRAS-47 §4.1, §6.2)
 # ---------------------------------------------------------------------------
 
 
-def test_an_administrator_may_grant_anything_except_the_documented_admin_gap(
+def test_a_superuser_may_grant_everything_except_the_superuser_only_four(
     client: TestClient, session: Session
 ):
-    """`packages:my_lots_read` is F1 §11.5, made observable (§9.2)."""
-    author = _administrator(session)
-    assert set(ADMIN_GAP_PERMISSIONS) == {"packages:my_lots_read"}
+    """APRAS-47 §4.1 + §6.2, made observable.
+
+    A superuser now holds the whole catalogue — `packages:my_lots_read`
+    included, which the ADMINISTRATOR gap used to withhold — so the only
+    strings they cannot put into a group are the four whose routes are gated
+    by `deps.get_current_superuser`. A group carrying one of those would
+    grant nothing, which is why the refusal applies to every author.
+    """
+    author = _superuser(session)
+
+    for permission in sorted(PERMISSIONS - SUPERUSER_ONLY_PERMISSIONS):
+        assert permission in _effective(session, author)
 
     allowed = client.post(
         "/api/v1/user-types/",
         headers=_headers(author),
-        json={"name": "Quase tudo", "permissions": [FINANCE_MANAGE]},
+        json={
+            "name": "Quase tudo",
+            "permissions": [FINANCE_MANAGE, "packages:my_lots_read"],
+        },
     )
     assert allowed.status_code == 201
 
-    refused = client.post(
-        "/api/v1/user-types/",
-        headers=_headers(author),
-        json={"name": "Com o gap", "permissions": ["packages:my_lots_read"]},
-    )
-    assert refused.status_code == 403
-    assert "packages:my_lots_read" in refused.json()["detail"]
+    for permission in sorted(SUPERUSER_ONLY_PERMISSIONS):
+        refused = client.post(
+            "/api/v1/user-types/",
+            headers=_headers(author),
+            json={"name": f"Só superusuário {permission}", "permissions": [permission]},
+        )
+        assert refused.status_code == 403, permission
+        assert permission in refused.json()["detail"]
 
 
 # ---------------------------------------------------------------------------
@@ -284,7 +330,7 @@ def test_an_administrator_may_grant_anything_except_the_documented_admin_gap(
 
 
 def test_an_unknown_permission_string_is_422(client: TestClient, session: Session):
-    author = _administrator(session)
+    author = _superuser(session)
 
     response = client.post(
         "/api/v1/user-types/",
@@ -312,7 +358,7 @@ def test_patching_a_group_with_an_explicit_null_bundle_leaves_it_alone(
     client: TestClient, session: Session
 ):
     """`"permissions": null` is the same "leave it" sentinel as omitting it."""
-    author = _administrator(session)
+    author = _superuser(session)
     created = client.post(
         "/api/v1/user-types/",
         headers=_headers(author),
