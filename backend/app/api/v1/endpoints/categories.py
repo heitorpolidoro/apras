@@ -6,7 +6,7 @@ from uuid import UUID
 from app.api import deps as api_deps
 from app.db import get_session
 from app.models.category import Category
-from app.models.enums import MenuKey, UserRole
+from app.models.enums import MenuKey
 from app.models.user import User
 from app.schemas.category import CategoryCreate, CategoryRead, CategoryUpdate
 from app.services.category_service import CategoryService
@@ -15,12 +15,12 @@ from sqlmodel import Session
 
 router = APIRouter()
 
-_CATEGORY_WRITE_ROLES = {UserRole.ADMINISTRATOR, UserRole.DIRECTOR}
 
-
-def _require_category_write_permission(current_user: User) -> None:
-    """Raise 403 if the user does not have permission to write categories."""
-    if current_user.role not in _CATEGORY_WRITE_ROLES:
+def _require_category_write_permission(
+    current_user: User, session: Session, permission: str
+) -> None:
+    """Raise 403 unless the caller holds this route's category permission."""
+    if not api_deps.has_permission(current_user, session, permission):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only ADMINISTRATOR and DIRECTOR can manage categories",
@@ -45,7 +45,7 @@ def create_category(
 ) -> CategoryRead:
     """Create a new category. ADMINISTRATOR and DIRECTOR only."""
     api_deps.assert_menu_access(current_user, MenuKey.CATEGORIES, session)
-    _require_category_write_permission(current_user)
+    _require_category_write_permission(current_user, session, "categories:create")
     return CategoryService.create_category(session=session, category_in=category_in)
 
 
@@ -58,7 +58,7 @@ def update_category(
 ) -> CategoryRead:
     """Update a category. ADMINISTRATOR and DIRECTOR only."""
     api_deps.assert_menu_access(current_user, MenuKey.CATEGORIES, session)
-    _require_category_write_permission(current_user)
+    _require_category_write_permission(current_user, session, "categories:update")
     db_category = session.get(Category, category_id)
     if not db_category:
         raise HTTPException(status_code=404, detail="Category not found")
@@ -75,7 +75,7 @@ def delete_category(
 ) -> None:
     """Deactivate a category. ADMINISTRATOR and DIRECTOR only."""
     api_deps.assert_menu_access(current_user, MenuKey.CATEGORIES, session)
-    _require_category_write_permission(current_user)
+    _require_category_write_permission(current_user, session, "categories:delete")
     db_category = session.get(Category, category_id)
     if not db_category:
         raise HTTPException(status_code=404, detail="Category not found")

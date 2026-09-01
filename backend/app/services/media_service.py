@@ -5,6 +5,7 @@ from typing import Tuple, List, Optional
 from PIL import Image
 from sqlmodel import Session, select, func
 
+from app.api.deps import has_permission
 from app.core.exceptions import (
     MediaAssetNotFoundError,
     PhotoFileTooLargeError,
@@ -13,7 +14,7 @@ from app.core.exceptions import (
     PhotoRejectionReasonRequiredError,
     ForbiddenError,
 )
-from app.models.enums import EntityType, StorageProvider, PhotoApprovalStatus, UserRole
+from app.models.enums import EntityType, StorageProvider, PhotoApprovalStatus
 from app.models.media_asset import MediaAsset
 from app.models.user import User
 from app.schemas.media_asset import MediaAssetRead, MediaAssetListResponse
@@ -104,8 +105,7 @@ class MediaService:
         _, thumbnail_url = self.storage_provider.save_file(thumb_bytes, thumb_filename, mime_type)
 
         # 6. Auto-approval policy
-        admin_roles = {UserRole.ADMINISTRATOR, UserRole.DIRECTOR, UserRole.MANAGER}
-        if current_user.role in admin_roles:
+        if has_permission(current_user, session, "uploads:auto_approve"):
             status = PhotoApprovalStatus.APPROVED
             approved_by_id = current_user.id
             approved_at = datetime.utcnow()
@@ -143,7 +143,7 @@ class MediaService:
     def list_pending_photos(
         self, session: Session, current_user: User, page: int = 1, limit: int = 20
     ) -> MediaAssetListResponse:
-        if current_user.role not in {UserRole.ADMINISTRATOR, UserRole.DIRECTOR}:
+        if not has_permission(current_user, session, "uploads:pending_read"):
             raise PhotoApprovalPermissionError()
 
         pending_stmt = select(MediaAsset).where(MediaAsset.status == PhotoApprovalStatus.PENDING_APPROVAL)
@@ -171,7 +171,7 @@ class MediaService:
         )
 
     def approve_photo(self, session: Session, photo_id: uuid.UUID, admin_user: User) -> MediaAssetRead:
-        if admin_user.role not in {UserRole.ADMINISTRATOR, UserRole.DIRECTOR}:
+        if not has_permission(admin_user, session, "uploads:approve"):
             raise PhotoApprovalPermissionError()
 
         asset = session.get(MediaAsset, photo_id)
@@ -193,7 +193,7 @@ class MediaService:
     def reject_photo(
         self, session: Session, photo_id: uuid.UUID, admin_user: User, rejection_reason: str
     ) -> MediaAssetRead:
-        if admin_user.role not in {UserRole.ADMINISTRATOR, UserRole.DIRECTOR}:
+        if not has_permission(admin_user, session, "uploads:reject"):
             raise PhotoApprovalPermissionError()
 
         if not rejection_reason or not rejection_reason.strip():
@@ -220,7 +220,7 @@ class MediaService:
             raise MediaAssetNotFoundError(photo_id)
 
         is_owner = asset.uploaded_by_id == current_user.id
-        is_admin = current_user.role in {UserRole.ADMINISTRATOR, UserRole.DIRECTOR}
+        is_admin = has_permission(current_user, session, "uploads:approve")
 
         if not (is_owner or is_admin):
             raise ForbiddenError("Você não tem permissão para excluir esta foto.")

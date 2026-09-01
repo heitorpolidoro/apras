@@ -5,13 +5,14 @@ from uuid import UUID
 
 from sqlmodel import Session, func, select
 
+from app.api.deps import has_permission
 from app.core.exceptions import (
     LotNotFoundError,
     PackageAccessForbiddenError,
     PackageAlreadyPickedUpError,
     PackageNotFoundError,
 )
-from app.models.enums import PackageStatus, UserRole
+from app.models.enums import PackageStatus
 from app.models.lot import Lot
 from app.models.package import Package
 from app.models.user import User
@@ -26,13 +27,6 @@ from app.services.visitor_service import VisitorService
 
 class PackageService:
     """Service class for Package domain operations."""
-
-    _GATEKEEPER_ROLES = (
-        UserRole.ADMINISTRATOR,
-        UserRole.DIRECTOR,
-        UserRole.MANAGER,
-        UserRole.PORTEIRO,
-    )
 
     @staticmethod
     def _build_package_read(session: Session, package: Package) -> PackageRead:
@@ -73,19 +67,23 @@ class PackageService:
         )
 
     @staticmethod
-    def _assert_gatekeeper_role(current_user: User) -> None:
-        """Raise unless current_user holds a gatekeeper-desk role."""
-        if current_user.role not in PackageService._GATEKEEPER_ROLES:
+    def _assert_gatekeeper_role(
+        current_user: User, session: Session, permission: str
+    ) -> None:
+        """Raise unless current_user holds the calling route's permission."""
+        if not has_permission(current_user, session, permission):
             raise PackageAccessForbiddenError(
                 "Apenas administradores, diretores, gerentes e porteiros podem registrar encomendas."
             )
 
     @staticmethod
-    def _assert_lot_access(session: Session, lot_id: UUID, current_user: User) -> None:
-        """Gatekeeper roles: unrestricted. GUEST: always denied. Everyone else: must be linked to lot_id."""
-        if current_user.role in PackageService._GATEKEEPER_ROLES:
+    def _assert_lot_access(
+        session: Session, lot_id: UUID, current_user: User, permission: str
+    ) -> None:
+        """Gatekeepers: unrestricted. No permission: denied. Else: linked to lot_id."""
+        if has_permission(current_user, session, "packages:queue_read"):
             return
-        if current_user.role == UserRole.GUEST:
+        if not has_permission(current_user, session, permission):
             # Explicit reject before the linked-lots lookup below: GUEST accounts are not
             # barred from having a UserLotLink/Resident row at the data-model level (see
             # backend/app/services/visitor_service.py and
@@ -104,7 +102,7 @@ class PackageService:
         cls, session: Session, current_user: User, package_in: PackageCreate
     ) -> PackageRead:
         """Log a new package's arrival for a lot."""
-        cls._assert_gatekeeper_role(current_user)
+        cls._assert_gatekeeper_role(current_user, session, "packages:create")
         lot = session.get(Lot, package_in.lot_id)
         if not lot:
             raise LotNotFoundError(package_in.lot_id)
@@ -132,7 +130,7 @@ class PackageService:
         limit: int = 100,
     ) -> tuple[list[PackageRead], int]:
         """List packages for a specific lot, if caller has access to it."""
-        cls._assert_lot_access(session, lot_id, current_user)
+        cls._assert_lot_access(session, lot_id, current_user, "packages:read")
 
         query = select(Package).where(Package.lot_id == lot_id)
         if status:
@@ -154,7 +152,7 @@ class PackageService:
         limit: int = 100,
     ) -> tuple[list[PackageRead], int]:
         """List all AWAITING_PICKUP packages across lots (gatekeeper queue)."""
-        cls._assert_gatekeeper_role(current_user)
+        cls._assert_gatekeeper_role(current_user, session, "packages:queue_read")
 
         query = select(Package).where(Package.status == PackageStatus.AWAITING_PICKUP)
         total = session.exec(select(func.count()).select_from(query.subquery())).one()
@@ -172,7 +170,7 @@ class PackageService:
         package = session.get(Package, package_id)
         if not package:
             raise PackageNotFoundError(package_id)
-        cls._assert_lot_access(session, package.lot_id, current_user)
+        cls._assert_lot_access(session, package.lot_id, current_user, "packages:read")
         return cls._build_package_read(session, package)
 
     @classmethod
@@ -187,7 +185,7 @@ class PackageService:
         package = session.get(Package, package_id)
         if not package:
             raise PackageNotFoundError(package_id)
-        cls._assert_lot_access(session, package.lot_id, current_user)
+        cls._assert_lot_access(session, package.lot_id, current_user, "packages:pickup")
         if package.status == PackageStatus.PICKED_UP:
             raise PackageAlreadyPickedUpError()
         package.status = PackageStatus.PICKED_UP
@@ -202,11 +200,11 @@ class PackageService:
     @classmethod
     def get_my_lots(cls, session: Session, current_user: User) -> list[LotSummaryRead]:
         """Return the caller's own linked lots (non-gatekeeper, non-GUEST callers)."""
-        if current_user.role in PackageService._GATEKEEPER_ROLES:
+        if has_permission(current_user, session, "packages:queue_read"):
             raise PackageAccessForbiddenError(
                 "Use /packages/queue para ver encomendas de todos os lotes."
             )
-        if current_user.role == UserRole.GUEST:
+        if not has_permission(current_user, session, "packages:my_lots_read"):
             raise PackageAccessForbiddenError()
         lot_ids = VisitorService.get_user_linked_lot_ids(session, current_user)
         if not lot_ids:

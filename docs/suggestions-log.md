@@ -104,3 +104,28 @@
 - 7.3 deveria pinar o column_default exato do Postgres ('[]'::json) como o precedente da 0029 pina "false".
 - 5.2 teste 8 agrupa por primeira tag; ("GET","/") e a unica rota sem tags - agrupar defensivamente.
 - Nota opcional no AGENTS.md para o registry (precedente APRAS-43; o 'Nothing else' da secao 2 le como proibindo, embora o ER-6 nao proiba).
+
+## [APRAS-46] IAM F2: enforcement por permissoes com matriz de paridade — 2026-09-01
+
+- 6.3 'sorted diff' le como teste agregador enquanto ER-9 pina caso parametrizado por celula - meia frase resolve.
+- NON_ROLE_403 <= 40 sem clausula de desvio (ao contrario de DENIAL_SHAPE_OVERRIDES e PERMITTED_422); aplicar a mesma disciplina 'nomeia no PR body e sobe o literal'.
+- Dizer que o engine + outer transaction + create_savepoint mora em matrix_world.py (o recorder script nao usa tmp_path_factory).
+- git status --short -uall no ER-8 para nao colapsar diretorios untracked.
+- module::function do 8.2 funde metodos homonimos num modulo - parentese (nenhum dos 22 sites afetado).
+- (QA da 45) alinhar 'ruff check is clean' com a regra operativa 'touched files must add none'; teste rotulado de baseline drift para total==190; lembrete na F2 de estender _LEGACY_ROLES_BY_PERMISSION ao adicionar permissoes.
+
+## [APRAS-47] IAM F3: is_superuser e is_tenant_admin como atalho — 2026-09-01
+
+- Registrar o lar observado do pin TENANT_ADMIN_PERMISSIONS: na arvore em voo da F2 e test_permission_enforcement.py:393 (modulo ja autorizado); deletar aquele teste nao perde nada (PERMISSION_GUARDED_ROUTES duplicado na l.359).
+- O grep -c 'not\*\* grant the domain-service' do ER-9 e frouxo como BRE; parear com grep -in 'does not grant' sobre a secao extraida, enumerado no PR body.
+- Tabela 'Files touched' da secao 2 omite a linha condicional de test_permission_registry.py - marcar (conditional - deletion only).
+- Nota na secao 0 de que a F2 esta em voo e varios contratos ja confirmados contra a working tree (CONVERTED_COMPARE == 85, split 15/7/8, guards deletadas), mantendo o spec da F2 como contrato.
+
+## [APRAS-48] IAM F4: UI de grupos e gating por permissao — 2026-09-01
+
+- Tabela de consumidores da 2.7 lista useMenuAccess na linha do effective permission set; ele le identidade simulada e allowed_menus - um parentese evita fiacao errada.
+- ER-3 sem caso nomeado na primeira metade; nomear o caso de AdminUserDashboard.test.tsx que a 8.2 ja implica.
+- Baselines de cobertura da secao 10 divergem levemente do comentario do ratchet no vitest.config.ts; dizer no PR body qual comando produziu.
+- Parametrizar test_me_matches_get_effective_permissions tambem sobre superuser e tenant-admin.
+- Atualizar de fato matrix_world.py l.15 ('The ten UNGUARDED_ROUTES') em vez de deixar opcional.
+- Revisabilidade: 3 commits limpos dentro do PR (3; 4-5; 6-7).

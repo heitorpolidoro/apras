@@ -6,6 +6,7 @@ from uuid import UUID
 
 from sqlmodel import Session, col, func, or_, select
 
+from app.api.deps import has_permission
 from app.core.exceptions import (
     OccurrenceAccessForbiddenError,
     OccurrenceNotFoundError,
@@ -38,10 +39,9 @@ class OccurrenceService:
         session: Session, current_user: User, occurrence: Occurrence
     ) -> OccurrenceRead:
         """Helper to convert Occurrence model into sanitized OccurrenceRead schema."""
-        is_admin_or_director = current_user.role in [
-            UserRole.ADMINISTRATOR,
-            UserRole.DIRECTOR,
-        ]
+        is_admin_or_director = has_permission(
+            current_user, session, "occurrences:manage_all"
+        )
 
         reporter_user_id = occurrence.reporter_user_id
         reporter_name = None
@@ -95,9 +95,11 @@ class OccurrenceService:
         )
 
     @staticmethod
-    def _check_user_access(current_user: User, occurrence: Occurrence) -> bool:
+    def _check_user_access(
+        current_user: User, occurrence: Occurrence, session: Session
+    ) -> bool:
         """Determines if user has read access to the specified occurrence."""
-        if current_user.role in [UserRole.ADMINISTRATOR, UserRole.DIRECTOR]:
+        if has_permission(current_user, session, "occurrences:manage_all"):
             return True
         if current_user.role == UserRole.MANAGER:
             return (
@@ -168,7 +170,7 @@ class OccurrenceService:
         query = select(Occurrence)
 
         # RBAC Filtering
-        if current_user.role not in [UserRole.ADMINISTRATOR, UserRole.DIRECTOR]:
+        if not has_permission(current_user, session, "occurrences:manage_all"):
             if current_user.role == UserRole.MANAGER:
                 query = query.where(
                     or_(
@@ -226,15 +228,14 @@ class OccurrenceService:
         if not occurrence:
             raise OccurrenceNotFoundError(occurrence_id)
 
-        if not cls._check_user_access(current_user, occurrence):
+        if not cls._check_user_access(current_user, occurrence, session):
             raise OccurrenceAccessForbiddenError
 
         base_read = cls._build_occurrence_read(session, current_user, occurrence)
 
-        is_admin_or_director = current_user.role in [
-            UserRole.ADMINISTRATOR,
-            UserRole.DIRECTOR,
-        ]
+        is_admin_or_director = has_permission(
+            current_user, session, "occurrences:manage_all"
+        )
 
         timeline_entries = []
         for entry in occurrence.timeline_entries:
@@ -286,10 +287,9 @@ class OccurrenceService:
         if not occurrence:
             raise OccurrenceNotFoundError(occurrence_id)
 
-        is_admin_or_director = current_user.role in [
-            UserRole.ADMINISTRATOR,
-            UserRole.DIRECTOR,
-        ]
+        is_admin_or_director = has_permission(
+            current_user, session, "occurrences:manage_all"
+        )
         is_assigned = occurrence.assigned_to_id == current_user.id
 
         if not (is_admin_or_director or is_assigned):
@@ -355,13 +355,12 @@ class OccurrenceService:
         if not occurrence:
             raise OccurrenceNotFoundError(occurrence_id)
 
-        if not cls._check_user_access(current_user, occurrence):
+        if not cls._check_user_access(current_user, occurrence, session):
             raise OccurrenceAccessForbiddenError
 
-        is_admin_or_director = current_user.role in [
-            UserRole.ADMINISTRATOR,
-            UserRole.DIRECTOR,
-        ]
+        is_admin_or_director = has_permission(
+            current_user, session, "occurrences:manage_all"
+        )
         is_internal = note_in.is_internal_only if is_admin_or_director else False
 
         status_from = None

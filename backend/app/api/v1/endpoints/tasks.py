@@ -27,7 +27,7 @@ def create_task(
 ) -> TaskRead:
     """Create a new task. Any authenticated user except GUEST can create tasks."""
     api_deps.assert_menu_access(current_user, MenuKey.TASKS, session)
-    if current_user.role == UserRole.GUEST:
+    if not api_deps.has_permission(current_user, session, "tasks:create"):
         raise ForbiddenError("Guests cannot create tasks")
     db_task = TaskService.create_task(
         session=session,
@@ -49,7 +49,9 @@ def list_tasks(
 ) -> list[TaskRead]:
     """List tasks with optional filters. GUEST sees no tasks."""
     api_deps.assert_menu_access(current_user, MenuKey.TASKS, session)
-    if current_user.role == UserRole.GUEST:
+    # The documented empty-list refusal, kept verbatim: turning it into a
+    # 403 would be a divergence the parity matrix rejects.
+    if not api_deps.has_permission(current_user, session, "tasks:read"):
         return []
 
     from app.models.category import Category
@@ -141,7 +143,7 @@ def update_task(
         raise TaskNotFoundError(task_id)
 
     api_deps.assert_manager_can_see_task(current_user, db_task, session)
-    api_deps.assert_can_edit_task(current_user, db_task)
+    api_deps.assert_can_edit_task(current_user, db_task, session)
 
     updated_task = TaskService.update_task(
         session=session, db_task=db_task, task_in=task_in, current_user=current_user
@@ -169,7 +171,7 @@ def get_task_history(
 def delete_task(
     task_id: UUID,
     session: Annotated[Session, Depends(get_session)],
-    current_user: Annotated[User, Depends(api_deps.get_current_tenant_admin)],
+    current_user: Annotated[User, Depends(api_deps.require_permission("tasks:delete"))],
 ) -> None:
     """Delete a task (Soft Delete).
 

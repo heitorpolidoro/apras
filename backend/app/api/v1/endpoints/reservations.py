@@ -5,7 +5,6 @@ from uuid import UUID
 
 from app.api import deps as api_deps
 from app.db import get_session
-from app.models.enums import UserRole
 from app.models.reservation import ReservableSpace
 from app.models.user import User
 from app.schemas.reservation import (
@@ -26,21 +25,22 @@ from sqlmodel import Session
 spaces_router = APIRouter()
 reservations_router = APIRouter()
 
-_SPACE_WRITE_ROLES = {UserRole.ADMINISTRATOR, UserRole.DIRECTOR}
-
-
-def _require_space_write_permission(current_user: User) -> None:
-    """Raise 403 if the user does not have permission to write spaces."""
-    if current_user.role not in _SPACE_WRITE_ROLES:
+def _require_space_write_permission(
+    current_user: User, session: Session, permission: str
+) -> None:
+    """Raise 403 unless the caller holds this route's space-write permission."""
+    if not api_deps.has_permission(current_user, session, permission):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only ADMINISTRATOR and DIRECTOR can manage reservable spaces",
         )
 
 
-def _require_non_guest(current_user: User) -> None:
-    """Raise 403 if the user is a GUEST (cannot create reservations)."""
-    if current_user.role == UserRole.GUEST:
+def _require_non_guest(
+    current_user: User, session: Session, permission: str
+) -> None:
+    """Raise 403 unless the caller holds this route's reservation permission."""
+    if not api_deps.has_permission(current_user, session, permission):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="GUEST cannot create reservations",
@@ -71,7 +71,7 @@ def create_reservable_space(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> ReservableSpaceRead:
     """Create a new reservable space. ADMINISTRATOR/DIRECTOR only."""
-    _require_space_write_permission(current_user)
+    _require_space_write_permission(current_user, session, "spaces:create")
     return ReservableSpaceService.create_space(session=session, space_in=space_in)
 
 
@@ -83,7 +83,7 @@ def update_reservable_space(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> ReservableSpaceRead:
     """Update a reservable space. ADMINISTRATOR/DIRECTOR only."""
-    _require_space_write_permission(current_user)
+    _require_space_write_permission(current_user, session, "spaces:update")
     db_space = session.get(ReservableSpace, space_id)
     if not db_space:
         raise HTTPException(status_code=404, detail="Reservable space not found")
@@ -99,7 +99,7 @@ def deactivate_reservable_space(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> None:
     """Deactivate a reservable space (soft delete). ADMINISTRATOR/DIRECTOR only."""
-    _require_space_write_permission(current_user)
+    _require_space_write_permission(current_user, session, "spaces:deactivate")
     db_space = session.get(ReservableSpace, space_id)
     if not db_space:
         raise HTTPException(status_code=404, detail="Reservable space not found")
@@ -120,7 +120,7 @@ def create_space_reservation(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> SpaceReservationRead:
     """Create a new space reservation. Any authenticated user except GUEST."""
-    _require_non_guest(current_user)
+    _require_non_guest(current_user, session, "reservations:create")
     reservation = SpaceReservationService.create_reservation(
         session=session, current_user=current_user, reservation_in=reservation_in
     )
@@ -137,7 +137,7 @@ def list_space_reservations(
     mine: bool = False,
 ) -> list[SpaceReservationRead]:
     """List space reservations per the visibility/masking precedence rules."""
-    _require_non_guest(current_user)
+    _require_non_guest(current_user, session, "reservations:read")
     return SpaceReservationService.list_reservations(
         session=session, current_user=current_user, space_id=space_id, mine=mine
     )
@@ -150,7 +150,7 @@ def get_space_reservation(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> SpaceReservationRead:
     """Get a single space reservation by id, per visibility rules."""
-    _require_non_guest(current_user)
+    _require_non_guest(current_user, session, "reservations:read")
     return SpaceReservationService.get_reservation(
         session=session, current_user=current_user, reservation_id=reservation_id
     )

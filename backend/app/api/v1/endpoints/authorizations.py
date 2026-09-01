@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlmodel import Session
 
 from app.api import deps
-from app.models.enums import AuthorizationStatus, DayOfWeek, ShiftType, UserRole
+from app.models.enums import AuthorizationStatus, DayOfWeek, ShiftType
 from app.models.user import User
 from app.models.visitor import VisitorAuthorization
 from app.schemas.visitor import (
@@ -25,9 +25,17 @@ from app.services.visitor_service import VisitorService
 router = APIRouter()
 
 
-def _assert_not_porteiro(current_user: User) -> None:
-    """Raise 403 if the caller is PORTEIRO (gate-only role, no access here)."""
-    if current_user.role == UserRole.PORTEIRO:
+def _assert_not_porteiro(
+    current_user: User, session: Session, permission: str
+) -> None:
+    """Raise 403 unless the caller holds this route's own permission.
+
+    Named for the rule it used to spell (PORTEIRO is a gate-only role and
+    never reaches this module); each call site now passes the permission of
+    *its* route, so a helper shared by a dozen routes does not collapse a
+    dozen permissions into one.
+    """
+    if not deps.has_permission(current_user, session, permission):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not enough privileges",
@@ -72,7 +80,7 @@ def list_lot_authorizations(
     limit: int = 100,
 ) -> PaginatedAuthorizationRead:
     """List visitor pre-authorizations for a specific lot."""
-    _assert_not_porteiro(current_user)
+    _assert_not_porteiro(current_user, session, "authorizations:read")
     auths, total = VisitorService.get_lot_authorizations(
         session, lot_id, current_user, skip=skip, limit=limit, status=status_filter
     )
@@ -92,7 +100,7 @@ def create_lot_authorization(
     current_user: Annotated[User, Depends(deps.get_current_user)],
 ) -> VisitorAuthorizationRead:
     """Create a visitor pre-authorization for a lot."""
-    _assert_not_porteiro(current_user)
+    _assert_not_porteiro(current_user, session, "authorizations:create")
     auth = VisitorService.create_authorization(session, lot_id, auth_in, current_user)
     return _to_authorization_read(auth)
 
@@ -109,7 +117,7 @@ def revoke_authorization(
     payload: VisitorAuthorizationRevoke | None = None,
 ) -> VisitorAuthorizationRead:
     """Revoke an active pre-authorization immediately."""
-    _assert_not_porteiro(current_user)
+    _assert_not_porteiro(current_user, session, "authorizations:revoke")
     auth = VisitorService.revoke_authorization(session, auth_id, current_user)
     return _to_authorization_read(auth)
 

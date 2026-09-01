@@ -6,6 +6,7 @@ from uuid import UUID
 from sqlalchemy import func, or_
 from sqlmodel import Session, select
 
+from app.api.deps import has_permission
 from app.core.exceptions import (
     AssetAccessForbiddenError,
     AssetNotFoundError,
@@ -13,7 +14,7 @@ from app.core.exceptions import (
     InsufficientStockError,
 )
 from app.models.asset import Asset, InventoryMovement
-from app.models.enums import AssetCategory, AssetCondition, MovementType, UserRole
+from app.models.enums import AssetCategory, AssetCondition, MovementType
 from app.models.user import User
 from app.schemas.asset import (
     AssetCreate,
@@ -27,9 +28,6 @@ from app.schemas.asset import (
     PaginatedInventoryMovementRead,
 )
 
-_STAFF_ROLES = {UserRole.ADMINISTRATOR, UserRole.DIRECTOR}
-_VIEW_ROLES = {UserRole.ADMINISTRATOR, UserRole.DIRECTOR, UserRole.MANAGER}
-
 
 class AssetService:
     """Service class for Asset and Inventory operations."""
@@ -39,7 +37,7 @@ class AssetService:
         session: Session, current_user: User, asset_in: AssetCreate
     ) -> AssetRead:
         """Create a new asset or inventory item."""
-        if current_user.role not in _STAFF_ROLES:
+        if not has_permission(current_user, session, "assets:create"):
             raise AssetAccessForbiddenError(
                 "Apenas Administradores e Diretores podem cadastrar ativos."
             )
@@ -92,7 +90,7 @@ class AssetService:
         limit: int = 100,
     ) -> PaginatedAssetRead:
         """List assets with filtering, searching, and pagination."""
-        if current_user.role not in _VIEW_ROLES:
+        if not has_permission(current_user, session, "assets:read"):
             raise AssetAccessForbiddenError("Acesso ao patrimônio e estoque negado.")
 
         statement = select(Asset)
@@ -140,7 +138,7 @@ class AssetService:
     @staticmethod
     def get_asset_summary(session: Session, current_user: User) -> AssetSummaryRead:
         """Compute aggregate metrics for assets and inventory."""
-        if current_user.role not in _VIEW_ROLES:
+        if not has_permission(current_user, session, "assets:summary_read"):
             raise AssetAccessForbiddenError("Acesso ao patrimônio e estoque negado.")
 
         all_assets = session.exec(select(Asset)).all()
@@ -171,7 +169,7 @@ class AssetService:
         session: Session, current_user: User, asset_id: UUID
     ) -> AssetDetailRead:
         """Retrieve detailed asset information with movements."""
-        if current_user.role not in _VIEW_ROLES:
+        if not has_permission(current_user, session, "assets:read"):
             raise AssetAccessForbiddenError("Acesso ao patrimônio e estoque negado.")
 
         asset = session.get(Asset, asset_id)
@@ -219,7 +217,7 @@ class AssetService:
         asset_in: AssetUpdate,
     ) -> AssetRead:
         """Update metadata of an existing asset."""
-        if current_user.role not in _STAFF_ROLES:
+        if not has_permission(current_user, session, "assets:update"):
             raise AssetAccessForbiddenError(
                 "Apenas Administradores e Diretores podem atualizar ativos."
             )
@@ -252,7 +250,7 @@ class AssetService:
         session: Session, current_user: User, asset_id: UUID
     ) -> None:
         """Delete an asset and cascade its movements."""
-        if current_user.role not in _STAFF_ROLES:
+        if not has_permission(current_user, session, "assets:delete"):
             raise AssetAccessForbiddenError(
                 "Apenas Administradores e Diretores podem excluir ativos."
             )
@@ -272,10 +270,15 @@ class AssetService:
         movement_in: InventoryMovementCreate,
     ) -> InventoryMovementRead:
         """Record an inventory or asset stock movement."""
-        if current_user.role not in _VIEW_ROLES:
+        if not has_permission(current_user, session, "assets:movement_record"):
             raise AssetAccessForbiddenError("Acesso negado.")
 
-        if current_user.role == UserRole.MANAGER and movement_in.movement_type in {
+        # Exact: the `assets:movement_record` gate above leaves only
+        # {A, D, M}, and `assets:update` is {A, D}, so "lacks assets:update"
+        # is precisely "is a MANAGER" here.
+        if not has_permission(
+            current_user, session, "assets:update"
+        ) and movement_in.movement_type in {
             MovementType.AJUSTE_INVENTARIO,
             MovementType.BAIXA_PATRIMONIAL,
         }:
@@ -353,7 +356,7 @@ class AssetService:
         limit: int = 100,
     ) -> PaginatedInventoryMovementRead:
         """List inventory movements across all assets with filtering."""
-        if current_user.role not in _VIEW_ROLES:
+        if not has_permission(current_user, session, "inventory:movements_read"):
             raise AssetAccessForbiddenError("Acesso negado.")
 
         statement = (

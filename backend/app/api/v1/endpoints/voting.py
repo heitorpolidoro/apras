@@ -9,7 +9,7 @@ from uuid import UUID
 
 from app.api import deps as api_deps
 from app.db import get_session
-from app.models.enums import UserRole, VoteKind, VoteStatus, VoteType
+from app.models.enums import VoteKind, VoteStatus, VoteType
 from app.models.lot import Lot
 from app.models.user import User
 from app.models.voting import Ballot, Vote
@@ -36,12 +36,19 @@ from sqlmodel import Session
 assemblies_router = APIRouter()
 votes_router = APIRouter()
 
-_NO_ACCESS_ROLES = {UserRole.GUEST, UserRole.PORTEIRO}
+def _require_voting_access(
+    current_user: User, session: Session, permission: str
+) -> None:
+    """GUEST and PORTEIRO never reach the voting surface, read or write.
 
-
-def _require_voting_access(current_user: User) -> None:
-    """GUEST and PORTEIRO never reach the voting surface, read or write."""
-    if current_user.role in _NO_ACCESS_ROLES:
+    Each call site passes the *module-access* permission of its surface
+    (`assemblies:read`, `votes:read`, `votes:my_ballot_read`,
+    `votes:eligible_lots_read`), each of which is exactly
+    `{A, D, M, R}` -- i.e. "everyone but GUEST and PORTEIRO". The narrower
+    board/tally gates stay in `voting_service`, so a MANAGER refused from
+    `POST /assemblies/` is still refused *there*, with that message.
+    """
+    if not api_deps.has_permission(current_user, session, permission):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Este perfil não tem acesso ao módulo de votação",
@@ -118,7 +125,7 @@ def create_assembly(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> AssemblyRead:
     """Create an assembly (AGO/AGE). ADMINISTRATOR/DIRECTOR only."""
-    _require_voting_access(current_user)
+    _require_voting_access(current_user, session, "assemblies:read")
     assembly = voting_service.create_assembly(session, current_user, assembly_in)
     return AssemblyRead.model_validate(assembly)
 
@@ -129,7 +136,7 @@ def list_assemblies(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> list[AssemblyRead]:
     """List assemblies, most recent first."""
-    _require_voting_access(current_user)
+    _require_voting_access(current_user, session, "assemblies:read")
     return [
         AssemblyRead.model_validate(item)
         for item in voting_service.list_assemblies(session)
@@ -143,7 +150,7 @@ def get_assembly(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> AssemblyRead:
     """Retrieve a single assembly."""
-    _require_voting_access(current_user)
+    _require_voting_access(current_user, session, "assemblies:read")
     return AssemblyRead.model_validate(
         voting_service.get_assembly(session, assembly_id)
     )
@@ -157,7 +164,7 @@ def update_assembly(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> AssemblyRead:
     """Update an assembly. Blocked once the assembly is CLOSED."""
-    _require_voting_access(current_user)
+    _require_voting_access(current_user, session, "assemblies:read")
     assembly = voting_service.get_assembly(session, assembly_id)
     return AssemblyRead.model_validate(
         voting_service.update_assembly(session, current_user, assembly, assembly_in)
@@ -171,7 +178,7 @@ def close_assembly(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> AssemblyRead:
     """Close the assembly, cascading into every vote still open."""
-    _require_voting_access(current_user)
+    _require_voting_access(current_user, session, "assemblies:read")
     assembly = voting_service.get_assembly(session, assembly_id)
     return AssemblyRead.model_validate(
         voting_service.close_assembly(session, current_user, assembly)
@@ -185,7 +192,7 @@ def get_assembly_minutes(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> HTMLResponse:
     """Render the minutes as HTML. Only after the assembly is closed."""
-    _require_voting_access(current_user)
+    _require_voting_access(current_user, session, "assemblies:read")
     assembly = voting_service.get_assembly(session, assembly_id)
     return HTMLResponse(
         content=voting_service.get_minutes_html(session, current_user, assembly)
@@ -203,7 +210,7 @@ def save_assembly_minutes(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> AssociationDocumentRead:
     """Store the rendered minutes in the Document Center."""
-    _require_voting_access(current_user)
+    _require_voting_access(current_user, session, "assemblies:read")
     assembly = voting_service.get_assembly(session, assembly_id)
     return voting_service.save_minutes(session, current_user, assembly)
 
@@ -220,7 +227,7 @@ def create_vote(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> VoteRead:
     """Create an agenda vote or a standalone poll."""
-    _require_voting_access(current_user)
+    _require_voting_access(current_user, session, "votes:read")
     return VoteRead.model_validate(
         voting_service.create_vote(session, current_user, vote_in)
     )
@@ -235,7 +242,7 @@ def list_votes(
     assembly_id: UUID | None = Query(default=None),
 ) -> list[VoteRead]:
     """List votes. Never materialises snapshots (see the lazy-close rule)."""
-    _require_voting_access(current_user)
+    _require_voting_access(current_user, session, "votes:read")
     votes = voting_service.list_votes(
         session, kind=kind, status=status_filter, assembly_id=assembly_id
     )
@@ -249,7 +256,7 @@ def get_vote(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> VoteRead:
     """Retrieve one vote, lazily closing it if the window has elapsed."""
-    _require_voting_access(current_user)
+    _require_voting_access(current_user, session, "votes:read")
     vote = voting_service.get_vote(session, vote_id)
     voting_service.materialize_if_due(session, vote)
     return VoteRead.model_validate(vote)
@@ -263,7 +270,7 @@ def update_vote(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> VoteRead:
     """Update a vote — only while it has received no ballot at all."""
-    _require_voting_access(current_user)
+    _require_voting_access(current_user, session, "votes:read")
     vote = voting_service.get_vote(session, vote_id)
     return VoteRead.model_validate(
         voting_service.update_vote(session, current_user, vote, vote_in)
@@ -277,7 +284,7 @@ def close_vote(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> VoteRead:
     """Close a vote early, materialising its tally snapshot."""
-    _require_voting_access(current_user)
+    _require_voting_access(current_user, session, "votes:read")
     vote = voting_service.get_vote(session, vote_id)
     return VoteRead.model_validate(
         voting_service.close_vote(session, current_user, vote)
@@ -341,7 +348,7 @@ def get_my_ballot(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> list[MyBallotRead]:
     """The ballots the caller may see (own, lot-mates', or only own if anonymous)."""
-    _require_voting_access(current_user)
+    _require_voting_access(current_user, session, "votes:my_ballot_read")
     vote = voting_service.get_vote(session, vote_id)
     return voting_service.get_my_ballots(session, current_user, vote)
 
@@ -353,7 +360,7 @@ def list_eligible_lots(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> list[EligibleLotRead]:
     """Lots the caller may cast this vote's ballot for (empty for a poll)."""
-    _require_voting_access(current_user)
+    _require_voting_access(current_user, session, "votes:eligible_lots_read")
     vote = voting_service.get_vote(session, vote_id)
     return [
         EligibleLotRead(id=lot.id, label=f"{lot.block}/{lot.lot_number}")

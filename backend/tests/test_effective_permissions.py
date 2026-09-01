@@ -17,10 +17,10 @@ from sqlmodel import Session, select
 
 from app.api import deps
 from app.core import tenant_context
-from app.core.permissions import LEGACY_ROLE_PERMISSIONS
+from app.core.permissions import LEGACY_ROLE_PERMISSIONS, TENANT_ADMIN_PERMISSIONS
 from app.core.security import create_access_token
 from app.models.enums import UserRole
-from app.models.tenant import DEFAULT_TENANT_ID, Tenant
+from app.models.tenant import DEFAULT_TENANT_ID, Tenant, UserTenantLink
 from app.models.user import User
 from app.models.user_type import UserType
 from app.services.tenant_service import TenantService
@@ -220,3 +220,64 @@ def test_the_column_defaults_to_an_empty_list(session: Session):
     session.refresh(user_type)
 
     assert user_type.permissions == []
+
+
+# ---------------------------------------------------------------------------
+# The `is_tenant_admin` bridge (IAM F2, APRAS-46 §3.3) -- additive only
+# ---------------------------------------------------------------------------
+
+
+def test_the_tenant_admin_bridge_adds_exactly_the_seven_apras43_permissions(
+    session: Session,
+):
+    """A capability holder gains the seven routes APRAS-43 granted, and no more."""
+    user = _make_user(session, UserRole.RESIDENT)
+    session.add(
+        UserTenantLink(
+            user_id=user.id, tenant_id=DEFAULT_TENANT_ID, is_tenant_admin=True
+        )
+    )
+    session.commit()
+    tenant_context.set_acting_tenant(session, DEFAULT_TENANT_ID)
+
+    result = deps.get_effective_permissions(user, session)
+
+    assert result == LEGACY_ROLE_PERMISSIONS[UserRole.RESIDENT] | TENANT_ADMIN_PERMISSIONS
+    assert result - LEGACY_ROLE_PERMISSIONS[UserRole.RESIDENT] <= TENANT_ADMIN_PERMISSIONS
+
+
+def test_the_bridge_grants_nothing_without_an_acting_tenant(session: Session):
+    """`is_acting_tenant_admin` has no DEFAULT_TENANT_ID fallback, on purpose."""
+    user = _make_user(session, UserRole.RESIDENT)
+    session.add(
+        UserTenantLink(
+            user_id=user.id, tenant_id=DEFAULT_TENANT_ID, is_tenant_admin=True
+        )
+    )
+    session.commit()
+
+    result = deps.get_effective_permissions(user, session)
+
+    assert result == LEGACY_ROLE_PERMISSIONS[UserRole.RESIDENT]
+
+
+def test_the_bridge_grants_nothing_in_a_tenant_that_did_not_grant_it(
+    session: Session, tenant_b: Tenant
+):
+    user = _make_user(session, UserRole.RESIDENT)
+    session.add(
+        UserTenantLink(
+            user_id=user.id, tenant_id=tenant_b.id, is_tenant_admin=True
+        )
+    )
+    session.add(
+        UserTenantLink(
+            user_id=user.id, tenant_id=DEFAULT_TENANT_ID, is_tenant_admin=False
+        )
+    )
+    session.commit()
+    tenant_context.set_acting_tenant(session, DEFAULT_TENANT_ID)
+
+    result = deps.get_effective_permissions(user, session)
+
+    assert result == LEGACY_ROLE_PERMISSIONS[UserRole.RESIDENT]

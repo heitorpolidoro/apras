@@ -24,6 +24,7 @@ from app.models.user import User
 from app.models.user_type import UserType
 from app.schemas.user import UserContactInfoUpdate, UserRead, UserUpdate
 from app.schemas.user_type import UserTypeRead
+from app.services import user_type_service
 from app.services.user_service import UserService
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
@@ -72,7 +73,7 @@ def update_user(
     *,
     session: Annotated[Session, Depends(get_session)],
     tenant: Annotated[Tenant, Depends(api_deps.get_current_tenant)],
-    current_user: Annotated[User, Depends(api_deps.get_current_tenant_admin)],
+    current_user: Annotated[User, Depends(api_deps.require_permission("users:update"))],
     user_id: UUID,
     user_in: UserUpdate,
 ) -> UserRead:
@@ -133,7 +134,9 @@ def update_user(
     if "user_type_ids" in update_data:
         user_type_ids = update_data.pop("user_type_ids")
         if user_type_ids is not None:
-            _assign_user_types(session, db_user, user_type_ids, tenant.id)
+            _assign_user_types(
+                session, db_user, user_type_ids, tenant.id, current_user
+            )
 
     for key, value in update_data.items():
         setattr(db_user, key, value)
@@ -145,7 +148,11 @@ def update_user(
 
 
 def _assign_user_types(
-    session: Session, db_user: User, user_type_ids: list[UUID], tenant_id: UUID
+    session: Session,
+    db_user: User,
+    user_type_ids: list[UUID],
+    tenant_id: UUID,
+    author: User,
 ) -> None:
     """Replace the target's acting-tenant UserType links, keeping the rest.
 
@@ -172,6 +179,10 @@ def _assign_user_types(
                 + ", ".join(sorted(str(item) for item in missing))
             ),
         )
+    # The second grant surface (APRAS-46 §9.3): handing an existing
+    # over-privileged group to a confederate is the same escalation as
+    # creating one.
+    user_type_service.assert_can_assign_user_types(session, author, found)
     keep = [
         user_type
         for user_type in db_user.user_types
@@ -186,7 +197,7 @@ def update_user_contact_info(
     session: Annotated[Session, Depends(get_session)],
     tenant: Annotated[Tenant, Depends(api_deps.get_current_tenant)],
     current_user: Annotated[  # noqa: ARG001
-        User, Depends(api_deps.get_current_tenant_admin_or_manager)
+        User, Depends(api_deps.require_permission("users:update_contact"))
     ],
     user_id: UUID,
     user_in: UserContactInfoUpdate,

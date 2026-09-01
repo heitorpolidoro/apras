@@ -9,7 +9,7 @@ from sqlmodel import Session
 from app.api import deps as api_deps
 from app.core.exceptions import ProjectAccessForbiddenError
 from app.db import get_session
-from app.models.enums import ProjectStatus, UserRole
+from app.models.enums import ProjectStatus
 from app.models.user import User
 from app.schemas.project import (
     MilestoneCreate,
@@ -27,36 +27,28 @@ from app.services.project_service import ProjectService
 
 router = APIRouter()
 
-_PROJECT_READ_ROLES = {
-    UserRole.ADMINISTRATOR,
-    UserRole.DIRECTOR,
-    UserRole.MANAGER,
-    UserRole.RESIDENT,
-}
-_PROJECT_ADMIN_ROLES = {UserRole.ADMINISTRATOR, UserRole.DIRECTOR}
-_PROJECT_UPDATE_ROLES = {
-    UserRole.ADMINISTRATOR,
-    UserRole.DIRECTOR,
-    UserRole.MANAGER,
-}
-
-
-def _require_read_permission(current_user: User) -> None:
-    if current_user.role not in _PROJECT_READ_ROLES:
+def _require_read_permission(
+    current_user: User, session: Session, permission: str
+) -> None:
+    if not api_deps.has_permission(current_user, session, permission):
         raise ProjectAccessForbiddenError(
             "Access denied to construction projects"
         )
 
 
-def _require_admin_permission(current_user: User) -> None:
-    if current_user.role not in _PROJECT_ADMIN_ROLES:
+def _require_admin_permission(
+    current_user: User, session: Session, permission: str
+) -> None:
+    if not api_deps.has_permission(current_user, session, permission):
         raise ProjectAccessForbiddenError(
             "Only ADMINISTRATOR and DIRECTOR can perform this action"
         )
 
 
-def _require_update_permission(current_user: User) -> None:
-    if current_user.role not in _PROJECT_UPDATE_ROLES:
+def _require_update_permission(
+    current_user: User, session: Session, permission: str
+) -> None:
+    if not api_deps.has_permission(current_user, session, permission):
         raise ProjectAccessForbiddenError(
             "Not enough privileges to post project updates"
         )
@@ -76,7 +68,7 @@ def list_projects(
     limit: int = Query(default=50, ge=1, le=100),
 ) -> PaginatedProjects:
     """Lists construction projects with optional status filter and pagination."""
-    _require_read_permission(current_user)
+    _require_read_permission(current_user, session, "projects:read")
     items, total = ProjectService.list_projects(
         session=session, status=status, skip=skip, limit=limit
     )
@@ -95,7 +87,7 @@ def create_project(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> ProjectRead:
     """Creates a new construction project (Admin/Director only)."""
-    _require_admin_permission(current_user)
+    _require_admin_permission(current_user, session, "projects:create")
     project = ProjectService.create_project(session, project_in)
     return ProjectRead.model_validate(project)
 
@@ -107,7 +99,7 @@ def get_project_detail(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> ProjectDetailRead:
     """Retrieves full project details including milestones and update logs."""
-    _require_read_permission(current_user)
+    _require_read_permission(current_user, session, "projects:read")
     return ProjectService.get_project_detail(session, id)
 
 
@@ -119,7 +111,7 @@ def update_project(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> ProjectRead:
     """Updates construction project attributes (Admin/Director only)."""
-    _require_admin_permission(current_user)
+    _require_admin_permission(current_user, session, "projects:update")
     project = ProjectService.get_project_by_id(session, id)
     updated = ProjectService.update_project(session, project, project_in)
     return ProjectRead.model_validate(updated)
@@ -132,7 +124,7 @@ def delete_project(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> None:
     """Deletes a project and its milestones/updates (Admin/Director only)."""
-    _require_admin_permission(current_user)
+    _require_admin_permission(current_user, session, "projects:delete")
     project = ProjectService.get_project_by_id(session, id)
     ProjectService.delete_project(session, project)
 
@@ -154,7 +146,7 @@ def create_milestone(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> MilestoneRead:
     """Creates a milestone under a project (Admin/Director only)."""
-    _require_admin_permission(current_user)
+    _require_admin_permission(current_user, session, "projects:milestone_create")
     milestone = ProjectService.create_milestone(session, id, milestone_in)
     return MilestoneRead.model_validate(milestone)
 
@@ -171,7 +163,7 @@ def update_milestone(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> MilestoneRead:
     """Updates milestone status, dates, or details (Admin/Director only)."""
-    _require_admin_permission(current_user)
+    _require_admin_permission(current_user, session, "projects:milestone_update")
     milestone = ProjectService.update_milestone(
         session, id, milestone_id, milestone_in
     )
@@ -189,7 +181,7 @@ def delete_milestone(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> None:
     """Deletes a milestone (Admin/Director only)."""
-    _require_admin_permission(current_user)
+    _require_admin_permission(current_user, session, "projects:milestone_delete")
     ProjectService.delete_milestone(session, id, milestone_id)
 
 
@@ -210,7 +202,7 @@ def create_project_update(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> ProjectUpdateRead:
     """Posts a progress update log with photos and cost impact (Admin/Director/Manager)."""
-    _require_update_permission(current_user)
+    _require_update_permission(current_user, session, "projects:update_create")
     return ProjectService.create_project_update(
         session, id, current_user.id, update_in
     )
@@ -227,5 +219,5 @@ def delete_project_update(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> None:
     """Deletes a progress update log (Admin/Director only)."""
-    _require_admin_permission(current_user)
+    _require_admin_permission(current_user, session, "projects:update_delete")
     ProjectService.delete_project_update(session, id, update_id)

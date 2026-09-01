@@ -5,8 +5,9 @@ from uuid import UUID
 
 from sqlmodel import Session, func, select
 
+from app.api.deps import has_permission
 from app.core.exceptions import FeedbackAccessForbiddenError, FeedbackNotFoundError
-from app.models.enums import FeedbackCategory, FeedbackStatus, UserRole
+from app.models.enums import FeedbackCategory, FeedbackStatus
 from app.models.feedback import Feedback
 from app.models.user import User
 from app.schemas.feedback import FeedbackCreate, FeedbackRead, FeedbackRespond
@@ -20,10 +21,9 @@ class FeedbackService:
         session: Session, current_user: User, feedback: Feedback
     ) -> FeedbackRead:
         """Helper to convert Feedback model into sanitized FeedbackRead schema."""
-        is_admin_or_director = current_user.role in [
-            UserRole.ADMINISTRATOR,
-            UserRole.DIRECTOR,
-        ]
+        is_admin_or_director = has_permission(
+            current_user, session, "feedback:respond"
+        )
 
         reporter_user_id = feedback.reporter_user_id
         reporter_name = None
@@ -94,7 +94,7 @@ class FeedbackService:
         """
         query = select(Feedback)
 
-        if current_user.role not in [UserRole.ADMINISTRATOR, UserRole.DIRECTOR]:
+        if not has_permission(current_user, session, "feedback:respond"):
             query = query.where(Feedback.reporter_user_id == current_user.id)
 
         if category:
@@ -126,10 +126,9 @@ class FeedbackService:
         if not feedback:
             raise FeedbackNotFoundError(feedback_id)
 
-        is_admin_or_director = current_user.role in [
-            UserRole.ADMINISTRATOR,
-            UserRole.DIRECTOR,
-        ]
+        is_admin_or_director = has_permission(
+            current_user, session, "feedback:respond"
+        )
 
         if not is_admin_or_director and feedback.reporter_user_id != current_user.id:
             raise FeedbackAccessForbiddenError
@@ -159,7 +158,7 @@ class FeedbackService:
         if not feedback:
             raise FeedbackNotFoundError(feedback_id)
 
-        if current_user.role not in [UserRole.ADMINISTRATOR, UserRole.DIRECTOR]:
+        if not has_permission(current_user, session, "feedback:respond"):
             raise FeedbackAccessForbiddenError(
                 "Only administrators or directors can respond to feedback"
             )

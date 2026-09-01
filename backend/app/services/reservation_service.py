@@ -5,13 +5,14 @@ from uuid import UUID
 
 from sqlmodel import Session, select
 
+from app.api.deps import has_permission
 from app.core.exceptions import (
     ForbiddenError,
     ReservableSpaceNotFoundError,
     SpaceReservationConflictError,
     SpaceReservationNotFoundError,
 )
-from app.models.enums import ReservationStatus, UserRole
+from app.models.enums import ReservationStatus
 from app.models.reservation import ReservableSpace, SpaceReservation
 from app.models.user import User
 from app.schemas.reservation import (
@@ -21,7 +22,6 @@ from app.schemas.reservation import (
     SpaceReservationRead,
 )
 
-_STAFF_ROLES = {UserRole.ADMINISTRATOR, UserRole.DIRECTOR}
 _BLOCKING_STATUSES = [ReservationStatus.CONFIRMED, ReservationStatus.PENDING]
 
 
@@ -238,7 +238,7 @@ class SpaceReservationService:
         - mine omitted/false, space_id set, non-staff: masked busy-slot
           calendar view (own row unmasked).
         """
-        is_staff = current_user.role in _STAFF_ROLES
+        is_staff = has_permission(current_user, session, "reservations:approve")
         statement = select(SpaceReservation)
 
         if mine:
@@ -279,7 +279,7 @@ class SpaceReservationService:
     ) -> SpaceReservationRead:
         """Get a single reservation by id, per visibility rules."""
         reservation = session.get(SpaceReservation, reservation_id)
-        is_staff = current_user.role in _STAFF_ROLES
+        is_staff = has_permission(current_user, session, "reservations:approve")
         if not reservation or (
             not is_staff and reservation.reserved_by_id != current_user.id
         ):
@@ -295,7 +295,7 @@ class SpaceReservationService:
         approve: bool,
     ) -> SpaceReservation:
         """Approve or reject a PENDING reservation. Staff only."""
-        if current_user.role not in _STAFF_ROLES:
+        if not has_permission(current_user, session, "reservations:approve"):
             raise ForbiddenError(
                 "Only ADMINISTRATOR and DIRECTOR can approve or reject reservations"
             )
@@ -334,7 +334,7 @@ class SpaceReservationService:
         if not reservation or reservation.status not in _BLOCKING_STATUSES:
             raise SpaceReservationNotFoundError(reservation_id)
 
-        is_staff = current_user.role in _STAFF_ROLES
+        is_staff = has_permission(current_user, session, "reservations:approve")
         is_owner = reservation.reserved_by_id == current_user.id
 
         if not is_staff:

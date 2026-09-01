@@ -7,8 +7,10 @@ case: a new router that ships without declared permissions fails here, in CI,
 before F2 can build a matrix with a hole in it. The other cases keep it from
 rotting.
 
-Nothing here enforces anything at runtime. IAM F1 builds the vocabulary and
-the plumbing only; enforcement is F4.
+IAM F1 built the vocabulary and the plumbing only. IAM F2 (`APRAS-46`) is
+the enforcement swap, and amends exactly two assertions here: the
+reachability rule now admits `SCOPE_PERMISSIONS` (§4.2), and the `UserType`
+schemas now carry `permissions` (§9.1).
 """
 
 import re
@@ -18,6 +20,7 @@ from fastapi.routing import APIRoute
 from app.core.permissions import (
     PERMISSIONS,
     ROUTE_PERMISSIONS,
+    SCOPE_PERMISSIONS,
     UNGUARDED_ROUTES,
     module_of,
     permission_for_route,
@@ -94,8 +97,26 @@ def test_every_declared_permission_is_in_the_catalogue():
 
 
 def test_every_catalogue_permission_is_reachable():
-    """No dead vocabulary: the catalogue is exactly the route surface."""
-    assert set(ROUTE_PERMISSIONS.values()) == PERMISSIONS
+    """No dead vocabulary: route surface plus IAM F2's four scope permissions.
+
+    Amended by APRAS-46 §7.1. F1's intent survives: a scope permission is
+    dead unless it appears in the enforcement code, which
+    `test_permission_enforcement.py`'s AST allowlist makes visible.
+    """
+    assert set(ROUTE_PERMISSIONS.values()) | SCOPE_PERMISSIONS == PERMISSIONS
+
+
+def test_scope_permissions_are_not_route_mapped():
+    assert SCOPE_PERMISSIONS & set(ROUTE_PERMISSIONS.values()) == frozenset()
+
+
+def test_scope_permissions_are_exactly_four():
+    assert set(SCOPE_PERMISSIONS) == {
+        "residents:read_any_lot",
+        "visitors:manage_any_lot",
+        "occurrences:manage_all",
+        "uploads:auto_approve",
+    }
 
 
 def test_permission_strings_follow_the_convention():
@@ -148,8 +169,27 @@ def test_module_of_returns_the_module_segment():
     assert {module_of(p) for p in PERMISSIONS} == {p.split(":")[0] for p in PERMISSIONS}
 
 
-def test_user_type_schemas_are_unchanged():
-    """The model gains `permissions`; the wire format does not (§9.3)."""
-    assert set(UserTypeCreate.model_fields) == {"name", "allowed_menus"}
-    assert set(UserTypeRead.model_fields) == {"id", "name", "allowed_menus", "role"}
-    assert set(UserTypeUpdate.model_fields) == {"name", "allowed_menus"}
+def test_user_type_schemas_expose_permissions():
+    """The declared F1 -> F2 handoff (APRAS-46 §7.1).
+
+    F1's ER-6 pinned these schemas *in F1*; IAM F2 is the slice that makes
+    groups editable, so the three schemas gain `permissions`. The assertion
+    stays exact, so a future field still fails CI.
+    """
+    assert set(UserTypeCreate.model_fields) == {
+        "name",
+        "allowed_menus",
+        "permissions",
+    }
+    assert set(UserTypeUpdate.model_fields) == {
+        "name",
+        "allowed_menus",
+        "permissions",
+    }
+    assert set(UserTypeRead.model_fields) == {
+        "id",
+        "name",
+        "allowed_menus",
+        "role",
+        "permissions",
+    }

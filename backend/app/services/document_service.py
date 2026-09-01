@@ -3,6 +3,7 @@ from datetime import datetime
 from uuid import UUID
 from sqlmodel import Session, func, select
 
+from app.api.deps import has_permission
 from app.core.exceptions import (
     DocumentFolderNotFoundError,
     DocumentNotFoundError,
@@ -11,7 +12,6 @@ from app.core.exceptions import (
     InvalidFolderHierarchyError,
 )
 from app.models.document import AssociationDocument, DocumentDownloadLog, DocumentFolder
-from app.models.enums import UserRole
 from app.models.user import User
 from app.schemas.document import (
     AssociationDocumentCreate,
@@ -25,14 +25,17 @@ from app.schemas.document import (
 )
 
 
-def _check_admin_or_director(user: User) -> None:
-    if user.role not in (UserRole.ADMINISTRATOR, UserRole.DIRECTOR):
+def _check_admin_or_director(user: User, session: Session, permission: str) -> None:
+    if not has_permission(user, session, permission):
         raise ForbiddenError("Not enough privileges")
 
 
 def get_accessible_folder_ids(session: Session, user: User) -> set[UUID]:
     folders = session.exec(select(DocumentFolder)).all()
-    if user.role in (UserRole.ADMINISTRATOR, UserRole.DIRECTOR):
+    # The all-folders staff bypass. `documents:folder_create` is the {A, D}
+    # permission of this module; the per-folder ACL below is the object
+    # dimension and stays keyed on the role string (F5 owns it).
+    if has_permission(user, session, "documents:folder_create"):
         return {f.id for f in folders}
 
     accessible_ids: set[UUID] = set()
@@ -99,7 +102,7 @@ def get_folder_tree(session: Session, user: User) -> list[DocumentFolderTreeRead
 def create_folder(
     session: Session, user: User, folder_in: DocumentFolderCreate
 ) -> DocumentFolderRead:
-    _check_admin_or_director(user)
+    _check_admin_or_director(user, session, "documents:folder_create")
 
     if folder_in.parent_id:
         parent = session.get(DocumentFolder, folder_in.parent_id)
@@ -134,7 +137,7 @@ def create_folder(
 def update_folder(
     session: Session, user: User, folder_id: UUID, folder_in: DocumentFolderUpdate
 ) -> DocumentFolderRead:
-    _check_admin_or_director(user)
+    _check_admin_or_director(user, session, "documents:folder_update")
 
     folder = session.get(DocumentFolder, folder_id)
     if not folder:
@@ -193,7 +196,7 @@ def update_folder(
 
 
 def delete_folder(session: Session, user: User, folder_id: UUID) -> None:
-    _check_admin_or_director(user)
+    _check_admin_or_director(user, session, "documents:folder_delete")
 
     folder = session.get(DocumentFolder, folder_id)
     if not folder:
@@ -290,7 +293,7 @@ def get_documents(
 def create_document(
     session: Session, user: User, doc_in: AssociationDocumentCreate
 ) -> AssociationDocumentRead:
-    _check_admin_or_director(user)
+    _check_admin_or_director(user, session, "documents:create")
 
     folder = session.get(DocumentFolder, doc_in.folder_id)
     if not folder:
@@ -326,7 +329,7 @@ def create_document_version(
     doc_id: UUID,
     version_in: AssociationDocumentVersionCreate,
 ) -> AssociationDocumentRead:
-    _check_admin_or_director(user)
+    _check_admin_or_director(user, session, "documents:version_create")
 
     prev_doc = session.get(AssociationDocument, doc_id)
     if not prev_doc:
@@ -387,7 +390,7 @@ def log_download(session: Session, user: User, doc_id: UUID) -> str:
 
 
 def delete_document(session: Session, user: User, doc_id: UUID) -> None:
-    _check_admin_or_director(user)
+    _check_admin_or_director(user, session, "documents:delete")
 
     doc = session.get(AssociationDocument, doc_id)
     if not doc:

@@ -6,6 +6,7 @@ import logging
 from typing import Optional
 from uuid import UUID
 
+from app.api.deps import has_permission
 from app.core.exceptions import (
     AccessLogNotFoundError,
     AuthorizationExpiredError,
@@ -19,7 +20,7 @@ from app.core.exceptions import (
     OpenEntryExistsError,
     VisitorNotFoundError,
 )
-from app.models.enums import AuthorizationStatus, AuthorizationType, DayOfWeek, ShiftType, UserRole
+from app.models.enums import AuthorizationStatus, AuthorizationType, DayOfWeek, ShiftType
 from app.models.lot import Lot, UserLotLink
 from app.models.resident import Resident
 from app.models.user import User
@@ -60,11 +61,7 @@ class VisitorService:
     @staticmethod
     def _check_lot_access(session: Session, lot_id: UUID, current_user: User) -> None:
         """Check if current user is allowed to access or manage authorizations for lot_id."""
-        if current_user.role in (
-            UserRole.ADMINISTRATOR,
-            UserRole.DIRECTOR,
-            UserRole.MANAGER,
-        ):
+        if has_permission(current_user, session, "visitors:manage_any_lot"):
             return
 
         # Check if user is linked to lot via UserLotLink
@@ -97,11 +94,7 @@ class VisitorService:
     @staticmethod
     def get_user_linked_lot_ids(session: Session, current_user: User) -> list[UUID]:
         """Return list of lot IDs linked to the current user."""
-        if current_user.role in (
-            UserRole.ADMINISTRATOR,
-            UserRole.DIRECTOR,
-            UserRole.MANAGER,
-        ):
+        if has_permission(current_user, session, "visitors:manage_any_lot"):
             all_lots = session.exec(select(Lot.id)).all()
             return list(all_lots)
 
@@ -284,7 +277,10 @@ class VisitorService:
         linked to the authorization's lot, same as the other routes here.
         """
         auth = VisitorService.get_authorization_by_id(session, auth_id)
-        if current_user.role != UserRole.PORTEIRO:
+        # `gate:checkin` is `{A, D, M, P}`; A/D/M were already bypassing
+        # inside `_check_lot_access`, so the composed outcome is unchanged
+        # and one branch disappears.
+        if not has_permission(current_user, session, "gate:checkin"):
             VisitorService._check_lot_access(session, auth.lot_id, current_user)
         return auth
 
@@ -295,11 +291,10 @@ class VisitorService:
         """Revoke a pre-authorization."""
         auth = VisitorService.get_authorization_by_id(session, auth_id)
 
-        if current_user.role not in (
-            UserRole.ADMINISTRATOR,
-            UserRole.DIRECTOR,
-            UserRole.MANAGER,
-        ) and auth.authorizer_user_id != current_user.id:
+        if (
+            not has_permission(current_user, session, "visitors:manage_any_lot")
+            and auth.authorizer_user_id != current_user.id
+        ):
             # Check if current user is linked to the lot
             VisitorService._check_lot_access(session, auth.lot_id, current_user)
 
@@ -461,11 +456,7 @@ class VisitorService:
         query = select(AccessLog)
 
         # RBAC check: non-admin/director/manager restricted to their own linked lots
-        if current_user.role not in (
-            UserRole.ADMINISTRATOR,
-            UserRole.DIRECTOR,
-            UserRole.MANAGER,
-        ):
+        if not has_permission(current_user, session, "visitors:manage_any_lot"):
             linked_lot_ids = VisitorService.get_user_linked_lot_ids(session, current_user)
             if lot_id:
                 if lot_id not in linked_lot_ids:

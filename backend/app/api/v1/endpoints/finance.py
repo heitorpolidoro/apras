@@ -10,7 +10,7 @@ from sqlmodel import Session
 from app.api import deps as api_deps
 from app.core.exceptions import FinanceAccessForbiddenError
 from app.db import get_session
-from app.models.enums import TransactionType, UserRole
+from app.models.enums import TransactionType
 from app.models.finance import FinancialTransaction
 from app.models.user import User
 from app.schemas.finance import (
@@ -32,48 +32,43 @@ from app.services.finance_service import FinanceService
 
 router = APIRouter()
 
-_FINANCE_READ_ROLES = {
-    UserRole.ADMINISTRATOR,
-    UserRole.DIRECTOR,
-    UserRole.MANAGER,
-    UserRole.RESIDENT,
-}
-_FINANCE_ADMIN_ROLES = {UserRole.ADMINISTRATOR, UserRole.DIRECTOR}
-_FINANCE_WRITE_ROLES = {
-    UserRole.ADMINISTRATOR,
-    UserRole.DIRECTOR,
-    UserRole.MANAGER,
-}
-
-
-def _require_read_permission(current_user: User) -> None:
-    if current_user.role not in _FINANCE_READ_ROLES:
+def _require_read_permission(
+    current_user: User, session: Session, permission: str
+) -> None:
+    if not api_deps.has_permission(current_user, session, permission):
         raise FinanceAccessForbiddenError("Access denied to the finance module")
 
 
-def _require_admin_permission(current_user: User) -> None:
-    if current_user.role not in _FINANCE_ADMIN_ROLES:
+def _require_admin_permission(
+    current_user: User, session: Session, permission: str
+) -> None:
+    if not api_deps.has_permission(current_user, session, permission):
         raise FinanceAccessForbiddenError(
             "Only ADMINISTRATOR and DIRECTOR can perform this action"
         )
 
 
-def _require_write_permission(current_user: User) -> None:
-    if current_user.role not in _FINANCE_WRITE_ROLES:
+def _require_write_permission(
+    current_user: User, session: Session, permission: str
+) -> None:
+    if not api_deps.has_permission(current_user, session, permission):
         raise FinanceAccessForbiddenError(
             "Not enough privileges to create financial transactions"
         )
 
 
 def _require_transaction_edit_permission(
-    current_user: User, transaction: FinancialTransaction
+    current_user: User, transaction: FinancialTransaction, session: Session
 ) -> None:
-    if current_user.role in _FINANCE_ADMIN_ROLES:
+    """The finance-admin short-circuit, then the own-row narrowing.
+
+    Exact: the enclosing `_require_write_permission` has already excluded
+    everyone below MANAGER, so "lacks `finance:transaction_delete`" is
+    precisely "is a MANAGER" here.
+    """
+    if api_deps.has_permission(current_user, session, "finance:transaction_delete"):
         return
-    if (
-        current_user.role == UserRole.MANAGER
-        and transaction.created_by_id == current_user.id
-    ):
+    if transaction.created_by_id == current_user.id:
         return
     raise FinanceAccessForbiddenError(
         "You can only edit or manage invoices on transactions you created"
@@ -93,9 +88,9 @@ def list_categories(
     include_inactive: bool = Query(default=False),
 ) -> list[FinanceCategoryRead]:
     """Lists finance categories (inactive list restricted to admin roles)."""
-    _require_read_permission(current_user)
+    _require_read_permission(current_user, session, "finance:read")
     if include_inactive:
-        _require_admin_permission(current_user)
+        _require_admin_permission(current_user, session, "finance:category_create")
     categories = FinanceService.list_categories(
         session=session, type_filter=type, include_inactive=include_inactive
     )
@@ -111,7 +106,7 @@ def create_category(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> FinanceCategoryRead:
     """Creates a finance category (Admin/Director only)."""
-    _require_admin_permission(current_user)
+    _require_admin_permission(current_user, session, "finance:category_create")
     category = FinanceService.create_category(session, category_in)
     return FinanceCategoryRead.model_validate(category)
 
@@ -124,7 +119,7 @@ def update_category(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> FinanceCategoryRead:
     """Renames and/or toggles a finance category (Admin/Director only)."""
-    _require_admin_permission(current_user)
+    _require_admin_permission(current_user, session, "finance:category_update")
     category = FinanceService.update_category(session, id, category_in)
     return FinanceCategoryRead.model_validate(category)
 
@@ -141,7 +136,7 @@ def list_budget_lines(
     fiscal_year: int = Query(...),
 ) -> list[BudgetLineRead]:
     """Lists budget lines for a fiscal year."""
-    _require_read_permission(current_user)
+    _require_read_permission(current_user, session, "finance:read")
     budget_lines = FinanceService.list_budget_lines(session, fiscal_year)
     return [FinanceService.format_budget_line_read(bl) for bl in budget_lines]
 
@@ -155,7 +150,7 @@ def create_budget_line(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> BudgetLineRead:
     """Creates a budget line (Admin/Director only)."""
-    _require_admin_permission(current_user)
+    _require_admin_permission(current_user, session, "finance:budget_create")
     budget_line = FinanceService.create_budget_line(session, budget_in)
     return FinanceService.format_budget_line_read(budget_line)
 
@@ -168,7 +163,7 @@ def update_budget_line(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> BudgetLineRead:
     """Updates a budget line's planned amount and/or notes (Admin/Director only)."""
-    _require_admin_permission(current_user)
+    _require_admin_permission(current_user, session, "finance:budget_update")
     budget_line = FinanceService.update_budget_line(session, id, budget_in)
     return FinanceService.format_budget_line_read(budget_line)
 
@@ -180,7 +175,7 @@ def delete_budget_line(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> None:
     """Deletes a budget line (Admin/Director only)."""
-    _require_admin_permission(current_user)
+    _require_admin_permission(current_user, session, "finance:budget_delete")
     FinanceService.delete_budget_line(session, id)
 
 
@@ -201,7 +196,7 @@ def list_transactions(
     limit: int = Query(default=50, ge=1, le=100),
 ) -> PaginatedTransactions:
     """Lists financial transactions with optional filters and pagination."""
-    _require_read_permission(current_user)
+    _require_read_permission(current_user, session, "finance:read")
     items, total = FinanceService.list_transactions(
         session=session,
         type_filter=type,
@@ -230,7 +225,7 @@ def create_transaction(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> FinancialTransactionRead:
     """Creates a financial transaction (Admin/Director/Manager only)."""
-    _require_write_permission(current_user)
+    _require_write_permission(current_user, session, "finance:transaction_create")
     transaction = FinanceService.create_transaction(
         session, current_user.id, transaction_in
     )
@@ -244,7 +239,7 @@ def get_transaction(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> FinancialTransactionRead:
     """Retrieves a single financial transaction."""
-    _require_read_permission(current_user)
+    _require_read_permission(current_user, session, "finance:read")
     transaction = FinanceService.get_transaction_by_id(session, id)
     return FinanceService.format_transaction_read(session, transaction)
 
@@ -257,9 +252,9 @@ def update_transaction(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> FinancialTransactionRead:
     """Updates a financial transaction (write roles + ownership rule for Manager)."""
-    _require_write_permission(current_user)
+    _require_write_permission(current_user, session, "finance:transaction_update")
     transaction = FinanceService.get_transaction_by_id(session, id)
-    _require_transaction_edit_permission(current_user, transaction)
+    _require_transaction_edit_permission(current_user, transaction, session)
     updated = FinanceService.update_transaction(session, transaction, transaction_in)
     return FinanceService.format_transaction_read(session, updated)
 
@@ -271,7 +266,7 @@ def delete_transaction(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> None:
     """Deletes a financial transaction and its invoice, if any (Admin/Director only)."""
-    _require_admin_permission(current_user)
+    _require_admin_permission(current_user, session, "finance:transaction_delete")
     transaction = FinanceService.get_transaction_by_id(session, id)
     FinanceService.delete_transaction(session, transaction)
 
@@ -284,9 +279,9 @@ async def upload_invoice(
     file: UploadFile = File(...),
 ) -> FinancialTransactionRead:
     """Uploads/replaces the PDF invoice on a transaction (write roles + ownership)."""
-    _require_write_permission(current_user)
+    _require_write_permission(current_user, session, "finance:invoice_upload")
     transaction = FinanceService.get_transaction_by_id(session, id)
-    _require_transaction_edit_permission(current_user, transaction)
+    _require_transaction_edit_permission(current_user, transaction, session)
 
     file_bytes = await file.read()
     filename = file.filename or "invoice.pdf"
@@ -309,9 +304,9 @@ def delete_invoice(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> None:
     """Removes the invoice attached to a transaction (write roles + ownership)."""
-    _require_write_permission(current_user)
+    _require_write_permission(current_user, session, "finance:invoice_delete")
     transaction = FinanceService.get_transaction_by_id(session, id)
-    _require_transaction_edit_permission(current_user, transaction)
+    _require_transaction_edit_permission(current_user, transaction, session)
     FinanceService.delete_invoice(session, transaction)
 
 
@@ -327,7 +322,7 @@ def get_balance(
     as_of: date | None = Query(default=None),
 ) -> CashBalanceRead:
     """Returns the cash balance as of a given date (defaults to today)."""
-    _require_read_permission(current_user)
+    _require_read_permission(current_user, session, "finance:read")
     return FinanceService.get_cash_balance(session, as_of)
 
 
@@ -339,7 +334,7 @@ def get_statement(
     end_date: date = Query(...),
 ) -> FinancialStatementRead:
     """Returns the monthly cash inflows/outflows statement for a date range."""
-    _require_read_permission(current_user)
+    _require_read_permission(current_user, session, "finance:read")
     return FinanceService.get_statement(session, start_date, end_date)
 
 
@@ -350,7 +345,7 @@ def get_budget_vs_actual(
     fiscal_year: int = Query(...),
 ) -> BudgetVsActualRead:
     """Returns the budget-vs-actual execution table for a fiscal year."""
-    _require_read_permission(current_user)
+    _require_read_permission(current_user, session, "finance:read")
     return FinanceService.get_budget_vs_actual(session, fiscal_year)
 
 
@@ -367,7 +362,7 @@ def get_category_transactions(
     limit: int = Query(default=50, ge=1, le=100),
 ) -> PaginatedTransactions:
     """Returns the paginated drill-down transaction list for a category/year."""
-    _require_read_permission(current_user)
+    _require_read_permission(current_user, session, "finance:read")
     items, total = FinanceService.list_category_transactions(
         session=session,
         category_id=category_id,

@@ -4,6 +4,7 @@ from datetime import datetime
 import logging
 from uuid import UUID
 
+from app.api.deps import has_permission
 from app.core.exceptions import (
     DomainError,
     ForbiddenError,
@@ -11,7 +12,6 @@ from app.core.exceptions import (
     ResidentCPFConflictError,
     ResidentNotFoundError,
 )
-from app.models.enums import UserRole
 from app.models.lot import Lot, UserLotLink
 from app.models.resident import Resident
 from app.models.user import User
@@ -26,11 +26,7 @@ class ResidentService:
     @staticmethod
     def _check_lot_access(session: Session, lot_id: UUID, current_user: User) -> None:
         """Check if current user is allowed to access residents of lot_id."""
-        if current_user.role in (
-            UserRole.ADMINISTRATOR,
-            UserRole.DIRECTOR,
-            UserRole.MANAGER,
-        ):
+        if has_permission(current_user, session, "residents:read_any_lot"):
             return
 
         # Check if user is linked to lot via UserLotLink

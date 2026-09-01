@@ -5,7 +5,6 @@ from uuid import UUID
 
 from app.api import deps
 from app.core.exceptions import ForbiddenError
-from app.models.enums import UserRole
 from app.models.user import User
 from app.models.visitor import AccessLog
 from app.schemas.visitor import (
@@ -22,13 +21,10 @@ from sqlmodel import Session
 router = APIRouter()
 
 
-def _assert_gatekeeper_access(current_user: User) -> None:
-    if current_user.role not in (
-        UserRole.ADMINISTRATOR,
-        UserRole.DIRECTOR,
-        UserRole.MANAGER,
-        UserRole.PORTEIRO,
-    ):
+def _assert_gatekeeper_access(
+    current_user: User, session: Session, permission: str
+) -> None:
+    if not deps.has_permission(current_user, session, permission):
         raise ForbiddenError("Only gatekeepers and administrators can perform check-in or check-out")
 
 
@@ -59,7 +55,7 @@ def check_in_visitor(
     current_user: Annotated[User, Depends(deps.get_current_user)],
 ) -> AccessLogRead:
     """Register visitor entry at gate."""
-    _assert_gatekeeper_access(current_user)
+    _assert_gatekeeper_access(current_user, session, "gate:checkin")
     log = VisitorService.check_in(session, check_in_in, current_user)
     return _to_access_log_read(log)
 
@@ -75,7 +71,7 @@ def check_out_visitor(
     current_user: Annotated[User, Depends(deps.get_current_user)],
 ) -> AccessLogRead:
     """Register visitor exit at gate."""
-    _assert_gatekeeper_access(current_user)
+    _assert_gatekeeper_access(current_user, session, "gate:checkout")
     log = VisitorService.check_out(session, check_out_in, current_user)
     return _to_access_log_read(log)
 

@@ -5,7 +5,6 @@ from uuid import UUID
 
 from app.api import deps
 from app.core.exceptions import ForbiddenError
-from app.models.enums import UserRole
 from app.models.user import User
 from app.schemas.resident import (
     LinkUserPayload,
@@ -24,8 +23,10 @@ from sqlmodel import Session
 router = APIRouter()
 
 
-def assert_admin_or_director(current_user: User) -> None:
-    if current_user.role not in (UserRole.ADMINISTRATOR, UserRole.DIRECTOR):
+def assert_admin_or_director(
+    current_user: User, session: Session, permission: str
+) -> None:
+    if not deps.has_permission(current_user, session, permission):
         raise ForbiddenError("Only Administrators and Directors can perform this action")
 
 
@@ -97,7 +98,7 @@ def create_resident(
     session: Annotated[Session, Depends(deps.get_session)],
     current_user: Annotated[User, Depends(deps.get_current_user)],
 ) -> ResidentRead:
-    assert_admin_or_director(current_user)
+    assert_admin_or_director(current_user, session, "residents:create")
     resident = ResidentService.create_resident(session, lot_id, resident_in)
     return ResidentRead.model_validate(resident)
 
@@ -127,7 +128,7 @@ def update_resident(
     session: Annotated[Session, Depends(deps.get_session)],
     current_user: Annotated[User, Depends(deps.get_current_user)],
 ) -> ResidentRead:
-    assert_admin_or_director(current_user)
+    assert_admin_or_director(current_user, session, "residents:update")
     resident = ResidentService.get_resident_by_id(session, resident_id, current_user)
     updated = ResidentService.update_resident(
         session, resident, resident_in, current_user
@@ -144,7 +145,7 @@ def delete_resident(
     session: Annotated[Session, Depends(deps.get_session)],
     current_user: Annotated[User, Depends(deps.get_current_user)],
 ) -> None:
-    assert_admin_or_director(current_user)
+    assert_admin_or_director(current_user, session, "residents:delete")
     resident = ResidentService.get_resident_by_id(session, resident_id, current_user)
     ResidentService.deactivate_resident(session, resident)
 
@@ -160,7 +161,7 @@ def link_user_account(
     session: Annotated[Session, Depends(deps.get_session)],
     current_user: Annotated[User, Depends(deps.get_current_user)],
 ) -> ResidentRead:
-    assert_admin_or_director(current_user)
+    assert_admin_or_director(current_user, session, "residents:link_user")
     linked = ResidentService.link_user(session, resident_id, payload.user_id)
     return ResidentRead.model_validate(linked)
 
@@ -175,6 +176,6 @@ def unlink_user_account(
     session: Annotated[Session, Depends(deps.get_session)],
     current_user: Annotated[User, Depends(deps.get_current_user)],
 ) -> ResidentRead:
-    assert_admin_or_director(current_user)
+    assert_admin_or_director(current_user, session, "residents:unlink_user")
     unlinked = ResidentService.unlink_user(session, resident_id)
     return ResidentRead.model_validate(unlinked)

@@ -44,10 +44,40 @@ ALL_ROLES: frozenset[UserRole] = frozenset(UserRole)
 
 
 # ---------------------------------------------------------------------------
+# Scope permissions (IAM F2, APRAS-46 §4.2)
+# ---------------------------------------------------------------------------
+
+#: The only vocabulary IAM F2 adds. Each replaces an *object*-dimension staff
+#: bypass whose role set matches no route permission in the right module;
+#: forcing one (gating "see every lot's residents" on `assets:read` because
+#: both happen to be `{A, D, M}`) would break the day someone edits
+#: `assets:read`. They are deliberately **not** route-mapped, which is why
+#: `test_every_catalogue_permission_is_reachable` is amended rather than
+#: quietly satisfied.
+SCOPE_PERMISSIONS: frozenset[str] = frozenset(
+    {
+        # ResidentService._check_lot_access staff bypass.
+        "residents:read_any_lot",
+        # VisitorService._check_lot_access / get_user_linked_lot_ids /
+        # revoke_authorization / get_access_logs staff bypasses -- one
+        # predicate, four sites, the same {A, D, M} tuple today.
+        "visitors:manage_any_lot",
+        # occurrence_service A/D branches: see every occurrence, see
+        # internal-only timeline entries, unmask anonymous reporters, update
+        # status without being assigned.
+        "occurrences:manage_all",
+        # MediaService.upload_photo's auto-approval branch -- publishing
+        # without review is a real privilege, not a display rule.
+        "uploads:auto_approve",
+    }
+)
+
+
+# ---------------------------------------------------------------------------
 # The catalogue (§4)
 # ---------------------------------------------------------------------------
 
-PERMISSIONS: frozenset[str] = frozenset(
+PERMISSIONS: frozenset[str] = SCOPE_PERMISSIONS | frozenset(
     {
         # §4.1 tasks
         "tasks:read",
@@ -732,6 +762,11 @@ _LEGACY_ROLES_BY_PERMISSION: dict[str, frozenset[UserRole]] = {
     "access_control:facial_template_read": frozenset({A, D, M}),
     "access_control:facial_template_sync": frozenset({A, D}),
     "access_control:events_read": frozenset({A, D, M}),
+    # §4.2 (F2) scope permissions -- the role set each staff bypass has today
+    "residents:read_any_lot": frozenset({A, D, M}),
+    "visitors:manage_any_lot": frozenset({A, D, M}),
+    "occurrences:manage_all": frozenset({A, D}),
+    "uploads:auto_approve": frozenset({A, D, M}),
 }
 
 
@@ -755,6 +790,42 @@ LEGACY_ROLE_PERMISSIONS: dict[UserRole, frozenset[str]] = {
     )
     for role in UserRole
 }
+
+#: Permissions ADMINISTRATOR does NOT hold. Every entry needs a comment
+#: naming the production gate that excludes it. Lived in
+#: `tests/test_legacy_role_permissions.py` in F1; moved here by IAM F2 so
+#: production (`user_type_service.assert_can_grant`) can read it without
+#: importing a test module.
+ADMIN_GAP_PERMISSIONS: frozenset[str] = frozenset(
+    {
+        # PackageService.get_my_lots raises for the gatekeeper roles (incl.
+        # ADMINISTRATOR): staff use GET /packages/queue instead.
+        "packages:my_lots_read",
+    }
+)
+
+# TRANSITIONAL (IAM F2 -> F3). Exactly the seven tenant-scoped admin routes
+# APRAS-43 swapped to `get_current_tenant_admin` / `_or_manager`, expressed as
+# the permissions those routes now require. `get_effective_permissions` unions
+# this set in when `is_acting_tenant_admin` is true, which is what keeps a
+# RESIDENT tenant_admin passing `DELETE /lots/{id}` after the swap.
+#
+# It is deliberately **not** "every permission in the acting tenant": that is
+# F3's headline, and doing it here would hand a RESIDENT tenant_admin ~170
+# permissions they cannot reach today -- a widening the six-role matrix cannot
+# see. `test_tenant_admin_permissions_are_exactly_the_apras43_routes` pins it
+# to those seven routes through `ROUTE_PERMISSIONS`, so it cannot drift.
+TENANT_ADMIN_PERMISSIONS: frozenset[str] = frozenset(
+    {
+        "tasks:delete",
+        "lots:delete",
+        "users:update",
+        "users:update_contact",
+        "user_types:create",
+        "user_types:update",
+        "user_types:delete",
+    }
+)
 
 #: The slice that deletes `LEGACY_ROLE_PERMISSIONS`. Asserted by
 #: `tests/test_legacy_role_permissions.py` so removing the marker is a test

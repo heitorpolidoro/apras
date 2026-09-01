@@ -10,6 +10,7 @@ from uuid import UUID
 from sqlalchemy import func, or_
 from sqlmodel import Session, select
 
+from app.api.deps import has_permission
 from app.core.exceptions import (
     PurchaseAccessForbiddenError,
     PurchaseQuoteFrozenError,
@@ -17,7 +18,7 @@ from app.core.exceptions import (
     PurchaseRequestNotFoundError,
     PurchaseRequestNotOpenError,
 )
-from app.models.enums import PurchaseRequestStatus, UserRole
+from app.models.enums import PurchaseRequestStatus
 from app.models.purchase import PurchaseQuote, PurchaseQuoteDecision, PurchaseRequest
 from app.models.user import User
 from app.schemas.purchase import (
@@ -34,10 +35,6 @@ from app.schemas.purchase import (
     PurchaseSummaryRead,
 )
 
-_DECIDE_ROLES = {UserRole.ADMINISTRATOR, UserRole.DIRECTOR}
-_WRITE_ROLES = {UserRole.ADMINISTRATOR, UserRole.DIRECTOR, UserRole.MANAGER}
-_VIEW_ROLES = _WRITE_ROLES
-
 
 def _quote_total(quote: PurchaseQuote) -> float:
     """Total price of a quote (unit price times quantity, rounded to cents)."""
@@ -52,26 +49,34 @@ class PurchaseService:
     # ------------------------------------------------------------------ #
 
     @staticmethod
-    def _assert_can_view(current_user: User) -> None:
-        if current_user.role not in _VIEW_ROLES:
+    def _assert_can_view(current_user: User, session: Session, permission: str) -> None:
+        if not has_permission(current_user, session, permission):
             raise PurchaseAccessForbiddenError(
                 "Acesso às cotações de compra negado."
             )
 
     @staticmethod
-    def _assert_can_decide(current_user: User) -> None:
-        if current_user.role not in _DECIDE_ROLES:
+    def _assert_can_decide(
+        current_user: User, session: Session, permission: str
+    ) -> None:
+        if not has_permission(current_user, session, permission):
             raise PurchaseAccessForbiddenError(
                 "Apenas Administradores e Diretores podem escolher um orçamento."
             )
 
     @staticmethod
     def _assert_can_write_request(
-        current_user: User, purchase_request: PurchaseRequest
+        current_user: User, purchase_request: PurchaseRequest, session: Session
     ) -> None:
-        if current_user.role in _DECIDE_ROLES:
+        """Decide-level short-circuit, then the MANAGER own-row narrowing.
+
+        `purchases:decide` is `{A, D}` and `purchases:update` is `{A, D, M}`,
+        so "holds update but not decide" is exactly "is a MANAGER" -- the
+        same partition the two role comparisons drew, message for message.
+        """
+        if has_permission(current_user, session, "purchases:decide"):
             return
-        if current_user.role != UserRole.MANAGER:
+        if not has_permission(current_user, session, "purchases:update"):
             raise PurchaseAccessForbiddenError(
                 "Acesso às cotações de compra negado."
             )
@@ -85,10 +90,13 @@ class PurchaseService:
             )
 
     @staticmethod
-    def _assert_can_write_quote(current_user: User, quote: PurchaseQuote) -> None:
-        if current_user.role in _DECIDE_ROLES:
+    def _assert_can_write_quote(
+        current_user: User, quote: PurchaseQuote, session: Session
+    ) -> None:
+        """The same partition as `_assert_can_write_request`, for a quote."""
+        if has_permission(current_user, session, "purchases:decide"):
             return
-        if current_user.role != UserRole.MANAGER:
+        if not has_permission(current_user, session, "purchases:quote_update"):
             raise PurchaseAccessForbiddenError(
                 "Acesso às cotações de compra negado."
             )
@@ -212,7 +220,7 @@ class PurchaseService:
         session: Session, current_user: User, request_in: PurchaseRequestCreate
     ) -> PurchaseRequestRead:
         """Create a new purchase request in the OPEN status."""
-        if current_user.role not in _WRITE_ROLES:
+        if not has_permission(current_user, session, "purchases:create"):
             raise PurchaseAccessForbiddenError(
                 "Apenas Administradores, Diretores e Gerentes podem abrir pedidos."
             )
@@ -247,7 +255,7 @@ class PurchaseService:
         limit: int = 100,
     ) -> PaginatedPurchaseRequestRead:
         """List purchase requests with filters, search and pagination."""
-        PurchaseService._assert_can_view(current_user)
+        PurchaseService._assert_can_view(current_user, session, "purchases:read")
 
         statement = select(PurchaseRequest)
         if status:
@@ -317,7 +325,9 @@ class PurchaseService:
     @staticmethod
     def get_summary(session: Session, current_user: User) -> PurchaseSummaryRead:
         """Compute aggregate metrics for the purchase dashboard."""
-        PurchaseService._assert_can_view(current_user)
+        PurchaseService._assert_can_view(
+            current_user, session, "purchases:summary_read"
+        )
 
         requests = session.exec(select(PurchaseRequest)).all()
         counts = dict.fromkeys(PurchaseRequestStatus, 0)
@@ -368,7 +378,7 @@ class PurchaseService:
         session: Session, current_user: User, request_id: UUID
     ) -> PurchaseRequestDetailRead:
         """Return a purchase request with its quotes and decision history."""
-        PurchaseService._assert_can_view(current_user)
+        PurchaseService._assert_can_view(current_user, session, "purchases:read")
         purchase_request = PurchaseService._get_request_or_404(session, request_id)
 
         quotes = list(purchase_request.quotes)
@@ -437,9 +447,11 @@ class PurchaseService:
         request_in: PurchaseRequestUpdate,
     ) -> PurchaseRequestRead:
         """Update the free-text fields of a purchase request."""
-        PurchaseService._assert_can_view(current_user)
+        PurchaseService._assert_can_view(current_user, session, "purchases:update")
         purchase_request = PurchaseService._get_request_or_404(session, request_id)
-        PurchaseService._assert_can_write_request(current_user, purchase_request)
+        PurchaseService._assert_can_write_request(
+            current_user, purchase_request, session
+        )
 
         for key, value in request_in.model_dump(exclude_unset=True).items():
             setattr(purchase_request, key, value)
@@ -468,9 +480,11 @@ class PurchaseService:
         session: Session, current_user: User, request_id: UUID
     ) -> None:
         """Delete a purchase request and cascade its quotes and decisions."""
-        PurchaseService._assert_can_view(current_user)
+        PurchaseService._assert_can_view(current_user, session, "purchases:delete")
         purchase_request = PurchaseService._get_request_or_404(session, request_id)
-        PurchaseService._assert_can_write_request(current_user, purchase_request)
+        PurchaseService._assert_can_write_request(
+            current_user, purchase_request, session
+        )
 
         session.delete(purchase_request)
         session.commit()
@@ -480,7 +494,7 @@ class PurchaseService:
         session: Session, current_user: User, request_id: UUID
     ) -> PurchaseRequestRead:
         """Cancel an open purchase request."""
-        PurchaseService._assert_can_decide(current_user)
+        PurchaseService._assert_can_decide(current_user, session, "purchases:cancel")
         purchase_request = PurchaseService._get_request_or_404(session, request_id)
 
         if purchase_request.status != PurchaseRequestStatus.OPEN:
@@ -508,7 +522,7 @@ class PurchaseService:
         quote_in: PurchaseQuoteCreate,
     ) -> PurchaseQuoteRead:
         """Add a supplier quote to an open purchase request."""
-        if current_user.role not in _WRITE_ROLES:
+        if not has_permission(current_user, session, "purchases:quote_create"):
             raise PurchaseAccessForbiddenError(
                 "Acesso às cotações de compra negado."
             )
@@ -543,10 +557,12 @@ class PurchaseService:
         quote_in: PurchaseQuoteUpdate,
     ) -> PurchaseQuoteRead:
         """Update a supplier quote on an open purchase request."""
-        PurchaseService._assert_can_view(current_user)
+        PurchaseService._assert_can_view(
+            current_user, session, "purchases:quote_update"
+        )
         purchase_request = PurchaseService._get_request_or_404(session, request_id)
         quote = PurchaseService._get_quote_or_404(session, request_id, quote_id)
-        PurchaseService._assert_can_write_quote(current_user, quote)
+        PurchaseService._assert_can_write_quote(current_user, quote, session)
         PurchaseService._assert_quotes_unfrozen(purchase_request)
 
         update_data = quote_in.model_dump(exclude_unset=True)
@@ -569,10 +585,12 @@ class PurchaseService:
         session: Session, current_user: User, request_id: UUID, quote_id: UUID
     ) -> None:
         """Delete a supplier quote from an open purchase request."""
-        PurchaseService._assert_can_view(current_user)
+        PurchaseService._assert_can_view(
+            current_user, session, "purchases:quote_delete"
+        )
         purchase_request = PurchaseService._get_request_or_404(session, request_id)
         quote = PurchaseService._get_quote_or_404(session, request_id, quote_id)
-        PurchaseService._assert_can_write_quote(current_user, quote)
+        PurchaseService._assert_can_write_quote(current_user, quote, session)
         PurchaseService._assert_quotes_unfrozen(purchase_request)
 
         session.delete(quote)
@@ -590,7 +608,7 @@ class PurchaseService:
         decision_in: PurchaseDecisionCreate,
     ) -> PurchaseDecisionRead:
         """Record the justified choice of one quote for a purchase request."""
-        PurchaseService._assert_can_decide(current_user)
+        PurchaseService._assert_can_decide(current_user, session, "purchases:decide")
         purchase_request = PurchaseService._get_request_or_404(session, request_id)
 
         if purchase_request.status == PurchaseRequestStatus.CANCELLED:

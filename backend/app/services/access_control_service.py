@@ -6,6 +6,7 @@ from uuid import UUID
 
 from sqlmodel import Session, func, select
 
+from app.api.deps import has_permission
 from app.core import tenant_context
 from app.core.exceptions import (
     AccessDeviceNotFoundError,
@@ -21,7 +22,6 @@ from app.models.enums import (
     EntityType,
     FacialTemplateSyncStatus,
     PhotoApprovalStatus,
-    UserRole,
 )
 from app.models.media_asset import MediaAsset
 from app.models.resident import Resident
@@ -33,13 +33,17 @@ from app.schemas.access_control import (
 )
 
 
-def _assert_admin_or_director(current_user: User) -> None:
-    if current_user.role not in (UserRole.ADMINISTRATOR, UserRole.DIRECTOR):
+def _assert_admin_or_director(
+    current_user: User, session: Session, permission: str
+) -> None:
+    if not has_permission(current_user, session, permission):
         raise ForbiddenError("Only Administrators and Directors can manage access control devices")
 
 
-def _assert_admin_director_or_manager(current_user: User) -> None:
-    if current_user.role not in (UserRole.ADMINISTRATOR, UserRole.DIRECTOR, UserRole.MANAGER):
+def _assert_admin_director_or_manager(
+    current_user: User, session: Session, permission: str
+) -> None:
+    if not has_permission(current_user, session, permission):
         raise ForbiddenError("Only Administrators, Directors, and Managers can view access control data")
 
 
@@ -55,7 +59,7 @@ class AccessControlService:
         session: Session, device_in: AccessDeviceCreate, current_user: User
     ) -> AccessDevice:
         """Register a new access-control device with a server-generated secret key."""
-        _assert_admin_or_director(current_user)
+        _assert_admin_or_director(current_user, session, "access_control:device_create")
 
         existing = session.exec(
             select(AccessDevice).where(AccessDevice.name == device_in.name)
@@ -78,7 +82,9 @@ class AccessControlService:
     @staticmethod
     def list_devices(session: Session, current_user: User) -> list[AccessDevice]:
         """List all registered access-control devices."""
-        _assert_admin_director_or_manager(current_user)
+        _assert_admin_director_or_manager(
+            current_user, session, "access_control:devices_read"
+        )
         devices = session.exec(select(AccessDevice).order_by(AccessDevice.name)).all()
         return list(devices)
 
@@ -98,7 +104,9 @@ class AccessControlService:
         current_user: User,
     ) -> AccessDevice:
         """Manually update a device's status."""
-        _assert_admin_or_director(current_user)
+        _assert_admin_or_director(
+            current_user, session, "access_control:device_update_status"
+        )
         device = AccessControlService.get_device_by_id(session, device_id)
         device.status = status_in.status
         device.updated_at = datetime.utcnow()
@@ -112,7 +120,9 @@ class AccessControlService:
         session: Session, device_id: UUID, current_user: User
     ) -> AccessDevice:
         """Rotate a device's secret key."""
-        _assert_admin_or_director(current_user)
+        _assert_admin_or_director(
+            current_user, session, "access_control:device_regenerate_key"
+        )
         device = AccessControlService.get_device_by_id(session, device_id)
         device.device_key = secrets.token_urlsafe(32)
         device.updated_at = datetime.utcnow()
@@ -130,7 +140,9 @@ class AccessControlService:
         session: Session, resident_id: UUID, current_user: User
     ) -> FacialTemplate:
         """Sync (simulated) a resident's template from their latest approved photo."""
-        _assert_admin_or_director(current_user)
+        _assert_admin_or_director(
+            current_user, session, "access_control:facial_template_sync"
+        )
 
         resident = session.get(Resident, resident_id)
         if not resident:
@@ -185,7 +197,9 @@ class AccessControlService:
         deliberate one: an unknown resident id is now a 404 instead of
         `200 null`, matching the sibling `.../facial-template/sync` route.
         """
-        _assert_admin_director_or_manager(current_user)
+        _assert_admin_director_or_manager(
+            current_user, session, "access_control:facial_template_read"
+        )
         resident = session.get(Resident, resident_id)
         if not resident:
             raise ResidentNotFoundError(resident_id)
@@ -269,7 +283,9 @@ class AccessControlService:
         limit: int = 100,
     ) -> tuple[list[FacialAccessEvent], int]:
         """List facial access events, most recent first, with optional filters."""
-        _assert_admin_director_or_manager(current_user)
+        _assert_admin_director_or_manager(
+            current_user, session, "access_control:events_read"
+        )
 
         # `FacialAccessEvent` inherits its tenant from `AccessDevice`; the
         # join is what puts a scoped entity in the statement (APRAS-42 §6.2).

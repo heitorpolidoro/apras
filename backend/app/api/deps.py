@@ -10,12 +10,13 @@ import jwt
 from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import ValidationError
+from sqlalchemy.orm import object_session
 from sqlmodel import Session, select
 
 from app.core import tenant_context
 from app.core.config import settings
 from app.core.exceptions import ForbiddenError
-from app.core.permissions import LEGACY_ROLE_PERMISSIONS
+from app.core.permissions import LEGACY_ROLE_PERMISSIONS, TENANT_ADMIN_PERMISSIONS
 from app.db import get_session
 from app.models.enums import MenuKey, UserRole
 from app.models.task import Task
@@ -255,9 +256,32 @@ def get_effective_permissions(user: User, session: Session) -> frozenset[str]:
         ).all()
         for user_type in user_types:
             granted.update(user_type.permissions)
+    # The tenant_admin bridge (APRAS-46 §3.3). It reads the *capability*,
+    # never a role, and `is_acting_tenant_admin` has no DEFAULT_TENANT_ID
+    # fallback, so on a global route, in `app/seed.py` or in a unit-test
+    # Session it grants nothing.
+    if is_acting_tenant_admin(user, session):
+        granted |= TENANT_ADMIN_PERMISSIONS
     return frozenset(granted)
 
 
+def has_permission(user: User, session: Session, permission: str) -> bool:
+    """True when `user` holds `permission` in the session's acting tenant.
+
+    The in-code predicate every non-route-level authorization check uses
+    after IAM F2's swap: same function, same line, same exception class, same
+    detail string as the role comparison it replaces -- only the condition
+    changes.
+
+    Args:
+        user: The user whose permissions are being read.
+        session: Database session carrying (or not) an acting tenant.
+        permission: A `<module>:<action>` string from the catalogue.
+
+    Returns:
+        bool: Whether the permission is held.
+    """
+    return permission in get_effective_permissions(user, session)
 def assert_menu_access(current_user: User, menu_key: MenuKey, session: Session) -> None:
     """Raise ForbiddenError unless the user can access the given menu/feature.
 
@@ -305,7 +329,7 @@ def assert_manager_can_see_task(current_user: User, task: Task, session: Session
     """
     from app.core.exceptions import TaskNotFoundError
 
-    if current_user.role == UserRole.GUEST:
+    if not has_permission(current_user, session, "tasks:read"):
         raise TaskNotFoundError(task.id)
     if current_user.role == UserRole.MANAGER:
         if task.visible_to and not (
@@ -315,21 +339,34 @@ def assert_manager_can_see_task(current_user: User, task: Task, session: Session
             raise TaskNotFoundError(task.id)
 
 
-def assert_can_edit_task(current_user: User, task: Task) -> None:
+def assert_can_edit_task(
+    current_user: User, task: Task, session: Session | None = None
+) -> None:
     """Raise ForbiddenError if the user is not allowed to edit the task.
 
     ADMINISTRATOR and DIRECTOR may edit any task.
     MANAGER may only edit tasks that are unassigned or assigned to themselves.
-    GUEST may not edit any task.
+    A caller without `tasks:update` may not edit any task.
+
+    `session` is optional and falls back to the ORM session `task` is already
+    attached to. Production always passes it explicitly
+    (`endpoints/tasks.py::update_task`); the fallback exists so the four
+    pre-existing unit tests that call this helper with two arguments
+    (`test_tasks_rbac.py`, `test_guest_rbac.py`) stay byte-identical, which
+    APRAS-46 §11 requires. `object_session` is SQLAlchemy's own accessor, so
+    nothing is guessed: a detached task has no session and the caller must
+    supply one.
 
     Args:
         current_user: The authenticated user making the request.
         task: The task being edited.
+        session: Database session used to resolve effective permissions.
 
     Raises:
-        ForbiddenError: If the user's role does not allow editing this task.
+        ForbiddenError: If the user's permissions do not allow editing this task.
     """
-    if current_user.role == UserRole.GUEST:
+    session = session if session is not None else object_session(task)
+    if not has_permission(current_user, session, "tasks:update"):
         raise ForbiddenError("Guests cannot edit tasks")
     if current_user.role == UserRole.MANAGER:
         if task.assigned_to_id is not None and task.assigned_to_id != current_user.id:
@@ -436,52 +473,52 @@ def get_current_tenant(
     return tenant
 
 
-def get_current_tenant_admin(
-    session: Annotated[Session, Depends(get_session)],
-    current_user: Annotated[User, Depends(get_current_user)],
-    _tenant: Annotated[Tenant, Depends(get_current_tenant)],
-) -> User:
-    """Admin-level guard for a tenant-scoped route (APRAS-43 §4.2).
+class PermissionRequired:
+    """FastAPI dependency: 403 unless the caller holds `permission`.
 
-    Passes for a global ADMINISTRATOR and for a tenant_admin of the acting
-    tenant. Keeps `get_current_active_admin`'s 403 detail verbatim, so no
-    existing assertion changes.
+    A class rather than a closure so `tests/test_permission_enforcement.py`
+    can read `.permission` off a route's dependant tree and compare it to
+    `ROUTE_PERMISSIONS`.
 
-    Depending on `get_current_tenant` here is deliberate rather than relying
-    on the router-level dependency having run first: router-level
-    dependencies resolve before the endpoint's own and a shared
-    sub-dependency is called once per request, so the guard is
-    self-sufficient *and* free. It also cannot be mounted on an unscoped
-    router by accident — `tests/test_tenant_admin.py` forbids that
-    combination outright.
+    Depends on `get_current_tenant` for the same reason
+    `get_current_tenant_admin` did (APRAS-43 §4.2): the acting tenant must be
+    resolved before permissions are, router-level dependencies resolve first,
+    and a shared sub-dependency is solved once per request, so this is
+    self-sufficient and free.
+
+    It is used on **exactly** the seven routes whose gate is already a
+    route-level `Depends`. A gate that runs inside the handler today must
+    stay inside the handler: FastAPI solves sub-dependencies *before* it
+    raises body-validation errors, so moving one into the dependency tree
+    would flip a denied caller's `422` (invalid body) or `404` (missing
+    object) into a `403`.
     """
-    if not has_admin_capability(current_user, session):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="The user doesn't have enough privileges",
-        )
-    return current_user
+
+    def __init__(self, permission: str) -> None:
+        self.permission = permission
+
+    def __call__(
+        self,
+        session: Annotated[Session, Depends(get_session)],
+        current_user: Annotated[User, Depends(get_current_user)],
+        _tenant: Annotated[Tenant, Depends(get_current_tenant)],
+    ) -> User:
+        if not has_permission(current_user, session, self.permission):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="The user doesn't have enough privileges",
+            )
+        return current_user
 
 
-def get_current_tenant_admin_or_manager(
-    session: Annotated[Session, Depends(get_session)],
-    current_user: Annotated[User, Depends(get_current_user)],
-    _tenant: Annotated[Tenant, Depends(get_current_tenant)],
-) -> User:
-    """`get_current_tenant_admin`, widened by the MANAGER role.
+def require_permission(permission: str) -> PermissionRequired:
+    """The route-level guard: `Depends(require_permission("lots:delete"))`.
 
-    The tenant-aware counterpart of `get_current_admin_or_manager`, same 403
-    detail.
+    Returns the `User`, so a handler signature that read
+    `Depends(get_current_tenant_admin)` needs no other edit, and the 403
+    detail is byte-identical to the one it replaces.
     """
-    if not (
-        has_admin_capability(current_user, session)
-        or current_user.role == UserRole.MANAGER
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="The user doesn't have enough privileges",
-        )
-    return current_user
+    return PermissionRequired(permission)
 
 
 def use_global_tenant_scope(

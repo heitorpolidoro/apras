@@ -21,6 +21,7 @@ from uuid import UUID
 
 from sqlmodel import Session, select
 
+from app.api.deps import has_permission
 from app.core.exceptions import (
     AnonymousAssemblyError,
     AssemblyNotClosedError,
@@ -44,7 +45,6 @@ from app.models.enums import (
     AssemblyStatus,
     BallotRejectionReason,
     LotAssociationType,
-    UserRole,
     VoteKind,
     VoteStatus,
 )
@@ -72,9 +72,6 @@ from app.schemas.voting import (
 from app.services import document_service
 from app.services.storage_service import BaseStorageProvider, LocalStorageProvider
 
-BOARD_ROLES = (UserRole.ADMINISTRATOR, UserRole.DIRECTOR)
-TALLY_STAFF_ROLES = (UserRole.ADMINISTRATOR, UserRole.DIRECTOR, UserRole.MANAGER)
-NON_VOTING_ROLES = (UserRole.GUEST, UserRole.PORTEIRO)
 MINUTES_FOLDER_NAME = "Atas de Assembleia"
 
 
@@ -83,34 +80,48 @@ MINUTES_FOLDER_NAME = "Atas de Assembleia"
 # ---------------------------------------------------------------------------
 
 
-def _assert_board(user: User) -> None:
+def _assert_board(user: User, session: Session, permission: str) -> None:
     """Only ADMINISTRATOR/DIRECTOR manage assemblies and assembly votes."""
-    if user.role not in BOARD_ROLES:
+    if not has_permission(user, session, permission):
         raise ForbiddenError(
             "Apenas Administrador e Diretor podem gerenciar assembleias"
         )
 
 
-def _assert_can_create_vote(user: User, kind: VoteKind) -> None:
-    """MANAGER may create polls; assembly votes stay with the board."""
+def _assert_can_create_vote(
+    user: User, kind: VoteKind, session: Session, permission: str
+) -> None:
+    """MANAGER may create polls; assembly votes stay with the board.
+
+    The payload-dependent narrowing (§5.2) stays in code: `permission` is the
+    poll-level permission of the calling route (`votes:create` / `:update` /
+    `:close`, each `{A, D, M}`), and the ASSEMBLEIA arm still delegates to the
+    board guard.
+    """
     if kind == VoteKind.ENQUETE:
-        if user.role not in TALLY_STAFF_ROLES:
+        if not has_permission(user, session, permission):
             raise ForbiddenError("Você não pode criar enquetes")
         return
-    _assert_board(user)
+    _assert_board(user, session, "assemblies:create")
 
 
-def _assert_can_manage_eligibility(user: User) -> None:
+def _assert_can_manage_eligibility(
+    user: User, session: Session, permission: str
+) -> None:
     """ADMINISTRATOR/DIRECTOR/MANAGER curate the extra voter list of a lot."""
-    if user.role not in TALLY_STAFF_ROLES:
+    if not has_permission(user, session, permission):
         raise ForbiddenError("Você não pode gerenciar elegíveis de um lote")
 
 
 def _assert_can_view_tally(session: Session, user: User, vote: Vote) -> None:
     """Whoever could vote, plus ADMINISTRATOR/DIRECTOR/MANAGER, may read it."""
-    if user.role in TALLY_STAFF_ROLES:
+    # The voting-staff short-circuit. `votes:create` is the module's
+    # `{A, D, M}` permission -- the same set `TALLY_STAFF_ROLES` named --
+    # and it must NOT be `votes:tally_read`, which is `{A, D, M, R}` and
+    # would let a RESIDENT skip the eligible-lot check below.
+    if has_permission(user, session, "votes:create"):
         return
-    if user.role in NON_VOTING_ROLES:
+    if not has_permission(user, session, "votes:cast"):
         raise TallyNotAvailableError
     if vote.kind == VoteKind.ASSEMBLEIA:
         if not get_user_eligible_lot_ids(session, user):
@@ -338,7 +349,9 @@ def _assert_can_cast(
     _assert_window_open(session, vote, user, lot_id)
 
     # 2 — role
-    if user.role in NON_VOTING_ROLES:
+    if not has_permission(
+        user, session, "votes:retract" if is_retraction else "votes:cast"
+    ):
         _record_rejection(
             session, vote, user, lot_id, BallotRejectionReason.ROLE_FORBIDDEN
         )
@@ -716,7 +729,7 @@ def get_assembly(session: Session, assembly_id: UUID) -> Assembly:
 def create_assembly(
     session: Session, user: User, assembly_in: AssemblyCreate
 ) -> Assembly:
-    _assert_board(user)
+    _assert_board(user, session, "assemblies:create")
     assembly = Assembly(
         title=assembly_in.title,
         type=assembly_in.type,
@@ -740,7 +753,7 @@ def list_assemblies(session: Session) -> list[Assembly]:
 def update_assembly(
     session: Session, user: User, assembly: Assembly, assembly_in: AssemblyUpdate
 ) -> Assembly:
-    _assert_board(user)
+    _assert_board(user, session, "assemblies:update")
     if assembly.status == AssemblyStatus.CLOSED:
         raise VoteAlreadyClosedError("Assembleia fechada não pode ser editada.")
     if assembly_in.status == AssemblyStatus.CLOSED:
@@ -763,7 +776,7 @@ def close_assembly(session: Session, user: User, assembly: Assembly) -> Assembly
 
     This is what makes the minutes available.
     """
-    _assert_board(user)
+    _assert_board(user, session, "assemblies:close")
     if assembly.status == AssemblyStatus.CLOSED:
         raise VoteAlreadyClosedError("Assembleia já está fechada.")
 
@@ -792,7 +805,7 @@ def get_vote(session: Session, vote_id: UUID) -> Vote:
 
 
 def create_vote(session: Session, user: User, vote_in: VoteCreate) -> Vote:
-    _assert_can_create_vote(user, vote_in.kind)
+    _assert_can_create_vote(user, vote_in.kind, session, "votes:create")
 
     if vote_in.kind == VoteKind.ASSEMBLEIA:
         if vote_in.is_anonymous:
@@ -854,7 +867,7 @@ def update_vote(
     session: Session, user: User, vote: Vote, vote_in: VoteUpdate
 ) -> Vote:
     """Edit a vote — only while it has not received a single ballot."""
-    _assert_can_create_vote(user, vote.kind)
+    _assert_can_create_vote(user, vote.kind, session, "votes:update")
     if vote.status == VoteStatus.CLOSED:
         raise VoteAlreadyClosedError
     if has_ballots(session, vote):
@@ -888,7 +901,7 @@ def update_vote(
 
 
 def close_vote(session: Session, user: User, vote: Vote) -> Vote:
-    _assert_can_create_vote(user, vote.kind)
+    _assert_can_create_vote(user, vote.kind, session, "votes:close")
     if vote.status == VoteStatus.CLOSED:
         raise VoteAlreadyClosedError
     return materialize_snapshot(session, vote)
@@ -903,7 +916,7 @@ def set_lot_voter_eligibility(
     session: Session, user: User, lot_id: UUID, target_user_id: UUID
 ) -> LotVoterEligibility:
     """Register an extra assembly voter for a lot (idempotent)."""
-    _assert_can_manage_eligibility(user)
+    _assert_can_manage_eligibility(user, session, "votes:eligibility_manage")
     lot = session.get(Lot, lot_id)
     if lot is None or lot.is_deleted:
         raise LotNotFoundError(lot_id)
@@ -931,7 +944,7 @@ def set_lot_voter_eligibility(
 def remove_lot_voter_eligibility(
     session: Session, user: User, lot_id: UUID, target_user_id: UUID
 ) -> None:
-    _assert_can_manage_eligibility(user)
+    _assert_can_manage_eligibility(user, session, "votes:eligibility_manage")
     # `.join(Lot)` as in `list_lot_voter_eligibility`: `LotVoterEligibility` is
     # an inherited table with no `tenant_id`, so without a scoped entity in the
     # statement the ambient filter has nothing to constrain and a cross-tenant
@@ -954,7 +967,7 @@ def remove_lot_voter_eligibility(
 def list_lot_voter_eligibility(
     session: Session, user: User, lot_id: UUID
 ) -> list[LotVoterEligibility]:
-    _assert_can_manage_eligibility(user)
+    _assert_can_manage_eligibility(user, session, "votes:eligibility_read")
     # `.join(Lot)` rather than a `get_lot_by_id` 404: this route never loaded
     # its `Lot`, and preserving the `200 []` answer for an unknown lot id is
     # deliberate. The cross-tenant answer becomes 200-with-zero-rows instead
@@ -972,7 +985,7 @@ def set_lot_delinquency(
     session: Session, user: User, lot: Lot, is_delinquent: bool
 ) -> Lot:
     """Flip the manual delinquency flag that suspends the lot's voting right."""
-    _assert_board(user)
+    _assert_board(user, session, "lots:set_delinquency")
     lot.is_delinquent = is_delinquent
     lot.delinquency_updated_at = datetime.utcnow()
     lot.delinquency_updated_by_id = user.id
@@ -1118,7 +1131,7 @@ def render_minutes_html(session: Session, assembly: Assembly) -> str:
 
 def get_minutes_html(session: Session, user: User, assembly: Assembly) -> str:
     """Board-only entry point for the rendered minutes."""
-    _assert_board(user)
+    _assert_board(user, session, "assemblies:minutes_read")
     return render_minutes_html(session, assembly)
 
 
@@ -1150,7 +1163,7 @@ def save_minutes(
     storage_provider: BaseStorageProvider | None = None,
 ):
     """Render the minutes and file them in the Document Center."""
-    _assert_board(user)
+    _assert_board(user, session, "assemblies:minutes_save")
     minutes_html = render_minutes_html(session, assembly)
     payload = minutes_html.encode("utf-8")
 

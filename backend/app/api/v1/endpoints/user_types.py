@@ -8,6 +8,7 @@ from app.db import get_session
 from app.models.user import User
 from app.models.user_type import UserType
 from app.schemas.user_type import UserTypeCreate, UserTypeRead, UserTypeUpdate
+from app.services import user_type_service
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
 
@@ -27,13 +28,16 @@ def read_user_types(
 def create_user_type(
     *,
     session: Annotated[Session, Depends(get_session)],
-    current_user: Annotated[User, Depends(api_deps.get_current_tenant_admin)],  # noqa: ARG001
+    current_user: Annotated[
+        User, Depends(api_deps.require_permission("user_types:create"))
+    ],
     user_type_in: UserTypeCreate,
 ) -> UserType:
     """Create a new user type in the acting tenant.
 
     ADMINISTRATOR, or a tenant_admin of the acting tenant (APRAS-43).
     """
+    user_type_service.assert_can_grant(session, current_user, user_type_in.permissions)
     existing = session.exec(
         select(UserType).where(UserType.name == user_type_in.name)
     ).first()
@@ -43,7 +47,9 @@ def create_user_type(
             detail="A user type with this name already exists",
         )
     user_type = UserType(
-        name=user_type_in.name, allowed_menus=user_type_in.allowed_menus
+        name=user_type_in.name,
+        allowed_menus=user_type_in.allowed_menus,
+        permissions=user_type_in.permissions,
     )
     session.add(user_type)
     session.commit()
@@ -55,7 +61,9 @@ def create_user_type(
 def update_user_type(
     *,
     session: Annotated[Session, Depends(get_session)],
-    current_user: Annotated[User, Depends(api_deps.get_current_tenant_admin)],  # noqa: ARG001
+    current_user: Annotated[
+        User, Depends(api_deps.require_permission("user_types:update"))
+    ],
     user_type_id: UUID,
     user_type_in: UserTypeUpdate,
 ) -> UserType:
@@ -69,6 +77,11 @@ def update_user_type(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User type not found"
         )
+    if user_type_in.permissions is not None:
+        user_type_service.assert_can_grant(
+            session, current_user, user_type_in.permissions
+        )
+        db_type.permissions = user_type_in.permissions
     db_type.name = user_type_in.name
     db_type.allowed_menus = user_type_in.allowed_menus
     session.add(db_type)
@@ -81,7 +94,9 @@ def update_user_type(
 def delete_user_type(
     *,
     session: Annotated[Session, Depends(get_session)],
-    current_user: Annotated[User, Depends(api_deps.get_current_tenant_admin)],  # noqa: ARG001
+    current_user: Annotated[  # noqa: ARG001
+        User, Depends(api_deps.require_permission("user_types:delete"))
+    ],
     user_type_id: UUID,
 ) -> None:
     """Delete a user type. ADMINISTRATOR or a tenant_admin of its tenant.

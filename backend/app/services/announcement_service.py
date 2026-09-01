@@ -5,6 +5,7 @@ from uuid import UUID
 
 from sqlmodel import Session, func, select
 
+from app.api.deps import has_permission
 from app.core.exceptions import (
     AnnouncementCommentNotFoundError,
     AnnouncementMediaNotFoundError,
@@ -19,7 +20,7 @@ from app.models.announcement import (
     AnnouncementMedia,
     AnnouncementReadReceipt,
 )
-from app.models.enums import AnnouncementMediaType, UserRole
+from app.models.enums import AnnouncementMediaType
 from app.models.user import User
 from app.schemas.announcement import (
     AnnouncementCommentCreate,
@@ -45,8 +46,8 @@ ALLOWED_MEDIA_MIME_TYPES: dict[str, AnnouncementMediaType] = {
 _storage_provider: BaseStorageProvider = LocalStorageProvider()
 
 
-def _check_publisher(user: User) -> None:
-    if user.role not in (UserRole.ADMINISTRATOR, UserRole.DIRECTOR):
+def _check_publisher(user: User, session: Session, permission: str) -> None:
+    if not has_permission(user, session, permission):
         raise AnnouncementPermissionError()
 
 
@@ -147,7 +148,7 @@ def get_announcement(session: Session, user: User, announcement_id: UUID) -> Ann
 
 
 def create_announcement(session: Session, user: User, data: AnnouncementCreate) -> AnnouncementRead:
-    _check_publisher(user)
+    _check_publisher(user, session, "announcements:create")
 
     announcement = Announcement(
         title=data.title,
@@ -166,7 +167,7 @@ def create_announcement(session: Session, user: User, data: AnnouncementCreate) 
 def update_announcement(
     session: Session, user: User, announcement_id: UUID, data: AnnouncementUpdate
 ) -> AnnouncementRead:
-    _check_publisher(user)
+    _check_publisher(user, session, "announcements:update")
 
     announcement = session.get(Announcement, announcement_id)
     if not announcement or announcement.is_deleted:
@@ -186,7 +187,7 @@ def update_announcement(
 
 
 def delete_announcement(session: Session, user: User, announcement_id: UUID) -> None:
-    _check_publisher(user)
+    _check_publisher(user, session, "announcements:delete")
 
     announcement = session.get(Announcement, announcement_id)
     if not announcement or announcement.is_deleted:
@@ -206,7 +207,7 @@ def upload_media(
     filename: str,
     mime_type: str,
 ) -> AnnouncementMediaRead:
-    _check_publisher(user)
+    _check_publisher(user, session, "announcements:media_upload")
 
     announcement = session.get(Announcement, announcement_id)
     if not announcement or announcement.is_deleted:
@@ -246,7 +247,7 @@ def upload_media(
 
 
 def delete_media(session: Session, user: User, announcement_id: UUID, media_id: UUID) -> None:
-    _check_publisher(user)
+    _check_publisher(user, session, "announcements:media_delete")
 
     # Load the scoped parent through the (tenant-filtered) session first:
     # `AnnouncementMedia` inherits its tenant and both ids here are
@@ -284,7 +285,7 @@ def list_comments(session: Session, announcement_id: UUID) -> list[AnnouncementC
 def add_comment(
     session: Session, user: User, announcement_id: UUID, data: AnnouncementCommentCreate
 ) -> AnnouncementCommentRead:
-    if user.role == UserRole.GUEST:
+    if not has_permission(user, session, "announcements:comment"):
         raise AnnouncementPermissionError("Convidados não podem comentar em comunicados.")
 
     announcement = session.get(Announcement, announcement_id)
@@ -317,7 +318,7 @@ def delete_comment(session: Session, user: User, comment_id: UUID) -> None:
         raise AnnouncementCommentNotFoundError(comment_id)
 
     is_author = comment.user_id == user.id
-    is_publisher = user.role in (UserRole.ADMINISTRATOR, UserRole.DIRECTOR)
+    is_publisher = has_permission(user, session, "announcements:create")
     if not (is_author or is_publisher):
         raise AnnouncementPermissionError(
             "Apenas o autor do comentário ou um Administrador/Diretor pode excluí-lo."
@@ -356,7 +357,7 @@ def mark_read(session: Session, user: User, announcement_id: UUID) -> datetime:
 def list_read_receipts(
     session: Session, user: User, announcement_id: UUID
 ) -> list[AnnouncementReadReceiptRead]:
-    _check_publisher(user)
+    _check_publisher(user, session, "announcements:read_receipts_read")
 
     announcement = session.get(Announcement, announcement_id)
     if not announcement or announcement.is_deleted:

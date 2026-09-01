@@ -5,7 +5,7 @@ from uuid import UUID
 
 from app.api import deps as api_deps
 from app.db import get_session
-from app.models.enums import LotStatus, UserRole
+from app.models.enums import LotStatus
 from app.models.user import User
 from app.schemas.lot import (
     LotCreate,
@@ -26,22 +26,22 @@ from sqlmodel import Session
 
 router = APIRouter()
 
-_LOT_READ_ROLES = {UserRole.ADMINISTRATOR, UserRole.DIRECTOR, UserRole.MANAGER, UserRole.PORTEIRO}
-_LOT_WRITE_ROLES = {UserRole.ADMINISTRATOR, UserRole.DIRECTOR}
-
-
-def _require_lot_read_permission(current_user: User) -> None:
-    """Raise 403 if the user does not have permission to read lots."""
-    if current_user.role not in _LOT_READ_ROLES:
+def _require_lot_read_permission(
+    current_user: User, session: Session, permission: str
+) -> None:
+    """Raise 403 unless the caller holds this route's lot-read permission."""
+    if not api_deps.has_permission(current_user, session, permission):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not enough privileges to access lots",
         )
 
 
-def _require_lot_write_permission(current_user: User) -> None:
-    """Raise 403 if the user does not have permission to write lots."""
-    if current_user.role not in _LOT_WRITE_ROLES:
+def _require_lot_write_permission(
+    current_user: User, session: Session, permission: str
+) -> None:
+    """Raise 403 unless the caller holds this route's lot-write permission."""
+    if not api_deps.has_permission(current_user, session, permission):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only ADMINISTRATOR and DIRECTOR can modify lots",
@@ -58,7 +58,7 @@ def list_lots(
     limit: int = Query(default=100, ge=1, le=100),
 ) -> PaginatedLotRead:
     """List lots with optional filtering by block and status."""
-    _require_lot_read_permission(current_user)
+    _require_lot_read_permission(current_user, session, "lots:read")
     items, total = LotService.get_lots(
         session=session,
         block=block,
@@ -77,7 +77,7 @@ def create_lot(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> LotRead:
     """Create a new lot. ADMINISTRATOR and DIRECTOR only."""
-    _require_lot_write_permission(current_user)
+    _require_lot_write_permission(current_user, session, "lots:create")
     db_lot = LotService.create_lot(session=session, lot_in=lot_in)
     return LotRead.model_validate(db_lot)
 
@@ -89,7 +89,7 @@ def get_lot(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> LotDetailRead:
     """Get detailed lot information along with linked users."""
-    _require_lot_read_permission(current_user)
+    _require_lot_read_permission(current_user, session, "lots:read")
     return LotService.get_lot_detail(session=session, lot_id=lot_id)
 
 
@@ -101,7 +101,7 @@ def update_lot(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> LotRead:
     """Update a lot. ADMINISTRATOR and DIRECTOR only."""
-    _require_lot_write_permission(current_user)
+    _require_lot_write_permission(current_user, session, "lots:update")
     db_lot = LotService.get_lot_by_id(session=session, lot_id=lot_id)
     updated_lot = LotService.update_lot(
         session=session, db_lot=db_lot, lot_in=lot_in
@@ -113,7 +113,7 @@ def update_lot(
 def delete_lot(
     lot_id: UUID,
     session: Annotated[Session, Depends(get_session)],
-    current_user: Annotated[User, Depends(api_deps.get_current_tenant_admin)],
+    current_user: Annotated[User, Depends(api_deps.require_permission("lots:delete"))],
 ) -> None:
     """Soft delete a lot. ADMINISTRATOR or a tenant_admin of the acting tenant."""
     db_lot = LotService.get_lot_by_id(session=session, lot_id=lot_id)
@@ -132,7 +132,7 @@ def link_user_to_lot(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> UserLotLinkRead:
     """Bind a user to a lot. ADMINISTRATOR and DIRECTOR only."""
-    _require_lot_write_permission(current_user)
+    _require_lot_write_permission(current_user, session, "lots:link_user")
     link = LotService.link_user(session=session, lot_id=lot_id, link_in=link_in)
     user = session.get(User, link.user_id)
     if not user:
@@ -163,7 +163,7 @@ def unlink_user_from_lot(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> None:
     """Unlink a user from a lot. ADMINISTRATOR and DIRECTOR only."""
-    _require_lot_write_permission(current_user)
+    _require_lot_write_permission(current_user, session, "lots:unlink_user")
     LotService.unlink_user(session=session, lot_id=lot_id, user_id=user_id)
 
 
