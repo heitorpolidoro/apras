@@ -1,12 +1,27 @@
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MemoryRouter } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import apiClient from "../../../api/client";
 import Navbar from "../components/Navbar";
 import * as AuthHook from "../context/AuthContext";
 import * as TenantHook from "../context/useTenant";
 import { UserRole, type Tenant, type User } from "../../../types/auth";
+import { PERMISSIONS_BY_ROLE } from "../../../test/permissionFixtures";
 import pt from "../../../i18n/locales/pt.json";
 import en from "../../../i18n/locales/en.json";
+
+/**
+ * IAM F4: `Navbar` calls `useMyPermissions()`, a real TanStack query, so the
+ * bare mount below needs a `QueryClientProvider` and a `/permissions/me`
+ * fixture — without them it throws `No QueryClient set`. The fixture is
+ * **identical across every render in this file**, which the third case
+ * depends on: it byte-compares `container.textContent` between the
+ * zero-tenant and single-tenant renders.
+ */
+vi.mock("../../../api/client", () => ({
+  default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() },
+}));
 
 vi.mock("../context/SimulationContext", () => ({
   useSimulation: vi.fn(() => ({
@@ -60,12 +75,27 @@ const mockTenant = (tenants: Tenant[]) => {
   });
 };
 
-const renderNavbar = () =>
-  render(
-    <MemoryRouter>
-      <Navbar />
-    </MemoryRouter>,
+const renderNavbar = () => {
+  vi.mocked(apiClient.get).mockImplementation(((url: string) =>
+    url === "/permissions/me"
+      ? Promise.resolve({
+          data: {
+            tenant_id: TENANT_A.id,
+            permissions: PERMISSIONS_BY_ROLE[UserRole.RESIDENT],
+          },
+        })
+      : Promise.resolve({ data: [] })) as never);
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <Navbar />
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
+};
 
 describe("Navbar tenant switcher", () => {
   beforeEach(() => {

@@ -68,11 +68,31 @@ const USER_TYPES = [
   { id: "type-1", name: "Test Type", allowed_menus: ["tasks", "categories"] },
 ];
 
+/**
+ * `/permissions/me` per tenant (IAM F4, ER-3): tenant A grants
+ * `finance:read`, tenant B does not. The key is `["me","permissions"]`, which
+ * does not start with `"tenants"`, so `setActingTenant`'s `resetQueries`
+ * sweep evicts and refetches it under the new header — no reload.
+ */
+const PERMISSIONS_BY_TENANT: Record<string, string[]> = {
+  [TENANT_A]: ["tasks:read", "categories:read", "finance:read"],
+  [TENANT_B]: ["tasks:read", "categories:read"],
+};
+
 const installClient = () => {
   mockedGet.mockReset();
   mockedGet.mockImplementation(((url: string) => {
     if (url === "/tenants") return Promise.resolve({ data: TENANTS });
     if (url === "/user-types/") return Promise.resolve({ data: USER_TYPES });
+    if (url === "/permissions/me") {
+      const acting = getActingTenantId();
+      return Promise.resolve({
+        data: {
+          tenant_id: acting,
+          permissions: acting ? PERMISSIONS_BY_TENANT[acting] ?? [] : [],
+        },
+      });
+    }
     if (url === "/tasks/") {
       const acting = getActingTenantId();
       const title = acting ? TASKS_BY_TENANT[acting] : undefined;
@@ -180,5 +200,53 @@ describe("tenant switch integration", () => {
     await waitFor(() => {
       expect(mockedGet).toHaveBeenCalledWith("/tasks/", expect.anything());
     });
+  });
+
+  it("re-evaluates menus after a tenant switch without a reload", async () => {
+    mockAuth({
+      id: "u1",
+      full_name: "Morador",
+      role: UserRole.RESIDENT,
+      user_types: USER_TYPES,
+      tenants: [
+        {
+          tenant_id: TENANT_A,
+          name: "Condomínio A",
+          is_active: true,
+          is_tenant_admin: false,
+        },
+        {
+          tenant_id: TENANT_B,
+          name: "Condomínio B",
+          is_active: true,
+          is_tenant_admin: false,
+        },
+      ],
+    });
+
+    // jsdom will not let `location.reload` be redefined, so the sentinel is
+    // the URL itself: any reload or assignment would move it.
+    const originalHref = window.location.href;
+    const originalPath = window.location.pathname;
+
+    renderApp();
+
+    // Tenant A grants `finance:read`, so the Financeiro link is shown.
+    expect(
+      await screen.findByRole("link", { name: "Financeiro" }),
+    ).toBeInTheDocument();
+
+    const switcher = await screen.findByRole("combobox", { name: /condom/i });
+    await userEvent.selectOptions(switcher, TENANT_B);
+
+    // Tenant B does not, and the link disappears with no page reload: the
+    // permission query was evicted and refetched under the new header.
+    await waitFor(() =>
+      expect(screen.queryByRole("link", { name: "Financeiro" })).toBeNull(),
+    );
+    expect(screen.getByRole("link", { name: "Tarefas" })).toBeInTheDocument();
+    expect(window.location.href).toBe(originalHref);
+    expect(window.location.pathname).toBe(originalPath);
+    expect(getActingTenantId()).toBe(TENANT_B);
   });
 });

@@ -1,10 +1,15 @@
 import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import * as AuthHook from "../context/AuthContext";
 import { UserRole } from "../context/AuthContext";
 import { useUserTypes } from "../../../hooks/useUserTypes";
+import { useMyPermissions } from "../../../hooks/usePermissionQueries";
+import {
+  PERMISSIONS_BY_ROLE,
+  settledPermissions,
+} from "../../../test/permissionFixtures";
 
 // Navbar reads the effective (possibly simulated) role via
 // useEffectiveIdentity, which combines useAuth (spied on per-test below) with
@@ -31,6 +36,24 @@ vi.mock("../../../hooks/useUserTypes", () => ({
     data: [{ id: "type-1", name: "Test Type", allowed_menus: ["tasks", "categories"] }],
   })),
 }));
+
+// IAM F4: every link is decided by `useCanShowMenu` over `/permissions/me`.
+// The mock derives the payload from whatever role the per-test `useAuth` spy
+// is returning, so each case below keeps stating its scenario in one place —
+// the user fixture — and no case has to repeat its own permission list.
+vi.mock("../../../hooks/usePermissionQueries", () => ({
+  useMyPermissions: vi.fn(),
+  usePermissionCatalogue: vi.fn(() => ({ data: [], isPending: false })),
+}));
+
+beforeEach(() => {
+  vi.mocked(useMyPermissions).mockImplementation(
+    () =>
+      settledPermissions(
+        PERMISSIONS_BY_ROLE[AuthHook.useAuth().user?.role ?? ""] ?? [],
+      ) as never,
+  );
+});
 
 describe("Navbar", () => {
   it("renders nothing when not authenticated", () => {
@@ -497,7 +520,7 @@ describe("Navbar", () => {
 
   // ── PORTEIRO scoping (APRAS-12) ─────────────────────────────────────────
 
-  it("shows only the Portaria link for PORTEIRO, nothing else", () => {
+  it("shows PORTEIRO the links its permissions allow and no administration", () => {
     vi.spyOn(AuthHook, "useAuth").mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
@@ -521,9 +544,15 @@ describe("Navbar", () => {
 
     expect(screen.getByText("APRAS")).toBeDefined();
     expect(screen.getByText(/nav\.gate|Portaria/)).toBeInTheDocument();
+    // Menu-gated and PORTEIRO holds no `tasks`/`categories` menu key.
     expect(screen.queryByText("Tarefas")).toBeNull();
     expect(screen.queryByText("Categorias")).toBeNull();
-    expect(screen.queryByText("Lotes")).toBeNull();
+    // §5.2 accepted widenings: PORTEIRO genuinely holds `lots:read`,
+    // `packages:queue_read` and `reservations:read`, so the backend has always
+    // answered these three 200. The link now says so.
+    expect(screen.getByText("Lotes")).toBeInTheDocument();
+    expect(screen.getByText(/nav\.packages|Encomendas/)).toBeInTheDocument();
+    expect(screen.getByText(/nav\.reservations|Reservas/)).toBeInTheDocument();
     expect(screen.queryByText(/nav\.authorizations|Autorizações/)).toBeNull();
     expect(screen.queryByText(/nav\.occurrences|Ocorrências/)).toBeNull();
     expect(screen.queryByText(/nav\.documents|Documentos/)).toBeNull();

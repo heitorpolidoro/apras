@@ -132,6 +132,15 @@
 - Parametrizar test_me_matches_get_effective_permissions tambem sobre superuser e tenant-admin.
 - Atualizar de fato matrix_world.py l.15 ('The ten UNGUARDED_ROUTES') em vez de deixar opcional.
 - Revisabilidade: 3 commits limpos dentro do PR (3; 4-5; 6-7).
+- (code review) ProtectedRoute.porteiroRouteGating.test.tsx foi reescrito muito alem da linha 'prop rename' do 8.2 (48 casos parametrizados, melhoria) - desvio nao declarado; registrar no PR body.
+- (code review) useCanAccess.ts:33 constroi um Set por item de nav (23/render), nao 'um por render' como o 4.3 promete; e o sentinel `?? "tasks"` (l.124/136) passado ao useMenuAccess para as 22 regras sem legacyMenu.
+- (code review) routeAccess.ts:72 AUTHENTICATED_ONLY_PATHS e codigo de producao com consumidor so em teste e serve de escape ao invariante 'toda rota tem regra'.
+- (code review) MyPermissionsRead.tenant_id (schemas/permission.py:31) sem consumidor no frontend apesar do docstring.
+- (code review) test/permissionFixtures.ts e copia exata do mapa do backend hoje, mas nada os mantem em sincronia - gerar do backend ou pinar com um teste que compare ao /permissions.
+
+- (QA) assert_can_grant valida o bundle resultante inteiro: um grupo que ja tem permissao que o editor nao pode conceder fica insalvavel por ele - ate um rename puro da 403 (reproduzido ao vivo). Letra do ER-4 atendida, mas o 6.3 so trocou strip silencioso por beco visivel. F5: validar o delta ou desabilitar Salvar com dica.
+- (QA) permissions.errors.cannotGrant em en.json e o prefixo literal da frase do backend - reescrever a copia em ingles.
+- (QA) bypass ADMINISTRATOR do useMenuAccess le user.role legado, nao is_superuser: Tasks/Categories somem para superuser cujo role nao e ADMINISTRATOR (backend recusa igual, correto pelo 2.3) - resolver na F5.
 
 ## [APRAS-49] IAM F5: rename para role, drop do enum — 2026-09-01
 
@@ -141,6 +150,8 @@
 - 11.2 explicita is_superuser nas dez personas mas nao is_tenant_admin (falha alta, nao silenciosa) - uma linha fecha.
 - Honrar o split em dois commits (A=rename, B=drop do enum) e dizer no PR body qual e qual.
 - Gravar tests/data/legacy_role_bundles.json em commit proprio antes de qualquer delecao - depois desta fatia e a unica declaracao sobrevivente do que o enum significava.
+- (da revisao da APRAS-40) 11.1 (~l.1288-1301): expressar 'bundles de legacy_role_bundles.json ∪ NEW_TIER' como fonte de um helper bundle(profile), porque a APRAS-40 divide holds() em bundle()/holds_by_bundle()/holds() com branch de superuser; lookup inlined no call site obriga a 40 a re-dividir.
+- (da revisao da APRAS-40) l.90 apaga o 'role framing' de ADMIN_GAP_PERMISSIONS - a constante em si precisa sobreviver a F5 (a 40 le para MATRIX_ADMIN_GAP; ha fallback, clareza e nao bloqueio).
 
 ## [APRAS-39] Modularizar features por tenant — 2026-09-01
 
@@ -151,3 +162,22 @@
 - S5: 'referenced nowhere else' do ER-4 lido literalmente exclui o def; usar a forma precisa do 12.1.
 - S6: snippet do 5.1 reescreve o branch que o spec manda mover verbatim.
 - S7: pinar precedencia 404-vs-400 para PUT com tenant e modulo ambos desconhecidos.
+
+## [APRAS-40] Área de assinatura com contratação de módulos pelo tenant — 2026-09-01
+
+- 9.2.2 (~l.1360): 'os tres da F2 nao sao editados' contradiz a tabela do 9.2.5 (test_baseline_file_exists muda para F2_CELL_COUNT); dizer 'o par' e nomear os dois.
+- 9.2.5 (~l.1845): 'treze casos, nove por uma linha' vs 'oito dos nove' (~l.1810) - alinhar; ER-10 ja escopa a afirmacao aos seis callers de holds().
+- 9.2.5 (~l.1810): a forma de linha de test_cell_matches_the_recorded_baseline e `expected = baseline_status(load_baseline(), ...)`, nao `baseline = load_baseline()`.
+- 9.1/10.2/12: a string '89 POST/PUT/PATCH routes' vive no comentario `#:` acima de REQUEST_BODIES e no docstring de _NoBody (dois lugares), nao no docstring do modulo.
+- can_contract com conjunto ent.managed agora em quatro sites; test_baseline_covers_exactly_the_matrix duplica a assercao de particao - candidato a colapsar na implementacao.
+
+## [APRAS-44] Gestão de infrações com regras e escalonamento por condomínio — 2026-09-02
+
+- 7 diz 'as sete tabelas carregam created_at/updated_at' mas 12.2 afirma que infraction_stage nao tem updated_at (as listas de colunas do 7.2 concordam com 12.2) - alinhar a frase.
+- 12.6/8.4/11 escrevem world.infraction / world.lot / world.occurrence.lot_id; MatrixWorld em 4f952b0 so carrega ids (lot_id, resident_id, occurrence_id); o bloco de codigo do 12.6 ja usa a grafia certa.
+- 4.5 'nao ha rota page/page_size em lugar nenhum' e exagero: uploads.py:40 declara page; page_size nao existe; skip/limit segue correto.
+- Precificacao de acao explicita fora da escada nao declarada (fine_amount de MULTA explicita, defense_due_on de NOTIFICACAO explicita sem passo correspondente) - decidir na implementacao: usar o ultimo passo do mesmo tipo da escada ou exigir os campos no corpo.
+- infraction_contestation.stage_id: declarar nulabilidade (7.2); e colisao latente de FK: infraction_stage.infraction_id CASCADE vs infraction_contestation.stage_id RESTRICT.
+- test_policy_rejects_non_contiguous_step_order diz '422/400' - unico ou-ou de status no spec; fixar 422.
+- InfractionCreate.source_occurrence_id e aceito e ignorado silenciosamente - remover do schema ou validar.
+- 7.7(2) usa uma unica string de detail tambem para residente inativo; citacoes de linha do 4.5 derivaram; citacao do AGENTS.md no 7.2 esta abreviada.

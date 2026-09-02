@@ -16,6 +16,9 @@ export interface UserType {
   /** Set only for the 5 role-linked types seeded by the APRAS-9 backend
    * migration; undefined/null for regular admin-created types. */
   role?: string | null;
+  /** The group's permission bundle (IAM F2 put it on `UserTypeRead`).
+   *  Optional so every pre-existing `UserType` fixture keeps type-checking. */
+  permissions?: string[];
 }
 
 /** One membership of the *calling* user, as returned by `GET /auth/me`. */

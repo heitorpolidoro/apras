@@ -6,10 +6,17 @@ import { UserRole } from "../context/AuthContext";
 import * as AuthHook from "../context/AuthContext";
 import { useSimulation } from "../context/SimulationContext";
 import { useUserTypes } from "../../../hooks/useUserTypes";
+import { useMyPermissions } from "../../../hooks/usePermissionQueries";
+import { ROUTE_ACCESS } from "../access/routeAccess";
+import {
+  PERMISSIONS_BY_ROLE,
+  settledPermissions,
+} from "../../../test/permissionFixtures";
 
-// Mirrors ProtectedRoute.guestWelcome.test.tsx: generalizes the requiredMenu
-// GUEST->/welcome redirect (APRAS-10) to also cover PORTEIRO->/gate
-// (APRAS-12).
+// Mirrors ProtectedRoute.guestWelcome.test.tsx: the PORTEIRO->/gate landing
+// redirect (APRAS-12), which IAM F4 keeps role-shaped on exactly the two
+// routes carrying `landingRedirect` (§2.4) — a PORTEIRO genuinely holds
+// `tasks:read`, so no permission predicate can express "pin them to the gate".
 vi.mock("../context/SimulationContext", () => ({
   useSimulation: vi.fn(),
 }));
@@ -18,6 +25,11 @@ vi.mock("../../../hooks/useUserTypes", () => ({
   useUserTypes: vi.fn(() => ({
     data: [{ id: "type-1", name: "Test Type", allowed_menus: ["tasks", "categories"] }],
   })),
+}));
+
+vi.mock("../../../hooks/usePermissionQueries", () => ({
+  useMyPermissions: vi.fn(),
+  usePermissionCatalogue: vi.fn(() => ({ data: [], isPending: false })),
 }));
 
 const notSimulating = {
@@ -29,6 +41,25 @@ const notSimulating = {
   stopSimulation: vi.fn(),
 };
 
+const authAs = (role: UserRole, id: string) => {
+  vi.spyOn(AuthHook, "useAuth").mockReturnValue({
+    isAuthenticated: true,
+    isLoading: false,
+    user: {
+      id,
+      email: `${id}@example.com`,
+      full_name: id,
+      role,
+      is_active: true,
+    } as never,
+    login: vi.fn() as never,
+    logout: vi.fn(),
+  });
+  vi.mocked(useMyPermissions).mockReturnValue(
+    settledPermissions(PERMISSIONS_BY_ROLE[role]) as never,
+  );
+};
+
 const renderDashboard = () =>
   render(
     <MemoryRouter initialEntries={["/dashboard"]}>
@@ -38,7 +69,7 @@ const renderDashboard = () =>
         <Route
           path="/dashboard"
           element={
-            <ProtectedRoute requiredMenu="tasks">
+            <ProtectedRoute requiredAccess={ROUTE_ACCESS["/dashboard"]}>
               <div>Tasks Content</div>
             </ProtectedRoute>
           }
@@ -47,29 +78,17 @@ const renderDashboard = () =>
     </MemoryRouter>,
   );
 
-describe("ProtectedRoute — PORTEIRO gate redirect (requiredMenu routes)", () => {
+describe("ProtectedRoute — PORTEIRO gate redirect (landingRedirect routes)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(useUserTypes).mockReturnValue({
       data: [{ id: "type-1", name: "Test Type", allowed_menus: ["tasks", "categories"] }],
-    } as any); // skipcq: JS-0323
+    } as never);
   });
 
   it("redirects a real PORTEIRO away from /dashboard to /gate instead of showing the restricted-access message", () => {
     vi.mocked(useSimulation).mockReturnValue(notSimulating);
-    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
-      isAuthenticated: true,
-      isLoading: false,
-      user: {
-        id: "porteiro-1",
-        email: "porteiro@example.com",
-        full_name: "Porteiro User",
-        role: UserRole.PORTEIRO,
-        is_active: true,
-      } as any,
-      login: vi.fn() as any,
-      logout: vi.fn(),
-    });
+    authAs(UserRole.PORTEIRO, "porteiro-1");
 
     renderDashboard();
 
@@ -87,19 +106,7 @@ describe("ProtectedRoute — PORTEIRO gate redirect (requiredMenu routes)", () =
       setSimulatedUserTypeIds: vi.fn(),
       stopSimulation: vi.fn(),
     });
-    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
-      isAuthenticated: true,
-      isLoading: false,
-      user: {
-        id: "admin-1",
-        email: "admin@example.com",
-        full_name: "Admin User",
-        role: UserRole.ADMINISTRATOR,
-        is_active: true,
-      } as any,
-      login: vi.fn() as any,
-      logout: vi.fn(),
-    });
+    authAs(UserRole.ADMINISTRATOR, "admin-1");
 
     renderDashboard();
 
@@ -109,19 +116,7 @@ describe("ProtectedRoute — PORTEIRO gate redirect (requiredMenu routes)", () =
 
   it("does not redirect a real ADMINISTRATOR (no simulation) away from /dashboard", () => {
     vi.mocked(useSimulation).mockReturnValue(notSimulating);
-    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
-      isAuthenticated: true,
-      isLoading: false,
-      user: {
-        id: "admin-1",
-        email: "admin@example.com",
-        full_name: "Admin User",
-        role: UserRole.ADMINISTRATOR,
-        is_active: true,
-      } as any,
-      login: vi.fn() as any,
-      logout: vi.fn(),
-    });
+    authAs(UserRole.ADMINISTRATOR, "admin-1");
 
     renderDashboard();
 
@@ -129,21 +124,9 @@ describe("ProtectedRoute — PORTEIRO gate redirect (requiredMenu routes)", () =
     expect(screen.queryByText("Gate Page")).toBeNull();
   });
 
-  it("does not redirect PORTEIRO to /gate on a requiredRole route (only requiredMenu routes are affected)", () => {
+  it("does not redirect PORTEIRO to /gate on a route without landingRedirect", () => {
     vi.mocked(useSimulation).mockReturnValue(notSimulating);
-    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
-      isAuthenticated: true,
-      isLoading: false,
-      user: {
-        id: "porteiro-1",
-        email: "porteiro@example.com",
-        full_name: "Porteiro User",
-        role: UserRole.PORTEIRO,
-        is_active: true,
-      } as any,
-      login: vi.fn() as any,
-      logout: vi.fn(),
-    });
+    authAs(UserRole.PORTEIRO, "porteiro-1");
 
     render(
       <MemoryRouter initialEntries={["/admin"]}>
@@ -153,7 +136,7 @@ describe("ProtectedRoute — PORTEIRO gate redirect (requiredMenu routes)", () =
           <Route
             path="/admin"
             element={
-              <ProtectedRoute requiredRole={UserRole.ADMINISTRATOR}>
+              <ProtectedRoute requiredAccess={ROUTE_ACCESS["/admin/users"]}>
                 <div>Admin Content</div>
               </ProtectedRoute>
             }
@@ -162,26 +145,17 @@ describe("ProtectedRoute — PORTEIRO gate redirect (requiredMenu routes)", () =
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("Dashboard")).toBeInTheDocument();
+    // §2.4: denial is in place. The route neither lands the PORTEIRO on /gate
+    // nor bounces them to /dashboard.
     expect(screen.queryByText("Gate Page")).toBeNull();
+    expect(screen.queryByText("Dashboard")).toBeNull();
     expect(screen.queryByText("Admin Content")).toBeNull();
+    expect(screen.getByText("Acesso restrito")).toBeInTheDocument();
   });
 
-  it("resolves a PORTEIRO denied by requiredRoles on another route to /gate in exactly one intermediate hop through /dashboard, with no loop", () => {
+  it("denies a PORTEIRO on /finance in place, with no hop through /dashboard at all", () => {
     vi.mocked(useSimulation).mockReturnValue(notSimulating);
-    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
-      isAuthenticated: true,
-      isLoading: false,
-      user: {
-        id: "porteiro-1",
-        email: "porteiro@example.com",
-        full_name: "Porteiro User",
-        role: UserRole.PORTEIRO,
-        is_active: true,
-      } as any,
-      login: vi.fn() as any,
-      logout: vi.fn(),
-    });
+    authAs(UserRole.PORTEIRO, "porteiro-1");
 
     render(
       <MemoryRouter initialEntries={["/finance"]}>
@@ -189,7 +163,7 @@ describe("ProtectedRoute — PORTEIRO gate redirect (requiredMenu routes)", () =
           <Route
             path="/dashboard"
             element={
-              <ProtectedRoute requiredMenu="tasks">
+              <ProtectedRoute requiredAccess={ROUTE_ACCESS["/dashboard"]}>
                 <div>Tasks Content</div>
               </ProtectedRoute>
             }
@@ -198,14 +172,7 @@ describe("ProtectedRoute — PORTEIRO gate redirect (requiredMenu routes)", () =
           <Route
             path="/finance"
             element={
-              <ProtectedRoute
-                requiredRoles={[
-                  UserRole.ADMINISTRATOR,
-                  UserRole.DIRECTOR,
-                  UserRole.MANAGER,
-                  UserRole.RESIDENT,
-                ]}
-              >
+              <ProtectedRoute requiredAccess={ROUTE_ACCESS["/finance"]}>
                 <div>Finance Content</div>
               </ProtectedRoute>
             }
@@ -214,11 +181,12 @@ describe("ProtectedRoute — PORTEIRO gate redirect (requiredMenu routes)", () =
       </MemoryRouter>,
     );
 
-    // /finance's requiredRoles check bounces PORTEIRO to /dashboard, whose
-    // requiredMenu+PORTEIRO branch (this test's target behavior) then
-    // bounces it again to /gate — settling there with no loop.
-    expect(screen.getByText("Gate Page")).toBeInTheDocument();
+    // Before IAM F4 this settled on /gate after two redirects (deny to
+    // /dashboard, then the PORTEIRO landing rule). §2.4 removes the redirect
+    // entirely, which is precisely what makes the old loop hazard unreachable.
+    expect(screen.getByText("Acesso restrito")).toBeInTheDocument();
     expect(screen.queryByText("Finance Content")).toBeNull();
     expect(screen.queryByText("Tasks Content")).toBeNull();
+    expect(screen.queryByText("Gate Page")).toBeNull();
   });
 });

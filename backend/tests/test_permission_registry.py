@@ -32,7 +32,7 @@ from app.schemas.user_type import UserTypeCreate, UserTypeRead, UserTypeUpdate
 PERMISSION_RE = re.compile(r"^[a-z][a-z0-9_]*:[a-z][a-z0-9_]*$")
 
 #: The tag groups that are entirely unguarded (§4.24).
-FULLY_UNGUARDED_TAGS = frozenset({"auth", "health", "<root>"})
+FULLY_UNGUARDED_TAGS = frozenset({"auth", "health", "permissions", "<root>"})
 
 
 def _api_routes() -> list[APIRoute]:
@@ -124,22 +124,23 @@ def test_permission_strings_follow_the_convention():
     assert not bad, f"permissions violating <module>:<action>: {bad}"
 
 
-def test_unguarded_allowlist_is_ten_routes():
-    assert len(UNGUARDED_ROUTES) == 10
+def test_unguarded_allowlist_is_twelve_routes():
+    assert len(UNGUARDED_ROUTES) == 12
 
 
 def test_route_count_is_fully_accounted_for():
     """The registry accounts for the whole route table, with no overlap.
 
     The total is recomputed from `app.main.app` rather than hard-coded, so
-    the invariant survives a baseline shift; 190/180/10 is what to expect on
-    the APRAS-38 tree this task was written against.
+    the invariant survives a baseline shift; 192/180/12 is what to expect on
+    the IAM F4 (APRAS-48) tree, which added the two `/permissions` reads to
+    the allowlist and no row to `ROUTE_PERMISSIONS`.
     """
     total = len(_all_route_keys())
     assert set(ROUTE_PERMISSIONS) & UNGUARDED_ROUTES == set()
     assert len(ROUTE_PERMISSIONS) + len(UNGUARDED_ROUTES) == total
-    assert len(UNGUARDED_ROUTES) == 10
-    assert len(ROUTE_PERMISSIONS) == total - 10
+    assert len(UNGUARDED_ROUTES) == 12
+    assert len(ROUTE_PERMISSIONS) == total - 12
 
 
 def test_every_router_module_has_at_least_one_permission():

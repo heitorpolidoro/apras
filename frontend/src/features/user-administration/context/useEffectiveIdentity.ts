@@ -35,6 +35,11 @@ export interface EffectiveIdentity {
  * admin-role-simulation can preview menu-gated pages; this is safe because
  * the exit-simulation control (`SimulationBanner`) is rendered outside
  * `ProtectedRoute`/`<Routes>` in App.tsx and is always reachable.
+ *
+ * Since IAM F4 (APRAS-48) the single prop is `requiredAccess`, decided by
+ * `useCanAccess` over the non-simulated permission set; the `requiredMenu`
+ * exception survives as `AccessRule.legacyMenu`, still evaluated through
+ * `useMenuAccess` and therefore still simulation-aware.
  */
 export const useEffectiveIdentity = (): EffectiveIdentity => {
   const { user } = useAuth();

@@ -32,7 +32,13 @@ const SimulationBanner: React.FC = () => {
         {t("simulation.bannerLabel", {
           role: t(`roles.${simulatedRole}`),
           userTypes: userTypesLabel,
-        })}
+        })}{" "}
+        {/* §2.7: the preview shows the simulated groups' menus, while the
+            administrator's own route access stays on their real permission
+            set — so a menu and its route can disagree here, by design. */}
+        <span className="font-normal">
+          {t("simulation.permissionsPreviewNote")}
+        </span>
       </span>
       <Button
         type="button"

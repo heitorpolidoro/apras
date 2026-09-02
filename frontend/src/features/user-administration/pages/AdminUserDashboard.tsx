@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import apiClient from "../../../api/client";
-import { UserRole, useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/AuthContext";
 import type { User, UserType } from "../../../types/auth";
 import { Link } from "react-router-dom";
 import { Badge } from "../../../components/ui/badge";
@@ -10,9 +10,25 @@ import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Select } from "../../../components/ui/select";
 import { AlertModal } from "../../../components/ui/alert-modal";
-import type { MenuKey } from "../context/useMenuAccess";
+import { useSetUserGroups } from "../hooks/useUserTypeMutations";
+import { friendlyPermissionError } from "../utils/permissionErrors";
 
-const ALL_MENU_KEYS: MenuKey[] = ["tasks", "categories"];
+/**
+ * The user directory (APRAS-48 §7).
+ *
+ * The role `<Select>` is **gone**: the write surface for `user.role` is
+ * removed, so nobody can grant power by role in the one slice whose purpose
+ * is to prove groups can do it. The role is still *displayed*, read-only,
+ * under `admin.colRoleLegacy`, so an operator can diagnose a legacy bundle
+ * during the transition — TRANSITIONAL (IAM F4 -> F5). No backend change was
+ * needed: `UserUpdate.role` is already optional and there is no
+ * `POST /users/` (signup forces GUEST). Consequence, stated so it is not
+ * rediscovered as a bug: until F5 a role cannot be changed from the UI, and a
+ * new signup stays GUEST and is made functional by adding them to groups.
+ *
+ * The inline "user types" card is gone too; the group editor now lives in one
+ * place, `/admin/groups`.
+ */
 
 const AdminUserDashboard: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<
@@ -22,12 +38,6 @@ const AdminUserDashboard: React.FC = () => {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editFullName, setEditFullName] = useState("");
   const [editTypeIds, setEditTypeIds] = useState<string[]>([]);
-  const [newTypeName, setNewTypeName] = useState("");
-  const [editingType, setEditingType] = useState<UserType | null>(null);
-  const [editTypeNameValue, setEditTypeNameValue] = useState("");
-  const [editTypeAllowedMenus, setEditTypeAllowedMenus] = useState<string[]>(
-    [],
-  );
   const queryClient = useQueryClient();
   const { user: currentUser, logout } = useAuth();
   const { t } = useTranslation();
@@ -78,62 +88,9 @@ const AdminUserDashboard: React.FC = () => {
     },
   });
 
-  const createTypeMutation = useMutation({
-    mutationFn: async (name: string) => {
-      const response = await apiClient.post<UserType>("/user-types/", { name });
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["user-types"] });
-      setNewTypeName("");
-    },
-    onError: (err: Error & { response?: { data?: { detail?: string } } }) => {
-      setActionError(
-        err.response?.data?.detail || t("admin.errorCreatingType"),
-      );
-    },
-  });
-
-  const deleteTypeMutation = useMutation({
-    mutationFn: async (typeId: string) => {
-      await apiClient.delete(`/user-types/${typeId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["user-types"] });
-      queryClient.invalidateQueries({ queryKey: ["users"] });
-    },
-    onError: (err: Error & { response?: { data?: { detail?: string } } }) => {
-      setActionError(
-        err.response?.data?.detail || t("admin.errorDeletingType"),
-      );
-    },
-  });
-
-  const updateUserTypeMutation = useMutation({
-    mutationFn: async ({
-      typeId,
-      data,
-    }: {
-      typeId: string;
-      data: { name: string; allowed_menus: string[] };
-    }) => {
-      const response = await apiClient.patch<UserType>(
-        `/user-types/${typeId}`,
-        data,
-      );
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["user-types"] });
-      setActionError(null);
-      setEditingType(null);
-    },
-    onError: (err: Error & { response?: { data?: { detail?: string } } }) => {
-      setActionError(
-        err.response?.data?.detail || t("admin.errorUpdatingType"),
-      );
-    },
-  });
+  // Membership, from the **user** side. The same mutation the group screen's
+  // members panel uses (§6.4), so both directions are one code path.
+  const setUserGroups = useSetUserGroups();
 
   const handleToggleActive = (user: User) => {
     if (user.id === currentUser?.id) {
@@ -146,14 +103,6 @@ const AdminUserDashboard: React.FC = () => {
     });
   };
 
-  const handleRoleSelect = (user: User, newRole: UserRole) => {
-    if (user.id === currentUser?.id) {
-      setActionError(t("admin.cannotChangeOwnRole"));
-      return;
-    }
-    updateUserMutation.mutate({ userId: user.id, data: { role: newRole } });
-  };
-
   const openEditModal = (user: User) => {
     setEditingUser(user);
     setEditFullName(user.full_name);
@@ -163,37 +112,22 @@ const AdminUserDashboard: React.FC = () => {
   const handleSaveEdit = () => {
     /* v8 ignore next */
     if (!editingUser) return;
-    updateUserMutation.mutate({
-      userId: editingUser.id,
-      data: {
-        full_name: editFullName || undefined,
-        user_type_ids: editTypeIds,
+    setUserGroups.mutate(
+      {
+        userId: editingUser.id,
+        userTypeIds: editTypeIds,
+        fullName: editFullName || undefined,
       },
-    });
-  };
-
-  const handleAddType = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTypeName.trim()) return;
-    createTypeMutation.mutate(newTypeName.trim());
-  };
-
-  const openEditTypeModal = (userType: UserType) => {
-    setEditingType(userType);
-    setEditTypeNameValue(userType.name);
-    setEditTypeAllowedMenus(userType.allowed_menus ?? []);
-  };
-
-  const handleSaveEditType = () => {
-    /* v8 ignore next */
-    if (!editingType) return;
-    updateUserTypeMutation.mutate({
-      typeId: editingType.id,
-      data: {
-        name: editTypeNameValue,
-        allowed_menus: editTypeAllowedMenus,
+      {
+        onSuccess: () => {
+          setActionError(null);
+          setEditingUser(null);
+        },
+        // `assert_can_assign_user_types` can answer 403 here exactly as on the
+        // group screen; §6.5 renders it the same way in both.
+        onError: (err) => setActionError(friendlyPermissionError(err, t)),
       },
-    });
+    );
   };
 
   if (isLoading)
@@ -229,67 +163,14 @@ const AdminUserDashboard: React.FC = () => {
         message={actionError ?? ""}
       />
 
-      {/* User Types Section */}
-      <div className="rounded-xl border bg-card p-4 mb-6">
-        <h2 className="text-sm font-semibold text-foreground mb-3">
-          {t("admin.userTypes")}
-        </h2>
-        <div className="flex flex-wrap gap-2 mb-3">
-          {userTypes?.length === 0 && (
-            <span className="text-sm text-muted-foreground">
-              {t("admin.noTypesYet")}
-            </span>
-          )}
-          {userTypes?.map((ut) => (
-            <div key={ut.id} className="flex items-center gap-1">
-              <Badge variant="secondary">{ut.name}</Badge>
-              <button
-                onClick={() => openEditTypeModal(ut)}
-                className="text-xs text-muted-foreground hover:text-primary transition-colors ml-1"
-                aria-label={`edit ${ut.name}`}
-              >
-                ✎
-              </button>
-              {!ut.role && (
-                <button
-                  onClick={() => {
-                    if (window.confirm(t("admin.confirmDeleteType"))) {
-                      deleteTypeMutation.mutate(ut.id);
-                    }
-                  }}
-                  className="text-xs text-muted-foreground hover:text-destructive transition-colors ml-1"
-                  aria-label={`delete ${ut.name}`}
-                >
-                  ×
-                </button>
-              )}
-              {ut.role && (
-                <span
-                  className="text-xs text-muted-foreground ml-1"
-                  title={t("admin.roleLinkedTypeCannotBeDeleted")}
-                  aria-label={`role-linked ${ut.name}`}
-                >
-                  🔒
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
-        <form onSubmit={handleAddType} className="flex gap-2 items-center">
-          <Input
-            value={newTypeName}
-            onChange={(e) => setNewTypeName(e.target.value)}
-            placeholder={t("admin.newTypeName")}
-            className="h-8 text-sm w-48"
-          />
-          <Button
-            type="submit"
-            size="sm"
-            disabled={!newTypeName.trim() || createTypeMutation.isPending}
-          >
-            {t("admin.addType")}
-          </Button>
-        </form>
+      {/* The group editor lives in one place now: /admin/groups (§7). */}
+      <div className="rounded-xl border bg-card p-4 mb-6 flex items-center justify-between gap-3 flex-wrap">
+        <span className="text-sm text-muted-foreground">
+          {t("groups.subtitle")}
+        </span>
+        <Button variant="outline" asChild>
+          <Link to="/admin/groups">{t("admin.manageGroups")}</Link>
+        </Button>
       </div>
 
       <div className="flex items-center gap-3 mb-5">
@@ -327,8 +208,10 @@ const AdminUserDashboard: React.FC = () => {
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground hidden md:table-cell">
                   {t("admin.colEmail")}
                 </th>
+                {/* TRANSITIONAL (IAM F4 -> F5): read-only, so an operator can
+                    still diagnose a legacy role bundle during the transition. */}
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">
-                  {t("admin.colRole")}
+                  {t("admin.colRoleLegacy")}
                 </th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">
                   {t("admin.colType")}
@@ -397,18 +280,6 @@ const AdminUserDashboard: React.FC = () => {
                           ? t("admin.deactivate")
                           : t("admin.approve")}
                       </Button>
-                      <Select
-                        aria-label={t("admin.colRole")}
-                        value={user.role}
-                        onChange={(e) => handleRoleSelect(user, e.target.value as UserRole)}
-                        className="h-8 text-sm w-36"
-                        disabled={user.id === currentUser?.id || updateUserMutation.isPending}
-                      >
-                        <option value={UserRole.ADMINISTRATOR}>{t("roles.ADMINISTRATOR")}</option>
-                        <option value={UserRole.DIRECTOR}>{t("roles.DIRECTOR")}</option>
-                        <option value={UserRole.MANAGER}>{t("roles.MANAGER")}</option>
-                        <option value={UserRole.GUEST}>{t("roles.GUEST")}</option>
-                      </Select>
                     </div>
                   </td>
                 </tr>
@@ -465,7 +336,7 @@ const AdminUserDashboard: React.FC = () => {
               </div>
               <div>
                 <label className="text-sm font-medium text-muted-foreground block mb-1">
-                  {t("admin.editType")}
+                  {t("admin.editGroups")}
                 </label>
                 <div className="max-h-40 overflow-y-auto border rounded-md p-2 space-y-2">
                   {userTypes?.length === 0 && (
@@ -502,7 +373,7 @@ const AdminUserDashboard: React.FC = () => {
               </Button>
               <Button
                 onClick={handleSaveEdit}
-                disabled={updateUserMutation.isPending}
+                disabled={setUserGroups.isPending}
               >
                 {t("admin.save")}
               </Button>
@@ -511,86 +382,6 @@ const AdminUserDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Edit User Type Modal */}
-      {editingType && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-          role="presentation"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setEditingType(null);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") setEditingType(null);
-          }}
-        >
-          <div className="bg-card border rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
-            <h2 className="text-lg font-semibold text-foreground mb-4">
-              {t("admin.editTypeTitle")}
-            </h2>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-muted-foreground block mb-1">
-                  {t("admin.editTypeName")}
-                </label>
-                <Input
-                  value={editTypeNameValue}
-                  onChange={(e) => setEditTypeNameValue(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground block mb-1">
-                  {t("admin.allowedMenus")}
-                </label>
-                <div className="border rounded-md p-2 space-y-2">
-                  {ALL_MENU_KEYS.map((menuKey) => {
-                    const isChecked = editTypeAllowedMenus.includes(menuKey);
-                    const label =
-                      menuKey === "tasks"
-                        ? t("admin.menuTasks")
-                        : t("admin.menuCategories");
-                    return (
-                      <label
-                        key={menuKey}
-                        className="flex items-center gap-2 text-sm cursor-pointer select-none"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setEditTypeAllowedMenus((prev) => [
-                                ...prev,
-                                menuKey,
-                              ]);
-                            } else {
-                              setEditTypeAllowedMenus((prev) =>
-                                prev.filter((key) => key !== menuKey),
-                              );
-                            }
-                          }}
-                          className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4"
-                        />
-                        <span>{label}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-            <div className="flex gap-3 mt-6 justify-end">
-              <Button variant="outline" onClick={() => setEditingType(null)}>
-                {t("admin.cancel")}
-              </Button>
-              <Button
-                onClick={handleSaveEditType}
-                disabled={updateUserTypeMutation.isPending}
-              >
-                {t("admin.save")}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

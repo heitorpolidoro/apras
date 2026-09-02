@@ -12,7 +12,7 @@ What it provides
 
 * :data:`CELLS` -- ``(role, method, path)`` for every ``ROUTE_PERMISSIONS``
   key and every :class:`~app.models.enums.UserRole`: ``6 x 180 == 1080``.
-  The ten ``UNGUARDED_ROUTES`` are excluded because none of them makes a
+  The twelve ``UNGUARDED_ROUTES`` are excluded because none of them makes a
   role-dimension authorization decision: eight are unauthenticated (``/``,
   ``/api/v1/health``, login, signup, forgot/reset-password and the two dev
   helpers), ``GET /api/v1/auth/me`` is strictly self-scoped, and the device

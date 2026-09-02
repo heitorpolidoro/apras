@@ -562,6 +562,11 @@ UNGUARDED_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("GET", "/api/v1/auth/dev-users"),  # unauthenticated dev helper
         ("POST", "/api/v1/auth/dev-login"),  # unauthenticated dev helper
         ("GET", "/api/v1/auth/me"),  # strictly self-scoped
+        # Strictly self-scoped, like /auth/me: "what do I hold here".
+        ("GET", "/api/v1/permissions/me"),
+        # The static permission vocabulary. No tenant data, no user data;
+        # identical for every authenticated caller (IAM F4).
+        ("GET", "/api/v1/permissions/"),
         # Authenticated by X-Device-Key, no user in the request at all.
         ("POST", "/api/v1/access-control/webhook/verification"),
     }

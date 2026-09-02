@@ -4,6 +4,12 @@ import { MemoryRouter } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import * as AuthHook from "../context/AuthContext";
 import * as TenantHook from "../context/useTenant";
+import { useMyPermissions } from "../../../hooks/usePermissionQueries";
+import {
+  ALL_PERMISSIONS,
+  PERMISSIONS_BY_ROLE,
+  settledPermissions,
+} from "../../../test/permissionFixtures";
 import { UserRole, type User } from "../../../types/auth";
 
 vi.mock("../context/SimulationContext", () => ({
@@ -23,6 +29,11 @@ vi.mock("../../../hooks/useUserTypes", () => ({
       { id: "type-1", name: "Test Type", allowed_menus: ["tasks", "categories"] },
     ],
   })),
+}));
+
+vi.mock("../../../hooks/usePermissionQueries", () => ({
+  useMyPermissions: vi.fn(),
+  usePermissionCatalogue: vi.fn(() => ({ data: [], isPending: false })),
 }));
 
 const TENANT_A = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
@@ -61,6 +72,16 @@ const mockTenant = (actingTenantId: string, isActingTenantAdmin: boolean) => {
     isLoading: false,
     setActingTenant: vi.fn(),
   });
+  // IAM F3: `get_effective_permissions` answers an acting tenant_admin the
+  // whole catalogue **in the granting tenant only**, and their own role's
+  // bundle everywhere else. That is now the only thing the Navbar reads.
+  vi.mocked(useMyPermissions).mockReturnValue(
+    settledPermissions(
+      isActingTenantAdmin
+        ? ALL_PERMISSIONS
+        : PERMISSIONS_BY_ROLE[UserRole.RESIDENT],
+    ) as never,
+  );
 };
 
 const renderNavbar = () =>

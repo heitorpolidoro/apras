@@ -15,6 +15,7 @@ from app.api.v1.endpoints import (
     lots,
     occurrences,
     packages,
+    permissions,
     projects,
     purchases,
     reservations,
@@ -55,6 +56,10 @@ api_router.include_router(tasks.router, prefix="/tasks", tags=["tasks"], depende
 api_router.include_router(users.router, prefix="/users", tags=["users"], dependencies=TENANT_SCOPED)
 api_router.include_router(categories.router, prefix="/categories", tags=["categories"], dependencies=TENANT_SCOPED)
 api_router.include_router(user_types.router, prefix="/user-types", tags=["user-types"], dependencies=TENANT_SCOPED)
+# Tenant-scoped, and it must be: `/permissions/me` answers "what do I hold in
+# the tenant I am acting in", which is exactly what `get_current_tenant`
+# resolves (APRAS-48 §2.1). `/auth/me` stays global and gains nothing.
+api_router.include_router(permissions.router, prefix="/permissions", tags=["permissions"], dependencies=TENANT_SCOPED)
 api_router.include_router(tenants.router, prefix="/tenants", tags=["tenants"], dependencies=GLOBAL_SCOPED)
 api_router.include_router(lots.router, prefix="/lots", tags=["lots"], dependencies=TENANT_SCOPED)
 api_router.include_router(residents.router, tags=["residents"], dependencies=TENANT_SCOPED)

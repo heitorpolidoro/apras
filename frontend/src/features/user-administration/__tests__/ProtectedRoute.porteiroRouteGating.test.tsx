@@ -4,13 +4,30 @@ import { MemoryRouter, Routes, Route } from "react-router-dom";
 import ProtectedRoute from "../components/ProtectedRoute";
 import { UserRole } from "../context/AuthContext";
 import * as AuthHook from "../context/AuthContext";
+import { useMyPermissions } from "../../../hooks/usePermissionQueries";
+import { ROUTE_ACCESS } from "../access/routeAccess";
+import {
+  PERMISSIONS_BY_ROLE,
+  settledPermissions,
+} from "../../../test/permissionFixtures";
 
-// These tests exercise the exact `requiredRoles` arrays App.tsx now attaches
-// to /gate and to the six previously-unguarded routes (/lots,
-// /authorizations, /occurrences, /documents, /projects, /announcements),
-// per the APRAS-12 spec. ProtectedRoute always calls useMenuAccess (rules of
-// hooks) even though these routes don't pass `requiredMenu`, so mock its
-// dependencies the same way ProtectedRoute.test.tsx does.
+/**
+ * The routes APRAS-12 gated, re-expressed over `ROUTE_ACCESS` (APRAS-48 §5.2).
+ *
+ * `ALLOWED_ROLES` is the spec's "Rule ⇒ roles" column, written out
+ * independently of the implementation, so this file states *which roles reach
+ * which page* rather than re-deriving the rule. Two rows differ from the
+ * pre-F4 `requiredRoles` arrays, and both are §5.2 deltas the backend already
+ * enforced:
+ *
+ *  * `/lots` — `lots:read` is A/D/M/P, so RESIDENT and GUEST lose a link the
+ *    backend answered 403 to anyway, and PORTEIRO gains one it always held;
+ *  * `/projects` — `projects:read` is A/D/M/R, so GUEST loses a 403.
+ *
+ * ProtectedRoute always calls `useMenuAccess` (rules of hooks) even on routes
+ * with no `legacyMenu`, so its dependencies are mocked the same way
+ * `ProtectedRoute.test.tsx` mocks them.
+ */
 vi.mock("../context/SimulationContext", () => ({
   useSimulation: vi.fn(() => ({
     simulatedRole: null,
@@ -26,36 +43,59 @@ vi.mock("../../../hooks/useUserTypes", () => ({
   useUserTypes: vi.fn(() => ({ data: [] })),
 }));
 
-const GATE_ROLES = [
-  UserRole.ADMINISTRATOR,
-  UserRole.DIRECTOR,
-  UserRole.MANAGER,
-  UserRole.PORTEIRO,
-];
+vi.mock("../../../hooks/usePermissionQueries", () => ({
+  useMyPermissions: vi.fn(),
+  usePermissionCatalogue: vi.fn(() => ({ data: [], isPending: false })),
+}));
 
-const SIX_ROUTES_ROLES = [
+const ALL_ROLES = [
   UserRole.ADMINISTRATOR,
   UserRole.DIRECTOR,
   UserRole.MANAGER,
   UserRole.RESIDENT,
   UserRole.GUEST,
+  UserRole.PORTEIRO,
 ];
 
-const mockUser = (role: UserRole) => ({
-  isAuthenticated: true,
-  isLoading: false,
-  user: {
-    id: "user-1",
-    email: "user@example.com",
-    full_name: "Test User",
-    role,
-    is_active: true,
-  } as any,
-  login: vi.fn() as any,
-  logout: vi.fn(),
-});
+const A = UserRole.ADMINISTRATOR;
+const D = UserRole.DIRECTOR;
+const M = UserRole.MANAGER;
+const R = UserRole.RESIDENT;
+const G = UserRole.GUEST;
+const P = UserRole.PORTEIRO;
 
-const renderGuardedRoute = (path: string, requiredRoles: UserRole[]) =>
+/** §5.2's "Rule ⇒ roles" column, transcribed. */
+const ALLOWED_ROLES: Record<string, UserRole[]> = {
+  "/gate": [A, D, M, P],
+  "/lots": [A, D, M, P],
+  "/authorizations": [A, D, M, R, G],
+  "/occurrences": [A, D, M, R, G],
+  "/documents": [A, D, M, R, G],
+  "/projects": [A, D, M, R],
+  "/announcements": [A, D, M, R, G],
+  "/finance": [A, D, M, R],
+};
+
+const mockUser = (role: UserRole) => {
+  vi.spyOn(AuthHook, "useAuth").mockReturnValue({
+    isAuthenticated: true,
+    isLoading: false,
+    user: {
+      id: "user-1",
+      email: "user@example.com",
+      full_name: "Test User",
+      role,
+      is_active: true,
+    } as never,
+    login: vi.fn() as never,
+    logout: vi.fn(),
+  });
+  vi.mocked(useMyPermissions).mockReturnValue(
+    settledPermissions(PERMISSIONS_BY_ROLE[role]) as never,
+  );
+};
+
+const renderGuardedRoute = (path: string) =>
   render(
     <MemoryRouter initialEntries={[path]}>
       <Routes>
@@ -63,7 +103,7 @@ const renderGuardedRoute = (path: string, requiredRoles: UserRole[]) =>
         <Route
           path={path}
           element={
-            <ProtectedRoute requiredRoles={requiredRoles}>
+            <ProtectedRoute requiredAccess={ROUTE_ACCESS[path]}>
               <div>Guarded Content</div>
             </ProtectedRoute>
           }
@@ -72,73 +112,18 @@ const renderGuardedRoute = (path: string, requiredRoles: UserRole[]) =>
     </MemoryRouter>,
   );
 
-describe("/gate route gating (previously unguarded)", () => {
-  it.each([
-    UserRole.ADMINISTRATOR,
-    UserRole.DIRECTOR,
-    UserRole.MANAGER,
-    UserRole.PORTEIRO,
-  ])("allows %s", (role) => {
-    vi.spyOn(AuthHook, "useAuth").mockReturnValue(mockUser(role));
-    renderGuardedRoute("/gate", GATE_ROLES);
-    expect(screen.getByText("Guarded Content")).toBeInTheDocument();
-  });
+describe.each(Object.keys(ALLOWED_ROLES))("%s route gating", (path) => {
+  it.each(ALL_ROLES)("decides %s exactly as ROUTE_ACCESS says", (role) => {
+    mockUser(role);
+    renderGuardedRoute(path);
 
-  it.each([UserRole.GUEST, UserRole.RESIDENT])(
-    "blocks %s (new restriction, no prior test coverage)",
-    (role) => {
-      vi.spyOn(AuthHook, "useAuth").mockReturnValue(mockUser(role));
-      renderGuardedRoute("/gate", GATE_ROLES);
-      expect(screen.getByText("Dashboard Page")).toBeInTheDocument();
+    if (ALLOWED_ROLES[path].includes(role)) {
+      expect(screen.getByText("Guarded Content")).toBeInTheDocument();
+    } else {
+      // §2.4: denial is in place, never a bounce to /dashboard.
       expect(screen.queryByText("Guarded Content")).toBeNull();
-    },
-  );
-});
-
-describe.each([
-  ["/lots", "LotsPage"],
-  ["/authorizations", "VisitorAuthPage"],
-  ["/occurrences", "OccurrenceBookPage"],
-  ["/documents", "DocumentCenterPage"],
-  ["/projects", "ConstructionTrackerPage"],
-  ["/announcements", "AnnouncementFeedPage"],
-])("%s route gating (previously unguarded, now excludes PORTEIRO)", (path) => {
-  it.each([
-    UserRole.ADMINISTRATOR,
-    UserRole.DIRECTOR,
-    UserRole.MANAGER,
-    UserRole.RESIDENT,
-    UserRole.GUEST,
-  ])(`still allows %s (regression)`, (role) => {
-    vi.spyOn(AuthHook, "useAuth").mockReturnValue(mockUser(role));
-    renderGuardedRoute(path, SIX_ROUTES_ROLES);
-    expect(screen.getByText("Guarded Content")).toBeInTheDocument();
-  });
-
-  it("blocks PORTEIRO", () => {
-    vi.spyOn(AuthHook, "useAuth").mockReturnValue(mockUser(UserRole.PORTEIRO));
-    renderGuardedRoute(path, SIX_ROUTES_ROLES);
-    expect(screen.getByText("Dashboard Page")).toBeInTheDocument();
-    expect(screen.queryByText("Guarded Content")).toBeNull();
-  });
-});
-
-// Spot-check: /finance already excluded PORTEIRO by construction before
-// this task (Non-Goals) — confirm it's still blocked, as a representative
-// sample of "every route that already had a requiredRole/requiredRoles
-// allowlist... excludes PORTEIRO by construction".
-describe("/finance route (already excluded PORTEIRO by construction)", () => {
-  const FINANCE_ROLES = [
-    UserRole.ADMINISTRATOR,
-    UserRole.DIRECTOR,
-    UserRole.MANAGER,
-    UserRole.RESIDENT,
-  ];
-
-  it("blocks PORTEIRO", () => {
-    vi.spyOn(AuthHook, "useAuth").mockReturnValue(mockUser(UserRole.PORTEIRO));
-    renderGuardedRoute("/finance", FINANCE_ROLES);
-    expect(screen.getByText("Dashboard Page")).toBeInTheDocument();
-    expect(screen.queryByText("Guarded Content")).toBeNull();
+      expect(screen.queryByText("Dashboard Page")).toBeNull();
+      expect(screen.getByText("Acesso restrito")).toBeInTheDocument();
+    }
   });
 });

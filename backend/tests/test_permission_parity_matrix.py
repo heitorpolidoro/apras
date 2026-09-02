@@ -271,9 +271,9 @@ def test_matrix_covers_every_permission_mapped_route():
     assert len(CELLS) == EXPECTED_CELL_COUNT
 
 
-def test_the_ten_unguarded_routes_are_the_only_ones_excluded():
+def test_the_twelve_unguarded_routes_are_the_only_ones_excluded():
     """No cell may be dropped for any reason other than being unguarded."""
-    assert len(UNGUARDED_ROUTES) == 10
+    assert len(UNGUARDED_ROUTES) == 12
     assert not (set(ROUTE_PERMISSIONS) & UNGUARDED_ROUTES)
 
 

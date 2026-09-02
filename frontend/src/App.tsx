@@ -33,6 +33,9 @@ import SpaceBookingPage from "./features/space-reservation-management/components
 import AssemblyVotingPage from "./features/assembly-voting/components/AssemblyVotingPage";
 import AssetsInventoryPage from "./features/asset-management/components/AssetsInventoryPage";
 import PurchaseRequestsPage from "./features/purchase-management/components/PurchaseRequestsPage";
+import GroupsAdminPage from "./features/user-administration/pages/GroupsAdminPage";
+import GroupDetailPage from "./features/user-administration/pages/GroupDetailPage";
+import { ROUTE_ACCESS } from "./features/user-administration/access/routeAccess";
 import { UserRole } from "./types/auth";
 import "./App.css";
 
@@ -79,7 +82,7 @@ function App() {
                 <Route
                   path="/dashboard"
                   element={
-                    <ProtectedRoute requiredMenu="tasks">
+                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/dashboard"]}>
                       <TaskDashboard />
                     </ProtectedRoute>
                   }
@@ -88,7 +91,7 @@ function App() {
                 <Route
                   path="/categories"
                   element={
-                    <ProtectedRoute requiredMenu="categories">
+                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/categories"]}>
                       <CategoriesPage />
                     </ProtectedRoute>
                   }
@@ -106,15 +109,7 @@ function App() {
                 <Route
                   path="/lots"
                   element={
-                    <ProtectedRoute
-                      requiredRoles={[
-                        UserRole.ADMINISTRATOR,
-                        UserRole.DIRECTOR,
-                        UserRole.MANAGER,
-                        UserRole.RESIDENT,
-                        UserRole.GUEST,
-                      ]}
-                    >
+                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/lots"]}>
                       <LotsPage />
                     </ProtectedRoute>
                   }
@@ -123,15 +118,7 @@ function App() {
                 <Route
                   path="/authorizations"
                   element={
-                    <ProtectedRoute
-                      requiredRoles={[
-                        UserRole.ADMINISTRATOR,
-                        UserRole.DIRECTOR,
-                        UserRole.MANAGER,
-                        UserRole.RESIDENT,
-                        UserRole.GUEST,
-                      ]}
-                    >
+                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/authorizations"]}>
                       <VisitorAuthPage />
                     </ProtectedRoute>
                   }
@@ -140,14 +127,7 @@ function App() {
                 <Route
                   path="/gate"
                   element={
-                    <ProtectedRoute
-                      requiredRoles={[
-                        UserRole.ADMINISTRATOR,
-                        UserRole.DIRECTOR,
-                        UserRole.MANAGER,
-                        UserRole.PORTEIRO,
-                      ]}
-                    >
+                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/gate"]}>
                       <GatekeeperDashboard />
                     </ProtectedRoute>
                   }
@@ -156,15 +136,7 @@ function App() {
                 <Route
                   path="/occurrences"
                   element={
-                    <ProtectedRoute
-                      requiredRoles={[
-                        UserRole.ADMINISTRATOR,
-                        UserRole.DIRECTOR,
-                        UserRole.MANAGER,
-                        UserRole.RESIDENT,
-                        UserRole.GUEST,
-                      ]}
-                    >
+                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/occurrences"]}>
                       <OccurrenceBookPage />
                     </ProtectedRoute>
                   }
@@ -173,7 +145,7 @@ function App() {
                 <Route
                   path="/feedback"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/feedback"]}>
                       <FeedbackChannelPage />
                     </ProtectedRoute>
                   }
@@ -182,15 +154,7 @@ function App() {
                 <Route
                   path="/documents"
                   element={
-                    <ProtectedRoute
-                      requiredRoles={[
-                        UserRole.ADMINISTRATOR,
-                        UserRole.DIRECTOR,
-                        UserRole.MANAGER,
-                        UserRole.RESIDENT,
-                        UserRole.GUEST,
-                      ]}
-                    >
+                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/documents"]}>
                       <DocumentCenterPage />
                     </ProtectedRoute>
                   }
@@ -199,15 +163,7 @@ function App() {
                 <Route
                   path="/projects"
                   element={
-                    <ProtectedRoute
-                      requiredRoles={[
-                        UserRole.ADMINISTRATOR,
-                        UserRole.DIRECTOR,
-                        UserRole.MANAGER,
-                        UserRole.RESIDENT,
-                        UserRole.GUEST,
-                      ]}
-                    >
+                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/projects"]}>
                       <ConstructionTrackerPage />
                     </ProtectedRoute>
                   }
@@ -216,15 +172,7 @@ function App() {
                 <Route
                   path="/announcements"
                   element={
-                    <ProtectedRoute
-                      requiredRoles={[
-                        UserRole.ADMINISTRATOR,
-                        UserRole.DIRECTOR,
-                        UserRole.MANAGER,
-                        UserRole.RESIDENT,
-                        UserRole.GUEST,
-                      ]}
-                    >
+                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/announcements"]}>
                       <AnnouncementFeedPage />
                     </ProtectedRoute>
                   }
@@ -233,14 +181,7 @@ function App() {
                 <Route
                   path="/finance"
                   element={
-                    <ProtectedRoute
-                      requiredRoles={[
-                        UserRole.ADMINISTRATOR,
-                        UserRole.DIRECTOR,
-                        UserRole.MANAGER,
-                        UserRole.RESIDENT,
-                      ]}
-                    >
+                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/finance"]}>
                       <FinanceDashboardPage />
                     </ProtectedRoute>
                   }
@@ -249,7 +190,7 @@ function App() {
                 <Route
                   path="/admin/users"
                   element={
-                    <ProtectedRoute requiredCapability="admin">
+                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/admin/users"]}>
                       <AdminUserDashboard />
                     </ProtectedRoute>
                   }
@@ -258,10 +199,7 @@ function App() {
                 <Route
                   path="/users/contact-info"
                   element={
-                    <ProtectedRoute
-                      requiredRoles={[UserRole.MANAGER]}
-                      requiredCapability="admin"
-                    >
+                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/users/contact-info"]}>
                       <ContactInfoDashboard />
                     </ProtectedRoute>
                   }
@@ -270,7 +208,7 @@ function App() {
                 <Route
                   path="/admin/photo-approvals"
                   element={
-                    <ProtectedRoute requiredRole={UserRole.DIRECTOR}>
+                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/admin/photo-approvals"]}>
                       <PhotoApprovalQueuePage />
                     </ProtectedRoute>
                   }
@@ -279,9 +217,7 @@ function App() {
                 <Route
                   path="/admin/access-control"
                   element={
-                    <ProtectedRoute
-                      requiredRoles={[UserRole.ADMINISTRATOR, UserRole.DIRECTOR]}
-                    >
+                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/admin/access-control"]}>
                       <AccessControlPage />
                     </ProtectedRoute>
                   }
@@ -290,13 +226,7 @@ function App() {
                 <Route
                   path="/gate-monitor"
                   element={
-                    <ProtectedRoute
-                      requiredRoles={[
-                        UserRole.ADMINISTRATOR,
-                        UserRole.DIRECTOR,
-                        UserRole.MANAGER,
-                      ]}
-                    >
+                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/gate-monitor"]}>
                       <GateMonitorPage />
                     </ProtectedRoute>
                   }
@@ -305,9 +235,7 @@ function App() {
                 <Route
                   path="/spaces"
                   element={
-                    <ProtectedRoute
-                      requiredRoles={[UserRole.ADMINISTRATOR, UserRole.DIRECTOR]}
-                    >
+                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/spaces"]}>
                       <ReservableSpacesPage />
                     </ProtectedRoute>
                   }
@@ -316,15 +244,7 @@ function App() {
                 <Route
                   path="/reservations"
                   element={
-                    <ProtectedRoute
-                      requiredRoles={[
-                        UserRole.ADMINISTRATOR,
-                        UserRole.DIRECTOR,
-                        UserRole.MANAGER,
-                        UserRole.RESIDENT,
-                        UserRole.GUEST,
-                      ]}
-                    >
+                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/reservations"]}>
                       <SpaceBookingPage />
                     </ProtectedRoute>
                   }
@@ -333,14 +253,7 @@ function App() {
                 <Route
                   path="/packages"
                   element={
-                    <ProtectedRoute
-                      requiredRoles={[
-                        UserRole.ADMINISTRATOR,
-                        UserRole.DIRECTOR,
-                        UserRole.MANAGER,
-                        UserRole.RESIDENT,
-                      ]}
-                    >
+                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/packages"]}>
                       <PackageStatusPage />
                     </ProtectedRoute>
                   }
@@ -351,14 +264,7 @@ function App() {
                 <Route
                   path="/voting"
                   element={
-                    <ProtectedRoute
-                      requiredRoles={[
-                        UserRole.ADMINISTRATOR,
-                        UserRole.DIRECTOR,
-                        UserRole.MANAGER,
-                        UserRole.RESIDENT,
-                      ]}
-                    >
+                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/voting"]}>
                       <AssemblyVotingPage />
                     </ProtectedRoute>
                   }
@@ -367,13 +273,7 @@ function App() {
                 <Route
                   path="/assets"
                   element={
-                    <ProtectedRoute
-                      requiredRoles={[
-                        UserRole.ADMINISTRATOR,
-                        UserRole.DIRECTOR,
-                        UserRole.MANAGER,
-                      ]}
-                    >
+                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/assets"]}>
                       <AssetsInventoryPage />
                     </ProtectedRoute>
                   }
@@ -385,14 +285,28 @@ function App() {
                 <Route
                   path="/purchases"
                   element={
-                    <ProtectedRoute
-                      requiredRoles={[
-                        UserRole.ADMINISTRATOR,
-                        UserRole.DIRECTOR,
-                        UserRole.MANAGER,
-                      ]}
-                    >
+                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/purchases"]}>
                       <PurchaseRequestsPage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/admin/groups"
+                  element={
+                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/admin/groups"]}>
+                      <GroupsAdminPage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/admin/groups/:groupId"
+                  element={
+                    <ProtectedRoute
+                      requiredAccess={ROUTE_ACCESS["/admin/groups/:groupId"]}
+                    >
+                      <GroupDetailPage />
                     </ProtectedRoute>
                   }
                 />

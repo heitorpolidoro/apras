@@ -67,9 +67,24 @@ Building administrators and HOA boards juggle dozens of operational tasks — ma
 |--------------------|------------------------|-------------------------|
 | `/login`           | `LoginPage`            | Public                  |
 | `/signup`          | `SignupPage`           | Public                  |
-| `/dashboard`       | `TaskDashboard`        | Authenticated           |
-| `/categories`      | `CategoriesPage`       | Authenticated           |
-| `/admin/users`     | `AdminUserDashboard`   | Administrator only      |
+| `/dashboard`       | `TaskDashboard`        | `{module:"tasks"}` + the legacy `tasks` menu key |
+| `/categories`      | `CategoriesPage`       | `{module:"categories"}` + the legacy `categories` menu key |
+| `/admin/users`     | `AdminUserDashboard`   | `users:update`          |
+| `/admin/groups`    | `GroupsAdminPage`      | any of `user_types:create/update/delete` |
+| `/admin/groups/:groupId` | `GroupDetailPage`| the same rule           |
+
+Since APRAS-48 every protected route's rule is one entry of
+`ROUTE_ACCESS` (`frontend/src/features/user-administration/access/routeAccess.ts`),
+passed as `ProtectedRoute`'s single `requiredAccess` prop and reused verbatim
+by the matching `NAV_ITEMS` entry, so a menu and its route can never state
+different rules. Authorization reads the **real** permission set
+(`useCanAccess`); menus read the **simulated** one while an administrator is
+"viewing as" (`useCanShowMenu`) — APRAS-35's invariant, restated over
+permissions. A denied route renders `RestrictedAccessMessage` **in place** and
+never redirects. Two `TRANSITIONAL (IAM F4 -> F5)` fields survive on exactly
+two entries: `legacyMenu`, because `deps.assert_menu_access` still gates 12
+handlers, and `landingRedirect`, the GUEST → `/welcome` / PORTEIRO → `/gate`
+landing rule, which is not authorization.
 
 ## Backend (FastAPI)
 
@@ -90,6 +105,7 @@ Building administrators and HOA boards juggle dozens of operational tasks — ma
 | `/api/v1/categories` | Categories  | `backend/app/api/v1/endpoints/categories.py` |
 | `/api/v1/user-types` | User Types  | `backend/app/api/v1/endpoints/user_types.py` |
 | `/api/v1/tenants` | Tenants & membership | `backend/app/api/v1/endpoints/tenants.py` |
+| `/api/v1/permissions` | Permission catalogue & effective set | `backend/app/api/v1/endpoints/permissions.py` |
 | `/api/v1/health` | Health check    | `backend/app/api/v1/api.py`              |
 
 ## Data Layer
@@ -378,10 +394,24 @@ B-only user exactly as a tenant_admin of A does, and reaches that user by
 sending `X-Tenant-Id: B`. Global vision is a property of *sending the header*,
 not of the role.
 
-**Not yet done.** The frontend tenant switcher is **APRAS-38**; nothing under
-`frontend/` knows tenants exist yet. `GET /api/v1/auth/me` stays global and
-returns the caller's own `user_types` unfiltered, having no acting tenant to
-filter by.
+**The two permission reads.** `GET /api/v1/permissions/` returns the whole
+static catalogue — one row per permission, pre-split into `module`, `action`
+and `superuser_only` — and `GET /api/v1/permissions/me` returns
+`{tenant_id, permissions[]}`, i.e. `deps.get_effective_permissions` for the
+**acting tenant**, sorted (APRAS-48). The router is mounted `TENANT_SCOPED`,
+so `/me` resolves its tenant through the same `get_current_tenant` ladder as
+`/user-types/`; `/auth/me` is deliberately **not** the carrier, because it is
+global (`GLOBAL_ROUTES`), so computing permissions there would answer the
+*default* tenant's groups to a user acting in another one. Both routes are on
+`UNGUARDED_ROUTES` — authenticated, self-scoped or data-free — which is what
+keeps `ROUTE_PERMISSIONS` at 180 and
+`backend/tests/data/parity_matrix_baseline.json` byte-identical. The frontend
+consumes `/permissions/me` under the TanStack key `["me","permissions"]`; the
+key does not start with `"tenants"`, so a tenant switch evicts and refetches
+it with no reload.
+
+**Not yet done.** `GET /api/v1/auth/me` stays global and returns the caller's
+own `user_types` unfiltered, having no acting tenant to filter by.
 
 ### Task
 

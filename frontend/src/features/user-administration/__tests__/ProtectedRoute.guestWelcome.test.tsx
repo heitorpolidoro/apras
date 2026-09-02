@@ -6,10 +6,17 @@ import { UserRole } from "../context/AuthContext";
 import * as AuthHook from "../context/AuthContext";
 import { useSimulation } from "../context/SimulationContext";
 import { useUserTypes } from "../../../hooks/useUserTypes";
+import { useMyPermissions } from "../../../hooks/usePermissionQueries";
+import { ROUTE_ACCESS } from "../access/routeAccess";
+import {
+  PERMISSIONS_BY_ROLE,
+  settledPermissions,
+} from "../../../test/permissionFixtures";
 
 // Mirrors the mocking approach in ProtectedRoute.test.tsx, but exposes
 // useSimulation as a controllable mock so individual tests can simulate an
-// Administrator "viewing as" GUEST.
+// Administrator "viewing as" GUEST. The GUEST -> /welcome landing rule is now
+// `AccessRule.landingRedirect`, carried by exactly the two routes of §2.4.
 vi.mock("../context/SimulationContext", () => ({
   useSimulation: vi.fn(),
 }));
@@ -18,6 +25,11 @@ vi.mock("../../../hooks/useUserTypes", () => ({
   useUserTypes: vi.fn(() => ({
     data: [{ id: "type-1", name: "Test Type", allowed_menus: ["tasks", "categories"] }],
   })),
+}));
+
+vi.mock("../../../hooks/usePermissionQueries", () => ({
+  useMyPermissions: vi.fn(),
+  usePermissionCatalogue: vi.fn(() => ({ data: [], isPending: false })),
 }));
 
 const notSimulating = {
@@ -38,7 +50,7 @@ const renderDashboard = () =>
         <Route
           path="/dashboard"
           element={
-            <ProtectedRoute requiredMenu="tasks">
+            <ProtectedRoute requiredAccess={ROUTE_ACCESS["/dashboard"]}>
               <div>Tasks Content</div>
             </ProtectedRoute>
           }
@@ -47,7 +59,7 @@ const renderDashboard = () =>
     </MemoryRouter>,
   );
 
-describe("ProtectedRoute — GUEST welcome redirect (requiredMenu routes)", () => {
+describe("ProtectedRoute — GUEST welcome redirect (landingRedirect routes)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(useUserTypes).mockReturnValue({
@@ -70,6 +82,9 @@ describe("ProtectedRoute — GUEST welcome redirect (requiredMenu routes)", () =
       login: vi.fn() as any,
       logout: vi.fn(),
     });
+    vi.mocked(useMyPermissions).mockReturnValue(
+      settledPermissions(PERMISSIONS_BY_ROLE[UserRole.GUEST]) as never,
+    );
 
     renderDashboard();
 
@@ -93,6 +108,9 @@ describe("ProtectedRoute — GUEST welcome redirect (requiredMenu routes)", () =
       login: vi.fn() as any,
       logout: vi.fn(),
     });
+    vi.mocked(useMyPermissions).mockReturnValue(
+      settledPermissions(PERMISSIONS_BY_ROLE[UserRole.DIRECTOR]) as never,
+    );
     vi.mocked(useUserTypes).mockReturnValue({ data: [] } as any); // skipcq: JS-0323
 
     renderDashboard();
@@ -124,6 +142,9 @@ describe("ProtectedRoute — GUEST welcome redirect (requiredMenu routes)", () =
       login: vi.fn() as any,
       logout: vi.fn(),
     });
+    vi.mocked(useMyPermissions).mockReturnValue(
+      settledPermissions(PERMISSIONS_BY_ROLE[UserRole.ADMINISTRATOR]) as never,
+    );
 
     renderDashboard();
 
@@ -146,6 +167,9 @@ describe("ProtectedRoute — GUEST welcome redirect (requiredMenu routes)", () =
       login: vi.fn() as any,
       logout: vi.fn(),
     });
+    vi.mocked(useMyPermissions).mockReturnValue(
+      settledPermissions(PERMISSIONS_BY_ROLE[UserRole.ADMINISTRATOR]) as never,
+    );
 
     renderDashboard();
 
@@ -153,7 +177,7 @@ describe("ProtectedRoute — GUEST welcome redirect (requiredMenu routes)", () =
     expect(screen.queryByText("Welcome Page")).toBeNull();
   });
 
-  it("does not redirect GUEST to /welcome on a requiredRole route (only requiredMenu routes are affected)", () => {
+  it("does not redirect GUEST to /welcome on a requiredRole route (only landingRedirect routes are affected)", () => {
     vi.mocked(useSimulation).mockReturnValue(notSimulating);
     vi.spyOn(AuthHook, "useAuth").mockReturnValue({
       isAuthenticated: true,
@@ -168,6 +192,9 @@ describe("ProtectedRoute — GUEST welcome redirect (requiredMenu routes)", () =
       login: vi.fn() as any,
       logout: vi.fn(),
     });
+    vi.mocked(useMyPermissions).mockReturnValue(
+      settledPermissions(PERMISSIONS_BY_ROLE[UserRole.GUEST]) as never,
+    );
 
     render(
       <MemoryRouter initialEntries={["/admin"]}>
@@ -177,7 +204,7 @@ describe("ProtectedRoute — GUEST welcome redirect (requiredMenu routes)", () =
           <Route
             path="/admin"
             element={
-              <ProtectedRoute requiredRole={UserRole.ADMINISTRATOR}>
+              <ProtectedRoute requiredAccess={ROUTE_ACCESS["/admin/users"]}>
                 <div>Admin Content</div>
               </ProtectedRoute>
             }
@@ -186,8 +213,10 @@ describe("ProtectedRoute — GUEST welcome redirect (requiredMenu routes)", () =
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("Dashboard")).toBeInTheDocument();
+    // §2.4: denial is in place, so there is no bounce to /dashboard either.
+    expect(screen.queryByText("Dashboard")).toBeNull();
     expect(screen.queryByText("Welcome Page")).toBeNull();
     expect(screen.queryByText("Admin Content")).toBeNull();
+    expect(screen.getByText("Acesso restrito")).toBeInTheDocument();
   });
 });

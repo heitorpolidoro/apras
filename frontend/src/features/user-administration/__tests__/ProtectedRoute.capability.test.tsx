@@ -4,8 +4,25 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "../components/ProtectedRoute";
 import * as AuthHook from "../context/AuthContext";
 import * as TenantHook from "../context/useTenant";
+import { useMyPermissions } from "../../../hooks/usePermissionQueries";
+import { ROUTE_ACCESS } from "../access/routeAccess";
+import {
+  ALL_PERMISSIONS,
+  PERMISSIONS_BY_ROLE,
+  settledPermissions,
+} from "../../../test/permissionFixtures";
 import { UserRole, type User } from "../../../types/auth";
 
+/**
+ * The APRAS-43 admin *capability*, restated over permissions (APRAS-48 §2.4).
+ *
+ * The `requiredCapability` prop is gone: under IAM F3 an `is_tenant_admin` of
+ * the acting tenant and an `is_superuser` both hold the **whole catalogue**,
+ * so the capability is no longer a separate predicate — it is simply the set
+ * `/permissions/me` answers. The scenarios below are unchanged; only the
+ * mechanism that expresses "this caller is a tenant_admin here" moved from a
+ * boolean to a permission payload.
+ */
 vi.mock("../context/SimulationContext", () => ({
   useSimulation: vi.fn(() => ({
     simulatedRole: null,
@@ -19,6 +36,11 @@ vi.mock("../context/SimulationContext", () => ({
 
 vi.mock("../../../hooks/useUserTypes", () => ({
   useUserTypes: vi.fn(() => ({ data: [] })),
+}));
+
+vi.mock("../../../hooks/usePermissionQueries", () => ({
+  useMyPermissions: vi.fn(),
+  usePermissionCatalogue: vi.fn(() => ({ data: [], isPending: false })),
 }));
 
 const TENANT_A = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
@@ -43,6 +65,13 @@ const mockTenant = (actingTenantId: string, isActingTenantAdmin: boolean) => {
     isLoading: false,
     setActingTenant: vi.fn(),
   });
+};
+
+/** What `/permissions/me` answers in the acting tenant. */
+const holding = (permissions: readonly string[]) => {
+  vi.mocked(useMyPermissions).mockReturnValue(
+    settledPermissions(permissions) as never,
+  );
 };
 
 /**
@@ -76,7 +105,7 @@ const renderAdminUsers = () =>
         <Route
           path="/admin/users"
           element={
-            <ProtectedRoute requiredCapability="admin">
+            <ProtectedRoute requiredAccess={ROUTE_ACCESS["/admin/users"]}>
               <div>Painel de Administração</div>
             </ProtectedRoute>
           }
@@ -94,8 +123,7 @@ const renderContactInfo = () =>
           path="/users/contact-info"
           element={
             <ProtectedRoute
-              requiredRoles={[UserRole.MANAGER]}
-              requiredCapability="admin"
+              requiredAccess={ROUTE_ACCESS["/users/contact-info"]}
             >
               <div>Contatos</div>
             </ProtectedRoute>
@@ -106,7 +134,7 @@ const renderContactInfo = () =>
     </MemoryRouter>,
   );
 
-describe("ProtectedRoute requiredCapability", () => {
+describe("ProtectedRoute admin capability, as permissions", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
@@ -114,59 +142,65 @@ describe("ProtectedRoute requiredCapability", () => {
   it("renders /admin/users for a tenant_admin acting in the granting tenant", () => {
     mockAuth(TENANT_ADMIN_OF_A);
     mockTenant(TENANT_A, true);
+    // IAM F3: in the granting tenant the capability *is* the whole catalogue.
+    holding(ALL_PERMISSIONS);
 
     renderAdminUsers();
 
     expect(screen.getByText("Painel de Administração")).toBeInTheDocument();
   });
 
-  it("redirects a tenant_admin acting in another tenant to /dashboard", () => {
+  it("denies a tenant_admin acting in another tenant", () => {
     mockAuth(TENANT_ADMIN_OF_A);
     mockTenant(TENANT_B, false);
+    // Outside the granting tenant they hold only their own role's bundle.
+    holding(PERMISSIONS_BY_ROLE[UserRole.RESIDENT]);
 
     renderAdminUsers();
 
     expect(screen.queryByText("Painel de Administração")).toBeNull();
-    expect(screen.getByText("Painel de Tarefas")).toBeInTheDocument();
+    expect(screen.getByText("Acesso restrito")).toBeInTheDocument();
   });
 
   it("still renders /admin/users for a global ADMINISTRATOR", () => {
     mockAuth({ id: "u-admin", role: UserRole.ADMINISTRATOR, tenants: [] });
-    // Not a tenant_admin anywhere: the role alone must carry the capability.
+    // Not a tenant_admin anywhere: the legacy bundle alone must carry it.
     mockTenant(TENANT_B, false);
+    holding(PERMISSIONS_BY_ROLE[UserRole.ADMINISTRATOR]);
 
     renderAdminUsers();
 
     expect(screen.getByText("Painel de Administração")).toBeInTheDocument();
   });
 
-  it("requiredCapability ORs with requiredRoles (MANAGER passes contact-info without the capability)", () => {
+  it("a MANAGER passes contact-info on users:update_contact alone", () => {
     mockAuth({ id: "u-manager", role: UserRole.MANAGER, tenants: [] });
     mockTenant(TENANT_A, false);
+    holding(PERMISSIONS_BY_ROLE[UserRole.MANAGER]);
 
     renderContactInfo();
 
     expect(screen.getByText("Contatos")).toBeInTheDocument();
   });
 
-  it("lets the capability alone pass a route that also lists roles", () => {
-    // A tenant_admin who is not a MANAGER: the OR must be a real OR, not an
-    // AND that only the role arm can satisfy.
+  it("lets a capability holder who is not a MANAGER pass contact-info", () => {
     mockAuth(TENANT_ADMIN_OF_A);
     mockTenant(TENANT_A, true);
+    holding(ALL_PERMISSIONS);
 
     renderContactInfo();
 
     expect(screen.getByText("Contatos")).toBeInTheDocument();
   });
 
-  it("denies a user with neither the role nor the capability", () => {
+  it("denies a user with neither the role's bundle nor the capability", () => {
     mockAuth({ id: "u-resident", role: UserRole.RESIDENT, tenants: [] });
     mockTenant(TENANT_A, false);
+    holding(PERMISSIONS_BY_ROLE[UserRole.RESIDENT]);
 
     renderContactInfo();
 
     expect(screen.queryByText("Contatos")).toBeNull();
-    expect(screen.getByText("Painel de Tarefas")).toBeInTheDocument();
+    expect(screen.getByText("Acesso restrito")).toBeInTheDocument();
   });
 });

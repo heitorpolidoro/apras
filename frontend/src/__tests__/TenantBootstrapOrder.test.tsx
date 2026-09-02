@@ -8,6 +8,10 @@ import {
   getActingTenantId,
 } from "../features/user-administration/context/tenantState";
 import { UserRole } from "../types/auth";
+import {
+  ALL_PERMISSIONS,
+  PERMISSIONS_BY_ROLE,
+} from "../test/permissionFixtures";
 
 /**
  * Bootstrap ordering for the acting tenant, on the **real `App`**.
@@ -31,7 +35,12 @@ import { UserRole } from "../types/auth";
  *    mirror through `useSyncExternalStore`) — with a `useState` + `useEffect`
  *    re-sync there is exactly one commit in which `user` is set, `isLoading`
  *    is false and the acting tenant is still `null`, and `ProtectedRoute`
- *    evaluates `requiredCapability` in that commit.
+ *    evaluates its rule in that commit.
+ *
+ * Since IAM F4 (APRAS-48) the client also answers `/permissions/me`, the
+ * scoped read `ProtectedRoute` and `Navbar` now gate on. It is per-tenant, so
+ * the `navigations` sentinel additionally proves that the extra query does not
+ * cause a redirect while it is in flight.
  */
 
 const TENANT_A = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
@@ -50,6 +59,17 @@ const RESIDENT_TYPE = {
   id: "type-resident",
   name: "Morador do Condomínio A",
   allowed_menus: ["tasks", "categories"],
+  permissions: [],
+};
+
+/** What `GET /permissions/me` answers per acting tenant, per fixture. */
+const PERMISSIONS_BY_TENANT: Record<string, Record<string, string[]>> = {
+  "u-dual": {
+    [TENANT_A]: PERMISSIONS_BY_ROLE[UserRole.RESIDENT],
+    [TENANT_B]: PERMISSIONS_BY_ROLE[UserRole.RESIDENT],
+  },
+  // IAM F3: the capability is the whole catalogue, in the granting tenant.
+  "u-syndic": { [TENANT_A]: ALL_PERMISSIONS },
 };
 
 const membership = (
@@ -122,7 +142,7 @@ let navigations: string[];
 let pushState: typeof window.history.pushState;
 let replaceState: typeof window.history.replaceState;
 
-const installClient = (me: unknown) => {
+const installClient = (me: { id: string }) => {
   mockedGet.mockReset();
   mockedGet.mockImplementation(((url: string) => {
     const actingTenantId = getActingTenantId();
@@ -142,6 +162,22 @@ const installClient = (me: unknown) => {
         });
       }
       return Promise.resolve({ data: [RESIDENT_TYPE] });
+    }
+    if (url === "/permissions/me") {
+      if (actingTenantId === null) {
+        return Promise.reject({
+          response: {
+            status: 400,
+            data: { detail: "X-Tenant-Id header is required" },
+          },
+        });
+      }
+      return Promise.resolve({
+        data: {
+          tenant_id: actingTenantId,
+          permissions: PERMISSIONS_BY_TENANT[me.id]?.[actingTenantId] ?? [],
+        },
+      });
     }
     if (url === "/users/") return Promise.resolve({ data: USERS });
     return Promise.resolve({ data: [] });

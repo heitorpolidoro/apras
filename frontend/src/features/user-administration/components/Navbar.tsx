@@ -2,10 +2,9 @@ import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth, UserRole } from "../context/AuthContext";
-import { useEffectiveIdentity } from "../context/useEffectiveIdentity";
-import { useMenuAccess } from "../context/useMenuAccess";
 import { useTenant } from "../context/useTenant";
-import { useEffectiveAdminCapability } from "../context/useAdminCapability";
+import { useCanShowMenu } from "../access/useCanAccess";
+import { NAV_ITEMS, type NavItem } from "../access/routeAccess";
 import { cn } from "../../../lib/utils";
 import SimulationControls from "./SimulationControls";
 
@@ -14,14 +13,38 @@ const LANGUAGES = [
   { code: "en", label: "EN" },
 ];
 
+/**
+ * One navigation link, gated by `useCanShowMenu` — the **display** hook, so
+ * "view-as" keeps previewing the simulated user's menu (APRAS-48 §2.7).
+ *
+ * It is a component rather than a loop body so the hook is called once per
+ * item at a fixed position, which is what the rules of hooks require.
+ */
+const NavItemLink: React.FC<{ item: NavItem }> = ({ item }) => {
+  const { allowed } = useCanShowMenu(item.access);
+  const location = useLocation();
+  const { t } = useTranslation();
+
+  if (!allowed) return null;
+
+  return (
+    <Link
+      to={item.path}
+      className={cn(
+        "text-sm font-semibold transition-all hover:text-primary relative py-1",
+        location.pathname === item.path
+          ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
+          : "text-muted-foreground",
+      )}
+    >
+      {t(item.labelKey)}
+    </Link>
+  );
+};
+
 const Navbar: React.FC = () => {
   const { user, logout, isAuthenticated } = useAuth();
-  const { role: effectiveRole } = useEffectiveIdentity();
-  const canAccessTasks = useMenuAccess("tasks");
-  const canAccessCategories = useMenuAccess("categories");
   const { tenants, actingTenantId, setActingTenant } = useTenant();
-  const hasEffectiveAdminCapability = useEffectiveAdminCapability();
-  const location = useLocation();
   const { t, i18n } = useTranslation();
   const currentLang = i18n.resolvedLanguage ?? i18n.language;
 
@@ -40,326 +63,9 @@ const Navbar: React.FC = () => {
       </Link>
 
       <div className="flex items-center gap-8">
-        {canAccessTasks && (
-          <Link
-            to="/dashboard"
-            className={cn(
-              "text-sm font-semibold transition-all hover:text-primary relative py-1",
-              location.pathname === "/dashboard"
-                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
-                : "text-muted-foreground",
-            )}
-          >
-            {t("nav.tasks")}
-          </Link>
-        )}
-
-        {canAccessCategories && (
-          <Link
-            to="/categories"
-            className={cn(
-              "text-sm font-semibold transition-all hover:text-primary relative py-1",
-              location.pathname === "/categories"
-                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
-                : "text-muted-foreground",
-            )}
-          >
-            {t("nav.categories")}
-          </Link>
-        )}
-
-        {effectiveRole !== UserRole.GUEST && effectiveRole !== UserRole.PORTEIRO && (
-          <Link
-            to="/lots"
-            className={cn(
-              "text-sm font-semibold transition-all hover:text-primary relative py-1",
-              location.pathname === "/lots"
-                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
-                : "text-muted-foreground",
-            )}
-          >
-            {t("nav.lots")}
-          </Link>
-        )}
-
-        {effectiveRole !== UserRole.GUEST && effectiveRole !== UserRole.PORTEIRO && (
-          <Link
-            to="/authorizations"
-            className={cn(
-              "text-sm font-semibold transition-all hover:text-primary relative py-1",
-              location.pathname === "/authorizations"
-                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
-                : "text-muted-foreground",
-            )}
-          >
-            {t("nav.authorizations")}
-          </Link>
-        )}
-
-        {(effectiveRole === UserRole.ADMINISTRATOR ||
-          effectiveRole === UserRole.DIRECTOR ||
-          effectiveRole === UserRole.MANAGER ||
-          effectiveRole === UserRole.PORTEIRO) && (
-          <Link
-            to="/gate"
-            className={cn(
-              "text-sm font-semibold transition-all hover:text-primary relative py-1",
-              location.pathname === "/gate"
-                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
-                : "text-muted-foreground",
-            )}
-          >
-            {t("nav.gate")}
-          </Link>
-        )}
-
-        {effectiveRole !== UserRole.PORTEIRO && (
-          <Link
-            to="/occurrences"
-            className={cn(
-              "text-sm font-semibold transition-all hover:text-primary relative py-1",
-              location.pathname === "/occurrences"
-                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
-                : "text-muted-foreground",
-            )}
-          >
-            {t("nav.occurrences", "Ocorrências")}
-          </Link>
-        )}
-
-        {effectiveRole !== UserRole.GUEST && effectiveRole !== UserRole.PORTEIRO && (
-          <Link
-            to="/packages"
-            className={cn(
-              "text-sm font-semibold transition-all hover:text-primary relative py-1",
-              location.pathname === "/packages"
-                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
-                : "text-muted-foreground",
-            )}
-          >
-            {t("nav.packages", "Encomendas")}
-          </Link>
-        )}
-
-        {effectiveRole !== UserRole.GUEST && effectiveRole !== UserRole.PORTEIRO && (
-          <Link
-            to="/voting"
-            className={cn(
-              "text-sm font-semibold transition-all hover:text-primary relative py-1",
-              location.pathname === "/voting"
-                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
-                : "text-muted-foreground",
-            )}
-          >
-            {t("nav.voting", "Assembleias")}
-          </Link>
-        )}
-
-        {effectiveRole !== UserRole.PORTEIRO && (
-          <Link
-            to="/feedback"
-            className={cn(
-              "text-sm font-semibold transition-all hover:text-primary relative py-1",
-              location.pathname === "/feedback"
-                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
-                : "text-muted-foreground",
-            )}
-          >
-            {t("nav.feedback", "Fale Conosco")}
-          </Link>
-        )}
-
-        {effectiveRole !== UserRole.PORTEIRO && (
-          <Link
-            to="/reservations"
-            className={cn(
-              "text-sm font-semibold transition-all hover:text-primary relative py-1",
-              location.pathname === "/reservations"
-                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
-                : "text-muted-foreground",
-            )}
-          >
-            {t("nav.reservations", "Reservas")}
-          </Link>
-        )}
-
-        {(effectiveRole === UserRole.ADMINISTRATOR ||
-          effectiveRole === UserRole.DIRECTOR) && (
-          <Link
-            to="/spaces"
-            className={cn(
-              "text-sm font-semibold transition-all hover:text-primary relative py-1",
-              location.pathname === "/spaces"
-                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
-                : "text-muted-foreground",
-            )}
-          >
-            {t("nav.manageSpaces", "Espaços")}
-          </Link>
-        )}
-
-        {effectiveRole !== UserRole.PORTEIRO && (
-          <Link
-            to="/documents"
-            className={cn(
-              "text-sm font-semibold transition-all hover:text-primary relative py-1",
-              location.pathname === "/documents"
-                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
-                : "text-muted-foreground",
-            )}
-          >
-            {t("nav.documents", "Documentos")}
-          </Link>
-        )}
-
-        {effectiveRole !== UserRole.GUEST && effectiveRole !== UserRole.PORTEIRO && (
-          <Link
-            to="/projects"
-            className={cn(
-              "text-sm font-semibold transition-all hover:text-primary relative py-1",
-              location.pathname === "/projects"
-                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
-                : "text-muted-foreground",
-            )}
-          >
-            {t("projects.navItem", "Obras")}
-          </Link>
-        )}
-
-        {effectiveRole !== UserRole.PORTEIRO && (
-          <Link
-            to="/announcements"
-            className={cn(
-              "text-sm font-semibold transition-all hover:text-primary relative py-1",
-              location.pathname === "/announcements"
-                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
-                : "text-muted-foreground",
-            )}
-          >
-            {t("nav.announcements", "Comunicados")}
-          </Link>
-        )}
-
-        {effectiveRole !== UserRole.GUEST && effectiveRole !== UserRole.PORTEIRO && (
-          <Link
-            to="/finance"
-            className={cn(
-              "text-sm font-semibold transition-all hover:text-primary relative py-1",
-              location.pathname === "/finance"
-                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
-                : "text-muted-foreground",
-            )}
-          >
-            {t("nav.finance", "Financeiro")}
-          </Link>
-        )}
-
-        {(effectiveRole === UserRole.ADMINISTRATOR ||
-          effectiveRole === UserRole.DIRECTOR ||
-          effectiveRole === UserRole.MANAGER) && (
-          <Link
-            to="/assets"
-            className={cn(
-              "text-sm font-semibold transition-all hover:text-primary relative py-1",
-              location.pathname === "/assets"
-                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
-                : "text-muted-foreground",
-            )}
-          >
-            {t("nav.assets", "Patrimônio & Estoque")}
-          </Link>
-        )}
-
-        {(effectiveRole === UserRole.ADMINISTRATOR ||
-          effectiveRole === UserRole.DIRECTOR ||
-          effectiveRole === UserRole.MANAGER) && (
-          <Link
-            to="/purchases"
-            className={cn(
-              "text-sm font-semibold transition-all hover:text-primary relative py-1",
-              location.pathname === "/purchases"
-                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
-                : "text-muted-foreground",
-            )}
-          >
-            {t("nav.purchases", "Cotações de Compra")}
-          </Link>
-        )}
-
-
-        {(hasEffectiveAdminCapability ||
-          effectiveRole === UserRole.MANAGER) && (
-          <Link
-            to="/users/contact-info"
-            className={cn(
-              "text-sm font-semibold transition-all hover:text-primary relative py-1",
-              location.pathname === "/users/contact-info"
-                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
-                : "text-muted-foreground",
-            )}
-          >
-            {t("nav.contactInfo")}
-          </Link>
-        )}
-
-        {hasEffectiveAdminCapability && (
-          <Link
-            to="/admin/users"
-            className={cn(
-              "text-sm font-semibold transition-all hover:text-primary relative py-1",
-              location.pathname === "/admin/users"
-                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
-                : "text-muted-foreground",
-            )}
-          >
-            {t("nav.administration")}
-          </Link>
-        )}
-
-        {(effectiveRole === UserRole.ADMINISTRATOR || effectiveRole === UserRole.DIRECTOR) && (
-          <Link
-            to="/admin/photo-approvals"
-            className={cn(
-              "text-sm font-semibold transition-all hover:text-primary relative py-1",
-              location.pathname === "/admin/photo-approvals"
-                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
-                : "text-muted-foreground",
-            )}
-          >
-            {t("nav.photoApprovals", "Aprovações de Fotos")}
-          </Link>
-        )}
-
-        {(effectiveRole === UserRole.ADMINISTRATOR || effectiveRole === UserRole.DIRECTOR) && (
-          <Link
-            to="/admin/access-control"
-            className={cn(
-              "text-sm font-semibold transition-all hover:text-primary relative py-1",
-              location.pathname === "/admin/access-control"
-                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
-                : "text-muted-foreground",
-            )}
-          >
-            {t("nav.accessControl", "Controle de Acesso")}
-          </Link>
-        )}
-
-        {(effectiveRole === UserRole.ADMINISTRATOR ||
-          effectiveRole === UserRole.DIRECTOR ||
-          effectiveRole === UserRole.MANAGER) && (
-          <Link
-            to="/gate-monitor"
-            className={cn(
-              "text-sm font-semibold transition-all hover:text-primary relative py-1",
-              location.pathname === "/gate-monitor"
-                ? "text-primary after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-t-md"
-                : "text-muted-foreground",
-            )}
-          >
-            {t("nav.gateMonitor", "Monitor da Portaria")}
-          </Link>
-        )}
-
+        {NAV_ITEMS.map((item) => (
+          <NavItemLink key={item.path} item={item} />
+        ))}
       </div>
 
       <div className="flex items-center gap-5">
@@ -387,6 +93,9 @@ const Navbar: React.FC = () => {
             ))}
           </select>
         )}
+        {/* TRANSITIONAL (IAM F4 -> F5): "view-as" is an operator tool, not an
+            authorization gate, and F3 exposes no `is_superuser` on
+            `/auth/me` to replace this comparison with. */}
         {user?.role === UserRole.ADMINISTRATOR && <SimulationControls />}
         <div className="flex items-center gap-1 border border-border/50 rounded-md overflow-hidden">
           {LANGUAGES.map((lang) => (
