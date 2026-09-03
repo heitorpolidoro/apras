@@ -10,13 +10,19 @@ would prove nothing.
 What it provides
 ----------------
 
-* :data:`CELLS` -- ``(role, method, path)`` for every ``ROUTE_PERMISSIONS``
-  key and every :class:`~app.models.enums.UserRole`: ``6 x 180 == 1080``.
-  The twelve ``UNGUARDED_ROUTES`` are excluded because none of them makes a
-  role-dimension authorization decision: eight are unauthenticated (``/``,
-  ``/api/v1/health``, login, signup, forgot/reset-password and the two dev
-  helpers), ``GET /api/v1/auth/me`` is strictly self-scoped, and the device
-  webhook authenticates an ``X-Device-Key`` and no user at all.
+* :data:`CELLS` -- ``(profile, method, path)`` for every
+  ``ROUTE_PERMISSIONS`` key and every :data:`PARITY_PROFILES` entry:
+  ``6 x 180 == 1080``.
+  The thirteen ``UNGUARDED_ROUTES`` are excluded because none of them makes a
+  **role-dimension, catalogue-permission** authorization decision: eight are
+  unauthenticated (``/``, ``/api/v1/health``, login, signup,
+  forgot/reset-password and the two dev helpers), ``GET /api/v1/auth/me`` and
+  ``GET /api/v1/permissions/me`` are strictly self-scoped, ``GET
+  /api/v1/permissions/`` is a static vocabulary, the device webhook
+  authenticates an ``X-Device-Key`` and no user at all, and ``PATCH
+  /api/v1/users/{user_id}/superuser`` (IAM F5, APRAS-49 §8.4) *does* make an
+  authorization decision -- it simply makes it on ``is_superuser``, a column
+  no role bundle can carry, so no profile dimension could move its answer.
 * :class:`MatrixWorld` -- one row of every object a matrix path parameter
   names, so the only reason a cell can be refused is the authorization
   decision under measurement.
@@ -55,13 +61,14 @@ every write. The world is never rebuilt.
 
 from __future__ import annotations
 
+import json
 import re
 import uuid
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine, event
@@ -93,7 +100,6 @@ from app.models.enums import (
     PhotoApprovalStatus,
     StorageProvider,
     TransactionType,
-    UserRole,
     VoteKind,
     VoteStatus,
     VoteType,
@@ -108,6 +114,7 @@ from app.models.project import ConstructionProject, ProjectMilestone, ProjectUpd
 from app.models.purchase import PurchaseQuote, PurchaseRequest
 from app.models.reservation import ReservableSpace, SpaceReservation
 from app.models.resident import Resident
+from app.models.role import Role
 from app.models.task import Task, TaskComment
 from app.models.tenant import (
     DEFAULT_TENANT_ID,
@@ -115,23 +122,42 @@ from app.models.tenant import (
     Tenant,
     UserTenantLink,
 )
-from app.models.user import User
-from app.models.user_type import UserType
 from app.models.visitor import AccessLog, Visitor, VisitorAuthorization
 from app.models.voting import Assembly, LotVoterEligibility, Vote, VoteOption
 from app.services import announcement_service, finance_service
 from app.services.media_service import media_service
 from app.services.storage_service import BaseStorageProvider
+from tests.conftest import make_user, profile_role
+
+if TYPE_CHECKING:  # pragma: no cover
+    from app.models.user import User
 
 # ---------------------------------------------------------------------------
 # The cell grid (§6.1)
 # ---------------------------------------------------------------------------
 
-#: `(role, method, path)` for every permission-mapped route and every role.
+#: What the retired role enum leaves behind in the test tree, and nothing
+#: else (IAM F5, APRAS-49 §11.1): the six **legacy profiles**, spelled as the
+#: enum's value strings, **verbatim** and in the same sorted order.
+#:
+#: Verbatim is not a style point. `tests/data/parity_matrix_baseline.json`'s
+#: top-level keys *are* those strings, so the golden file's byte-identity
+#: depends on them surviving the enum's death unchanged while the actor
+#: behind each becomes a role membership.
+PARITY_PROFILES: tuple[str, ...] = (
+    "ADMINISTRATOR",
+    "DIRECTOR",
+    "GUEST",
+    "MANAGER",
+    "PORTEIRO",
+    "RESIDENT",
+)
+
+#: `(profile, method, path)` for every permission-mapped route and profile.
 CELLS: list[tuple[str, str, str]] = [
-    (role.value, method, path)
+    (profile, method, path)
     for (method, path) in sorted(ROUTE_PERMISSIONS)
-    for role in sorted(UserRole, key=lambda r: r.value)
+    for profile in PARITY_PROFILES
 ]
 
 
@@ -221,7 +247,7 @@ class MatrixWorld:
     tenant_b_id: uuid.UUID
     lot_id: uuid.UUID
     category_id: uuid.UUID
-    user_type_id: uuid.UUID
+    role_id: uuid.UUID
     task_id: uuid.UUID
     task_comment_id: uuid.UUID
     resident_id: uuid.UUID
@@ -274,55 +300,57 @@ def build_world(session: Session) -> MatrixWorld:  # noqa: PLR0915
     session.commit()
     session.refresh(tenant_b)
 
-    # Every role-linked UserType, all with an empty bundle: the swap must be
-    # proven while `permissions == []`, which is what collapses the union in
-    # `get_effective_permissions` to the legacy set.
-    role_types: dict[UserRole, UserType] = {}
-    for role in UserRole:
-        row = UserType(name=f"{role.value} (papel)", role=role, allowed_menus=[])
-        session.add(row)
-        role_types[role] = row
-    # The menu-granting type every actor carries. Without it the
-    # `allowed_menus` gate 403s every tasks/categories cell for five of six
-    # roles and the matrix would measure the menu gate, not permissions.
-    menu_type = UserType(name="Matrix Menu Type", allowed_menus=["tasks", "categories"])
-    # A spare, unassigned, non-role type: what `{user_type_id}` binds to, so
-    # the user-type write cells are not answered by "role types cannot be
-    # renamed or deleted".
-    spare_type = UserType(name="Matrix Spare Type", allowed_menus=[])
-    session.add(menu_type)
+    # A spare, unassigned role: what `{role_id}` binds to. Since IAM F5 every
+    # role row is renamable and deletable, so this is no longer needed to dodge
+    # a "role-linked rows cannot be edited" refusal -- but the write cells must
+    # still not target a row an actor is a member of, or a delete would change
+    # the world under the next cell.
+    spare_type = Role(name="Matrix Spare Type")
     session.add(spare_type)
     session.commit()
-    session.refresh(menu_type)
     session.refresh(spare_type)
 
+    # One actor per profile, each a member of exactly the correspondingly
+    # named legacy role row carrying `bundle(profile)` -- the same union
+    # migration `0033` writes. `conftest.make_user` creates the row on first
+    # use, so the bundles come from `tests/data/legacy_role_bundles.json` and
+    # never from a second literal.
+    #
+    # The ADMINISTRATOR profile also carries `is_superuser=True`, which
+    # `make_user` defaults for it: IAM F3 already routed every administrator
+    # decision through the flag, so the profile would otherwise stop being the
+    # actor the baseline recorded.
+    #
+    # The menu-granting type every actor used to carry is gone with the gate
+    # (§4.1). It existed so the matrix measured permissions and not menus; the
+    # gate's removal makes that true by construction.
     users: dict[str, User] = {}
-    for index, role in enumerate(sorted(UserRole, key=lambda r: r.value)):
-        user = User(
+    for index, profile in enumerate(PARITY_PROFILES):
+        users[profile] = make_user(
+            session,
+            profile=profile,
             id=uuid.uuid4(),
-            email=f"{role.value.lower()}@matrix.example.com",
-            full_name=f"{role.value} Matrix",
+            email=f"{profile.lower()}@matrix.example.com",
+            full_name=f"{profile} Matrix",
             hashed_password="not-a-real-hash",
-            role=role,
             cpf=_cpf(index + 1),
-            user_types=[menu_type],
         )
-        session.add(user)
-        users[role.value] = user
-    target_user = User(
+    target_user = make_user(
+        session,
         id=uuid.uuid4(),
         email="target@matrix.example.com",
         full_name="Matrix Target",
         hashed_password="not-a-real-hash",
-        role=UserRole.GUEST,
+        profile="GUEST",
         cpf=_cpf(50),
     )
-    outsider_user = User(
+    outsider_user = make_user(
+        session,
         id=uuid.uuid4(),
         email="outsider@matrix.example.com",
         full_name="Matrix Outsider",
         hashed_password="not-a-real-hash",
-        role=UserRole.GUEST,
+        profile="GUEST",
         cpf=_cpf(51),
     )
     session.add(target_user)
@@ -381,7 +409,7 @@ def build_world(session: Session) -> MatrixWorld:  # noqa: PLR0915
     # from the tasks cells.
     task = Task(
         title="Matrix task",
-        created_by_id=users[UserRole.ADMINISTRATOR.value].id,
+        created_by_id=users["ADMINISTRATOR"].id,
         assigned_to_id=None,
     )
     session.add(task)
@@ -391,7 +419,7 @@ def build_world(session: Session) -> MatrixWorld:  # noqa: PLR0915
 
     task_comment = TaskComment(
         task_id=task.id,
-        created_by_id=users[UserRole.ADMINISTRATOR.value].id,
+        created_by_id=users["ADMINISTRATOR"].id,
         content="Matrix comment",
     )
     session.add(task_comment)
@@ -405,7 +433,7 @@ def build_world(session: Session) -> MatrixWorld:  # noqa: PLR0915
     authorization = VisitorAuthorization(
         visitor_id=visitor.id,
         lot_id=lot.id,
-        authorizer_user_id=users[UserRole.ADMINISTRATOR.value].id,
+        authorizer_user_id=users["ADMINISTRATOR"].id,
         status=AuthorizationStatus.ACTIVE,
         valid_from=now - timedelta(days=1),
         valid_until=now + timedelta(days=30),
@@ -427,13 +455,26 @@ def build_world(session: Session) -> MatrixWorld:  # noqa: PLR0915
         category=OccurrenceCategory.OTHER,
         title="Matrix occurrence",
         description="Matrix occurrence description",
-        reporter_user_id=users[UserRole.RESIDENT.value].id,
+        reporter_user_id=users["RESIDENT"].id,
         lot_id=lot.id,
         is_anonymous=False,
     )
     session.add(occurrence)
 
-    folder = DocumentFolder(name="Matrix Folder")
+    # The per-folder ACL is a list of role **ids** since IAM F5 (APRAS-49
+    # §6); it held the four `UserRole` value strings `0010`'s `server_default`
+    # named. Seeding the corresponding profile rows keeps every recorded
+    # `documents:*` cell -- including the GUEST and PORTEIRO 403s the baseline
+    # attributes to "per-folder ACL" -- exactly what it was.
+    folder = DocumentFolder(
+        name="Matrix Folder",
+        allowed_role_ids_json=json.dumps(
+            [
+                str(profile_role(session, profile).id)
+                for profile in ("ADMINISTRATOR", "DIRECTOR", "MANAGER", "RESIDENT")
+            ]
+        ),
+    )
     session.add(folder)
     session.commit()
     session.refresh(access_log)
@@ -445,14 +486,14 @@ def build_world(session: Session) -> MatrixWorld:  # noqa: PLR0915
         title="Matrix Document",
         file_url="http://null/matrix.pdf",
         file_size_bytes=1,
-        uploaded_by_id=users[UserRole.ADMINISTRATOR.value].id,
+        uploaded_by_id=users["ADMINISTRATOR"].id,
     )
     session.add(document)
 
     announcement = Announcement(
         title="Matrix Announcement",
         content="Matrix announcement content",
-        author_id=users[UserRole.ADMINISTRATOR.value].id,
+        author_id=users["ADMINISTRATOR"].id,
     )
     session.add(announcement)
     session.commit()
@@ -461,7 +502,7 @@ def build_world(session: Session) -> MatrixWorld:  # noqa: PLR0915
 
     announcement_comment = AnnouncementComment(
         announcement_id=announcement.id,
-        user_id=users[UserRole.ADMINISTRATOR.value].id,
+        user_id=users["ADMINISTRATOR"].id,
         content="Matrix announcement comment",
     )
     announcement_media = AnnouncementMedia(
@@ -476,7 +517,7 @@ def build_world(session: Session) -> MatrixWorld:  # noqa: PLR0915
     session.add(announcement_media)
 
     feedback = Feedback(
-        reporter_user_id=users[UserRole.RESIDENT.value].id,
+        reporter_user_id=users["RESIDENT"].id,
         category=FeedbackCategory.SUGGESTION,
         message="Matrix feedback",
     )
@@ -492,7 +533,7 @@ def build_world(session: Session) -> MatrixWorld:  # noqa: PLR0915
 
     reservation = SpaceReservation(
         space_id=space.id,
-        reserved_by_id=users[UserRole.RESIDENT.value].id,
+        reserved_by_id=users["RESIDENT"].id,
         start_time=now + timedelta(days=2),
         end_time=now + timedelta(days=2, hours=2),
     )
@@ -508,7 +549,7 @@ def build_world(session: Session) -> MatrixWorld:  # noqa: PLR0915
         status=VoteStatus.OPEN,
         opens_at=now - timedelta(hours=1),
         closes_at=now + timedelta(days=7),
-        created_by_id=users[UserRole.ADMINISTRATOR.value].id,
+        created_by_id=users["ADMINISTRATOR"].id,
     )
     session.add(vote)
 
@@ -516,7 +557,7 @@ def build_world(session: Session) -> MatrixWorld:  # noqa: PLR0915
         title="Matrix Assembly",
         type=AssemblyType.AGO,
         held_on=(now + timedelta(days=7)).date(),
-        created_by_id=users[UserRole.ADMINISTRATOR.value].id,
+        created_by_id=users["ADMINISTRATOR"].id,
     )
     session.add(assembly)
 
@@ -544,14 +585,14 @@ def build_world(session: Session) -> MatrixWorld:  # noqa: PLR0915
         quantity=1,
         previous_quantity=99,
         new_quantity=100,
-        performed_by_id=users[UserRole.ADMINISTRATOR.value].id,
+        performed_by_id=users["ADMINISTRATOR"].id,
         reason="Matrix movement",
     )
     session.add(movement)
 
     purchase_request = PurchaseRequest(
         title="Matrix purchase",
-        requested_by_id=users[UserRole.ADMINISTRATOR.value].id,
+        requested_by_id=users["ADMINISTRATOR"].id,
     )
     session.add(purchase_request)
 
@@ -563,7 +604,7 @@ def build_world(session: Session) -> MatrixWorld:  # noqa: PLR0915
         file_size_bytes=1,
         mime_type="image/jpeg",
         status=PhotoApprovalStatus.PENDING_APPROVAL,
-        uploaded_by_id=users[UserRole.RESIDENT.value].id,
+        uploaded_by_id=users["RESIDENT"].id,
         approved_by_id=None,
     )
     session.add(media_asset)
@@ -571,7 +612,7 @@ def build_world(session: Session) -> MatrixWorld:  # noqa: PLR0915
     device = AccessDevice(
         name="Matrix Device",
         device_key="matrix-device-key",
-        created_by_id=users[UserRole.ADMINISTRATOR.value].id,
+        created_by_id=users["ADMINISTRATOR"].id,
     )
     session.add(device)
 
@@ -594,7 +635,7 @@ def build_world(session: Session) -> MatrixWorld:  # noqa: PLR0915
         supplier_name="Matrix Supplier",
         unit_price=10.0,
         quantity=1,
-        created_by_id=users[UserRole.ADMINISTRATOR.value].id,
+        created_by_id=users["ADMINISTRATOR"].id,
     )
     session.add(quote)
 
@@ -603,7 +644,7 @@ def build_world(session: Session) -> MatrixWorld:  # noqa: PLR0915
 
     project_update = ProjectUpdate(
         project_id=project.id,
-        author_id=users[UserRole.ADMINISTRATOR.value].id,
+        author_id=users["ADMINISTRATOR"].id,
         title="Matrix Update",
         content="Matrix update content",
     )
@@ -622,7 +663,7 @@ def build_world(session: Session) -> MatrixWorld:  # noqa: PLR0915
         description="Matrix transaction",
         amount=10.0,
         transaction_date=now.date(),
-        created_by_id=users[UserRole.ADMINISTRATOR.value].id,
+        created_by_id=users["ADMINISTRATOR"].id,
     )
     session.add(transaction)
     session.commit()
@@ -643,7 +684,7 @@ def build_world(session: Session) -> MatrixWorld:  # noqa: PLR0915
         tenant_b_id=tenant_b.id,
         lot_id=lot.id,
         category_id=category.id,
-        user_type_id=spare_type.id,
+        role_id=spare_type.id,
         task_id=task.id,
         task_comment_id=task_comment.id,
         resident_id=spare_resident.id,
@@ -717,7 +758,7 @@ def _path_params() -> dict[tuple[str, str], Binder]:
         "task_id": "task_id",
         "update_id": "project_update_id",
         "user_id": "target_user_id",
-        "user_type_id": "user_type_id",
+        "role_id": "role_id",
         "visitor_id": "visitor_id",
         "vote_id": "vote_id",
     }
@@ -868,12 +909,12 @@ REQUEST_BODIES: dict[tuple[str, str], BodySpec] = {
     # --- users -------------------------------------------------------------
     ("PATCH", "/api/v1/users/{user_id}"): _static({"full_name": "Matrix Renamed"}),
     ("PATCH", "/api/v1/users/{user_id}/contact-info"): _static({"phone": "11999990000"}),
-    # --- user types --------------------------------------------------------
-    ("POST", "/api/v1/user-types/"): _static(
-        {"name": "Matrix new type", "allowed_menus": []}
+    # --- roles --------------------------------------------------------
+    ("POST", "/api/v1/roles/"): _static(
+        {"name": "Matrix new type",}
     ),
-    ("PATCH", "/api/v1/user-types/{user_type_id}"): _static(
-        {"name": "Matrix renamed type", "allowed_menus": []}
+    ("PATCH", "/api/v1/roles/{role_id}"): _static(
+        {"name": "Matrix renamed type",}
     ),
     # --- tenants -----------------------------------------------------------
     ("POST", "/api/v1/tenants"): _static({"name": "Matrix new tenant"}),
@@ -944,7 +985,10 @@ REQUEST_BODIES: dict[tuple[str, str], BodySpec] = {
     ("POST", "/api/v1/documents/{id}/versions"): _static(
         {"file_url": "http://null/v2.pdf", "file_size_bytes": 2}
     ),
-    ("POST", "/api/v1/documents/folders"): _static({"name": "Matrix New Folder"}),
+    ("POST", "/api/v1/documents/folders"): _static(
+        # `allowed_role_ids` is required on create since IAM F5 (§6).
+        {"name": "Matrix New Folder", "allowed_role_ids": []}
+    ),
     ("PUT", "/api/v1/documents/folders/{id}"): _static({"name": "Matrix Renamed Folder"}),
     # --- assemblies --------------------------------------------------------
     ("POST", "/api/v1/assemblies/"): lambda _w: {

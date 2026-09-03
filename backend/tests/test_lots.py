@@ -1,20 +1,21 @@
 """Unit and integration tests for Lot management service and endpoints."""
 
 import uuid
+
 import pytest
+from fastapi.testclient import TestClient
+from sqlmodel import Session
+
 from app.core.exceptions import (
     LotAlreadyExistsError,
     LotNotFoundError,
     UserLotLinkAlreadyExistsError,
     UserLotLinkNotFoundError,
 )
-from app.models.enums import LotAssociationType, LotStatus, UserRole
-from app.models.lot import Lot, UserLotLink
+from app.models.enums import LotAssociationType, LotStatus
 from app.models.user import User
 from app.schemas.lot import LotCreate, LotUpdate, UserLotLinkCreate
 from app.services.lot_service import LotService
-from fastapi.testclient import TestClient
-from sqlmodel import Session
 
 
 def test_create_lot_success(session: Session):

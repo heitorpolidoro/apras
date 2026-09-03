@@ -1,14 +1,13 @@
 """Database model for User."""
 
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
 from sqlalchemy import text
 from sqlmodel import Field, Relationship, SQLModel
 
-from .enums import UserRole
-from .user_type import UserType
-from .user_type_link import UserUserTypeLink
+from .role import Role
+from .role_link import UserRoleLink
 
 if TYPE_CHECKING:
     from .lot import UserLotLink
@@ -21,7 +20,6 @@ class User(SQLModel, table=True):
     email: str = Field(index=True, unique=True)
     hashed_password: str
     full_name: str
-    role: UserRole = Field(default=UserRole.DIRECTOR)
     is_active: bool = Field(default=True)
     cpf: str = Field(unique=True, index=True)
     phone: str | None = Field(default=None)
@@ -39,27 +37,6 @@ class User(SQLModel, table=True):
         sa_column_kwargs={"server_default": text("false")},
     )
 
-    def __init__(self, **data: Any) -> None:
-        """TRANSITIONAL (IAM F3 -> F5).
-
-        While `User.role` still exists, creating a user with role
-        ADMINISTRATOR defaults `is_superuser` to True — exactly the rule
-        migration 0031 applies to the rows that predate it, so the two paths
-        agree and the column is complete. An explicit `is_superuser=` always
-        wins, and SQLAlchemy does **not** call `__init__` when loading a row,
-        so the column stays the single source of truth for every reader: a row
-        stored with role ADMINISTRATOR and `is_superuser=False` reads back as a
-        non-superuser. F5 deletes this together with the enum.
-
-        `__init__` rather than a `before_insert` mapper event because it also
-        covers users built in memory and never flushed (unit-level calls into
-        `app.api.deps`), and because not being reached on DB load is exactly
-        what keeps the negative case constructible.
-        """
-        if "is_superuser" not in data and data.get("role") == UserRole.ADMINISTRATOR:
-            data["is_superuser"] = True
-        super().__init__(**data)
-
     @property
     def username(self) -> str:
         return self.email.split("@")[0]
@@ -73,8 +50,8 @@ class User(SQLModel, table=True):
         back_populates="assignee",
         sa_relationship_kwargs={"foreign_keys": "Task.assigned_to_id"},
     )
-    user_types: list[UserType] = Relationship(
-        back_populates="users", link_model=UserUserTypeLink
+    roles: list[Role] = Relationship(
+        back_populates="users", link_model=UserRoleLink
     )
     lot_links: list["UserLotLink"] = Relationship(
         back_populates="user",

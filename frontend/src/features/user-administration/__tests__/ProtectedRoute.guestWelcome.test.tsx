@@ -2,16 +2,12 @@ import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import ProtectedRoute from "../components/ProtectedRoute";
-import { UserRole } from "../context/AuthContext";
 import * as AuthHook from "../context/AuthContext";
 import { useSimulation } from "../context/SimulationContext";
-import { useUserTypes } from "../../../hooks/useUserTypes";
+import { useRoles } from "../../../hooks/useRoles";
 import { useMyPermissions } from "../../../hooks/usePermissionQueries";
 import { ROUTE_ACCESS } from "../access/routeAccess";
-import {
-  PERMISSIONS_BY_ROLE,
-  settledPermissions,
-} from "../../../test/permissionFixtures";
+import { PERMISSIONS_BY_ROLE, settledPermissions,  } from "../../../test/permissionFixtures";
 
 // Mirrors the mocking approach in ProtectedRoute.test.tsx, but exposes
 // useSimulation as a controllable mock so individual tests can simulate an
@@ -21,9 +17,9 @@ vi.mock("../context/SimulationContext", () => ({
   useSimulation: vi.fn(),
 }));
 
-vi.mock("../../../hooks/useUserTypes", () => ({
-  useUserTypes: vi.fn(() => ({
-    data: [{ id: "type-1", name: "Test Type", allowed_menus: ["tasks", "categories"] }],
+vi.mock("../../../hooks/useRoles", () => ({
+  useRoles: vi.fn(() => ({
+    data: [{ id: "type-1", name: "Test Type" }],
   })),
 }));
 
@@ -33,11 +29,9 @@ vi.mock("../../../hooks/usePermissionQueries", () => ({
 }));
 
 const notSimulating = {
-  simulatedRole: null,
-  simulatedUserTypeIds: [],
+  simulatedRoleIds: [],
   isSimulating: false,
-  setSimulatedRole: vi.fn(),
-  setSimulatedUserTypeIds: vi.fn(),
+  setSimulatedRoleIds: vi.fn(),
   stopSimulation: vi.fn(),
 };
 
@@ -62,8 +56,8 @@ const renderDashboard = () =>
 describe("ProtectedRoute — GUEST welcome redirect (landingRedirect routes)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useUserTypes).mockReturnValue({
-      data: [{ id: "type-1", name: "Test Type", allowed_menus: ["tasks", "categories"] }],
+    vi.mocked(useRoles).mockReturnValue({
+      data: [{ id: "type-1", name: "Test Type" }],
     } as any); // skipcq: JS-0323
   });
 
@@ -76,14 +70,13 @@ describe("ProtectedRoute — GUEST welcome redirect (landingRedirect routes)", (
         id: "guest-1",
         email: "guest@example.com",
         full_name: "Guest User",
-        role: UserRole.GUEST,
         is_active: true,
       } as any,
       login: vi.fn() as any,
       logout: vi.fn(),
     });
     vi.mocked(useMyPermissions).mockReturnValue(
-      settledPermissions(PERMISSIONS_BY_ROLE[UserRole.GUEST]) as never,
+      settledPermissions(PERMISSIONS_BY_ROLE["GUEST"], "/welcome") as never,
     );
 
     renderDashboard();
@@ -93,7 +86,14 @@ describe("ProtectedRoute — GUEST welcome redirect (landingRedirect routes)", (
     expect(screen.queryByText("Tasks Content")).toBeNull();
   });
 
-  it("still shows the generic restricted-access message for a non-GUEST blocked role (e.g. Director with no qualifying UserType) — unaffected regression check", () => {
+  it("lets a DIRECTOR through, and shows the restricted message only to a caller with no tasks permission at all", () => {
+    // **The frontend twin of §4.2's widening.** This case used to assert
+    // "Acesso restrito" for a DIRECTOR with no qualifying menu key, because
+    // `legacyMenu` ANDed the `allowed_menus` gate on top of the permission.
+    // IAM F5 deleted that gate from all 12 handlers, so a DIRECTOR — who
+    // genuinely holds `tasks:read` — now reaches the page, and the door and
+    // the API agree. The restricted message survives for the caller it was
+    // always meant for: one whose bundle carries no `tasks:*`.
     vi.mocked(useSimulation).mockReturnValue(notSimulating);
     vi.spyOn(AuthHook, "useAuth").mockReturnValue({
       isAuthenticated: true,
@@ -102,16 +102,43 @@ describe("ProtectedRoute — GUEST welcome redirect (landingRedirect routes)", (
         id: "director-1",
         email: "director@example.com",
         full_name: "Director User",
-        role: UserRole.DIRECTOR,
         is_active: true,
       } as any,
       login: vi.fn() as any,
       logout: vi.fn(),
     });
     vi.mocked(useMyPermissions).mockReturnValue(
-      settledPermissions(PERMISSIONS_BY_ROLE[UserRole.DIRECTOR]) as never,
+      settledPermissions(PERMISSIONS_BY_ROLE["DIRECTOR"]) as never,
     );
-    vi.mocked(useUserTypes).mockReturnValue({ data: [] } as any); // skipcq: JS-0323
+    vi.mocked(useRoles).mockReturnValue({ data: [] } as any); // skipcq: JS-0323
+
+    renderDashboard();
+
+    expect(screen.getByText("Tasks Content")).toBeInTheDocument();
+    expect(screen.queryByText("Acesso restrito")).toBeNull();
+  });
+
+  it("shows the restricted-access message to a caller holding no tasks permission", () => {
+    vi.mocked(useSimulation).mockReturnValue(notSimulating);
+    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      user: {
+        id: "director-1",
+        email: "director@example.com",
+        full_name: "Director User",
+        is_active: true,
+      } as any,
+      login: vi.fn() as any,
+      logout: vi.fn(),
+    });
+    // No `tasks:*`, and no `landing_path` either — so there is nothing to
+    // redirect to and the denial is shown **in place**, which is the shape
+    // APRAS-48 chose over bouncing a denied user to `/dashboard`.
+    vi.mocked(useMyPermissions).mockReturnValue(
+      settledPermissions(["finance:read"]) as never,
+    );
+    vi.mocked(useRoles).mockReturnValue({ data: [] } as any); // skipcq: JS-0323
 
     renderDashboard();
 
@@ -122,11 +149,9 @@ describe("ProtectedRoute — GUEST welcome redirect (landingRedirect routes)", (
 
   it("redirects an Administrator simulating GUEST (effective role) to /welcome, even though the real role is ADMINISTRATOR", () => {
     vi.mocked(useSimulation).mockReturnValue({
-      simulatedRole: UserRole.GUEST,
-      simulatedUserTypeIds: [],
+      simulatedRoleIds: [],
       isSimulating: true,
-      setSimulatedRole: vi.fn(),
-      setSimulatedUserTypeIds: vi.fn(),
+      setSimulatedRoleIds: vi.fn(),
       stopSimulation: vi.fn(),
     });
     vi.spyOn(AuthHook, "useAuth").mockReturnValue({
@@ -136,14 +161,17 @@ describe("ProtectedRoute — GUEST welcome redirect (landingRedirect routes)", (
         id: "admin-1",
         email: "admin@example.com",
         full_name: "Admin User",
-        role: UserRole.ADMINISTRATOR,
+        is_superuser: true,
         is_active: true,
       } as any,
       login: vi.fn() as any,
       logout: vi.fn(),
     });
+    // The simulated identity is what `/permissions/me` answers for, so the
+    // landing follows the simulation — which is the whole point of §10.4 and
+    // is safe because route *access* stays on the real set.
     vi.mocked(useMyPermissions).mockReturnValue(
-      settledPermissions(PERMISSIONS_BY_ROLE[UserRole.ADMINISTRATOR]) as never,
+      settledPermissions(PERMISSIONS_BY_ROLE["GUEST"], "/welcome") as never,
     );
 
     renderDashboard();
@@ -161,14 +189,14 @@ describe("ProtectedRoute — GUEST welcome redirect (landingRedirect routes)", (
         id: "admin-1",
         email: "admin@example.com",
         full_name: "Admin User",
-        role: UserRole.ADMINISTRATOR,
+        is_superuser: true,
         is_active: true,
       } as any,
       login: vi.fn() as any,
       logout: vi.fn(),
     });
     vi.mocked(useMyPermissions).mockReturnValue(
-      settledPermissions(PERMISSIONS_BY_ROLE[UserRole.ADMINISTRATOR]) as never,
+      settledPermissions(PERMISSIONS_BY_ROLE["ADMINISTRATOR"]) as never,
     );
 
     renderDashboard();
@@ -186,14 +214,13 @@ describe("ProtectedRoute — GUEST welcome redirect (landingRedirect routes)", (
         id: "guest-1",
         email: "guest@example.com",
         full_name: "Guest User",
-        role: UserRole.GUEST,
         is_active: true,
       } as any,
       login: vi.fn() as any,
       logout: vi.fn(),
     });
     vi.mocked(useMyPermissions).mockReturnValue(
-      settledPermissions(PERMISSIONS_BY_ROLE[UserRole.GUEST]) as never,
+      settledPermissions(PERMISSIONS_BY_ROLE["GUEST"], "/welcome") as never,
     );
 
     render(

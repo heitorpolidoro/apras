@@ -1,16 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  getProjects,
-  getProjectDetail,
-  createProject,
-  updateProject,
-  deleteProject,
-  createMilestone,
-  updateMilestone,
-  deleteMilestone,
-  createProjectUpdate,
-  deleteProjectUpdate,
-} from "../projects";
+import { getProjects, getProjectDetail, createProject, updateProject, deleteProject, createMilestone, updateMilestone, deleteMilestone, createProjectUpdate, deleteProjectUpdate,  } from "../projects";
 import apiClient from "../client";
 
 vi.mock("../client", () => ({

@@ -4,7 +4,6 @@ import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import AdminUserDashboard from "../pages/AdminUserDashboard";
 import * as AuthHook from "../context/AuthContext";
-import { UserRole } from "../context/AuthContext";
 import apiClient from "../../../api/client";
 
 vi.mock("../../../api/client", () => ({
@@ -25,11 +24,11 @@ const mockCurrentUser = {
   username: "admin",
   email: "admin@example.com",
   full_name: "Admin User",
-  role: UserRole.ADMINISTRATOR,
+  is_superuser: true,
   is_active: true,
 };
 
-const mockUserTypes = [
+const mockRoles = [
   { id: "type-1", name: "Manager" },
   { id: "type-2", name: "Employee" },
 ];
@@ -40,7 +39,6 @@ const mockUsers = [
     username: "user1",
     email: "user1@example.com",
     full_name: "User One",
-    role: UserRole.DIRECTOR,
     is_active: true,
   },
   {
@@ -48,7 +46,7 @@ const mockUsers = [
     username: "user2",
     email: "user2@example.com",
     full_name: "User Two",
-    role: UserRole.ADMINISTRATOR,
+    is_superuser: true,
     is_active: false,
   },
 ];
@@ -300,10 +298,10 @@ describe("AdminUserDashboard", () => {
     ).toBeNull();
   });
 
-  // ── User type badge & empty list ────────────────────────────────────────
+  // ── Role badge & empty list ────────────────────────────────────────
 
-  it("renders user type badge when user has a type", async () => {
-    const usersWithType = [{ ...mockUsers[0], user_types: [{ id: "type-1", name: "Manager" }] }];
+  it("renders role badge when user has a role", async () => {
+    const usersWithType = [{ ...mockUsers[0], roles: [{ id: "type-1", name: "Manager" }] }];
     (apiClient.get as any).mockResolvedValue({ data: usersWithType });
 
     render(<AdminUserDashboard />, { wrapper: createWrapper() });
@@ -387,9 +385,9 @@ describe("AdminUserDashboard", () => {
     expect((nameInput as HTMLInputElement).value).toBe("User One Updated");
   });
 
-  it("changes user types in modal checklist", async () => {
+  it("changes roles in modal checklist", async () => {
     (apiClient.get as any).mockImplementation((url: string) => {
-      if (url === "/user-types/") return Promise.resolve({ data: mockUserTypes });
+      if (url === "/roles/") return Promise.resolve({ data: mockRoles });
       return Promise.resolve({ data: mockUsers });
     });
 
@@ -439,20 +437,20 @@ describe("AdminUserDashboard", () => {
     fireEvent.change(screen.getByDisplayValue("User One"), { target: { value: "" } });
     fireEvent.click(screen.getByText("Salvar"));
 
-    // `useSetUserGroups` omits `full_name` rather than sending it as
+    // `useSetUserRoles` omits `full_name` rather than sending it as
     // `undefined`; the two are byte-identical on the wire (JSON drops it), and
     // `UserUpdate.full_name` is optional, so the backend behaviour is the same.
     await waitFor(() => {
       expect(apiClient.patch).toHaveBeenCalledWith("/users/user-1", {
-        user_type_ids: [],
+        role_ids: [],
       });
     });
   });
 
   it("pre-fills type checkboxes when user has types", async () => {
-    const userWithType = { ...mockUsers[0], user_types: [{ id: "type-1", name: "Manager" }] };
+    const userWithType = { ...mockUsers[0], roles: [{ id: "type-1", name: "Manager" }] };
     (apiClient.get as any).mockImplementation((url: string) => {
-      if (url === "/user-types/") return Promise.resolve({ data: mockUserTypes });
+      if (url === "/roles/") return Promise.resolve({ data: mockRoles });
       return Promise.resolve({ data: [userWithType, mockUsers[1]] });
     });
 
@@ -470,7 +468,7 @@ describe("AdminUserDashboard", () => {
 
   it("renders no role select at all: the write surface for user.role is gone", async () => {
     (apiClient.get as any).mockImplementation((url: string) => {
-      if (url === "/user-types/") return Promise.resolve({ data: mockUserTypes });
+      if (url === "/roles/") return Promise.resolve({ data: mockRoles });
       return Promise.resolve({ data: mockUsers });
     });
 
@@ -481,22 +479,27 @@ describe("AdminUserDashboard", () => {
     expect(screen.queryAllByRole("combobox", { name: "Cargo" })).toHaveLength(0);
   });
 
-  it("shows the role read-only under the legacy column heading", async () => {
+  it("no longer shows a legacy role column", async () => {
+    // F4 kept a read-only "Cargo (legado)" column so an operator could
+    // diagnose a legacy bundle during the transition. IAM F5 (APRAS-49
+    // §10.2) removed it with the enum it displayed: a user's power is their
+    // role memberships and nothing else, so there is no second thing to
+    // diagnose — and the memberships already have their own column.
     (apiClient.get as any).mockImplementation((url: string) => {
-      if (url === "/user-types/") return Promise.resolve({ data: mockUserTypes });
+      if (url === "/roles/") return Promise.resolve({ data: mockRoles });
       return Promise.resolve({ data: mockUsers });
     });
 
     render(<AdminUserDashboard />, { wrapper: createWrapper() });
 
     await waitFor(() => expect(screen.getByText("User One")).toBeDefined());
-    expect(screen.getByText("Cargo (legado)")).toBeInTheDocument();
-    expect(screen.getByText(UserRole.DIRECTOR)).toBeInTheDocument();
+    expect(screen.queryByText("Cargo (legado)")).toBeNull();
+    expect(screen.queryByText("DIRECTOR")).toBeNull();
   });
 
-  it("links to /admin/groups instead of editing groups inline", async () => {
+  it("links to /admin/roles instead of editing roles inline", async () => {
     (apiClient.get as any).mockImplementation((url: string) => {
-      if (url === "/user-types/") return Promise.resolve({ data: mockUserTypes });
+      if (url === "/roles/") return Promise.resolve({ data: mockRoles });
       return Promise.resolve({ data: mockUsers });
     });
 
@@ -504,15 +507,15 @@ describe("AdminUserDashboard", () => {
 
     await waitFor(() => expect(screen.getByText("User One")).toBeDefined());
     expect(
-      screen.getByRole("link", { name: "Gerenciar grupos" }),
-    ).toHaveAttribute("href", "/admin/groups");
+      screen.getByRole("link", { name: "Gerenciar papéis" }),
+    ).toHaveAttribute("href", "/admin/roles");
     // The inline create-a-type form is gone with it.
-    expect(screen.queryByPlaceholderText("Nome do grupo")).toBeNull();
+    expect(screen.queryByPlaceholderText("Nome do papel")).toBeNull();
   });
 
-  it("heads the edit modal's checkbox list with admin.editGroups", async () => {
+  it("heads the edit modal's checkbox list with admin.editRoles", async () => {
     (apiClient.get as any).mockImplementation((url: string) => {
-      if (url === "/user-types/") return Promise.resolve({ data: mockUserTypes });
+      if (url === "/roles/") return Promise.resolve({ data: mockRoles });
       return Promise.resolve({ data: mockUsers });
     });
 
@@ -521,12 +524,12 @@ describe("AdminUserDashboard", () => {
     await waitFor(() => expect(screen.getByText("User One")).toBeDefined());
     fireEvent.click(screen.getAllByText("Editar")[0]);
 
-    expect(screen.getByText("Grupos")).toBeInTheDocument();
+    expect(screen.getByText("Papéis")).toBeInTheDocument();
   });
 
   it("never sends role in the edit-user PATCH", async () => {
     (apiClient.get as any).mockImplementation((url: string) => {
-      if (url === "/user-types/") return Promise.resolve({ data: mockUserTypes });
+      if (url === "/roles/") return Promise.resolve({ data: mockRoles });
       return Promise.resolve({ data: mockUsers });
     });
     (apiClient.patch as any).mockResolvedValue({ data: {} });
@@ -540,6 +543,6 @@ describe("AdminUserDashboard", () => {
     await waitFor(() => expect(apiClient.patch).toHaveBeenCalled());
     const [, body] = (apiClient.patch as any).mock.calls[0];
     expect(body).not.toHaveProperty("role");
-    expect(body).toHaveProperty("user_type_ids");
+    expect(body).toHaveProperty("role_ids");
   });
 });

@@ -25,10 +25,19 @@ class DocumentFolder(SQLModel, table=True):
         nullable=True,
         index=True,
     )
-    allowed_roles_json: str = Field(
-        default='["ADMINISTRATOR", "DIRECTOR", "MANAGER", "RESIDENT"]',
-        nullable=False,
-    )
+    # A JSON list of **role ids** (IAM F5, APRAS-49 §6). It stored the retired
+    # role enum's value strings until migration `0033` rewrote every row and
+    # renamed the column; renaming rather than reusing the name is deliberate,
+    # so a reader that was not updated fails loudly instead of silently
+    # matching nothing.
+    #
+    # The Python-side default is `'[]'` and the column's `server_default` is
+    # `'[]'` too: a `server_default` is a constant expression and role ids
+    # differ per tenant and per install, so neither can name "the four legacy
+    # roles" any more. `DocumentFolderCreate.allowed_role_ids` is therefore
+    # **required** — a folder created without an explicit ACL would otherwise
+    # be invisible to everyone, so the caller is made to say.
+    allowed_role_ids_json: str = Field(default="[]", nullable=False)
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
 

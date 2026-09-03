@@ -2,32 +2,29 @@ import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import ProtectedRoute from "../components/ProtectedRoute";
-import { UserRole } from "../context/AuthContext";
 import * as AuthHook from "../context/AuthContext";
-import { useUserTypes } from "../../../hooks/useUserTypes";
+import { useRoles } from "../../../hooks/useRoles";
 import { useMyPermissions } from "../../../hooks/usePermissionQueries";
 import { ROUTE_ACCESS } from "../access/routeAccess";
 import { settledPermissions } from "../../../test/permissionFixtures";
 
 // ProtectedRoute always calls useMenuAccess (rules of hooks), which combines
-// useEffectiveIdentity (real user + useSimulation) with useUserTypes, and it
+// useEffectivePermissionSet (real user + useSimulation) with useRoles, and it
 // now also calls useMyPermissions through useCanAccess. Mocking the query hook
 // rather than the decision module keeps `useCanAccess` running for real while
 // still needing no QueryClientProvider.
 vi.mock("../context/SimulationContext", () => ({
   useSimulation: vi.fn(() => ({
-    simulatedRole: null,
-    simulatedUserTypeIds: [],
+    simulatedRoleIds: [],
     isSimulating: false,
-    setSimulatedRole: vi.fn(),
-    setSimulatedUserTypeIds: vi.fn(),
+    setSimulatedRoleIds: vi.fn(),
     stopSimulation: vi.fn(),
   })),
 }));
 
-vi.mock("../../../hooks/useUserTypes", () => ({
-  useUserTypes: vi.fn(() => ({
-    data: [{ id: "type-1", name: "Test Type", allowed_menus: ["tasks", "categories"] }],
+vi.mock("../../../hooks/useRoles", () => ({
+  useRoles: vi.fn(() => ({
+    data: [{ id: "type-1", name: "Test Type" }],
   })),
 }));
 
@@ -42,7 +39,7 @@ const holding = (...permissions: string[]) => {
   );
 };
 
-const authAs = (role: UserRole, extra: Record<string, unknown> = {}) => {
+const authAs = (role: string, extra: Record<string, unknown> = {}) => {
   vi.spyOn(AuthHook, "useAuth").mockReturnValue({
     isAuthenticated: true,
     isLoading: false,
@@ -54,9 +51,9 @@ const authAs = (role: UserRole, extra: Record<string, unknown> = {}) => {
 
 beforeEach(() => {
   holding();
-  vi.mocked(useUserTypes).mockReturnValue({
+  vi.mocked(useRoles).mockReturnValue({
     data: [
-      { id: "type-1", name: "Test Type", allowed_menus: ["tasks", "categories"] },
+      { id: "type-1", name: "Test Type" },
     ],
   } as never);
 });
@@ -92,7 +89,7 @@ describe("ProtectedRoute", () => {
   });
 
   it("renders children if authenticated and the route carries no rule", () => {
-    authAs(UserRole.DIRECTOR);
+    authAs("DIRECTOR");
 
     render(
       <MemoryRouter initialEntries={["/protected"]}>
@@ -113,7 +110,7 @@ describe("ProtectedRoute", () => {
   });
 
   it("denies in place when the rule's anyOf permission is not held", () => {
-    authAs(UserRole.DIRECTOR);
+    authAs("DIRECTOR");
     holding("tasks:read");
 
     render(
@@ -142,7 +139,7 @@ describe("ProtectedRoute", () => {
   });
 
   it("allows access when one of the anyOf permissions is held", () => {
-    authAs(UserRole.MANAGER);
+    authAs("MANAGER");
     holding("users:update_contact");
 
     render(
@@ -166,7 +163,7 @@ describe("ProtectedRoute", () => {
   });
 
   it("denies a user holding no permission of the rule's module", () => {
-    authAs(UserRole.GUEST);
+    authAs("GUEST");
     holding("tasks:read");
 
     render(
@@ -210,7 +207,7 @@ describe("ProtectedRoute", () => {
   });
 
   it("renders the spinner while /permissions/me is still pending", () => {
-    authAs(UserRole.DIRECTOR);
+    authAs("DIRECTOR");
     vi.mocked(useMyPermissions).mockReturnValue({
       data: undefined,
       isPending: true,
@@ -239,11 +236,11 @@ describe("ProtectedRoute", () => {
 
   // ── the legacyMenu leg, TRANSITIONAL (IAM F4 -> F5) ───────────────────
 
-  it("renders children when the user's UserType grants the required menu", () => {
-    authAs(UserRole.DIRECTOR, { user_types: [{ id: "type-1", name: "Board" }] });
+  it("renders children when the user's Role grants the required menu", () => {
+    authAs("DIRECTOR", { roles: [{ id: "type-1", name: "Board" }] });
     holding("tasks:read");
-    vi.mocked(useUserTypes).mockReturnValue({
-      data: [{ id: "type-1", name: "Board", allowed_menus: ["tasks"] }],
+    vi.mocked(useRoles).mockReturnValue({
+      data: [{ id: "type-1", name: "Board" }],
     } as never);
 
     render(
@@ -264,10 +261,15 @@ describe("ProtectedRoute", () => {
     expect(screen.getByText("Tasks Content")).toBeDefined();
   });
 
-  it("renders the restricted-access message (no redirect) when the menu is denied", () => {
-    authAs(UserRole.DIRECTOR);
-    holding("tasks:read");
-    vi.mocked(useUserTypes).mockReturnValue({ data: [] } as never);
+  it("renders the restricted-access message (no redirect) when the permission is absent", () => {
+    // Denial is **in place**, never a redirect: bouncing a denied user to
+    // `/dashboard` is a redirect-loop hazard the moment `/dashboard` denies
+    // them too (APRAS-48). The trigger moved from "holds the permission but
+    // not the menu key" to simply "does not hold the permission", because
+    // IAM F5 deleted the `allowed_menus` conjunct (§4.1).
+    authAs("DIRECTOR");
+    holding("finance:read");
+    vi.mocked(useRoles).mockReturnValue({ data: [] } as never);
 
     render(
       <MemoryRouter initialEntries={["/dashboard"]}>
@@ -292,10 +294,10 @@ describe("ProtectedRoute", () => {
     expect(screen.getByText("Acesso restrito")).toBeInTheDocument();
   });
 
-  it("ADMINISTRATOR always passes the legacy menu leg regardless of UserTypes", () => {
-    authAs(UserRole.ADMINISTRATOR);
+  it("a caller holding the module permission passes regardless of Roles", () => {
+    authAs("ADMINISTRATOR");
     holding("categories:read");
-    vi.mocked(useUserTypes).mockReturnValue({ data: [] } as never);
+    vi.mocked(useRoles).mockReturnValue({ data: [] } as never);
 
     render(
       <MemoryRouter initialEntries={["/categories"]}>

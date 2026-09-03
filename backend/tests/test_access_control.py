@@ -10,10 +10,10 @@ from PIL import Image
 from sqlmodel import Session
 
 from app.core.security import create_access_token, get_password_hash
-from app.models.enums import UserRole
 from app.models.lot import Lot
 from app.models.resident import Resident
 from app.models.user import User
+from tests.conftest import make_user
 
 
 def create_test_image_bytes() -> bytes:
@@ -25,12 +25,13 @@ def create_test_image_bytes() -> bytes:
 
 @pytest.fixture
 def manager_user(session: Session) -> User:
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email="manager@test.com",
         full_name="Manager User",
         hashed_password=get_password_hash("password123"),
-        role=UserRole.MANAGER,
+        profile="MANAGER",
         cpf="11144477735",
     )
     session.add(user)
@@ -40,12 +41,13 @@ def manager_user(session: Session) -> User:
 
 @pytest.fixture
 def resident_role_user(session: Session) -> User:
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email="residentrole@test.com",
         full_name="Resident Role User",
         hashed_password=get_password_hash("password123"),
-        role=UserRole.RESIDENT,
+        profile="RESIDENT",
         cpf="52998224725",
     )
     session.add(user)

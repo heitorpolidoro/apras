@@ -2,8 +2,7 @@ import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Filter, MessageCircle } from "lucide-react";
 import type { FeedbackCategory, FeedbackStatus } from "../../../types/feedback";
-import { UserRole } from "../../../types/auth";
-import { useEffectiveIdentity } from "../../user-administration/context/useEffectiveIdentity";
+import { useEffectivePermissionSet } from "../../user-administration/access/useCanAccess";
 import { useFeedbackList } from "../hooks/useFeedback";
 import { NewFeedbackForm } from "./NewFeedbackForm";
 import { FeedbackHistoryList } from "./FeedbackHistoryList";
@@ -12,8 +11,8 @@ import { FeedbackDetailsView } from "./FeedbackDetailsView";
 
 export const FeedbackChannelPage: React.FC = () => {
   const { t } = useTranslation();
-  const { role } = useEffectiveIdentity();
-  const isManagement = role === UserRole.ADMINISTRATOR || role === UserRole.DIRECTOR;
+  const { has } = useEffectivePermissionSet();
+  const isManagement = has("feedback:respond");
 
   const [categoryFilter, setCategoryFilter] = useState<FeedbackCategory | "">("");
   const [statusFilter, setStatusFilter] = useState<FeedbackStatus | "">("");

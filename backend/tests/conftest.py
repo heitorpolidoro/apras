@@ -1,25 +1,130 @@
+import json
 import uuid
+from pathlib import Path
 
 import pytest
+from fastapi.testclient import TestClient
+from sqlmodel import Session, SQLModel, StaticPool, create_engine, select
+
 from app.core.security import get_password_hash
 from app.core.tenant_context import REQUEST_SCOPED_KEY
 from app.db import get_session
 from app.main import app
-from app.models.enums import UserRole
-from app.models.user import User
 from app.models.category import Category
+from app.models.role import Role
 from app.models.tenant import (
     DEFAULT_TENANT_ID,
     DEFAULT_TENANT_NAME,
     Tenant,
     UserTenantLink,
 )
-from app.models.user_type import UserType
-from fastapi.testclient import TestClient
-from sqlmodel import Session, SQLModel, StaticPool, create_engine
+from app.models.user import User
 
 # Disable rate limiting for tests
 app.state.limiter.enabled = False
+
+
+# ---------------------------------------------------------------------------
+# Legacy profiles (IAM F5, APRAS-49 §12.2 category 2)
+# ---------------------------------------------------------------------------
+
+#: The recording of what the retired role enum meant, made from
+#: `LEGACY_ROLE_PERMISSIONS` one last time before it was deleted (§7.6). It is
+#: the *only* surviving statement of those six bundles, which is why the test
+#: suite reads it rather than a second literal.
+LEGACY_BUNDLES: dict[str, list[str]] = json.loads(
+    (Path(__file__).parent / "data" / "legacy_role_bundles.json").read_text(
+        encoding="utf-8"
+    )
+)["bundles"]
+
+#: The three permissions IAM F5 minted for the two tiers the enum used to
+#: compile into `if` statements (§3.0). A profile's bundle is
+#: `LEGACY_BUNDLES[profile] | NEW_TIER[profile]` -- the same union migration
+#: `0033` writes onto the six historically-named rows.
+NEW_TIER: dict[str, frozenset[str]] = {
+    "ADMINISTRATOR": frozenset({"tasks:read_all", "tasks:update_any"}),
+    "DIRECTOR": frozenset({"tasks:read_all", "tasks:update_any"}),
+    "RESIDENT": frozenset({"tasks:read_all", "tasks:update_any"}),
+    "PORTEIRO": frozenset({"tasks:read_all", "tasks:update_any"}),
+    "MANAGER": frozenset({"occurrences:read_assigned"}),
+    "GUEST": frozenset(),
+}
+
+#: `profile -> role name`, the six names `TenantService.LEGACY_ROLE_NAMES`
+#: carries and migration `0033` backfilled.
+PROFILE_ROLE_NAMES: dict[str, str] = {
+    "ADMINISTRATOR": "Administrador (papel)",
+    "DIRECTOR": "Diretor (papel)",
+    "MANAGER": "Gerente (papel)",
+    "GUEST": "Convidado (papel)",
+    "RESIDENT": "Morador (papel)",
+    "PORTEIRO": "Porteiro (papel)",
+}
+
+
+def bundle(profile: str) -> frozenset[str]:
+    """The permissions a `profile` grants: the recording plus its tier."""
+    return frozenset(LEGACY_BUNDLES[profile]) | NEW_TIER[profile]
+
+
+def profile_role(
+    session: Session, profile: str, tenant_id: uuid.UUID = DEFAULT_TENANT_ID
+) -> Role:
+    """The `profile` role row of `tenant_id`, created on first use.
+
+    Idempotent per `(tenant, name)`, exactly like
+    `TenantService.ensure_legacy_roles`, and carrying `bundle(profile)` --
+    which is what migration `0033` put on the real rows.
+    """
+    name = PROFILE_ROLE_NAMES[profile]
+    existing = session.exec(
+        select(Role).where(Role.name == name, Role.tenant_id == tenant_id)
+    ).first()
+    if existing is not None:
+        return existing
+    role = Role(
+        name=name,
+        tenant_id=tenant_id,
+        permissions=sorted(bundle(profile)),
+        landing_path={"PORTEIRO": "/gate", "GUEST": "/welcome"}.get(profile),
+    )
+    session.add(role)
+    session.commit()
+    session.refresh(role)
+    return role
+
+
+def make_user(
+    session: Session,
+    *,
+    profile: str,
+    tenant_id: uuid.UUID = DEFAULT_TENANT_ID,
+    **kwargs,
+) -> User:
+    """A user whose only role is the legacy `profile` row of `tenant_id`.
+
+    The one substitution for the ~130 `User(..., role=UserRole.X, ...)`
+    constructions the enum's death invalidated (§12.2 category 2), so the 36
+    modules that used them inherit **one** proof --
+    `test_conftest_profiles.py::test_every_profile_grants_exactly_the_recorded_bundle`
+    -- instead of 36 bespoke rewrites.
+
+    `is_superuser` defaults to True for the ADMINISTRATOR profile, mirroring
+    the `User.__init__` transitional default F3 shipped and F5 deleted, so a
+    fixture that meant "the global administrator" still means it. An explicit
+    `is_superuser=` always wins.
+
+    Extra `roles=` are unioned with the profile row, never replaced.
+    """
+    role = profile_role(session, profile, tenant_id)
+    extra = kwargs.pop("roles", [])
+    kwargs.setdefault("is_superuser", profile == "ADMINISTRATOR")
+    user = User(roles=[role, *extra], **kwargs)
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return user
 
 
 @pytest.fixture(name="session")
@@ -74,12 +179,13 @@ def client_fixture(session: Session):
 @pytest.fixture(name="admin_user")
 def admin_user_fixture(session: Session):
     """Create and persist an ADMINISTRATOR user for tests."""
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email="admin@test.com",
         full_name="Admin User",
         hashed_password=get_password_hash("test_admin_password"),
-        role=UserRole.ADMINISTRATOR,
+        profile="ADMINISTRATOR",
         cpf="52998224725",
     )
     session.add(user)
@@ -89,29 +195,27 @@ def admin_user_fixture(session: Session):
 
 @pytest.fixture(name="normal_user")
 def normal_user_fixture(session: Session):
-    """Create and persist a DIRECTOR user for tests.
+    """Create and persist a DIRECTOR-profile user for tests.
 
-    Since DIRECTOR is subject to the UserType-based menu gate
-    (`assert_menu_access`, see APRAS-8), this fixture also creates and
-    assigns a UserType granting `allowed_menus: ["tasks", "categories"]`
-    so `normal_user` carries forward the standing tasks/categories access
-    it previously had unconditionally. Tests that need a user *without*
-    menu access (to exercise the 403 path) should build one explicitly.
+    It carries the `Diretor (papel)` bundle plus one ordinary, empty role --
+    the shape a real non-superuser has after migration `0033`. The extra role
+    used to carry `allowed_menus: ["tasks", "categories"]` for the menu gate
+    IAM F5 deleted (§4.1); it stays, now empty, because several modules
+    assert on a user with more than one membership.
     """
-    user_type = UserType(
-        name="Normal User Type", allowed_menus=["tasks", "categories"]
-    )
-    session.add(user_type)
+    role = Role(name="Normal User Type")
+    session.add(role)
     session.commit()
 
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email="user1@test.com",
         full_name="Normal User",
         hashed_password=get_password_hash("test_user_password"),
-        role=UserRole.DIRECTOR,
+        profile="DIRECTOR",
         cpf="11144477735",
-        user_types=[user_type],
+        roles=[role],
     )
     session.add(user)
     session.commit()
@@ -203,12 +307,13 @@ def user_in_tenant_a_fixture(session: Session):
     membership so the header-less resolution ladder lands on tenant A.
     Global vision is a property of *sending* `X-Tenant-Id`, not of the role.
     """
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email="a-admin@test.com",
         full_name="Tenant A Admin",
         hashed_password=get_password_hash("password"),
-        role=UserRole.ADMINISTRATOR,
+        profile="ADMINISTRATOR",
         cpf="39053344705",
     )
     session.add(user)
@@ -221,12 +326,13 @@ def user_in_tenant_a_fixture(session: Session):
 @pytest.fixture(name="user_in_tenant_b")
 def user_in_tenant_b_fixture(session: Session, tenant_b: Tenant):
     """An ADMINISTRATOR whose only membership is tenant B."""
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email="b-admin@test.com",
         full_name="Tenant B Admin",
         hashed_password=get_password_hash("password"),
-        role=UserRole.ADMINISTRATOR,
+        profile="ADMINISTRATOR",
         cpf="16899535009",
     )
     session.add(user)
@@ -243,12 +349,13 @@ def member_admin_fixture(session: Session, tenant_b: Tenant):
     Must send `X-Tenant-Id`: with two memberships the header-less ladder is
     deliberately a 400 rather than an arbitrary pick.
     """
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email="both-admin@test.com",
         full_name="Both Tenants Admin",
         hashed_password=get_password_hash("password"),
-        role=UserRole.ADMINISTRATOR,
+        profile="ADMINISTRATOR",
         cpf="15350946056",
     )
     session.add(user)

@@ -5,17 +5,18 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from app.core.security import create_access_token
-from app.models.enums import UserRole
 from app.models.user import User
+from tests.conftest import make_user
 
 
-def _make_user(session: Session, role: UserRole, email: str, cpf: str) -> User:
-    user = User(
+def _make_user(session: Session, role: str, email: str, cpf: str) -> User:
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email=email,
         full_name=f"User {email}",
         hashed_password="hash",
-        role=role,
+        profile=role,
         cpf=cpf,
     )
     session.add(user)
@@ -31,12 +32,12 @@ def _headers(user: User) -> dict[str, str]:
 
 @pytest.fixture
 def admin_user_local(session: Session) -> User:
-    return _make_user(session, UserRole.ADMINISTRATOR, "admin_asset@test.com", "12345678909")
+    return _make_user(session, "ADMINISTRATOR", "admin_asset@test.com", "12345678909")
 
 
 @pytest.fixture
 def manager_user_local(session: Session) -> User:
-    return _make_user(session, UserRole.MANAGER, "manager_asset@test.com", "98765432100")
+    return _make_user(session, "MANAGER", "manager_asset@test.com", "98765432100")
 
 
 def test_create_fixed_asset_success(session: Session, client: TestClient, admin_user_local: User):

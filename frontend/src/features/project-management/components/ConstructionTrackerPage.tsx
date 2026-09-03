@@ -1,13 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  ArrowLeft,
-  Building2,
-  HardHat,
-  Plus,
-  RefreshCw,
-} from 'lucide-react';
-import { useEffectiveIdentity } from '../../user-administration/context/useEffectiveIdentity';
+import { ArrowLeft, Building2, HardHat, Plus, RefreshCw,  } from 'lucide-react';
+import { useEffectivePermissionSet } from '../../user-administration/access/useCanAccess';
 import type {
   ConstructionProject,
   MilestoneCreatePayload,
@@ -19,18 +13,7 @@ import type {
   ProjectUpdateCreatePayload,
   ProjectUpdatePayload,
 } from '../../../types/project';
-import {
-  useCreateMilestone,
-  useCreateProject,
-  useCreateProjectUpdate,
-  useDeleteMilestone,
-  useDeleteProject,
-  useDeleteProjectUpdate,
-  useProjectDetail,
-  useProjects,
-  useUpdateMilestone,
-  useUpdateProject,
-} from '../hooks/useProjects';
+import { useCreateMilestone, useCreateProject, useCreateProjectUpdate, useDeleteMilestone, useDeleteProject, useDeleteProjectUpdate, useProjectDetail, useProjects, useUpdateMilestone, useUpdateProject,  } from '../hooks/useProjects';
 import { ProjectSummaryCard } from './ProjectSummaryCard';
 import { BudgetVsActualProgressBar } from './BudgetVsActualProgressBar';
 import { MilestoneTimeline } from './MilestoneTimeline';
@@ -45,10 +28,10 @@ type FilterStatus = 'ALL' | ProjectStatus;
 
 export const ConstructionTrackerPage: React.FC = () => {
   const { t } = useTranslation();
-  const { role } = useEffectiveIdentity();
-  const canManage = role === 'ADMINISTRATOR' || role === 'DIRECTOR';
+  const { has } = useEffectivePermissionSet();
+  const canManage = has("projects:create");
   const canPostUpdate =
-    role === 'ADMINISTRATOR' || role === 'DIRECTOR' || role === 'MANAGER';
+    has("projects:update_create");
 
   // Filters & Selected State
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('ALL');

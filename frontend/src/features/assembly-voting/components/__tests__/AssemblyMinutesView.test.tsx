@@ -1,10 +1,7 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import AssemblyMinutesView from "../AssemblyMinutesView";
-import {
-  useAssemblyMinutes,
-  useSaveAssemblyMinutes,
-} from "../../hooks/useVoting";
+import { useAssemblyMinutes, useSaveAssemblyMinutes,  } from "../../hooks/useVoting";
 import type { AssemblyRead } from "../../../../types/voting";
 
 vi.mock("../../hooks/useVoting", () => ({

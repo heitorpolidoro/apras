@@ -1,5 +1,3 @@
-import type { MenuKey } from "../features/user-administration/context/useMenuAccess";
-
 /** A `<module>:<action>` permission string, e.g. `"finance:read"`. */
 export type PermissionKey = string;
 
@@ -15,6 +13,11 @@ export interface PermissionDescriptor {
 export interface MyPermissions {
   tenant_id: string;
   permissions: PermissionKey[];
+  /** The first non-null `landing_path` among my roles in this tenant,
+   *  ordered by role name, or null (IAM F5, APRAS-49 §10.4). It follows the
+   *  **effective** (simulation-aware) identity because landing is a
+   *  preference; route *access* stays on the real set. */
+  landing_path?: string | null;
 }
 
 /**
@@ -26,14 +29,14 @@ export interface MyPermissions {
  * module's `read` is held by every legacy role and would therefore gate
  * nothing (`routeAccess.ts` names each of them).
  *
- * `legacyMenu` and `landingRedirect` are **TRANSITIONAL (IAM F4 -> F5)** and
- * are only ever set on the two entries `routeAccess.ts` marks; they are typed
- * `never` on the `{ anyOf }` arm so a third one cannot be added by accident.
+ * `landingRedirect` marks the two routes that honour the caller's
+ * `landing_path` (IAM F5, APRAS-49 §10.4). It is typed `never` on the
+ * `{ anyOf }` arm so a third one cannot be added by accident. F5 deleted its
+ * sibling `legacyMenu` together with the menu gate it read (§4.1).
  */
 export type AccessRule =
-  | { module: string; legacyMenu?: MenuKey; landingRedirect?: boolean }
+  | { module: string; landingRedirect?: boolean }
   | {
       anyOf: readonly PermissionKey[];
-      legacyMenu?: never;
       landingRedirect?: never;
     };

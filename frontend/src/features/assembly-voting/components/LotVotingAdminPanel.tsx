@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../../components/ui/button";
-import { UserRole } from "../../../types/auth";
-import { useEffectiveIdentity } from "../../user-administration/context/useEffectiveIdentity";
+import { useEffectivePermissionSet } from "../../user-administration/access/useCanAccess";
 import { useLots } from "../../lot-management/hooks/useLots";
 import { useUpdateLotDelinquency } from "../hooks/useVoting";
 import LotVoterEligibilityPanel from "./LotVoterEligibilityPanel";
@@ -18,8 +17,8 @@ interface ApiError extends Error {
  */
 const LotVotingAdminPanel: React.FC = () => {
   const { t } = useTranslation();
-  const { role } = useEffectiveIdentity();
-  const isBoard = role === UserRole.ADMINISTRATOR || role === UserRole.DIRECTOR;
+  const { has } = useEffectivePermissionSet();
+  const isBoard = has("assemblies:create");
 
   const { data: lots } = useLots();
   const delinquencyMutation = useUpdateLotDelinquency();

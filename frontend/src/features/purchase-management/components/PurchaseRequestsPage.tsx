@@ -1,36 +1,18 @@
 import React, { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Ban,
-  CheckCircle2,
-  Eye,
-  FileText,
-  Pencil,
-  Plus,
-  Search,
-  Trash2,
-  Wallet,
-} from "lucide-react";
+import { Ban, CheckCircle2, Eye, FileText, Pencil, Plus, Search, Trash2, Wallet,  } from "lucide-react";
 import { AlertModal } from "../../../components/ui/alert-modal";
 import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
-import { UserRole } from "../../../types/auth";
 import type {
   PurchaseFilterParams,
   PurchaseRequest,
   PurchaseRequestFormData,
 } from "../../../types/purchase";
 import { PurchaseRequestStatus } from "../../../types/purchase";
-import { useEffectiveIdentity } from "../../user-administration/context/useEffectiveIdentity";
-import {
-  useCancelPurchaseRequest,
-  useCreatePurchaseRequest,
-  useDeletePurchaseRequest,
-  usePurchaseRequests,
-  usePurchaseSummary,
-  useUpdatePurchaseRequest,
-} from "../hooks/usePurchaseRequests";
+import { useEffectivePermissionSet } from "../../user-administration/access/useCanAccess";
+import { useCancelPurchaseRequest, useCreatePurchaseRequest, useDeletePurchaseRequest, usePurchaseRequests, usePurchaseSummary, useUpdatePurchaseRequest,  } from "../hooks/usePurchaseRequests";
 import { formatCurrency, formatDateTime } from "../utils/formatters";
 import { PurchaseRequestDetailModal } from "./PurchaseRequestDetailModal";
 import { PurchaseRequestFormModal } from "./PurchaseRequestFormModal";
@@ -55,10 +37,10 @@ const STATUS_BADGE_VARIANT: Record<
 
 export const PurchaseRequestsPage: React.FC = () => {
   const { t } = useTranslation();
-  const { role } = useEffectiveIdentity();
+  const { has } = useEffectivePermissionSet();
 
   const canDecide =
-    role === UserRole.ADMINISTRATOR || role === UserRole.DIRECTOR;
+    has("purchases:decide");
 
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");

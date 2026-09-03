@@ -1,11 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { useTranslation } from "react-i18next";
-import {
-  actionLabel,
-  moduleLabel,
-  permissionLabel,
-  sortModules,
-} from "../utils/permissionLabels";
+import { actionLabel, moduleLabel, permissionLabel, sortModules,  } from "../utils/permissionLabels";
 
 // The global setup mocks `react-i18next` with a real pt.json lookup that
 // returns the raw key when it misses, which is exactly the resolution ladder
@@ -40,7 +35,7 @@ describe("permissionLabels", () => {
       "finance:read",
       "access_control:device_regenerate_key",
       "votes:cast",
-      "user_types:delete",
+      "roles:delete",
     ]) {
       const label = permissionLabel(permission, t);
       expect(label).not.toContain("permissions.");

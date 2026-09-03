@@ -1,24 +1,14 @@
-export const UserRole = {
-  ADMINISTRATOR: "ADMINISTRATOR",
-  DIRECTOR: "DIRECTOR",
-  MANAGER: "MANAGER",
-  GUEST: "GUEST",
-  RESIDENT: "RESIDENT",
-  PORTEIRO: "PORTEIRO",
-} as const;
-
-export type UserRole = (typeof UserRole)[keyof typeof UserRole];
-
-export interface UserType {
+export interface Role {
   id: string;
   name: string;
-  allowed_menus: string[];
-  /** Set only for the 5 role-linked types seeded by the APRAS-9 backend
-   * migration; undefined/null for regular admin-created types. */
-  role?: string | null;
-  /** The group's permission bundle (IAM F2 put it on `UserTypeRead`).
-   *  Optional so every pre-existing `UserType` fixture keeps type-checking. */
+  /** The role's permission bundle (IAM F2 put it on `RoleRead`).
+   *  Optional so every pre-existing `Role` fixture keeps type-checking. */
   permissions?: string[];
+  /** Where a member of this role lands after login, or null (IAM F5,
+   *  APRAS-49 §10.4). Landing is a preference, not authorization: the enum
+   *  switch that sent a GUEST to `/welcome` and a PORTEIRO to `/gate` is now
+   *  this column, editable in the role editor. */
+  landing_path?: string | null;
 }
 
 /** One membership of the *calling* user, as returned by `GET /auth/me`. */
@@ -41,14 +31,19 @@ export interface User {
   id: string;
   email: string;
   full_name: string;
-  role: UserRole;
   is_active: boolean;
-  user_types?: UserType[];
-  user_type_ids?: string[] | null;
+  roles?: Role[];
+  role_ids?: string[] | null;
   cpf?: string;
   phone?: string;
   address?: string;
   /** The caller's own tenant memberships (`GET /auth/me` only, APRAS-38).
    *  Optional so every pre-existing `User` fixture keeps type-checking. */
   tenants?: TenantMembership[];
+  /** The caller's **own** global flag (`GET /auth/me` only, IAM F5 §8.3).
+   *  `UserRead` deliberately does not carry it, so `GET /users/` payloads
+   *  never expose who the superusers are. The one consumer is
+   *  `context/tenantState.ts`, which runs before an acting tenant exists and
+   *  so cannot ask `/permissions/me`. */
+  is_superuser?: boolean;
 }

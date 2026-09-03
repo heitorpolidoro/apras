@@ -5,7 +5,6 @@ import { ResidentsTab } from "../components/ResidentsTab";
 import * as residentsApi from "../../../api/residents";
 import * as usersHook from "../../../hooks/useUsers";
 import { ResidentRelationship } from "../../../types/resident";
-import { UserRole } from "../../../types/auth";
 
 vi.mock("../../../api/residents");
 vi.mock("../../../hooks/useUsers");
@@ -49,7 +48,6 @@ const mockResidentsData = {
         id: "user-1",
         full_name: "João Oliveira User",
         email: "joao@test.com",
-        role: UserRole.DIRECTOR,
       },
       lot: { id: "lot-1", block: "A", lot_number: "101" },
     },
@@ -85,7 +83,6 @@ describe("ResidentsTab", () => {
           id: "user-2",
           email: "user2@test.com",
           full_name: "User Two",
-          role: UserRole.DIRECTOR,
           is_active: true,
         },
       ],

@@ -3,6 +3,9 @@
 import uuid
 from datetime import date, datetime, timedelta
 
+from sqlmodel import Session, select
+
+from app.core.security import get_password_hash
 from app.models.enums import (
     AssemblyStatus,
     AssemblyType,
@@ -21,8 +24,6 @@ from app.models.voting import (
     Vote,
     VoteOption,
 )
-from app.core.security import get_password_hash
-from sqlmodel import Session, select
 
 
 def test_enums_have_expected_members():

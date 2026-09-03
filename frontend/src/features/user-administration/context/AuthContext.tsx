@@ -8,13 +8,7 @@ import React, {
 import apiClient from "../../../api/client";
 import { type User } from "../../../types/auth";
 import { triggerSimulationReset } from "./simulationState";
-import {
-  clearActingTenantId,
-  getActingTenantId,
-  resolveActingTenantId,
-  setActingTenantId,
-} from "./tenantState";
-export { UserRole } from "../../../types/auth";
+import { clearActingTenantId, getActingTenantId, resolveActingTenantId, setActingTenantId,  } from "./tenantState";
 
 interface AuthContextType {
   user: User | null;
@@ -45,7 +39,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setActingTenantId(
         resolveActingTenantId(
           response.data.tenants ?? [],
-          response.data.role,
+          response.data.is_superuser,
           getActingTenantId(),
         ),
       );

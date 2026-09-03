@@ -1,7 +1,8 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useAuth, UserRole } from "../context/AuthContext";
+import { useAuth } from "../context/AuthContext";
+import { usePermissionSet } from "../access/useCanAccess";
 import { useTenant } from "../context/useTenant";
 import { useCanShowMenu } from "../access/useCanAccess";
 import { NAV_ITEMS, type NavItem } from "../access/routeAccess";
@@ -44,6 +45,7 @@ const NavItemLink: React.FC<{ item: NavItem }> = ({ item }) => {
 
 const Navbar: React.FC = () => {
   const { user, logout, isAuthenticated } = useAuth();
+  const canSimulate = usePermissionSet().has("roles:update");
   const { tenants, actingTenantId, setActingTenant } = useTenant();
   const { t, i18n } = useTranslation();
   const currentLang = i18n.resolvedLanguage ?? i18n.language;
@@ -96,7 +98,11 @@ const Navbar: React.FC = () => {
         {/* TRANSITIONAL (IAM F4 -> F5): "view-as" is an operator tool, not an
             authorization gate, and F3 exposes no `is_superuser` on
             `/auth/me` to replace this comparison with. */}
-        {user?.role === UserRole.ADMINISTRATOR && <SimulationControls />}
+        {/* IAM F5 (APRAS-49 §10.2): `roles:update` is the legacy {A} set
+            exactly. It reads the REAL set (`usePermissionSet`), never the
+            effective one, so the control that ends a simulation can never
+            be hidden by the simulation. */}
+        {canSimulate && <SimulationControls />}
         <div className="flex items-center gap-1 border border-border/50 rounded-md overflow-hidden">
           {LANGUAGES.map((lang) => (
             <button
@@ -117,9 +123,9 @@ const Navbar: React.FC = () => {
           <span className="text-sm font-semibold text-foreground leading-tight">
             {user?.full_name}
           </span>
-          {user?.user_types && user.user_types.length > 0 && (
+          {user?.roles && user.roles.length > 0 && (
             <span className="text-xs text-primary/80 font-medium leading-tight">
-              {user.user_types.map((ut) => ut.name).join(", ")}
+              {user.roles.map((ut) => ut.name).join(", ")}
             </span>
           )}
         </div>

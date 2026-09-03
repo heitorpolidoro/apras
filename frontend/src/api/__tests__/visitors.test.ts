@@ -1,17 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  searchVisitors,
-  createVisitor,
-  getVisitor,
-  updateVisitor,
-  getLotAuthorizations,
-  createLotAuthorization,
-  getAuthorization,
-  revokeAuthorization,
-  checkInVisitor,
-  checkOutVisitor,
-  getAccessLogs,
-} from "../visitors";
+import { searchVisitors, createVisitor, getVisitor, updateVisitor, getLotAuthorizations, createLotAuthorization, getAuthorization, revokeAuthorization, checkInVisitor, checkOutVisitor, getAccessLogs,  } from "../visitors";
 import apiClient from "../client";
 
 vi.mock("../client", () => ({

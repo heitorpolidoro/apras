@@ -5,14 +5,9 @@ import type React from "react";
 import apiClient from "../../../api/client";
 import * as AuthHook from "../context/AuthContext";
 import { useSimulation } from "../context/SimulationContext";
-import { useUserTypes } from "../../../hooks/useUserTypes";
-import {
-  useCanAccess,
-  useCanShowMenu,
-  useEffectivePermissionSet,
-  usePermissionSet,
-} from "../access/useCanAccess";
-import { UserRole, type User } from "../../../types/auth";
+import { useRoles } from "../../../hooks/useRoles";
+import { useCanAccess, useCanShowMenu, useEffectivePermissionSet, usePermissionSet,  } from "../access/useCanAccess";
+import { type User } from "../../../types/auth";
 
 /**
  * The two permission sets of §2.7, exercised through the real query stack:
@@ -27,18 +22,16 @@ vi.mock("../context/SimulationContext", () => ({
   useSimulation: vi.fn(),
 }));
 
-vi.mock("../../../hooks/useUserTypes", () => ({
-  useUserTypes: vi.fn(),
+vi.mock("../../../hooks/useRoles", () => ({
+  useRoles: vi.fn(),
 }));
 
 const mockedGet = vi.mocked(apiClient.get);
 
 const NOT_SIMULATING = {
-  simulatedRole: null,
-  simulatedUserTypeIds: [],
+  simulatedRoleIds: [],
   isSimulating: false,
-  setSimulatedRole: vi.fn(),
-  setSimulatedUserTypeIds: vi.fn(),
+  setSimulatedRoleIds: vi.fn(),
   stopSimulation: vi.fn(),
 };
 
@@ -46,9 +39,9 @@ const ADMIN: Partial<User> = {
   id: "admin-1",
   email: "admin@test.com",
   full_name: "Admin",
-  role: UserRole.ADMINISTRATOR,
+  is_superuser: true,
   is_active: true,
-  user_types: [],
+  roles: [],
 };
 
 const wrapper = (): React.FC<{ children: React.ReactNode }> => {
@@ -83,13 +76,13 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockedGet.mockReset();
   vi.mocked(useSimulation).mockReturnValue(NOT_SIMULATING);
-  vi.mocked(useUserTypes).mockReturnValue({ data: [] } as never);
+  vi.mocked(useRoles).mockReturnValue({ data: [] } as never);
   mockAuth();
 });
 
 describe("usePermissionSet / useCanAccess", () => {
   it("resolves the acting tenant's permissions from /permissions/me", async () => {
-    answerPermissions(["finance:read", "user_types:update"]);
+    answerPermissions(["finance:read", "roles:update"]);
 
     const { result } = renderHook(() => usePermissionSet(), {
       wrapper: wrapper(),
@@ -100,7 +93,7 @@ describe("usePermissionSet / useCanAccess", () => {
     expect(result.current.has("votes:cast")).toBe(false);
     expect([...result.current.all].sort()).toEqual([
       "finance:read",
-      "user_types:update",
+      "roles:update",
     ]);
     expect(mockedGet).toHaveBeenCalledWith("/permissions/me");
   });
@@ -150,20 +143,17 @@ describe("usePermissionSet / useCanAccess", () => {
   });
 
   it("usePermissionSet ignores an active simulation", async () => {
-    answerPermissions(["user_types:update"]);
+    answerPermissions(["roles:update"]);
     vi.mocked(useSimulation).mockReturnValue({
       ...NOT_SIMULATING,
-      simulatedRole: UserRole.RESIDENT,
-      simulatedUserTypeIds: ["resident-type"],
+      simulatedRoleIds: ["resident-type"],
       isSimulating: true,
     });
-    vi.mocked(useUserTypes).mockReturnValue({
+    vi.mocked(useRoles).mockReturnValue({
       data: [
         {
           id: "resident-type",
           name: "Morador (papel)",
-          allowed_menus: [],
-          role: UserRole.RESIDENT,
           permissions: ["tasks:read"],
         },
       ],
@@ -178,36 +168,62 @@ describe("usePermissionSet / useCanAccess", () => {
     );
 
     await waitFor(() => expect(result.current.real.isLoading).toBe(false));
-    expect(result.current.real.has("user_types:update")).toBe(true);
+    expect(result.current.real.has("roles:update")).toBe(true);
     expect(result.current.real.has("tasks:read")).toBe(false);
   });
 
-  it("useEffectivePermissionSet unions the simulated groups' permissions while simulating", async () => {
-    answerPermissions(["user_types:update"]);
+  it("useEffectivePermissionSet tolerates a role with no bundle and an unloaded list", async () => {
+    // Two defensive branches on the same line: `useRoles()` may not have
+    // settled (`roles ?? []`) and a `RoleRead` may carry no `permissions`
+    // (the field is optional so every pre-F2 fixture keeps type-checking).
+    // Neither may throw while an administrator is previewing a role.
+    answerPermissions(["roles:update"]);
     vi.mocked(useSimulation).mockReturnValue({
       ...NOT_SIMULATING,
-      simulatedRole: UserRole.RESIDENT,
-      simulatedUserTypeIds: ["type-a", "type-b"],
+      simulatedRoleIds: ["type-a"],
       isSimulating: true,
     });
-    vi.mocked(useUserTypes).mockReturnValue({
+    vi.mocked(useRoles).mockReturnValue({ data: undefined } as never);
+
+    const unloaded = renderHook(() => useEffectivePermissionSet(), {
+      wrapper: wrapper(),
+    });
+    await waitFor(() => expect(unloaded.result.current.isLoading).toBe(false));
+    expect([...unloaded.result.current.all]).toEqual([]);
+
+    vi.mocked(useRoles).mockReturnValue({
+      data: [{ id: "type-a", name: "Sem bundle" }],
+    } as never);
+
+    const noBundle = renderHook(() => useEffectivePermissionSet(), {
+      wrapper: wrapper(),
+    });
+    await waitFor(() => expect(noBundle.result.current.isLoading).toBe(false));
+    expect([...noBundle.result.current.all]).toEqual([]);
+  });
+
+  it("useEffectivePermissionSet unions the simulated roles' permissions while simulating", async () => {
+    answerPermissions(["roles:update"]);
+    vi.mocked(useSimulation).mockReturnValue({
+      ...NOT_SIMULATING,
+      simulatedRoleIds: ["type-a", "type-b"],
+      isSimulating: true,
+    });
+    vi.mocked(useRoles).mockReturnValue({
       data: [
         {
           id: "type-a",
           name: "A",
-          allowed_menus: [],
           permissions: ["tasks:read"],
         },
         {
           id: "type-b",
           name: "B",
-          allowed_menus: [],
           permissions: ["occurrences:read"],
         },
         {
           id: "type-c",
           name: "C",
-          allowed_menus: [],
           permissions: ["finance:read"],
         },
       ],
@@ -234,12 +250,12 @@ describe("usePermissionSet / useCanAccess", () => {
   });
 
   it("evaluates an anyOf rule against the real set", async () => {
-    answerPermissions(["user_types:update"]);
+    answerPermissions(["roles:update"]);
 
     const { result } = renderHook(
       () => ({
         held: useCanAccess({
-          anyOf: ["user_types:create", "user_types:update"],
+          anyOf: ["roles:create", "roles:update"],
         }),
         notHeld: useCanAccess({ anyOf: ["uploads:pending_read"] }),
         noRule: useCanAccess(undefined),
@@ -254,25 +270,27 @@ describe("usePermissionSet / useCanAccess", () => {
     expect(result.current.noRule.allowed).toBe(true);
   });
 
-  it("ANDs the legacy menu gate when the rule carries legacyMenu", async () => {
+  it("a rule is now exactly its permission predicate (IAM F5 §4.1)", async () => {
+    // This case used to assert that `{ module, legacyMenu }` ANDed the
+    // `allowed_menus` gate on top of the permission: a DIRECTOR whose roles
+    // granted no `tasks` menu key was refused even though the permission was
+    // held, because `deps.assert_menu_access` would have answered 403.
+    //
+    // F5 deleted that gate from all 12 handlers, so the door and the API now
+    // agree by construction and `legacyMenu` is not a field of `AccessRule`
+    // any more. The widening this causes is enumerated in §4.2 and pinned by
+    // `backend/tests/test_menu_gate_removal.py`.
+    mockAuth({ ...ADMIN });
     answerPermissions(["tasks:read"]);
-    // A DIRECTOR whose groups grant no `tasks` menu key: the permission is
-    // held, but `deps.assert_menu_access` would still answer 403 (§2.3).
-    mockAuth({ ...ADMIN, role: UserRole.DIRECTOR });
-    vi.mocked(useUserTypes).mockReturnValue({
-      data: [{ id: "type-1", name: "Board", allowed_menus: [] }],
+    vi.mocked(useRoles).mockReturnValue({
+      data: [{ id: "type-1", name: "Board" }],
     } as never);
 
-    const { result } = renderHook(
-      () => ({
-        withMenu: useCanAccess({ module: "tasks", legacyMenu: "tasks" }),
-        withoutMenu: useCanAccess({ module: "tasks" }),
-      }),
-      { wrapper: wrapper() },
-    );
+    const { result } = renderHook(() => useCanAccess({ module: "tasks" }), {
+      wrapper: wrapper(),
+    });
 
-    await waitFor(() => expect(result.current.withMenu.isLoading).toBe(false));
-    expect(result.current.withMenu.allowed).toBe(false);
-    expect(result.current.withoutMenu.allowed).toBe(true);
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.allowed).toBe(true);
   });
 });

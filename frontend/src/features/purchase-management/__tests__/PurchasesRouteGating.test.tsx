@@ -6,7 +6,6 @@ import type React from "react";
 import Navbar from "../../user-administration/components/Navbar";
 import ProtectedRoute from "../../user-administration/components/ProtectedRoute";
 import * as AuthHook from "../../user-administration/context/AuthContext";
-import { UserRole } from "../../user-administration/context/AuthContext";
 import apiClient from "../../../api/client";
 import { ROUTE_ACCESS } from "../../user-administration/access/routeAccess";
 import { PERMISSIONS_BY_ROLE } from "../../../test/permissionFixtures";
@@ -34,19 +33,17 @@ vi.mock("../../../api/client", () => ({
 
 vi.mock("../../user-administration/context/SimulationContext", () => ({
   useSimulation: vi.fn(() => ({
-    simulatedRole: null,
-    simulatedUserTypeIds: [],
+    simulatedRoleIds: [],
     isSimulating: false,
-    setSimulatedRole: vi.fn(),
-    setSimulatedUserTypeIds: vi.fn(),
+    setSimulatedRoleIds: vi.fn(),
     stopSimulation: vi.fn(),
   })),
 }));
 
-vi.mock("../../../hooks/useUserTypes", () => ({
-  useUserTypes: vi.fn(() => ({
+vi.mock("../../../hooks/useRoles", () => ({
+  useRoles: vi.fn(() => ({
     data: [
-      { id: "type-1", name: "Test Type", allowed_menus: ["tasks", "categories"] },
+      { id: "type-1", name: "Test Type" },
     ],
   })),
 }));
@@ -59,16 +56,16 @@ vi.mock("../../../hooks/usePermissionQueries", async () => {
 });
 
 export const PURCHASES_ROLES = [
-  UserRole.ADMINISTRATOR,
-  UserRole.DIRECTOR,
-  UserRole.MANAGER,
+  "ADMINISTRATOR",
+  "DIRECTOR",
+  "MANAGER",
 ];
 
-const DENIED_ROLES = [UserRole.RESIDENT, UserRole.PORTEIRO, UserRole.GUEST];
+const DENIED_ROLES = ["RESIDENT", "PORTEIRO", "GUEST"];
 
 const mockedGet = vi.mocked(apiClient.get);
 
-const mockAuth = (role: UserRole) => {
+const mockAuth = (role: string) => {
   vi.spyOn(AuthHook, "useAuth").mockReturnValue({
     isAuthenticated: true,
     isLoading: false,

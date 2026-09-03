@@ -1,13 +1,37 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import ReservableSpacesPage from "../ReservableSpacesPage";
-import {
-  useReservableSpaces,
-  useCreateReservableSpace,
-  useUpdateReservableSpace,
-  useDeactivateReservableSpace,
-} from "../../hooks/useReservations";
-import { useAuth, UserRole } from "../../../user-administration/context/AuthContext";
+import { useReservableSpaces, useCreateReservableSpace, useUpdateReservableSpace, useDeactivateReservableSpace,  } from "../../hooks/useReservations";
+import { useAuth } from "../../../user-administration/context/AuthContext";
+import { PERMISSIONS_BY_ROLE } from "../../../../test/permissionFixtures";
+
+/** The profile each case's fixture stands for. */
+const mockProfile = () => String(useAuth().user?.id ?? "").startsWith("guest") ? "GUEST" : useAuth().user?.is_superuser ? "ADMINISTRATOR" : String(useAuth().user?.id ?? "").startsWith("resident") ? "RESIDENT" : "MANAGER";
+
+// IAM F5 (APRAS-49 §10.2): the component reads its *permissions* now, not a
+// role. Mocking the access module keeps each case's signal exactly where it
+// was — the `useAuth()` fixture this file already varies per test — while
+// removing the `/permissions/me` query from the render path, which is what
+// made a `QueryClientProvider` necessary.
+vi.mock("../../../../features/user-administration/access/useCanAccess", () => {
+  const build = (profile: string) => ({
+    has: (permission: string) =>
+      (PERMISSIONS_BY_ROLE[profile] ?? []).includes(permission),
+    hasModule: (moduleName: string) =>
+      (PERMISSIONS_BY_ROLE[profile] ?? []).some((permission) =>
+        permission.startsWith(`${moduleName}:`),
+      ),
+    isLoading: false,
+    all: new Set(PERMISSIONS_BY_ROLE[profile] ?? []),
+  });
+  return {
+    useEffectivePermissionSet: () => build(mockProfile()),
+    usePermissionSet: () => build(mockProfile()),
+    useCanAccess: () => ({ allowed: true, isLoading: false }),
+    useCanShowMenu: () => ({ allowed: true, isLoading: false }),
+  };
+});
+
 
 vi.mock("../../hooks/useReservations", () => ({
   useReservableSpaces: vi.fn(),
@@ -25,7 +49,7 @@ vi.mock(
     return {
       ...actual,
       useAuth: vi.fn(() => ({
-        user: { id: "admin-1", role: actual.UserRole.ADMINISTRATOR },
+        user: { id: "admin-1", is_superuser: true },
       })),
     };
   },
@@ -33,17 +57,15 @@ vi.mock(
 
 vi.mock("../../../user-administration/context/SimulationContext", () => ({
   useSimulation: vi.fn(() => ({
-    simulatedRole: null,
-    simulatedUserTypeIds: [],
+    simulatedRoleIds: [],
     isSimulating: false,
-    setSimulatedRole: vi.fn(),
-    setSimulatedUserTypeIds: vi.fn(),
+    setSimulatedRoleIds: vi.fn(),
     stopSimulation: vi.fn(),
   })),
 }));
 
-vi.mock("../../../../hooks/useUserTypes", () => ({
-  useUserTypes: vi.fn(() => ({ data: [] })),
+vi.mock("../../../../hooks/useRoles", () => ({
+  useRoles: vi.fn(() => ({ data: [] })),
 }));
 
 const mockSpaces = [
@@ -90,7 +112,7 @@ describe("ReservableSpacesPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(useAuth).mockReturnValue({
-      user: { id: "admin-1", role: UserRole.ADMINISTRATOR },
+      user: { id: "admin-1", is_superuser: true },
     } as any);
     vi.mocked(useReservableSpaces).mockReturnValue({
       data: mockSpaces,
@@ -327,7 +349,7 @@ describe("ReservableSpacesPage", () => {
 
   it("MANAGER user does not see the Novo Espaço button", () => {
     vi.mocked(useAuth).mockReturnValue({
-      user: { id: "manager-1", role: UserRole.MANAGER },
+      user: { id: "manager-1" },
     } as any); // skipcq: JS-0323
     render(<ReservableSpacesPage />);
     expect(screen.queryByRole("button", { name: /Novo Espaço/i })).not.toBeInTheDocument();
@@ -335,7 +357,7 @@ describe("ReservableSpacesPage", () => {
 
   it("MANAGER user does not see edit/delete buttons", () => {
     vi.mocked(useAuth).mockReturnValue({
-      user: { id: "manager-1", role: UserRole.MANAGER },
+      user: { id: "manager-1" },
     } as any); // skipcq: JS-0323
     render(<ReservableSpacesPage />);
     expect(document.querySelectorAll("svg.lucide-pencil")).toHaveLength(0);

@@ -6,17 +6,17 @@ Covers the numbered backend tests of `docs/tasks/APRAS-33-spec.md`
 
 from datetime import datetime, timedelta
 
+from fastapi.testclient import TestClient
+from sqlmodel import Session
+
 from app.models.enums import (
     AssemblyStatus,
     LotAssociationType,
-    UserRole,
     VoteKind,
     VoteStatus,
     VoteType,
 )
 from app.services import voting_service
-from fastapi.testclient import TestClient
-from sqlmodel import Session
 from tests.voting_helpers import (
     auth_headers,
     link_user_to_lot,
@@ -46,7 +46,7 @@ def _cast(session, user, vote, label, lot=None):
 def test_board_creates_assembly_with_agenda_votes(
     client: TestClient, session: Session
 ):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
+    admin = make_user(session, "ADMINISTRATOR")
     headers = auth_headers(client, admin)
 
     response = client.post(
@@ -84,8 +84,8 @@ def test_board_creates_assembly_with_agenda_votes(
 def test_manager_may_create_poll_but_not_assembly_vote(
     client: TestClient, session: Session
 ):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
-    manager = make_user(session, UserRole.MANAGER)
+    admin = make_user(session, "ADMINISTRATOR")
+    manager = make_user(session, "MANAGER")
     assembly = make_assembly(session, admin)
     headers = auth_headers(client, manager)
     closes_at = (datetime.utcnow() + timedelta(days=1)).isoformat()
@@ -119,7 +119,7 @@ def test_manager_may_create_poll_but_not_assembly_vote(
 
 
 def test_anonymous_assembly_vote_is_rejected(client: TestClient, session: Session):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
+    admin = make_user(session, "ADMINISTRATOR")
     assembly = make_assembly(session, admin)
 
     response = client.post(
@@ -141,7 +141,7 @@ def test_anonymous_assembly_vote_is_rejected(client: TestClient, session: Sessio
 def test_assembly_vote_requires_assembly_and_poll_forbids_it(
     client: TestClient, session: Session
 ):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
+    admin = make_user(session, "ADMINISTRATOR")
     assembly = make_assembly(session, admin)
     headers = auth_headers(client, admin)
     closes_at = (datetime.utcnow() + timedelta(days=1)).isoformat()
@@ -178,8 +178,8 @@ def test_assembly_vote_requires_assembly_and_poll_forbids_it(
 def test_patch_vote_after_first_ballot_returns_400(
     client: TestClient, session: Session
 ):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
-    owner = make_user(session, UserRole.RESIDENT)
+    admin = make_user(session, "ADMINISTRATOR")
+    owner = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, owner, lot)
     assembly = make_assembly(session, admin)
@@ -201,7 +201,7 @@ def test_patch_vote_after_first_ballot_returns_400(
 
 
 def test_patch_closed_assembly_returns_400(client: TestClient, session: Session):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
+    admin = make_user(session, "ADMINISTRATOR")
     assembly = make_assembly(session, admin, status=AssemblyStatus.CLOSED)
 
     response = client.patch(
@@ -213,8 +213,8 @@ def test_patch_closed_assembly_returns_400(client: TestClient, session: Session)
 
 
 def test_ballot_in_draft_assembly_returns_400(client: TestClient, session: Session):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
-    owner = make_user(session, UserRole.RESIDENT)
+    admin = make_user(session, "ADMINISTRATOR")
+    owner = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, owner, lot)
     assembly = make_assembly(session, admin, status=AssemblyStatus.DRAFT)
@@ -234,7 +234,7 @@ def test_ballot_in_draft_assembly_returns_400(client: TestClient, session: Sessi
 def test_close_assembly_cascades_over_open_votes(
     client: TestClient, session: Session
 ):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
+    admin = make_user(session, "ADMINISTRATOR")
     assembly = make_assembly(session, admin)
     vote = make_vote(session, admin, assembly=assembly)
     headers = auth_headers(client, admin)
@@ -256,13 +256,13 @@ def test_close_assembly_cascades_over_open_votes(
 def test_guest_and_porteiro_cannot_vote_in_either_modality(
     client: TestClient, session: Session
 ):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
+    admin = make_user(session, "ADMINISTRATOR")
     assembly = make_assembly(session, admin)
     assembly_vote = make_vote(session, admin, assembly=assembly)
     poll = make_vote(session, admin, kind=VoteKind.ENQUETE)
     lot = make_lot(session, "A", "1")
 
-    for role in (UserRole.GUEST, UserRole.PORTEIRO):
+    for role in ("GUEST", "PORTEIRO"):
         user = make_user(session, role)
         link_user_to_lot(session, user, lot)
         headers = auth_headers(client, user)
@@ -293,8 +293,8 @@ def test_guest_and_porteiro_cannot_vote_in_either_modality(
 def test_open_tally_returns_only_the_count_even_for_administrator(
     client: TestClient, session: Session
 ):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
-    owner = make_user(session, UserRole.RESIDENT)
+    admin = make_user(session, "ADMINISTRATOR")
+    owner = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     make_lot(session, "A", "2")
     link_user_to_lot(session, owner, lot)
@@ -316,8 +316,8 @@ def test_open_tally_returns_only_the_count_even_for_administrator(
 def test_closed_poll_tally_has_no_total_lots_field(
     client: TestClient, session: Session
 ):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
-    resident = make_user(session, UserRole.RESIDENT)
+    admin = make_user(session, "ADMINISTRATOR")
+    resident = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, resident, lot)
     poll = make_vote(session, admin, kind=VoteKind.ENQUETE)
@@ -335,8 +335,8 @@ def test_closed_poll_tally_has_no_total_lots_field(
 def test_closed_anonymous_poll_tally_masks_identity_in_the_payload(
     client: TestClient, session: Session
 ):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
-    resident = make_user(session, UserRole.RESIDENT, full_name="Ciclana")
+    admin = make_user(session, "ADMINISTRATOR")
+    resident = make_user(session, "RESIDENT", full_name="Ciclana")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, resident, lot)
     poll = make_vote(session, admin, kind=VoteKind.ENQUETE, is_anonymous=True)
@@ -364,9 +364,9 @@ def test_closed_anonymous_poll_tally_masks_identity_in_the_payload(
 def test_manager_without_lot_sees_counts_and_closed_assembly_tally(
     client: TestClient, session: Session
 ):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
-    manager = make_user(session, UserRole.MANAGER)
-    owner = make_user(session, UserRole.RESIDENT)
+    admin = make_user(session, "ADMINISTRATOR")
+    manager = make_user(session, "MANAGER")
+    owner = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, owner, lot)
 
@@ -396,8 +396,8 @@ def test_manager_without_lot_sees_counts_and_closed_assembly_tally(
 
 
 def test_guest_cannot_read_the_tally(client: TestClient, session: Session):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
-    guest = make_user(session, UserRole.GUEST)
+    admin = make_user(session, "ADMINISTRATOR")
+    guest = make_user(session, "GUEST")
     poll = make_vote(session, admin, kind=VoteKind.ENQUETE)
 
     response = client.get(
@@ -409,7 +409,7 @@ def test_guest_cannot_read_the_tally(client: TestClient, session: Session):
 def test_listing_votes_does_not_materialise_snapshots(
     client: TestClient, session: Session
 ):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
+    admin = make_user(session, "ADMINISTRATOR")
     assembly = make_assembly(session, admin)
     vote = make_vote(
         session,
@@ -439,9 +439,9 @@ def test_listing_votes_does_not_materialise_snapshots(
 
 
 def test_retract_endpoint_error_mapping(client: TestClient, session: Session):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
-    owner_a = make_user(session, UserRole.RESIDENT)
-    owner_b = make_user(session, UserRole.RESIDENT)
+    admin = make_user(session, "ADMINISTRATOR")
+    owner_a = make_user(session, "RESIDENT")
+    owner_b = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, owner_a, lot)
     link_user_to_lot(session, owner_b, lot)
@@ -478,8 +478,8 @@ def test_retract_endpoint_error_mapping(client: TestClient, session: Session):
 def test_poll_retract_rejects_a_lot_id_and_assembly_requires_one(
     client: TestClient, session: Session
 ):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
-    resident = make_user(session, UserRole.RESIDENT)
+    admin = make_user(session, "ADMINISTRATOR")
+    resident = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, resident, lot)
     poll = make_vote(session, admin, kind=VoteKind.ENQUETE)
@@ -507,8 +507,8 @@ def test_poll_retract_rejects_a_lot_id_and_assembly_requires_one(
 
 
 def test_ballot_selection_arity_is_validated(client: TestClient, session: Session):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
-    owner = make_user(session, UserRole.RESIDENT)
+    admin = make_user(session, "ADMINISTRATOR")
+    owner = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, owner, lot)
     assembly = make_assembly(session, admin)
@@ -568,8 +568,8 @@ def test_ballot_selection_arity_is_validated(client: TestClient, session: Sessio
 def test_delinquency_endpoint_is_board_only_and_stamps_the_author(
     client: TestClient, session: Session
 ):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
-    manager = make_user(session, UserRole.MANAGER)
+    admin = make_user(session, "ADMINISTRATOR")
+    manager = make_user(session, "MANAGER")
     lot = make_lot(session, "A", "1")
 
     denied = client.patch(
@@ -596,9 +596,9 @@ def test_delinquency_endpoint_is_board_only_and_stamps_the_author(
 def test_voter_eligibility_endpoints_allow_manager_and_block_residents(
     client: TestClient, session: Session
 ):
-    manager = make_user(session, UserRole.MANAGER)
-    resident = make_user(session, UserRole.RESIDENT)
-    spouse = make_user(session, UserRole.RESIDENT, full_name="Cônjuge")
+    manager = make_user(session, "MANAGER")
+    resident = make_user(session, "RESIDENT")
+    spouse = make_user(session, "RESIDENT", full_name="Cônjuge")
     lot = make_lot(session, "A", "1")
 
     denied = client.post(
@@ -630,8 +630,8 @@ def test_voter_eligibility_endpoints_allow_manager_and_block_residents(
 def test_delinquent_lot_is_refused_through_the_api(
     client: TestClient, session: Session
 ):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
-    owner = make_user(session, UserRole.RESIDENT)
+    admin = make_user(session, "ADMINISTRATOR")
+    owner = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1", is_delinquent=True)
     link_user_to_lot(session, owner, lot)
     assembly = make_assembly(session, admin)
@@ -666,8 +666,8 @@ def test_delinquent_lot_is_refused_through_the_api(
 def test_tenant_can_vote_in_a_poll_through_the_api(
     client: TestClient, session: Session
 ):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
-    tenant = make_user(session, UserRole.RESIDENT)
+    admin = make_user(session, "ADMINISTRATOR")
+    tenant = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, tenant, lot, LotAssociationType.INQUILINO)
     poll = make_vote(session, admin, kind=VoteKind.ENQUETE)

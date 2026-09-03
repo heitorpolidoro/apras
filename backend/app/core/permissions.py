@@ -5,9 +5,9 @@ Slice 1 of the GCP-style IAM chain: **fine permissions in code -> roles
 vocabulary and the wiring; it changes no authorization outcome. Enforcement
 is IAM F4.
 
-Deliberately dependency-free apart from `app.models.enums.UserRole`: no
-FastAPI, no SQLModel, no session. It must stay importable from Alembic, from
-a script and from a test that has no database.
+Deliberately **dependency-free**: no FastAPI, no SQLModel, no session, and
+since IAM F5 (APRAS-49) not even a model import. It must stay importable from
+Alembic, from a script and from a test that has no database.
 
 Naming convention (§3)::
 
@@ -29,19 +29,6 @@ by ``voting_service._assert_can_manage_eligibility`` and are therefore
 ``APIRoute.path`` yields it, the same key shape ``test_tenant_route_scope.py``
 already uses.
 """
-
-from app.models.enums import UserRole
-
-A = UserRole.ADMINISTRATOR
-D = UserRole.DIRECTOR
-M = UserRole.MANAGER
-G = UserRole.GUEST
-R = UserRole.RESIDENT
-P = UserRole.PORTEIRO
-
-#: Every role there is. Spelled once so the "all six" rows below cannot drift.
-ALL_ROLES: frozenset[UserRole] = frozenset(UserRole)
-
 
 # ---------------------------------------------------------------------------
 # Scope permissions (IAM F2, APRAS-46 §4.2)
@@ -74,10 +61,41 @@ SCOPE_PERMISSIONS: frozenset[str] = frozenset(
 
 
 # ---------------------------------------------------------------------------
+# Tier permissions (IAM F5, APRAS-49 §3.0)
+# ---------------------------------------------------------------------------
+
+#: The three strings that replace the last `role == <enum>.MANAGER`
+#: comparisons. They are **grants, not restrictions** -- holding more is never
+#: less access -- which is what makes the two legacy tiers expressible in a
+#: model with no negative permissions.
+#:
+#: Like `SCOPE_PERMISSIONS` they are deliberately **not** route-mapped: they
+#: are in-code object predicates, so `test_permission_registry`'s reachability
+#: rule admits them explicitly rather than being quietly satisfied.
+TIER_PERMISSIONS: frozenset[str] = frozenset(
+    {
+        # deps.assert_manager_can_see_task, endpoints/tasks.py::list_tasks,
+        # task_service.create_task and task_service.update_task: see every
+        # task regardless of its `visible_to` targets, and author a task
+        # without the targets defaulting to the author's own roles.
+        # Legacy holders {A, D, R, P} -- i.e. everyone but MANAGER.
+        "tasks:read_all",
+        # deps.assert_can_edit_task: edit a task assigned to someone else.
+        # Legacy holders {A, D, R, P}.
+        "tasks:update_any",
+        # occurrence_service._check_user_access / get_occurrences: see
+        # occurrences assigned to me even without `occurrences:manage_all`.
+        # Legacy holders {M} exactly -- MANAGER's whole tier, as data.
+        "occurrences:read_assigned",
+    }
+)
+
+
+# ---------------------------------------------------------------------------
 # The catalogue (§4)
 # ---------------------------------------------------------------------------
 
-PERMISSIONS: frozenset[str] = SCOPE_PERMISSIONS | frozenset(
+PERMISSIONS: frozenset[str] = SCOPE_PERMISSIONS | TIER_PERMISSIONS | frozenset(
     {
         # §4.1 tasks
         "tasks:read",
@@ -94,11 +112,11 @@ PERMISSIONS: frozenset[str] = SCOPE_PERMISSIONS | frozenset(
         "users:read",
         "users:update",
         "users:update_contact",
-        # §4.4 user_types
-        "user_types:read",
-        "user_types:create",
-        "user_types:update",
-        "user_types:delete",
+        # §4.4 roles
+        "roles:read",
+        "roles:create",
+        "roles:update",
+        "roles:delete",
         # §4.5 tenants
         "tenants:read",
         "tenants:create",
@@ -281,11 +299,11 @@ ROUTE_PERMISSIONS: dict[tuple[str, str], str] = {
     ("GET", "/api/v1/users/"): "users:read",
     ("PATCH", "/api/v1/users/{user_id}"): "users:update",
     ("PATCH", "/api/v1/users/{user_id}/contact-info"): "users:update_contact",
-    # §4.4 user_types -- /api/v1/user-types
-    ("GET", "/api/v1/user-types/"): "user_types:read",
-    ("POST", "/api/v1/user-types/"): "user_types:create",
-    ("PATCH", "/api/v1/user-types/{user_type_id}"): "user_types:update",
-    ("DELETE", "/api/v1/user-types/{user_type_id}"): "user_types:delete",
+    # §4.4 roles -- /api/v1/roles
+    ("GET", "/api/v1/roles/"): "roles:read",
+    ("POST", "/api/v1/roles/"): "roles:create",
+    ("PATCH", "/api/v1/roles/{role_id}"): "roles:update",
+    ("DELETE", "/api/v1/roles/{role_id}"): "roles:delete",
     # §4.5 tenants -- /api/v1/tenants
     ("GET", "/api/v1/tenants"): "tenants:read",
     ("GET", "/api/v1/tenants/{tenant_id}"): "tenants:read",
@@ -569,242 +587,35 @@ UNGUARDED_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("GET", "/api/v1/permissions/"),
         # Authenticated by X-Device-Key, no user in the request at all.
         ("POST", "/api/v1/access-control/webhook/verification"),
+        # superuser-only, guarded by deps.get_current_superuser (IAM F5,
+        # APRAS-49 §8.4). It maps to no catalogue permission on purpose:
+        # `is_superuser` is a column, not a bundle, so minting a permission
+        # whose only job is to be refused by `assert_can_grant` -- and paying
+        # six parity-baseline cells for it -- would be the wrong trade.
+        ("PATCH", "/api/v1/users/{user_id}/superuser"),
     }
 )
 
 
 # ---------------------------------------------------------------------------
-# The legacy role map (§6)
+# Permissions no bundle can usefully carry (§8)
 # ---------------------------------------------------------------------------
 
-#: The §4 "Legacy roles" column, permission by permission. Private: the
-#: public shape is `LEGACY_ROLE_PERMISSIONS`, which is this table transposed.
-#: `tests/test_legacy_role_permissions.py` derives every row from the live
-#: production guard and fails on any drift, so this is a recording of what
-#: production decides today, never a second source of truth.
-_LEGACY_ROLES_BY_PERMISSION: dict[str, frozenset[UserRole]] = {
-    # §4.1 tasks
-    "tasks:read": frozenset({A, D, M, R, P}),
-    "tasks:create": frozenset({A, D, M, R, P}),
-    "tasks:update": frozenset({A, D, M, R, P}),
-    "tasks:delete": frozenset({A}),
-    "tasks:comment": frozenset({A, D, M, R, P}),
-    # §4.2 categories
-    "categories:read": ALL_ROLES,
-    "categories:create": frozenset({A, D}),
-    "categories:update": frozenset({A, D}),
-    "categories:delete": frozenset({A, D}),
-    # §4.3 users
-    "users:read": ALL_ROLES,
-    "users:update": frozenset({A}),
-    "users:update_contact": frozenset({A, M}),
-    # §4.4 user_types
-    "user_types:read": ALL_ROLES,
-    "user_types:create": frozenset({A}),
-    "user_types:update": frozenset({A}),
-    "user_types:delete": frozenset({A}),
-    # §4.5 tenants
-    "tenants:read": ALL_ROLES,
-    "tenants:create": frozenset({A}),
-    "tenants:update": frozenset({A}),
-    "tenants:members_read": ALL_ROLES,
-    "tenants:members_manage": frozenset({A}),
-    "tenants:members_set_admin": frozenset({A}),
-    # §4.6 lots
-    "lots:read": frozenset({A, D, M, P}),
-    "lots:create": frozenset({A, D}),
-    "lots:update": frozenset({A, D}),
-    "lots:delete": frozenset({A}),
-    "lots:link_user": frozenset({A, D}),
-    "lots:unlink_user": frozenset({A, D}),
-    "lots:set_delinquency": frozenset({A, D}),
-    # §4.7 residents
-    "residents:read": ALL_ROLES,
-    "residents:create": frozenset({A, D}),
-    "residents:update": frozenset({A, D}),
-    "residents:delete": frozenset({A, D}),
-    "residents:link_user": frozenset({A, D}),
-    "residents:unlink_user": frozenset({A, D}),
-    # §4.8 visitors
-    "visitors:read": ALL_ROLES,
-    "visitors:create": ALL_ROLES,
-    "visitors:update": ALL_ROLES,
-    # §4.9 authorizations
-    "authorizations:read": frozenset({A, D, M, G, R}),
-    "authorizations:create": frozenset({A, D, M, G, R}),
-    "authorizations:revoke": frozenset({A, D, M, G, R}),
-    "authorizations:gate_lookup": ALL_ROLES,
-    # §4.10 gate
-    "gate:checkin": frozenset({A, D, M, P}),
-    "gate:checkout": frozenset({A, D, M, P}),
-    # Filter, not refusal: `VisitorService.get_access_logs` narrows the query
-    # to the caller's linked lots and raises only on an explicit foreign
-    # `lot_id`, so at `lot_id=None` no role is refused (§4.10).
-    "gate:logs_read": ALL_ROLES,
-    # §4.11 occurrences
-    "occurrences:read": frozenset({A, D, M, G, R}),
-    "occurrences:create": frozenset({A, D, M, G, R}),
-    "occurrences:update_status": frozenset({A, D, M, G, R}),
-    "occurrences:add_note": frozenset({A, D, M, G, R}),
-    # §4.12 documents
-    "documents:read": frozenset({A, D, M, G, R}),
-    "documents:create": frozenset({A, D}),
-    "documents:delete": frozenset({A, D}),
-    "documents:download": frozenset({A, D, M, G, R}),
-    "documents:version_create": frozenset({A, D}),
-    "documents:folder_read": frozenset({A, D, M, G, R}),
-    "documents:folder_create": frozenset({A, D}),
-    "documents:folder_update": frozenset({A, D}),
-    "documents:folder_delete": frozenset({A, D}),
-    # §4.13 assemblies & votes
-    "assemblies:read": frozenset({A, D, M, R}),
-    "assemblies:create": frozenset({A, D}),
-    "assemblies:update": frozenset({A, D}),
-    "assemblies:close": frozenset({A, D}),
-    "assemblies:minutes_read": frozenset({A, D}),
-    "assemblies:minutes_save": frozenset({A, D}),
-    "votes:read": frozenset({A, D, M, R}),
-    "votes:create": frozenset({A, D, M}),
-    "votes:update": frozenset({A, D, M}),
-    "votes:close": frozenset({A, D, M}),
-    "votes:cast": frozenset({A, D, M, R}),
-    "votes:retract": frozenset({A, D, M, R}),
-    "votes:tally_read": frozenset({A, D, M, R}),
-    "votes:my_ballot_read": frozenset({A, D, M, R}),
-    "votes:eligible_lots_read": frozenset({A, D, M, R}),
-    "votes:eligibility_read": frozenset({A, D, M}),
-    "votes:eligibility_manage": frozenset({A, D, M}),
-    # §4.14 finance
-    "finance:read": frozenset({A, D, M, R}),
-    "finance:category_create": frozenset({A, D}),
-    "finance:category_update": frozenset({A, D}),
-    "finance:budget_create": frozenset({A, D}),
-    "finance:budget_update": frozenset({A, D}),
-    "finance:budget_delete": frozenset({A, D}),
-    "finance:transaction_create": frozenset({A, D, M}),
-    "finance:transaction_update": frozenset({A, D, M}),
-    "finance:transaction_delete": frozenset({A, D}),
-    "finance:invoice_upload": frozenset({A, D, M}),
-    "finance:invoice_delete": frozenset({A, D, M}),
-    # §4.15 projects
-    "projects:read": frozenset({A, D, M, R}),
-    "projects:create": frozenset({A, D}),
-    "projects:update": frozenset({A, D}),
-    "projects:delete": frozenset({A, D}),
-    "projects:milestone_create": frozenset({A, D}),
-    "projects:milestone_update": frozenset({A, D}),
-    "projects:milestone_delete": frozenset({A, D}),
-    "projects:update_create": frozenset({A, D, M}),
-    "projects:update_delete": frozenset({A, D}),
-    # §4.16 announcements
-    "announcements:read": frozenset({A, D, M, G, R}),
-    "announcements:create": frozenset({A, D}),
-    "announcements:update": frozenset({A, D}),
-    "announcements:delete": frozenset({A, D}),
-    "announcements:media_upload": frozenset({A, D}),
-    "announcements:media_delete": frozenset({A, D}),
-    "announcements:comment": frozenset({A, D, M, R}),
-    "announcements:comment_delete": frozenset({A, D, M, G, R}),
-    "announcements:mark_read": frozenset({A, D, M, G, R}),
-    "announcements:read_receipts_read": frozenset({A, D}),
-    # §4.17 feedback
-    "feedback:read": ALL_ROLES,
-    "feedback:create": ALL_ROLES,
-    "feedback:respond": frozenset({A, D}),
-    # §4.18 spaces & reservations
-    "spaces:read": ALL_ROLES,
-    "spaces:create": frozenset({A, D}),
-    "spaces:update": frozenset({A, D}),
-    "spaces:deactivate": frozenset({A, D}),
-    "reservations:read": frozenset({A, D, M, R, P}),
-    "reservations:create": frozenset({A, D, M, R, P}),
-    "reservations:approve": frozenset({A, D}),
-    "reservations:reject": frozenset({A, D}),
-    "reservations:cancel": frozenset({A, D, M, R, P}),
-    # §4.19 packages
-    "packages:read": frozenset({A, D, M, R, P}),
-    "packages:create": frozenset({A, D, M, P}),
-    "packages:pickup": frozenset({A, D, M, R, P}),
-    "packages:queue_read": frozenset({A, D, M, P}),
-    # Inverted gate: `PackageService.get_my_lots` refuses every
-    # `_GATEKEEPER_ROLES` member *and* GUEST, leaving RESIDENT alone. This is
-    # the one permission ADMINISTRATOR does not hold (§4.19, §11.5).
-    "packages:my_lots_read": frozenset({R}),
-    # §4.20 assets & inventory
-    "assets:read": frozenset({A, D, M}),
-    "assets:summary_read": frozenset({A, D, M}),
-    "assets:create": frozenset({A, D}),
-    "assets:update": frozenset({A, D}),
-    "assets:delete": frozenset({A, D}),
-    "assets:movement_record": frozenset({A, D, M}),
-    "inventory:movements_read": frozenset({A, D, M}),
-    # §4.21 purchases
-    "purchases:read": frozenset({A, D, M}),
-    "purchases:summary_read": frozenset({A, D, M}),
-    "purchases:create": frozenset({A, D, M}),
-    "purchases:update": frozenset({A, D, M}),
-    "purchases:delete": frozenset({A, D, M}),
-    "purchases:quote_create": frozenset({A, D, M}),
-    "purchases:quote_update": frozenset({A, D, M}),
-    "purchases:quote_delete": frozenset({A, D, M}),
-    "purchases:decide": frozenset({A, D}),
-    # Cancel is a decide-level action today, not a write-level one (§11.3).
-    "purchases:cancel": frozenset({A, D}),
-    # §4.22 uploads (media)
-    "uploads:photo_create": ALL_ROLES,
-    "uploads:photo_read": ALL_ROLES,
-    "uploads:pending_read": frozenset({A, D}),
-    "uploads:approve": frozenset({A, D}),
-    "uploads:reject": frozenset({A, D}),
-    # Owner-or-staff: `MediaService.delete_photo`'s owner branch admits every
-    # role, so on one's own photo no role is refused (§4.22).
-    "uploads:delete": ALL_ROLES,
-    # §4.23 access_control
-    "access_control:devices_read": frozenset({A, D, M}),
-    "access_control:device_create": frozenset({A, D}),
-    "access_control:device_update_status": frozenset({A, D}),
-    "access_control:device_regenerate_key": frozenset({A, D}),
-    "access_control:facial_template_read": frozenset({A, D, M}),
-    "access_control:facial_template_sync": frozenset({A, D}),
-    "access_control:events_read": frozenset({A, D, M}),
-    # §4.2 (F2) scope permissions -- the role set each staff bypass has today
-    "residents:read_any_lot": frozenset({A, D, M}),
-    "visitors:manage_any_lot": frozenset({A, D, M}),
-    "occurrences:manage_all": frozenset({A, D}),
-    "uploads:auto_approve": frozenset({A, D, M}),
-}
-
-
-# TRANSITIONAL (IAM F1 -> F5). Delete this map, and every reference to it,
-# in slice F5. It exists so that F1..F4 can compute permissions for users who
-# hold no role rows at all, because NOTHING is seeded: a fresh tenant's roles
-# carry no permissions, by the user's explicit decision.
-#
-# It answers exactly one question: *can a user whose only relevant attribute
-# is `role` pass the role-dimension gate of this operation, in the most
-# favourable object situation?* It is a coarse upper bound. Every narrowing
-# production has today -- the `allowed_menus` menu gate, `Task.visible_to`,
-# per-lot linkage, ownership/authorship, per-folder `allowed_roles_json`,
-# payload-dependent rules -- stays in code, which is why F4's enforcement
-# must be additive (role gate AND permission), never a replacement.
-LEGACY_ROLE_PERMISSIONS: dict[UserRole, frozenset[str]] = {
-    role: frozenset(
-        permission
-        for permission, roles in _LEGACY_ROLES_BY_PERMISSION.items()
-        if role in roles
-    )
-    for role in UserRole
-}
-
-#: Permissions ADMINISTRATOR does NOT hold. Every entry needs a comment
-#: naming the production gate that excludes it. Lived in
-#: `tests/test_legacy_role_permissions.py` in F1; moved here by IAM F2 so
-#: production (`user_type_service.assert_can_grant`) can read it without
-#: importing a test module.
+#: Permissions whose production gate refuses the staff tiers, so putting one
+#: in a staff bundle grants that member nothing. Every entry needs a comment
+#: naming the gate that excludes it.
+#:
+#: IAM F5 (APRAS-49 §8) keeps the constant and drops its **role framing**: it
+#: used to be spelled "permissions ADMINISTRATOR does not hold" and was
+#: derived from `LEGACY_ROLE_PERMISSIONS`, which no longer exists. What it
+#: records is a property of the *code*, not of a retired enum — and that
+#: property is what makes it survive the enum. It is pinned by
+#: `tests/test_permission_registry.py`.
 ADMIN_GAP_PERMISSIONS: frozenset[str] = frozenset(
     {
-        # PackageService.get_my_lots raises for the gatekeeper roles (incl.
-        # ADMINISTRATOR): staff use GET /packages/queue instead.
+        # PackageService.get_my_lots refuses every caller holding
+        # `packages:queue_read`: staff use GET /packages/queue instead, and
+        # "my lots" is meaningless for a caller with no lot link.
         "packages:my_lots_read",
     }
 )
@@ -815,13 +626,13 @@ ADMIN_GAP_PERMISSIONS: frozenset[str] = frozenset(
 #: `test_permission_registry.py::test_every_catalogue_permission_is_reachable`
 #: asserts `set(ROUTE_PERMISSIONS.values()) == PERMISSIONS`, so removing them
 #: from the catalogue while their routes remain mapped would turn that test
-#: red. They can never be put into a group -- `user_type_service.assert_can_grant`
+#: red. They can never be put into a group -- `role_service.assert_can_grant`
 #: refuses them to every author, superuser included -- because superuser is a
 #: column, not a bundle, and a group carrying them would be a lie.
 #:
-#: `tenants:read` and `tenants:members_read` are deliberately absent: they are
-#: ALL_ROLES in the legacy map and gate the two read routes every member
-#: reaches, so they stay ordinary, grantable (and inert) permissions.
+#: `tenants:read` and `tenants:members_read` are deliberately absent: they
+#: gate the two read routes every member reaches, so they stay ordinary,
+#: grantable (and inert) permissions.
 SUPERUSER_ONLY_PERMISSIONS: frozenset[str] = frozenset(
     {
         "tenants:create",
@@ -830,12 +641,6 @@ SUPERUSER_ONLY_PERMISSIONS: frozenset[str] = frozenset(
         "tenants:members_set_admin",
     }
 )
-
-#: The slice that deletes `LEGACY_ROLE_PERMISSIONS`. Asserted by
-#: `tests/test_legacy_role_permissions.py` so removing the marker is a test
-#: failure rather than a silent inheritance.
-LEGACY_MAP_REMOVAL_SLICE: str = "IAM F5"
-
 
 # ---------------------------------------------------------------------------
 # Pure helpers

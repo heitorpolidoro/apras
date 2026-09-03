@@ -26,7 +26,7 @@ declarative layer and the seeder.
 *Actor-role attribute.* An `ast.Attribute` whose `attr == "role"` and whose
 `.value` is an `ast.Name` in `{current_user, user, admin_user}`. Nothing else
 qualifies: `user_in.role`, `db_user.role`, `resident.user.role`,
-`UserType.role` and `folder.allowed_roles_json` are payloads, targets,
+`Role.role` and `folder.allowed_roles_json` are payloads, targets,
 columns or data, and are outside the rule **by construction**.
 
 *Rule C.* One count per `ast.Compare` node whose subtree contains at least
@@ -58,8 +58,13 @@ from app.core.permissions import ROUTE_PERMISSIONS
 from app.main import app
 
 APP_ROOT = pathlib.Path(deps.__file__).resolve().parent.parent
-EXCLUDED_PREFIXES = ("models/", "schemas/")
-EXCLUDED_FILES = ("seed.py",)
+#: **Empty since IAM F5** (APRAS-49 §11.3). F2 excluded `app/models/`,
+#: `app/schemas/` and `app/seed.py` because they held the enum's columns,
+#: payload shapes and the seeder. The enum is gone, so the reason for the
+#: exclusion is gone, and the walk now covers all of `app/` -- which is what
+#: makes "both allowlists are empty" a statement about the whole application.
+EXCLUDED_PREFIXES: tuple[str, ...] = ()
+EXCLUDED_FILES: tuple[str, ...] = ()
 ACTOR_NAMES = frozenset({"current_user", "user", "admin_user"})
 
 #: Measured at this task's merge base, 02c2025abcda4626569921eafb3863dfc540eb9e
@@ -67,9 +72,12 @@ ACTOR_NAMES = frozenset({"current_user", "user", "admin_user"})
 #: that changes either number has to change it deliberately.
 RULE_C_BASELINE = 100
 RULE_N_BASELINE = 7
-#: §5.4's per-module subtraction, aggregated: 85 in F2 (APRAS-46) + the 7
-#: is_superuser-shaped reads F3 converted (APRAS-47, merge base aa8953d).
-CONVERTED_COMPARE = 92
+#: §5.4's per-module subtraction, aggregated: 85 in F2 (APRAS-46), the 7
+#: is_superuser-shaped reads F3 converted (APRAS-47), and F5's last 8
+#: (APRAS-49 §3.1) -- 85 + 7 + 8 = 100, the whole of `RULE_C_BASELINE`.
+CONVERTED_COMPARE = 100
+#: All 7 Rule-N reads were converted by IAM F5 (APRAS-49 §3.2, §3.3).
+CONVERTED_NON_COMPARE = 7
 
 #: The seven routes APRAS-43 gated with `get_current_tenant_admin` /
 #: `get_current_tenant_admin_or_manager`, which IAM F2 swaps to
@@ -80,9 +88,9 @@ PERMISSION_GUARDED_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("DELETE", "/api/v1/lots/{lot_id}"),
         ("PATCH", "/api/v1/users/{user_id}"),
         ("PATCH", "/api/v1/users/{user_id}/contact-info"),
-        ("POST", "/api/v1/user-types/"),
-        ("PATCH", "/api/v1/user-types/{user_type_id}"),
-        ("DELETE", "/api/v1/user-types/{user_type_id}"),
+        ("POST", "/api/v1/roles/"),
+        ("PATCH", "/api/v1/roles/{role_id}"),
+        ("DELETE", "/api/v1/roles/{role_id}"),
     }
 )
 
@@ -96,6 +104,10 @@ ADMIN_ONLY_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("POST", "/api/v1/tenants/{tenant_id}/members"),
         ("DELETE", "/api/v1/tenants/{tenant_id}/members/{user_id}"),
         ("PATCH", "/api/v1/tenants/{tenant_id}/members/{user_id}"),
+        # IAM F5 (APRAS-49 §8.4): the grant *and the revoke* of the global
+        # flag. It is the sixth and only route this slice adds, and the only
+        # one outside `/api/v1/tenants` that `get_current_superuser` guards.
+        ("PATCH", "/api/v1/users/{user_id}/superuser"),
     }
 )
 
@@ -110,110 +122,18 @@ GLOBAL_EXTRA = frozenset({("GET", "/"), ("POST", "/api/v1/access-control/webhook
 # §5.3 -- the three allowlists, as two literals
 # ---------------------------------------------------------------------------
 
-#: Rule-C survivors: 8 reads in 8 functions, all F5.
+#: **Empty.** The ledger closes at zero (IAM F5, APRAS-49 §11.3).
 #:
-#: Group A -- the seven is_superuser-shaped / global-scope reads -- was
-#: converted by IAM F3 (APRAS-47 §5.1) and is gone. What remains is:
-#:
-#: B = object / visibility dimension (F5 owns);
-#: D = the resolver plumbing that cannot be converted without circularity.
-ROLE_READS_COMPARE: dict[str, tuple[int, str, str]] = {
-    # --- B: object / visibility dimension --------------------------------
-    "api/deps.py::assert_manager_can_see_task": (
-        1,
-        "F5",
-        "the MANAGER Task.visible_to tier; its GUEST branch is converted",
-    ),
-    "api/deps.py::assert_can_edit_task": (
-        1,
-        "F5",
-        "the MANAGER own/unassigned-task rule; its GUEST branch is converted",
-    ),
-    "api/v1/endpoints/tasks.py::list_tasks": (
-        1,
-        "F5",
-        "the MANAGER Task.visible_to query filter; its GUEST branch is converted",
-    ),
-    "services/task_service.py::create_task": (
-        1,
-        "F5",
-        "MANAGER visible_to defaulting; the module is not edited by this slice",
-    ),
-    "services/task_service.py::update_task": (
-        1,
-        "F5",
-        "MANAGER visible_to subset rule; the module is not edited by this slice",
-    ),
-    "services/occurrence_service.py::_check_user_access": (
-        1,
-        "F5",
-        (
-            "the MANAGER visibility tier between 'all' and 'own + public'; "
-            "its A/D branch is converted"
-        ),
-    ),
-    "services/occurrence_service.py::get_occurrences": (
-        1,
-        "F5",
-        "the same visibility tier as a query filter; its A/D branch is converted",
-    ),
-    # --- D: resolver plumbing --------------------------------------------
-    "api/deps.py::get_effective_user_type_ids": (
-        1,
-        "F5",
-        (
-            "the role-implicit UserType resolution get_effective_permissions "
-            "is built on; converting it would be circular. Retired in F5, "
-            "when User.role stops existing and group membership becomes "
-            "explicit"
-        ),
-    ),
-}
+#: F1 measured 100 Rule-C reads and 7 Rule-N reads. F2 converted 85, F3
+#: another 7, and F5 the last 8 -- plus all 7 Rule-N reads. The walkers do
+#: **not** die with the survivors: they are retargeted at the whole of
+#: `app/` and now assert that nothing is left, which is a stronger statement
+#: than any allowlist could make.
+ROLE_READS_COMPARE: dict[str, tuple[int, str, str]] = {}
 
-#: Rule-N survivors: 7 reads in 5 functions, all F5.
-ROLE_READS_NON_COMPARE: dict[str, tuple[int, str, str]] = {
-    "services/document_service.py::get_accessible_folder_ids": (
-        3,
-        "F5",
-        (
-            "one physical line -- role_str = user.role.value if hasattr(...) "
-            "-- carries three actor-role nodes, and Rule N counts nodes. "
-            "role_str is matched against the folder's stored "
-            "allowed_roles_json: a data-driven per-folder ACL, the object "
-            "dimension of §5.2"
-        ),
-    ),
-    "api/deps.py::get_effective_permissions": (
-        1,
-        "F5",
-        (
-            "LEGACY_ROLE_PERMISSIONS.get(user.role, ...) -- F1's own "
-            "resolver. Not an authorization decision; it is the transitional "
-            "map that produces permissions. F5 deletes it with the legacy map"
-        ),
-    ),
-    "api/v1/endpoints/lots.py::link_user_to_lot": (
-        1,
-        "F5",
-        (
-            "serialisation only: UserSummaryRead(..., role=user.role). "
-            "No branch, no decision"
-        ),
-    ),
-    "services/lot_service.py::get_lot_detail": (
-        1,
-        "F5",
-        "the same serialisation into UserSummaryRead",
-    ),
-    "services/tenant_service.py::_to_member_read": (
-        1,
-        "F5",
-        "the same serialisation into TenantMemberRead",
-    ),
-}
+#: **Empty**, for the same reason.
+ROLE_READS_NON_COMPARE: dict[str, tuple[int, str, str]] = {}
 
-#: Narrowed by IAM F3: `"F3"` has shipped, so re-introducing the marker after
-#: the fact is a failure rather than a note.
 VALID_SLICES = frozenset({"F5"})
 
 
@@ -341,7 +261,7 @@ def test_no_route_depends_on_a_tenant_admin_role_guard():
     assert not hasattr(deps, "get_current_admin_or_manager")
 
 
-def test_get_current_superuser_is_exactly_the_five_tenant_writes():
+def test_get_current_superuser_is_exactly_the_five_tenant_writes_plus_the_grant():
     found = {
         key
         for route in _api_routes()
@@ -400,9 +320,9 @@ def test_the_permission_guarded_routes_are_exactly_the_apras43_seven():
         ("DELETE", "/api/v1/lots/{lot_id}"),
         ("PATCH", "/api/v1/users/{user_id}"),
         ("PATCH", "/api/v1/users/{user_id}/contact-info"),
-        ("POST", "/api/v1/user-types/"),
-        ("PATCH", "/api/v1/user-types/{user_type_id}"),
-        ("DELETE", "/api/v1/user-types/{user_type_id}"),
+        ("POST", "/api/v1/roles/"),
+        ("PATCH", "/api/v1/roles/{role_id}"),
+        ("DELETE", "/api/v1/roles/{role_id}"),
     ]
     assert set(apras43_admin_routes) == PERMISSION_GUARDED_ROUTES
 
@@ -443,55 +363,51 @@ def test_every_allowlisted_role_read_has_a_reason():
             assert reason.strip(), f"{site}: empty reason"
 
 
-def test_role_read_arithmetic_closes():
-    """`100 - 92 == 8` and `7 - 0 == 7`, checkable rather than claimed.
+def test_no_actor_role_read_survives():
+    """`100 - 100 == 0` and `7 - 7 == 0`: the arithmetic ending of the chain.
 
-    The ledger is cumulative across the chain and stays anchored to F1's
-    tree: `RULE_C_BASELINE` and `RULE_N_BASELINE` are historical statements
-    about the commit that landed APRAS-45 and are still true, so only
-    `CONVERTED_COMPARE` moves.
+    The ledger is cumulative and stays anchored to F1's tree:
+    `RULE_C_BASELINE` and `RULE_N_BASELINE` are historical statements about
+    the commit that landed APRAS-45 and are **still true**, so only the
+    `CONVERTED_*` terms move. Both allowlists are empty, and the walk that
+    produces them now covers all of `app/`, `app/models/`, `app/schemas/` and
+    `app/seed.py` included (§11.3).
     """
     compare, non_compare = walk_role_reads()
-    surviving_compare = sum(count for count, _s, _r in ROLE_READS_COMPARE.values())
-    surviving_non_compare = sum(
-        count for count, _s, _r in ROLE_READS_NON_COMPARE.values()
-    )
 
     assert RULE_C_BASELINE == 100
     assert RULE_N_BASELINE == 7
-    assert CONVERTED_COMPARE == 92
-    assert surviving_compare == 8
-    assert surviving_non_compare == 7
-    assert surviving_compare == RULE_C_BASELINE - CONVERTED_COMPARE
-    assert surviving_non_compare == RULE_N_BASELINE
-    assert sum(compare.values()) == surviving_compare
-    assert sum(non_compare.values()) == surviving_non_compare
-    assert len(ROLE_READS_COMPARE) == 8
-    assert len(ROLE_READS_NON_COMPARE) == 5
+    assert CONVERTED_COMPARE == 100
+    assert CONVERTED_NON_COMPARE == 7
+    assert RULE_C_BASELINE - CONVERTED_COMPARE == 0
+    assert RULE_N_BASELINE - CONVERTED_NON_COMPARE == 0
+    assert ROLE_READS_COMPARE == {}
+    assert ROLE_READS_NON_COMPARE == {}
+    assert compare == {}, f"surviving actor-role comparisons: {sorted(compare)}"
+    assert non_compare == {}, f"surviving actor-role reads: {sorted(non_compare)}"
 
 
-def test_the_walk_scope_is_the_application_minus_the_declarative_layer():
-    """The exclusions are the three of §8.2 and nothing else."""
+def test_the_walk_scope_is_the_whole_application():
+    """IAM F5 (§11.3) removed F2's three exclusions: nothing is skipped."""
     scanned = {path.relative_to(APP_ROOT).as_posix() for path in _in_scope()}
-    everything = {path.relative_to(APP_ROOT).as_posix() for path in APP_ROOT.rglob("*.py")}
-    excluded = everything - scanned
-    assert all(
-        name.startswith(EXCLUDED_PREFIXES) or name in EXCLUDED_FILES
-        for name in excluded
-    ), sorted(excluded)
+    everything = {
+        path.relative_to(APP_ROOT).as_posix() for path in APP_ROOT.rglob("*.py")
+    }
+    assert scanned == everything
     assert "api/deps.py" in scanned
     assert "core/permissions.py" in scanned
-    assert "main.py" in scanned
+    assert "models/user.py" in scanned
+    assert "schemas/user.py" in scanned
+    assert "seed.py" in scanned
 
 
-def test_the_surviving_reads_are_assigned_to_a_later_slice():
-    """Every survivor is F5's; F3 has shipped, so no `"F3"` marker remains."""
+def test_no_read_is_deferred_to_a_later_slice():
+    """There is no later slice: F5 is the last one, and it converted all 15."""
     by_slice: dict[str, int] = {}
     for allowlist in (ROLE_READS_COMPARE, ROLE_READS_NON_COMPARE):
         for count, slice_name, _reason in allowlist.values():
             by_slice[slice_name] = by_slice.get(slice_name, 0) + count
-    assert by_slice == {"F5": 15}
-    assert set(by_slice) == VALID_SLICES
+    assert by_slice == {}
 
 
 # ---------------------------------------------------------------------------
@@ -500,13 +416,13 @@ def test_the_surviving_reads_are_assigned_to_a_later_slice():
 
 
 def test_the_declarative_layer_has_no_actor_role_read():
-    """The scope exclusion stops being load-bearing.
+    """Kept as a separate statement even though the scope now includes it.
 
-    `app/models/`, `app/schemas/` and `app/seed.py` are outside
-    `walk_role_reads` because they hold columns, payload shapes and the
-    seeder. Running the very same two rules over them proves the exclusion
-    hides nothing: an authorization decision cannot be smuggled into the
-    declarative layer to escape the allowlists above.
+    F2 excluded `app/models/`, `app/schemas/` and `app/seed.py` and ran the
+    same two rules over them to prove the exclusion hid nothing. IAM F5 folds
+    them into the main scope (§11.3); this case survives so the declarative
+    layer keeps its own named assertion rather than being merely covered by a
+    wider one.
     """
     compare, non_compare = _walk_role_reads_over(_declarative_paths())
 
@@ -514,27 +430,35 @@ def test_the_declarative_layer_has_no_actor_role_read():
     assert non_compare == {}
 
 
-def test_the_superuser_default_is_the_only_administrator_literal_in_models():
-    """APRAS-47 §3.3's transitional default is a declared, single exception.
+def test_no_model_names_a_retired_role_literal():
+    """The successor of F3's transitional-default pin (§3.3 #4).
 
-    `User.__init__` compares `data.get("role")` — a `Call`, not an actor
-    attribute — so the two rules above cannot see it. This pin does: it is
-    the *only* `UserRole.ADMINISTRATOR` reference under `app/models/`, and it
-    lives in exactly one function, which F5 deletes with the enum.
+    F3 shipped one declared exception in `app/models/`: `User.__init__`
+    defaulted `is_superuser` from `data.get("role") == UserRole.ADMINISTRATOR`
+    -- a `Call`, not an actor attribute, so neither rule above could see it,
+    and it needed its own pin. IAM F5 deleted the default with the enum, so
+    the pin inverts: **no** model may name a retired role value at all.
     """
+    # Only the two values *nothing else* in the domain uses. `RESIDENT`,
+    # `MANAGER`, `DIRECTOR` and `GUEST` are legitimately spelled by other
+    # enums (`EntityType.RESIDENT`, for one), so including them would make
+    # this case a false-positive generator rather than a pin.
+    retired = {"ADMINISTRATOR", "PORTEIRO"}
     found: dict[str, int] = {}
     for path in sorted((APP_ROOT / "models").rglob("*.py")):
         relative = path.relative_to(APP_ROOT / "models").as_posix()
         tree = ast.parse(path.read_text(encoding="utf-8"))
         where = _function_index(tree)
         for node in ast.walk(tree):
-            if (
-                isinstance(node, ast.Attribute)
-                and node.attr == "ADMINISTRATOR"
-                and isinstance(node.value, ast.Name)
-                and node.value.id == "UserRole"
-            ):
+            named = (
+                isinstance(node, ast.Attribute) and node.attr in retired
+            ) or (
+                isinstance(node, ast.Constant)
+                and isinstance(node.value, str)
+                and node.value in retired
+            )
+            if named:
                 key = f"{relative}::{where.get(id(node), '<module>')}"
                 found[key] = found.get(key, 0) + 1
 
-    assert found == {"user.py::__init__": 1}
+    assert found == {}, f"models still naming a retired role value: {found}"

@@ -7,46 +7,56 @@ but cannot see or interact with any task.
 import uuid
 
 import pytest
-from app.core.security import get_password_hash
-from app.models.category import Category
-from app.models.enums import UserRole
-from app.models.user import User
-from app.models.user_type import UserType
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
+from app.core.security import get_password_hash
+from app.models.category import Category
+from app.models.role import Role
+from tests.conftest import bundle, make_user, profile_role
 
-def test_guest_role_value_exists():
-    """GUEST must exist as a valid UserRole value."""
-    assert UserRole.GUEST == "GUEST"
+
+def test_the_guest_profile_still_names_a_real_role(session: Session):
+    """The successor of "GUEST must exist as a valid `UserRole` value".
+
+    There is no enum to have a value in. What the module needs instead is
+    that the GUEST *profile* resolves to a real role row carrying the bundle
+    the enum used to grant — which is what every other case here leans on.
+    """
+    role = profile_role(session, "GUEST")
+
+    assert role.name == "Convidado (papel)"
+    assert set(role.permissions) == bundle("GUEST")
 
 
 @pytest.fixture(name="guest_data")
 def guest_data_fixture(session: Session):
-    # GUEST intentionally gets zero UserTypes (and thus zero menu access,
+    # GUEST intentionally gets zero Roles (and thus zero menu access,
     # per APRAS-8) since these tests exercise GUEST being blocked. The
     # helper director, however, needs standing "tasks" access so it can set
     # up tasks for the guest-focused assertions below.
-    director_type = UserType(name="Director Guest RBAC Type", allowed_menus=["tasks"])
+    director_type = Role(name="Director Guest RBAC Type",)
     session.add(director_type)
     session.commit()
 
-    guest = User(
+    guest = make_user(
+        session,
         id=uuid.uuid4(),
         email="guest_rbac@test.com",
         full_name="Guest Test",
         hashed_password=get_password_hash("pass"),
-        role=UserRole.GUEST,
+        profile="GUEST",
         cpf="32464177002",
     )
-    director = User(
+    director = make_user(
+        session,
         id=uuid.uuid4(),
         email="director_guest_rbac@test.com",
         full_name="Director Test",
         hashed_password=get_password_hash("pass"),
-        role=UserRole.DIRECTOR,
+        profile="DIRECTOR",
         cpf="14555816045",
-        user_types=[director_type],
+        roles=[director_type],
     )
     category = Category(id=uuid.uuid4(), name="Guest Test Category", color="#FFFFFF")
     session.add(guest)
@@ -89,20 +99,33 @@ def test_guest_cannot_create_task(client: TestClient, session: Session, guest_da
 
 
 def test_guest_task_list_is_empty(client: TestClient, session: Session, guest_data):
-    """GUEST gets 403 listing tasks: no UserType grants "tasks" access.
+    """GUEST lists tasks and gets an empty list.
 
-    Before APRAS-8, GUEST's own role check made the list unconditionally
-    empty (200 with `[]`). The new menu gate now runs first and denies the
-    request outright, since GUEST has no UserType at all here.
+    The history, in one place, because this case has now had three answers.
+    Before APRAS-8 the GUEST role check made the list unconditionally empty
+    (200 with `[]`). APRAS-8's `allowed_menus` gate then ran *first* and made
+    it a 403. IAM F5 (APRAS-49 §4.2) deleted that gate, so the answer is the
+    permission layer's again -- and it is the **same 200** that
+    `tests/data/parity_matrix_baseline.json` recorded for
+    `("GUEST", "GET", "/api/v1/tasks/")` before a single guard was converted.
+
+    This module is otherwise construction-only; these four menu-gate cases
+    are the exception, and the matrix is what proves the new answers are the
+    pre-F2 ones rather than a regression.
     """
     _director_creates_task(client, guest_data)
     token = get_token(client, "guest_rbac", "pass")
     resp = client.get("/api/v1/tasks/", headers={"Authorization": f"Bearer {token}"})
-    assert resp.status_code == 403
+    assert resp.status_code == 200
+    assert resp.json() == []
 
 
 def test_guest_cannot_edit_task(client: TestClient, session: Session, guest_data):
-    """GUEST gets 403 editing a task: the menu gate runs before task visibility."""
+    """GUEST gets 404 editing a task: `assert_manager_can_see_task` refuses.
+
+    Was a 403 while the `allowed_menus` gate ran before task visibility
+    (§4.2). The baseline recorded 404 for this cell.
+    """
     task_id = _director_creates_task(client, guest_data)
     token = get_token(client, "guest_rbac", "pass")
     resp = client.patch(
@@ -110,24 +133,24 @@ def test_guest_cannot_edit_task(client: TestClient, session: Session, guest_data
         headers={"Authorization": f"Bearer {token}"},
         json={"status": "IN_PROGRESS"},
     )
-    assert resp.status_code == 403
+    assert resp.status_code == 404
 
 
 def test_guest_cannot_see_task_history(
     client: TestClient, session: Session, guest_data
 ):
-    """GUEST gets 403 accessing task history: the menu gate runs first."""
+    """GUEST gets 404 on task history (was 403 through the menu gate, §4.2)."""
     task_id = _director_creates_task(client, guest_data)
     token = get_token(client, "guest_rbac", "pass")
     resp = client.get(
         f"/api/v1/tasks/{task_id}/history",
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert resp.status_code == 403
+    assert resp.status_code == 404
 
 
 def test_guest_cannot_comment(client: TestClient, session: Session, guest_data):
-    """GUEST gets 403 commenting on a task: the menu gate runs first."""
+    """GUEST gets 404 commenting (was 403 through the menu gate, §4.2)."""
     task_id = _director_creates_task(client, guest_data)
     token = get_token(client, "guest_rbac", "pass")
     resp = client.post(
@@ -135,7 +158,7 @@ def test_guest_cannot_comment(client: TestClient, session: Session, guest_data):
         headers={"Authorization": f"Bearer {token}"},
         json={"content": "guest comment"},
     )
-    assert resp.status_code == 403
+    assert resp.status_code == 404
 
 
 def test_guest_cannot_create_category(

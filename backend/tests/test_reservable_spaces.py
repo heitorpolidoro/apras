@@ -1,13 +1,14 @@
 import uuid
 
+from fastapi.testclient import TestClient
+from sqlmodel import Session
+
 from app.core.security import get_password_hash
-from app.models.enums import UserRole
 from app.models.reservation import ReservableSpace
 from app.models.user import User
 from app.schemas.reservation import ReservableSpaceCreate, ReservableSpaceUpdate
 from app.services.reservation_service import ReservableSpaceService
-from fastapi.testclient import TestClient
-from sqlmodel import Session
+from tests.conftest import make_user
 
 
 def get_token(client, username, password):
@@ -17,13 +18,14 @@ def get_token(client, username, password):
     return response.json()["access_token"]
 
 
-def make_user(session: Session, role: UserRole, email: str, cpf: str) -> User:
-    user = User(
+def _local_user(session: Session, role: str, email: str, cpf: str) -> User:
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email=email,
-        full_name=f"{role.value} User",
+        full_name=f"{role} User",
         hashed_password=get_password_hash("pass"),
-        role=role,
+        profile=role,
         cpf=cpf,
     )
     session.add(user)
@@ -143,7 +145,7 @@ def test_list_spaces_authenticated(client: TestClient, session: Session, admin_u
 
 
 def test_list_spaces_guest_can_see(session: Session, client: TestClient):
-    guest = make_user(session, UserRole.GUEST, "guest_spaces@test.com", "80661003005")
+    guest = _local_user(session, "GUEST", "guest_spaces@test.com", "80661003005")
     token = get_token(client, "guest_spaces", "pass")
     response = client.get(
         "/api/v1/reservable-spaces/", headers={"Authorization": f"Bearer {token}"}
@@ -184,7 +186,7 @@ def test_director_can_create_space(client: TestClient, session: Session, normal_
 
 
 def test_resident_cannot_create_space(session: Session, client: TestClient):
-    make_user(session, UserRole.RESIDENT, "resident_spaces@test.com", "98765432100")
+    _local_user(session, "RESIDENT", "resident_spaces@test.com", "98765432100")
     token = get_token(client, "resident_spaces", "pass")
     response = client.post(
         "/api/v1/reservable-spaces/",
@@ -195,7 +197,7 @@ def test_resident_cannot_create_space(session: Session, client: TestClient):
 
 
 def test_manager_cannot_create_space(session: Session, client: TestClient):
-    make_user(session, UserRole.MANAGER, "mgr_spaces@test.com", "08050681057")
+    _local_user(session, "MANAGER", "mgr_spaces@test.com", "08050681057")
     token = get_token(client, "mgr_spaces", "pass")
     response = client.post(
         "/api/v1/reservable-spaces/",
@@ -233,7 +235,7 @@ def test_update_space_non_admin_forbidden(
     session.add(space)
     session.commit()
 
-    make_user(session, UserRole.RESIDENT, "resident_upd@test.com", "11144477735")
+    _local_user(session, "RESIDENT", "resident_upd@test.com", "11144477735")
     token = get_token(client, "resident_upd", "pass")
     response = client.patch(
         f"/api/v1/reservable-spaces/{space.id}",
@@ -279,7 +281,7 @@ def test_deactivate_space_non_admin_forbidden(
     session.add(space)
     session.commit()
 
-    make_user(session, UserRole.RESIDENT, "resident_del@test.com", "07491723040")
+    _local_user(session, "RESIDENT", "resident_del@test.com", "07491723040")
     token = get_token(client, "resident_del", "pass")
     response = client.delete(
         f"/api/v1/reservable-spaces/{space.id}",

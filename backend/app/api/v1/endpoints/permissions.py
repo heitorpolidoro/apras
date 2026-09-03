@@ -7,6 +7,7 @@ byte-identical (§3.3).
 """
 
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Depends
 from sqlmodel import Session
@@ -19,6 +20,24 @@ from app.models.user import User
 from app.schemas.permission import MyPermissionsRead, PermissionDescriptorRead
 
 router = APIRouter()
+
+
+def landing_path_for(user: User, tenant_id: UUID) -> str | None:
+    """The caller's landing preference in `tenant_id` (APRAS-49 §10.4).
+
+    The first non-null `Role.landing_path` among the user's roles in that
+    tenant, **ordered by role name** so the answer is total and
+    deterministic. It is only *identical* to the retired enum switch for
+    users with one landing-carrying role: a user holding both `Administrador
+    (papel)` and `Porteiro (papel)` lands on `/gate`, where the enum switch
+    (keyed on a single global value) sent them to `/dashboard`. That is the
+    deliberate answer -- the gatekeeper role is the one that carries an
+    opinion about where to land.
+    """
+    for role in sorted(user.roles, key=lambda item: item.name):
+        if role.tenant_id == tenant_id and role.landing_path:
+            return role.landing_path
+    return None
 
 
 # No `response_model=`: the return annotation is the same type, and ruff's
@@ -42,6 +61,7 @@ def read_my_permissions(
     return MyPermissionsRead(
         tenant_id=tenant.id,
         permissions=sorted(api_deps.get_effective_permissions(current_user, session)),
+        landing_path=landing_path_for(current_user, tenant.id),
     )
 
 

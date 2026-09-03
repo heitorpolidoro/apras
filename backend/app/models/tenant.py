@@ -27,21 +27,19 @@ Hand-offs deliberately left open by this slice:
   Python-side :data:`DEFAULT_TENANT_ID` default on every scoped model with a
   server-resolved acting tenant, and may then drop the matching
   ``server_default``.
-* **APRAS-42** also owns making ``get_effective_user_type_ids``
-  (``app/api/deps.py``) tenant-aware. It is tenant-blind today
-  (``select(UserType).where(UserType.role == user.role)).first()``) and is
-  deliberately **not** touched here: after this migration's backfill every
-  ``user_type`` row lives in the default tenant with exactly one row per
-  role, so ``.first()`` returns exactly what it returns today. For the same
-  reason ``POST /api/v1/tenants`` does **not** seed role-linked ``UserType``
-  rows for a new tenant — that would make ``.first()`` non-deterministic.
+* **APRAS-42** also owned making ``get_effective_role_ids``
+  (``app/api/deps.py``) tenant-aware; **APRAS-49** then reduced it to the
+  user's explicit memberships, narrowed to the acting tenant, once migration
+  ``0033`` turned the role-implicit membership into a real
+  ``user_role_link`` row.
 * **APRAS-43** added the ``is_tenant_admin`` column to
   :class:`UserTenantLink` (migration ``0029``); that is why the link table
   has a surrogate ``id`` primary key (mirroring ``UserLotLink``) rather than
   a composite one. The capability is deliberately a property of the
-  *membership*, not of ``user.role``: one global identity needs a different
-  answer per tenant, and a new ``UserRole`` value would silently alter the
-  54 role comparisons spread over 22 service modules.
+  *membership*, not of the retired global ``user.role`` column: one global
+  identity needs a different answer per tenant, and a new enum value would
+  have silently altered the 54 role comparisons spread over 22 service
+  modules that APRAS-46 and APRAS-49 have since converted to permissions.
 """
 
 from datetime import datetime

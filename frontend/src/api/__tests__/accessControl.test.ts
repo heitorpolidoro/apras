@@ -1,13 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  createDevice,
-  listDevices,
-  updateDeviceStatus,
-  regenerateDeviceKey,
-  syncFacialTemplate,
-  getFacialTemplate,
-  getAccessEvents,
-} from "../accessControl";
+import { createDevice, listDevices, updateDeviceStatus, regenerateDeviceKey, syncFacialTemplate, getFacialTemplate, getAccessEvents,  } from "../accessControl";
 import apiClient from "../client";
 
 vi.mock("../client", () => ({

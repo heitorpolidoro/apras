@@ -49,6 +49,7 @@ from app.models.enums import (
     VoteStatus,
 )
 from app.models.lot import Lot, UserLotLink
+from app.models.role import Role
 from app.models.user import User
 from app.models.voting import (
     Assembly,
@@ -1151,6 +1152,16 @@ def _find_or_create_minutes_folder(session: Session, user: User) -> UUID:
         DocumentFolderCreate(
             name=MINUTES_FOLDER_NAME,
             description="Minutas de ata geradas pelo módulo de assembleias.",
+            # Every role of the acting tenant (IAM F5, APRAS-49 §6): the
+            # folder used to inherit `0010`'s four-value default, which named
+            # roles the enum defined. With the ACL keyed on ids there is no
+            # constant that means "the board and the residents", so the
+            # minutes are scoped to the whole tenant and narrowed by the
+            # operator afterwards if they wish. `documents:folder_create`
+            # holders bypass the ACL either way.
+            allowed_role_ids=[
+                str(role.id) for role in session.exec(select(Role)).all()
+            ],
         ),
     )
     return created.id

@@ -1,13 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  getLotResidents,
-  createResident,
-  getResidentDetail,
-  updateResident,
-  deleteResident,
-  linkResidentUser,
-  unlinkResidentUser,
-} from "../residents";
+import { getLotResidents, createResident, getResidentDetail, updateResident, deleteResident, linkResidentUser, unlinkResidentUser,  } from "../residents";
 import apiClient from "../client";
 
 vi.mock("../client", () => ({

@@ -1,22 +1,24 @@
 import uuid
 from unittest.mock import patch
 
-from app.core import security
-from app.models.enums import TaskStatus, UserRole
-from app.models.task import Task
-from app.models.user import User
-from app.services.task_service import TaskService
 from fastapi import status
+
+from app.core import security
+from app.models.enums import TaskStatus
+from app.models.task import Task
+from app.services.task_service import TaskService
+from tests.conftest import make_user
 
 
 def test_signup_duplicate_email(client, session):
     """Test signup with an email that already exists."""
     # Create a user first
-    existing_user = User(
+    existing_user = make_user(
+        session,
         email="duplicate@example.com",
         full_name="Existing User",
         hashed_password="...",
-        role=UserRole.DIRECTOR,
+        profile="DIRECTOR",
         is_active=True,
         cpf="52998224725",
     )
@@ -86,11 +88,12 @@ def test_dev_login_user_not_found(client):
 
 def test_dev_login_inactive_user(client, session):
     """Test dev_login with inactive user."""
-    inactive_user = User(
+    inactive_user = make_user(
+        session,
         email="inactive_dev@example.com",
         full_name="Inactive Dev",
         hashed_password="...",
-        role=UserRole.DIRECTOR,
+        profile="DIRECTOR",
         is_active=False,
         cpf="53412530006",
     )
@@ -166,16 +169,21 @@ def test_update_self_admin_deactivate_fail(client, admin_user):
     assert "cannot deactivate themselves" in response.json()["detail"]
 
 
-def test_update_self_admin_change_role_fail(client, admin_user):
-    """Test admin trying to change their own role."""
+def test_update_self_admin_change_role_ids_fail(client, admin_user, session):
+    """An administrator may not change their own roles (IAM F5 §8.5).
+
+    The self-guard used to cover `UserUpdate.role`; it now covers `role_ids`,
+    which is where all authority lives. That is a deliberate **narrowing**:
+    the guard's whole purpose is "you may not edit your own authority".
+    """
     token = security.create_access_token(admin_user.id)
     response = client.patch(
         f"/api/v1/users/{admin_user.id}",
-        json={"role": UserRole.DIRECTOR},
+        json={"role_ids": []},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert "cannot change their own role" in response.json()["detail"]
+    assert "cannot change their own roles" in response.json()["detail"]
 
 
 def test_update_task_service_director_success(session, normal_user, default_category):

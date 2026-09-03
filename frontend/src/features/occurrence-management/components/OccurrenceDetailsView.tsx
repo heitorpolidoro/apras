@@ -7,13 +7,15 @@ import { OccurrenceTimelineLog } from "./OccurrenceTimelineLog";
 
 interface OccurrenceDetailsViewProps {
   occurrenceId: string;
-  userRole?: string;
+  /** IAM F5 (APRAS-49): `occurrences:manage_all` is the legacy {A, D}
+   *  set exactly, so the prop carries the decision instead of a role. */
+  canManage?: boolean;
   onClose: () => void;
 }
 
 export const OccurrenceDetailsView: React.FC<OccurrenceDetailsViewProps> = ({
   occurrenceId,
-  userRole,
+  canManage,
   onClose,
 }) => {
   const { t } = useTranslation();
@@ -24,7 +26,7 @@ export const OccurrenceDetailsView: React.FC<OccurrenceDetailsViewProps> = ({
   const [editPriority, setEditPriority] = useState<OccurrencePriority | "">("");
   const [resolutionNotes, setResolutionNotes] = useState("");
 
-  const isManagement = userRole === "ADMINISTRATOR" || userRole === "DIRECTOR";
+  const isManagement = Boolean(canManage);
 
   if (isLoading || !occurrence) {
     return (
@@ -228,7 +230,7 @@ export const OccurrenceDetailsView: React.FC<OccurrenceDetailsViewProps> = ({
           <OccurrenceTimelineLog
             occurrenceId={occurrence.id}
             timeline={occurrence.timeline || []}
-            userRole={userRole}
+            canManage={canManage}
           />
         </div>
       </div>

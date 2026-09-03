@@ -15,7 +15,6 @@ from app.models.enums import (
     OccurrenceCategory,
     OccurrencePriority,
     OccurrenceStatus,
-    UserRole,
 )
 from app.models.lot import Lot
 from app.models.occurrence import Occurrence, OccurrenceTimeline
@@ -101,13 +100,19 @@ class OccurrenceService:
         """Determines if user has read access to the specified occurrence."""
         if has_permission(current_user, session, "occurrences:manage_all"):
             return True
-        if current_user.role == UserRole.MANAGER:
-            return (
+        # IAM F5 (APRAS-49 §3.1 site 7) collapses the MANAGER tier into one
+        # grant: `occurrences:read_assigned` is the legacy `{M}` set exactly,
+        # so this is a literal rewrite of the two branches it replaces.
+        return (
+            occurrence.reporter_user_id == current_user.id
+            or occurrence.is_public
+            or (
                 occurrence.assigned_to_id == current_user.id
-                or occurrence.reporter_user_id == current_user.id
-                or occurrence.is_public
+                and has_permission(
+                    current_user, session, "occurrences:read_assigned"
+                )
             )
-        return occurrence.reporter_user_id == current_user.id or occurrence.is_public
+        )
 
     @classmethod
     def create_occurrence(
@@ -171,21 +176,16 @@ class OccurrenceService:
 
         # RBAC Filtering
         if not has_permission(current_user, session, "occurrences:manage_all"):
-            if current_user.role == UserRole.MANAGER:
-                query = query.where(
-                    or_(
-                        Occurrence.assigned_to_id == current_user.id,
-                        Occurrence.reporter_user_id == current_user.id,
-                        Occurrence.is_public == True,  # noqa: E712
-                    )
-                )
-            else:
-                query = query.where(
-                    or_(
-                        Occurrence.reporter_user_id == current_user.id,
-                        Occurrence.is_public == True,  # noqa: E712
-                    )
-                )
+            # IAM F5 (APRAS-49 §3.1 site 8): one `or_(...)` whose
+            # assigned-to-me term is included **iff** the caller holds
+            # `occurrences:read_assigned` (the legacy `{M}` set exactly).
+            terms = [
+                Occurrence.reporter_user_id == current_user.id,
+                Occurrence.is_public == True,  # noqa: E712
+            ]
+            if has_permission(current_user, session, "occurrences:read_assigned"):
+                terms.append(Occurrence.assigned_to_id == current_user.id)
+            query = query.where(or_(*terms))
 
         # Optional filters
         if category:

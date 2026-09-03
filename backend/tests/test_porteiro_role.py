@@ -21,28 +21,30 @@ import io
 import uuid
 
 import pytest
-from PIL import Image
 from fastapi.testclient import TestClient
+from PIL import Image
 from sqlmodel import Session
 
 from app.core.security import create_access_token, get_password_hash
-from app.models.enums import AuthorizationType, DayOfWeek, ShiftType, UserRole
+from app.models.enums import AuthorizationType, DayOfWeek, ShiftType
 from app.models.user import User
 from app.schemas.lot import LotCreate
 from app.schemas.visitor import VisitorAuthorizationCreate, VisitorCreate
 from app.services.lot_service import LotService
 from app.services.visitor_service import VisitorService
+from tests.conftest import make_user
 
 
 @pytest.fixture
 def porteiro_user(session: Session) -> User:
     """Create and persist a PORTEIRO user."""
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email="porteiro@test.com",
         full_name="Porteiro User",
         hashed_password=get_password_hash("password"),
-        role=UserRole.PORTEIRO,
+        profile="PORTEIRO",
         cpf="98765432100",
     )
     session.add(user)
@@ -263,7 +265,7 @@ def test_porteiro_forbidden_on_all_document_handlers(
 
     # Regression: admin_user (ADMINISTRATOR) can still do everything.
     folder_res = client.post(
-        "/api/v1/documents/folders", json={"name": "Pasta Regressao"}, headers=headers_admin
+        "/api/v1/documents/folders", json={"name": "Pasta Regressao", "allowed_role_ids": []}, headers=headers_admin
     )
     assert folder_res.status_code == 201
     folder_id = folder_res.json()["id"]
@@ -311,7 +313,7 @@ def test_porteiro_forbidden_on_all_document_handlers(
     # PORTEIRO forbidden on every handler. Build a fresh folder/document
     # (as admin) so each PORTEIRO call exercises the real guard, not a 404.
     folder2 = client.post(
-        "/api/v1/documents/folders", json={"name": "Pasta Porteiro"}, headers=headers_admin
+        "/api/v1/documents/folders", json={"name": "Pasta Porteiro", "allowed_role_ids": []}, headers=headers_admin
     ).json()
     doc2 = client.post(
         "/api/v1/documents",
@@ -327,7 +329,7 @@ def test_porteiro_forbidden_on_all_document_handlers(
     assert client.get("/api/v1/documents/folders", headers=headers_porteiro).status_code == 403
     assert (
         client.post(
-            "/api/v1/documents/folders", json={"name": "X"}, headers=headers_porteiro
+            "/api/v1/documents/folders", json={"name": "X", "allowed_role_ids": []}, headers=headers_porteiro
         ).status_code
         == 403
     )

@@ -1,17 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  checkInVisitor,
-  checkOutVisitor,
-  createLotAuthorization,
-  createVisitor,
-  getAccessLogs,
-  getAuthorization,
-  getLotAuthorizations,
-  getVisitor,
-  revokeAuthorization,
-  searchVisitors,
-  updateVisitor,
-} from "../../../api/visitors";
+import { checkInVisitor, checkOutVisitor, createLotAuthorization, createVisitor, getAccessLogs, getAuthorization, getLotAuthorizations, getVisitor, revokeAuthorization, searchVisitors, updateVisitor,  } from "../../../api/visitors";
 import type {
   AccessLogCheckIn,
   AccessLogCheckOut,

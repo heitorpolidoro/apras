@@ -1,14 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Camera,
-  MessageSquare,
-  Plus,
-  Trash2,
-  DollarSign,
-  User as UserIcon,
-  X,
-} from 'lucide-react';
+import { Camera, MessageSquare, Plus, Trash2, DollarSign, User as UserIcon, X,  } from 'lucide-react';
 import type { ProjectUpdate } from '../../../types/project';
 import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';

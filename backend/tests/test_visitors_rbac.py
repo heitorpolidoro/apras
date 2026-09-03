@@ -1,32 +1,33 @@
 """Unit and integration tests for Visitor Management RBAC security policies."""
 
 import uuid
+
 import pytest
-from app.core.exceptions import ForbiddenError
-from app.models.enums import LotAssociationType, UserRole
+from fastapi.testclient import TestClient
+from sqlmodel import Session
+
+from app.models.enums import LotAssociationType
 from app.models.user import User
 from app.schemas.lot import LotCreate, UserLotLinkCreate
 from app.schemas.visitor import (
-    AccessLogCheckIn,
-    AccessLogCheckOut,
     VisitorAuthorizationCreate,
     VisitorCreate,
 )
 from app.services.lot_service import LotService
 from app.services.visitor_service import VisitorService
-from fastapi.testclient import TestClient
-from sqlmodel import Session
+from tests.conftest import make_user
 
 
 @pytest.fixture
 def resident_user(session: Session) -> User:
     """Create a resident (GUEST role) user."""
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email="resident_rbac@test.com",
         full_name="Resident User",
         hashed_password="hashed_test_pass",
-        role=UserRole.GUEST,
+        profile="GUEST",
         cpf="11144477735",
     )
     session.add(user)

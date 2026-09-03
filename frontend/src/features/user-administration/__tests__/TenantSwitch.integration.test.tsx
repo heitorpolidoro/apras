@@ -8,12 +8,8 @@ import Navbar from "../components/Navbar";
 import TaskDashboard from "../../task-management/components/TaskDashboard";
 import * as AuthHook from "../context/AuthContext";
 import { TenantProvider } from "../context/TenantContext";
-import {
-  clearActingTenantId,
-  getActingTenantId,
-  setActingTenantId,
-} from "../context/tenantState";
-import { UserRole, type User } from "../../../types/auth";
+import { clearActingTenantId, getActingTenantId, setActingTenantId,  } from "../context/tenantState";
+import { type User } from "../../../types/auth";
 
 /**
  * Navbar + TaskDashboard under a real `TenantProvider`, with the mocked client
@@ -28,11 +24,9 @@ vi.mock("../../../api/client", () => ({
 
 vi.mock("../context/SimulationContext", () => ({
   useSimulation: vi.fn(() => ({
-    simulatedRole: null,
-    simulatedUserTypeIds: [],
+    simulatedRoleIds: [],
     isSimulating: false,
-    setSimulatedRole: vi.fn(),
-    setSimulatedUserTypeIds: vi.fn(),
+    setSimulatedRoleIds: vi.fn(),
     stopSimulation: vi.fn(),
   })),
 }));
@@ -65,7 +59,7 @@ const task = (title: string) => ({
 const mockedGet = vi.mocked(apiClient.get);
 
 const USER_TYPES = [
-  { id: "type-1", name: "Test Type", allowed_menus: ["tasks", "categories"] },
+  { id: "type-1", name: "Test Type" },
 ];
 
 /**
@@ -83,7 +77,7 @@ const installClient = () => {
   mockedGet.mockReset();
   mockedGet.mockImplementation(((url: string) => {
     if (url === "/tenants") return Promise.resolve({ data: TENANTS });
-    if (url === "/user-types/") return Promise.resolve({ data: USER_TYPES });
+    if (url === "/roles/") return Promise.resolve({ data: USER_TYPES });
     if (url === "/permissions/me") {
       const acting = getActingTenantId();
       return Promise.resolve({
@@ -143,8 +137,7 @@ describe("tenant switch integration", () => {
     mockAuth({
       id: "u1",
       full_name: "Morador",
-      role: UserRole.RESIDENT,
-      user_types: USER_TYPES,
+      roles: USER_TYPES,
       tenants: [
         {
           tenant_id: TENANT_A,
@@ -182,8 +175,8 @@ describe("tenant switch integration", () => {
     mockAuth({
       id: "u-admin",
       full_name: "Admin",
-      role: UserRole.ADMINISTRATOR,
-      user_types: USER_TYPES,
+      is_superuser: true,
+      roles: USER_TYPES,
       tenants: [],
     });
 
@@ -206,8 +199,7 @@ describe("tenant switch integration", () => {
     mockAuth({
       id: "u1",
       full_name: "Morador",
-      role: UserRole.RESIDENT,
-      user_types: USER_TYPES,
+      roles: USER_TYPES,
       tenants: [
         {
           tenant_id: TENANT_A,

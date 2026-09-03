@@ -1,13 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Building2,
-  Calendar,
-  ChevronRight,
-  Edit2,
-  HardHat,
-  Trash2,
-} from 'lucide-react';
+import { Building2, Calendar, ChevronRight, Edit2, HardHat, Trash2,  } from 'lucide-react';
 import type { ConstructionProject, ProjectStatus } from '../../../types/project';
 import { Button } from '../../../components/ui/button';
 import { formatCurrency } from '../utils/currency';

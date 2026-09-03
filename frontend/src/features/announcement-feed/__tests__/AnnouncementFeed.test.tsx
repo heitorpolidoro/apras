@@ -13,24 +13,58 @@ import type {
   AnnouncementMedia,
   PaginatedAnnouncementsResponse,
 } from "../../../types/announcement";
+import { PERMISSIONS_BY_ROLE } from "../../../test/permissionFixtures";
+
+/** The profile each case's fixture stands for. */
+const mockProfile = () => mockProfileName;
+
+// IAM F5 (APRAS-49 §10.2): the component reads its *permissions* now, not a
+// role. Mocking the access module keeps each case's signal exactly where it
+// was — the `useAuth()` fixture this file already varies per test — while
+// removing the `/permissions/me` query from the render path, which is what
+// made a `QueryClientProvider` necessary.
+vi.mock("../../../features/user-administration/access/useCanAccess", () => {
+  const build = (profile: string) => ({
+    has: (permission: string) =>
+      (PERMISSIONS_BY_ROLE[profile] ?? []).includes(permission),
+    hasModule: (moduleName: string) =>
+      (PERMISSIONS_BY_ROLE[profile] ?? []).some((permission) =>
+        permission.startsWith(`${moduleName}:`),
+      ),
+    isLoading: false,
+    all: new Set(PERMISSIONS_BY_ROLE[profile] ?? []),
+  });
+  return {
+    useEffectivePermissionSet: () => build(mockProfile()),
+    usePermissionSet: () => build(mockProfile()),
+    useCanAccess: () => ({ allowed: true, isLoading: false }),
+    useCanShowMenu: () => ({ allowed: true, isLoading: false }),
+  };
+});
+
 
 vi.mock("../../../api/announcements");
 
 vi.mock("../../user-administration/context/AuthContext", () => ({
   useAuth: vi.fn(),
-  UserRole: {
-    ADMINISTRATOR: "ADMINISTRATOR",
-    DIRECTOR: "DIRECTOR",
-    MANAGER: "MANAGER",
-    GUEST: "GUEST",
-  },
 }));
 
-const mockAuth = (role: string, id = "user-1") =>
-  vi.mocked(useAuth).mockReturnValue({
-    user: { id, role, full_name: "Test User" },
+/**
+ * IAM F5 (APRAS-49 §10.2): the components read `announcements:create` and
+ * `announcements:comment` now, not a role value. The argument stays a
+ * profile name because that is the *case's* signal, and `mockProfile` below
+ * turns it into the recorded bundle — so every case asserts the same outcome
+ * it asserted before.
+ */
+let mockProfileName = "RESIDENT";
+
+const mockAuth = (role: string, id = "user-1") => {
+  mockProfileName = role;
+  return vi.mocked(useAuth).mockReturnValue({
+    user: { id, full_name: "Test User", is_superuser: role === "ADMINISTRATOR" },
     isAuthenticated: true,
   } as unknown as ReturnType<typeof useAuth>);
+};
 
 const mockAnnouncement: Announcement = {
   id: "ann-1",

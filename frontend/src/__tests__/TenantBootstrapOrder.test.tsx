@@ -3,15 +3,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "../App";
 import apiClient from "../api/client";
-import {
-  clearActingTenantId,
-  getActingTenantId,
-} from "../features/user-administration/context/tenantState";
-import { UserRole } from "../types/auth";
-import {
-  ALL_PERMISSIONS,
-  PERMISSIONS_BY_ROLE,
-} from "../test/permissionFixtures";
+import { clearActingTenantId, getActingTenantId,  } from "../features/user-administration/context/tenantState";
+import { ALL_PERMISSIONS, PERMISSIONS_BY_ROLE,  } from "../test/permissionFixtures";
 
 /**
  * Bootstrap ordering for the acting tenant, on the **real `App`**.
@@ -27,8 +20,8 @@ import {
  * task's changes:
  *
  * 1. no tenant-scoped request leaves before the acting tenant is resolved
- *    (`enabled: useActingTenantReady()` on `useUserTypes`) — without it the
- *    recorded order is `["/user-types/", "/auth/me"]`, the scoped request goes
+ *    (`enabled: useActingTenantReady()` on `useRoles`) — without it the
+ *    recorded order is `["/roles/", "/auth/me"]`, the scoped request goes
  *    out headerless, the APRAS-42 resolver answers 400, and because the query
  *    is then *errored* rather than stale nothing ever refetches it;
  * 2. no commit observes a stale acting tenant (`TenantContext` reading the
@@ -54,19 +47,18 @@ const TENANTS = [
 /** Everything that is not one of the three global routes is tenant-scoped. */
 const GLOBAL_PATHS = ["/auth/me", "/auth/dev-users", "/tenants"];
 
-/** The UserType that grants the `tasks` menu to the RESIDENT fixtures. */
+/** The Role that grants the `tasks` menu to the RESIDENT fixtures. */
 const RESIDENT_TYPE = {
   id: "type-resident",
   name: "Morador do Condomínio A",
-  allowed_menus: ["tasks", "categories"],
   permissions: [],
 };
 
 /** What `GET /permissions/me` answers per acting tenant, per fixture. */
 const PERMISSIONS_BY_TENANT: Record<string, Record<string, string[]>> = {
   "u-dual": {
-    [TENANT_A]: PERMISSIONS_BY_ROLE[UserRole.RESIDENT],
-    [TENANT_B]: PERMISSIONS_BY_ROLE[UserRole.RESIDENT],
+    [TENANT_A]: PERMISSIONS_BY_ROLE["RESIDENT"],
+    [TENANT_B]: PERMISSIONS_BY_ROLE["RESIDENT"],
   },
   // IAM F3: the capability is the whole catalogue, in the granting tenant.
   "u-syndic": { [TENANT_A]: ALL_PERMISSIONS },
@@ -88,9 +80,8 @@ const DUAL_MEMBERSHIP_RESIDENT = {
   id: "u-dual",
   email: "dual@test.com",
   full_name: "Morador Duplo",
-  role: UserRole.RESIDENT,
   is_active: true,
-  user_types: [RESIDENT_TYPE],
+  roles: [RESIDENT_TYPE],
   tenants: [
     membership(TENANT_A, "Condomínio A"),
     membership(TENANT_B, "Condomínio B"),
@@ -102,9 +93,8 @@ const TENANT_ADMIN_OF_A = {
   id: "u-syndic",
   email: "syndic@test.com",
   full_name: "Síndico",
-  role: UserRole.RESIDENT,
   is_active: true,
-  user_types: [RESIDENT_TYPE],
+  roles: [RESIDENT_TYPE],
   tenants: [membership(TENANT_A, "Condomínio A", true)],
 };
 
@@ -113,9 +103,8 @@ const USERS = [
     id: "u-listed",
     email: "listed@test.com",
     full_name: "Usuário Listado",
-    role: UserRole.RESIDENT,
     is_active: true,
-    user_types: [],
+    roles: [],
   },
 ];
 
@@ -150,7 +139,7 @@ const installClient = (me: { id: string }) => {
 
     if (url === "/auth/me") return Promise.resolve({ data: me });
     if (url === "/tenants") return Promise.resolve({ data: TENANTS });
-    if (url === "/user-types/") {
+    if (url === "/roles/") {
       // The APRAS-42 header ladder, reproduced: a scoped request with no
       // acting tenant is a 400, not an empty list.
       if (actingTenantId === null) {
@@ -258,8 +247,8 @@ describe("tenant bootstrap ordering (real App)", () => {
 
     renderAppAt("/dashboard");
 
-    // The menu genuinely depends on /user-types/ returning rows: the fixture
-    // is a non-ADMINISTRATOR whose single UserType is what grants `tasks`.
+    // The menu genuinely depends on /roles/ returning rows: the fixture
+    // is a non-ADMINISTRATOR whose single Role is what grants `tasks`.
     expect(
       await screen.findByRole("link", { name: "Tarefas" }),
     ).toBeInTheDocument();

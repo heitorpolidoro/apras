@@ -1,8 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import {
-  fetchMyPermissions,
-  fetchPermissionCatalogue,
-} from "../api/permissions";
+import { fetchMyPermissions, fetchPermissionCatalogue,  } from "../api/permissions";
 import { useActingTenantReady } from "../features/user-administration/context/useTenant";
 
 /**
@@ -14,7 +11,7 @@ import { useActingTenantReady } from "../features/user-administration/context/us
  * same basename would make every `vi.mock("…/usePermissions")` ambiguous by
  * sight.
  *
- * `enabled` mirrors `useUserTypes` for the reason that hook's docstring
+ * `enabled` mirrors `useRoles` for the reason that hook's docstring
  * already gives: `Navbar` and `ProtectedRoute` both subscribe **above** their
  * own auth guards, as the rules of hooks require, and a headerless scoped
  * request is answered `400 X-Tenant-Id header is required` — an *errored*
@@ -36,7 +33,7 @@ export const useMyPermissions = () => {
 };
 
 /**
- * The static catalogue. Fetched only where it is needed (the group editor),
+ * The static catalogue. Fetched only where it is needed (the role editor),
  * so an ordinary user's page load gains exactly one request, not two.
  */
 export const usePermissionCatalogue = () => {

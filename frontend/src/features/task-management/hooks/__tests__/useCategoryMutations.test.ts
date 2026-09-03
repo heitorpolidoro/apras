@@ -2,11 +2,7 @@ import { renderHook, waitFor, act } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import React from "react";
-import {
-  useCreateCategory,
-  useUpdateCategory,
-  useDeleteCategory,
-} from "../useCategories";
+import { useCreateCategory, useUpdateCategory, useDeleteCategory,  } from "../useCategories";
 import apiClient from "../../../../api/client";
 
 vi.mock("../../../../api/client", () => ({

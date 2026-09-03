@@ -9,11 +9,25 @@ import { FeedbackDetailsView } from "../components/FeedbackDetailsView";
 import * as feedbackApi from "../../../api/feedback";
 import type { Feedback, PaginatedFeedbackResponse } from "../../../types/feedback";
 
+import { PERMISSIONS_BY_ROLE } from "../../../test/permissionFixtures";
+
+/**
+ * The permission predicate a retired role value carried (IAM F5, §10.2).
+ *
+ * `PERMISSIONS_BY_ROLE` is the recorded legacy bundle, so a case that mocked
+ * `role: "MANAGER"` and now mocks `hasOf("MANAGER")` asserts the **same**
+ * outcome it always did — which is what makes this a re-expression rather
+ * than a new claim.
+ */
+const hasOf = (profile: string) => (permission: string) =>
+    (PERMISSIONS_BY_ROLE[profile] ?? []).includes(permission);
+
+
 vi.mock("../../../api/feedback");
 
 const mockUseEffectiveIdentity = vi.fn();
-vi.mock("../../user-administration/context/useEffectiveIdentity", () => ({
-  useEffectiveIdentity: () => mockUseEffectiveIdentity(),
+vi.mock("../../user-administration/access/useCanAccess", () => ({
+  useEffectivePermissionSet: () => mockUseEffectiveIdentity(),
 }));
 
 const mockFeedbackItem: Feedback = {
@@ -70,7 +84,7 @@ describe("Feedback Management Feature Suite", () => {
   });
 
   it("renders the submission form and personal history view for non-staff roles", async () => {
-    mockUseEffectiveIdentity.mockReturnValue({ role: "GUEST", userTypeIds: [], isSimulating: false });
+    mockUseEffectiveIdentity.mockReturnValue({ has: hasOf("GUEST") });
 
     renderWithQuery(<FeedbackChannelPage />);
 
@@ -80,7 +94,7 @@ describe("Feedback Management Feature Suite", () => {
   });
 
   it("renders the categorized inbox for ADMINISTRATOR", async () => {
-    mockUseEffectiveIdentity.mockReturnValue({ role: "ADMINISTRATOR", userTypeIds: [], isSimulating: false });
+    mockUseEffectiveIdentity.mockReturnValue({ has: hasOf("ADMINISTRATOR") });
 
     renderWithQuery(<FeedbackChannelPage />);
 
@@ -90,7 +104,7 @@ describe("Feedback Management Feature Suite", () => {
   });
 
   it("renders the categorized inbox for DIRECTOR", async () => {
-    mockUseEffectiveIdentity.mockReturnValue({ role: "DIRECTOR", userTypeIds: [], isSimulating: false });
+    mockUseEffectiveIdentity.mockReturnValue({ has: hasOf("DIRECTOR") });
 
     renderWithQuery(<FeedbackChannelPage />);
 
@@ -99,7 +113,7 @@ describe("Feedback Management Feature Suite", () => {
   });
 
   it("submits a new feedback message from the contact form", async () => {
-    mockUseEffectiveIdentity.mockReturnValue({ role: "RESIDENT", userTypeIds: [], isSimulating: false });
+    mockUseEffectiveIdentity.mockReturnValue({ has: hasOf("RESIDENT") });
     vi.mocked(feedbackApi.createFeedback).mockResolvedValue(mockFeedbackItem);
 
     renderWithQuery(<FeedbackChannelPage />);

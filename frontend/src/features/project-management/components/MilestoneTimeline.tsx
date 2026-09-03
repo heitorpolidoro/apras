@@ -1,14 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  CheckCircle2,
-  Clock,
-  Calendar,
-  Plus,
-  Edit2,
-  Trash2,
-  ListOrdered,
-} from 'lucide-react';
+import { CheckCircle2, Clock, Calendar, Plus, Edit2, Trash2, ListOrdered,  } from 'lucide-react';
 import type { MilestoneStatus, ProjectMilestone } from '../../../types/project';
 import { Button } from '../../../components/ui/button';
 

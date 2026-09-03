@@ -3,7 +3,6 @@ import { describe, it, expect } from "vitest";
 import { useTaskFiltering } from "../useTaskFiltering";
 import { TaskStatus, TaskPriority } from "../../types";
 import type { TaskRead } from "../../types";
-import { UserRole } from "../../../../types/auth";
 
 const mockTasks: TaskRead[] = [
   {
@@ -44,7 +43,7 @@ const mockTasks: TaskRead[] = [
   },
 ];
 
-const userType = (id: string) => ({ id, name: id, allowed_menus: [] });
+const role = (id: string) => ({ id, name: id });
 
 describe("useTaskFiltering", () => {
   it("returns all tasks when no filters are applied", () => {
@@ -96,10 +95,25 @@ describe("useTaskFiltering", () => {
   });
 
   describe("admin role simulation filtering", () => {
+    /**
+     * The permission predicate each retired role value carried, for the two
+     * strings `canSeeSimulatedTask` reads (IAM F5, APRAS-49 §10.2). Every
+     * case below asserts the **same** outcome it asserted when the option
+     * was an enum value, so the rewrite is a re-expression rather than a new
+     * set of claims.
+     */
+    const has = (profile: string) => (permission: string) =>
+      ({
+        ADMINISTRATOR: ["tasks:read", "tasks:read_all"],
+        DIRECTOR: ["tasks:read", "tasks:read_all"],
+        MANAGER: ["tasks:read"],
+        GUEST: [] as string[],
+      })[profile]!.includes(permission);
+
     const simulationTasks: TaskRead[] = [
       { ...mockTasks[0], id: "pub", visible_to: [] },
-      { ...mockTasks[1], id: "typed", visible_to: [userType("type-1")] },
-      { ...mockTasks[2], id: "other-typed", visible_to: [userType("type-2")] },
+      { ...mockTasks[1], id: "typed", visible_to: [role("type-1")] },
+      { ...mockTasks[2], id: "other-typed", visible_to: [role("type-2")] },
     ];
 
     it("is a no-op when no simulation option is passed", () => {
@@ -113,8 +127,8 @@ describe("useTaskFiltering", () => {
       const { result } = renderHook(() =>
         useTaskFiltering(simulationTasks, {}, {
           isSimulating: false,
-          role: UserRole.MANAGER,
-          userTypeIds: [],
+          has: has("GUEST"),
+          roleIds: [],
         }),
       );
       expect(result.current).toHaveLength(3);
@@ -124,45 +138,44 @@ describe("useTaskFiltering", () => {
       const { result } = renderHook(() =>
         useTaskFiltering(simulationTasks, {}, {
           isSimulating: true,
-          role: UserRole.GUEST,
-          userTypeIds: [],
+          has: has("GUEST"),
+          roleIds: [],
         }),
       );
       expect(result.current).toHaveLength(0);
     });
 
-    it("shows only public and matching-UserType tasks when simulating MANAGER", () => {
+    it("shows only public and matching-Role tasks when simulating MANAGER", () => {
       const { result } = renderHook(() =>
         useTaskFiltering(simulationTasks, {}, {
           isSimulating: true,
-          role: UserRole.MANAGER,
-          userTypeIds: ["type-1"],
+          has: has("MANAGER"),
+          roleIds: ["type-1"],
         }),
       );
       expect(result.current.map((t) => t.id)).toEqual(["pub", "typed"]);
     });
 
-    it("resolves visibility via a role-type id folded into userTypeIds by useEffectiveIdentity (APRAS-9)", () => {
-      // useTaskFiltering has no concept of "explicit" vs "role-implicit"
-      // UserType ids: useEffectiveIdentity (APRAS-9) already folds a
-      // role-type id into `userTypeIds` before it reaches here, so a
-      // simulated MANAGER with zero *explicitly* simulated UserTypes still
-      // sees a task targeted at their role-type, indistinguishably from an
-      // explicitly-assigned UserType id — no change to this hook needed.
+    it("resolves visibility through an ordinary role id in roleIds", () => {
+      // The APRAS-9 distinction this case policed — "explicit" versus
+      // "role-implicit" ids — is gone: migration `0033` turned the implicit
+      // membership into a real `user_role_link` row, so every id reaching
+      // this hook is an ordinary membership and the hook still needs no
+      // change.
       const roleTypeTasks: TaskRead[] = [
         { ...mockTasks[0], id: "pub", visible_to: [] },
         {
           ...mockTasks[1],
           id: "via-role-type",
-          visible_to: [userType("role-type-manager")],
+          visible_to: [role("role-type-manager")],
         },
-        { ...mockTasks[2], id: "other-typed", visible_to: [userType("type-2")] },
+        { ...mockTasks[2], id: "other-typed", visible_to: [role("type-2")] },
       ];
       const { result } = renderHook(() =>
         useTaskFiltering(roleTypeTasks, {}, {
           isSimulating: true,
-          role: UserRole.MANAGER,
-          userTypeIds: ["role-type-manager"],
+          has: has("MANAGER"),
+          roleIds: ["role-type-manager"],
         }),
       );
       expect(result.current.map((t) => t.id)).toEqual(["pub", "via-role-type"]);
@@ -172,8 +185,8 @@ describe("useTaskFiltering", () => {
       const { result: directorResult } = renderHook(() =>
         useTaskFiltering(simulationTasks, {}, {
           isSimulating: true,
-          role: UserRole.DIRECTOR,
-          userTypeIds: [],
+          has: has("DIRECTOR"),
+          roleIds: [],
         }),
       );
       expect(directorResult.current).toHaveLength(3);
@@ -181,8 +194,8 @@ describe("useTaskFiltering", () => {
       const { result: adminResult } = renderHook(() =>
         useTaskFiltering(simulationTasks, {}, {
           isSimulating: true,
-          role: UserRole.ADMINISTRATOR,
-          userTypeIds: [],
+          has: has("ADMINISTRATOR"),
+          roleIds: [],
         }),
       );
       expect(adminResult.current).toHaveLength(3);
@@ -193,7 +206,7 @@ describe("useTaskFiltering", () => {
         useTaskFiltering(
           simulationTasks,
           { status: TaskStatus.PENDING },
-          { isSimulating: true, role: UserRole.MANAGER, userTypeIds: [] },
+          { isSimulating: true, has: has("MANAGER"), roleIds: [] },
         ),
       );
       // Only "pub" (empty visible_to) is visible to this manager, and it

@@ -74,7 +74,7 @@ class PurchaseQuote(SQLModel, table=True):
     # {"label": str, "value": str} objects. Portable JSON column (NOT Postgres
     # JSONB/ARRAY): tests/conftest.py builds the schema with
     # SQLModel.metadata.create_all() against sqlite:// in memory, exactly as
-    # documented on UserType.allowed_menus.
+    # documented on Role.permissions.
     extra_fields: list[dict[str, str]] = Field(
         default_factory=list,
         sa_column=Column(JSON, nullable=False, server_default="[]"),

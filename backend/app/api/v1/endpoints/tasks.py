@@ -6,7 +6,7 @@ from uuid import UUID
 from app.api import deps as api_deps
 from app.core.exceptions import ForbiddenError, TaskNotFoundError
 from app.db import get_session
-from app.models.enums import MenuKey, TaskPriority, TaskStatus, UserRole
+from app.models.enums import TaskPriority, TaskStatus
 from app.models.task import Task, TaskComment, TaskHistory
 from app.models.user import User
 from app.schemas.task import (TaskCommentCreate, TaskCommentRead,
@@ -26,7 +26,6 @@ def create_task(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> TaskRead:
     """Create a new task. Any authenticated user except GUEST can create tasks."""
-    api_deps.assert_menu_access(current_user, MenuKey.TASKS, session)
     if not api_deps.has_permission(current_user, session, "tasks:create"):
         raise ForbiddenError("Guests cannot create tasks")
     db_task = TaskService.create_task(
@@ -48,7 +47,6 @@ def list_tasks(
     category_id: Annotated[UUID | None, Query()] = None,
 ) -> list[TaskRead]:
     """List tasks with optional filters. GUEST sees no tasks."""
-    api_deps.assert_menu_access(current_user, MenuKey.TASKS, session)
     # The documented empty-list refusal, kept verbatim: turning it into a
     # 403 would be a divergence the parity matrix rejects.
     if not api_deps.has_permission(current_user, session, "tasks:read"):
@@ -56,8 +54,8 @@ def list_tasks(
 
     from app.models.category import Category
     from app.models.task import TaskVisibleToLink
-    from app.models.user_type import UserType
-    from app.schemas.user_type import UserTypeRead
+    from app.models.role import Role
+    from app.schemas.role import RoleRead
     from sqlalchemy import exists, or_
     from sqlalchemy.orm import aliased
 
@@ -86,8 +84,10 @@ def list_tasks(
         statement = statement.where(Task.priority == priority)
     if category_id:
         statement = statement.where(Task.category_id == category_id)
-    if current_user.role == UserRole.MANAGER:
-        effective_ids = api_deps.get_effective_user_type_ids(current_user, session)
+    # IAM F5 (APRAS-49 §3.1 site 4): identical query construction, keyed on
+    # `tasks:read_all` instead of `role == <enum>.MANAGER`.
+    if not api_deps.has_permission(current_user, session, "tasks:read_all"):
+        effective_ids = api_deps.get_effective_role_ids(current_user, session)
         has_any_target = exists(
             select(TaskVisibleToLink.task_id).where(
                 TaskVisibleToLink.task_id == Task.id
@@ -96,7 +96,7 @@ def list_tasks(
         has_matching_target = exists(
             select(TaskVisibleToLink.task_id).where(
                 TaskVisibleToLink.task_id == Task.id,
-                TaskVisibleToLink.user_type_id.in_(effective_ids),
+                TaskVisibleToLink.role_id.in_(effective_ids),
             )
         )
         statement = statement.where(or_(~has_any_target, has_matching_target))
@@ -104,15 +104,15 @@ def list_tasks(
     results = session.exec(statement).all()
     task_ids = [db_task.id for db_task, *_ in results]
 
-    visible_to_by_task: dict[UUID, list[UserType]] = {}
+    visible_to_by_task: dict[UUID, list[Role]] = {}
     if task_ids:
         link_statement = (
-            select(TaskVisibleToLink.task_id, UserType)
-            .join(UserType, TaskVisibleToLink.user_type_id == UserType.id)
+            select(TaskVisibleToLink.task_id, Role)
+            .join(Role, TaskVisibleToLink.role_id == Role.id)
             .where(TaskVisibleToLink.task_id.in_(task_ids))
         )
-        for task_id, user_type in session.exec(link_statement).all():
-            visible_to_by_task.setdefault(task_id, []).append(user_type)
+        for task_id, role in session.exec(link_statement).all():
+            visible_to_by_task.setdefault(task_id, []).append(role)
 
     tasks = []
     for db_task, creator_name, assignee_name, category_name, category_color in results:
@@ -122,7 +122,7 @@ def list_tasks(
         task_data["category_name"] = category_name
         task_data["category_color"] = category_color
         task_data["visible_to"] = [
-            UserTypeRead.model_validate(ut)
+            RoleRead.model_validate(ut)
             for ut in visible_to_by_task.get(db_task.id, [])
         ]
         tasks.append(TaskRead.model_validate(task_data))
@@ -137,7 +137,6 @@ def update_task(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> TaskRead:
     """Update an existing task."""
-    api_deps.assert_menu_access(current_user, MenuKey.TASKS, session)
     db_task = session.get(Task, task_id)
     if not db_task or db_task.is_deleted:
         raise TaskNotFoundError(task_id)
@@ -158,7 +157,6 @@ def get_task_history(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> list[TaskHistory]:
     """Get the audit history for a specific task."""
-    api_deps.assert_menu_access(current_user, MenuKey.TASKS, session)
     db_task = session.get(Task, task_id)
     if not db_task or db_task.is_deleted:
         raise TaskNotFoundError(task_id)
@@ -179,7 +177,6 @@ def delete_task(
     ever reach that tenant's own tasks, a foreign id being a 404 through the
     ambient filter (APRAS-43 §4.3).
     """
-    api_deps.assert_menu_access(current_user, MenuKey.TASKS, session)
     db_task = session.get(Task, task_id)
     if not db_task or db_task.is_deleted:
         raise TaskNotFoundError(task_id)
@@ -199,7 +196,6 @@ def list_comments(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> list[TaskCommentRead]:
     """List all comments for a task."""
-    api_deps.assert_menu_access(current_user, MenuKey.TASKS, session)
     db_task = session.get(Task, task_id)
     if not db_task or db_task.is_deleted:
         raise TaskNotFoundError(task_id)
@@ -220,7 +216,6 @@ def create_comment(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> TaskCommentRead:
     """Add a comment to a task. Any authenticated user can comment."""
-    api_deps.assert_menu_access(current_user, MenuKey.TASKS, session)
     db_task = session.get(Task, task_id)
     if not db_task or db_task.is_deleted:
         raise TaskNotFoundError(task_id)
@@ -243,7 +238,6 @@ def update_comment(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> TaskCommentRead:
     """Edit a comment. Only the comment author can edit it."""
-    api_deps.assert_menu_access(current_user, MenuKey.TASKS, session)
     db_task = session.get(Task, task_id)
     if not db_task or db_task.is_deleted:
         raise TaskNotFoundError(task_id)

@@ -12,22 +12,22 @@ from .tenant import tenant_id_field
 
 if TYPE_CHECKING:
     from .category import Category
+    from .role import Role
     from .user import User
-    from .user_type import UserType
 
 
 class TaskVisibleToLink(SQLModel, table=True):
     """Join table for the many-to-many `Task.visible_to` relationship.
 
-    Matches `UserUserTypeLink`'s shape exactly: composite primary key
-    (`task_id`, `user_type_id`), no surrogate `id` column, no
+    Matches `UserRoleLink`'s shape exactly: composite primary key
+    (`task_id`, `role_id`), no surrogate `id` column, no
     `ondelete`/`index` annotations (see APRAS-11 spec).
     """
 
     __tablename__ = "task_visible_to_link"
 
     task_id: UUID = Field(foreign_key="task.id", primary_key=True)
-    user_type_id: UUID = Field(foreign_key="user_type.id", primary_key=True)
+    role_id: UUID = Field(foreign_key="role.id", primary_key=True)
 
 
 def get_utc_now() -> datetime:
@@ -95,7 +95,7 @@ class Task(SQLModel, table=True):
         sa_relationship_kwargs={"foreign_keys": "Task.assigned_to_id"},
     )
     category: "Category" = Relationship(back_populates="tasks")
-    visible_to: list["UserType"] = Relationship(link_model=TaskVisibleToLink)
+    visible_to: list["Role"] = Relationship(link_model=TaskVisibleToLink)
     history: list["TaskHistory"] = Relationship(
         back_populates="task", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )

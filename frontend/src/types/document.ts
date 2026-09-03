@@ -3,7 +3,10 @@ export interface DocumentFolder {
   name: string;
   description?: string | null;
   parent_id?: string | null;
-  allowed_roles: string[];
+  /** Role **ids** since IAM F5 (APRAS-49 §6). The column stored enum value
+   *  strings until migration `0033` rewrote every row and renamed it, so a
+   *  reader that was not updated fails loudly instead of matching nothing. */
+  allowed_role_ids: string[];
   document_count: number;
   created_at: string;
   updated_at: string;
@@ -45,14 +48,14 @@ export interface DocumentFolderCreatePayload {
   name: string;
   description?: string | null;
   parent_id?: string | null;
-  allowed_roles?: string[];
+  allowed_role_ids?: string[];
 }
 
 export interface DocumentFolderUpdatePayload {
   name?: string | null;
   description?: string | null;
   parent_id?: string | null;
-  allowed_roles?: string[] | null;
+  allowed_role_ids?: string[] | null;
 }
 
 export interface AssociationDocumentCreatePayload {

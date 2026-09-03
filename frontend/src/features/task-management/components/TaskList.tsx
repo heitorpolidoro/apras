@@ -4,13 +4,9 @@ import { Lock } from "lucide-react";
 import type { TaskRead } from "../types";
 import { Badge } from "../../../components/ui/badge";
 import { useTaskFiltering, type TaskFilters } from "../hooks/useTaskFiltering";
-import {
-  getStatusLabel,
-  getPriorityLabel,
-  statusVariant,
-  priorityVariant,
-} from "../utils/taskUtils";
+import { getStatusLabel, getPriorityLabel, statusVariant, priorityVariant,  } from "../utils/taskUtils";
 import { useEffectiveIdentity } from "../../user-administration/context/useEffectiveIdentity";
+import { useEffectivePermissionSet } from "../../user-administration/access/useCanAccess";
 import { canEditSimulatedTask } from "../utils/simulatedPermissions";
 
 interface TaskListProps {
@@ -31,11 +27,12 @@ const TaskList: React.FC<TaskListProps> = ({
   onTaskClick,
 }) => {
   const { t, i18n } = useTranslation();
-  const { role, userTypeIds, isSimulating } = useEffectiveIdentity();
+  const { roleIds, isSimulating } = useEffectiveIdentity();
+  const { has } = useEffectivePermissionSet();
   const filteredTasks = useTaskFiltering(tasks, filters, {
     isSimulating,
-    role,
-    userTypeIds,
+    has,
+    roleIds,
   });
 
   if (isLoading) {
@@ -107,8 +104,7 @@ const TaskList: React.FC<TaskListProps> = ({
                   <span className="font-semibold text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
                     {task.title}
                     {isSimulating &&
-                      role &&
-                      !canEditSimulatedTask(task, role, userTypeIds) && (
+                      !canEditSimulatedTask(task, has, roleIds) && (
                         <span
                           data-testid="task-readonly-indicator"
                           title={t("simulation.readOnlyTask")}

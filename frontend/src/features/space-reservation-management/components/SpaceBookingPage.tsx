@@ -2,16 +2,8 @@ import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../../components/ui/button";
 import { AlertModal } from "../../../components/ui/alert-modal";
-import { UserRole } from "../../../types/auth";
-import { useEffectiveIdentity } from "../../user-administration/context/useEffectiveIdentity";
-import {
-  useReservableSpaces,
-  useSpaceReservations,
-  useCreateSpaceReservation,
-  useApproveReservation,
-  useRejectReservation,
-  useCancelReservation,
-} from "../hooks/useReservations";
+import { useEffectivePermissionSet } from "../../user-administration/access/useCanAccess";
+import { useReservableSpaces, useSpaceReservations, useCreateSpaceReservation, useApproveReservation, useRejectReservation, useCancelReservation,  } from "../hooks/useReservations";
 import type { SpaceReservationRead } from "../../../types/reservation";
 
 interface ApiError extends Error {
@@ -42,9 +34,9 @@ const canCancelClientSide = (reservation: SpaceReservationRead): boolean => {
 
 const SpaceBookingPage: React.FC = () => {
   const { t } = useTranslation();
-  const { role } = useEffectiveIdentity();
-  const isGuest = role === UserRole.GUEST;
-  const isStaff = role === UserRole.ADMINISTRATOR || role === UserRole.DIRECTOR;
+  const { has } = useEffectivePermissionSet();
+  const isGuest = !has("reservations:create");
+  const isStaff = has("reservations:approve");
 
   const { data: spaces, isLoading: spacesLoading } = useReservableSpaces();
   const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(null);

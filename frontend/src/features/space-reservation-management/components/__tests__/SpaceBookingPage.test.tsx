@@ -1,15 +1,37 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import SpaceBookingPage from "../SpaceBookingPage";
-import {
-  useReservableSpaces,
-  useSpaceReservations,
-  useCreateSpaceReservation,
-  useApproveReservation,
-  useRejectReservation,
-  useCancelReservation,
-} from "../../hooks/useReservations";
-import { useAuth, UserRole } from "../../../user-administration/context/AuthContext";
+import { useReservableSpaces, useSpaceReservations, useCreateSpaceReservation, useApproveReservation, useRejectReservation, useCancelReservation,  } from "../../hooks/useReservations";
+import { useAuth } from "../../../user-administration/context/AuthContext";
+import { PERMISSIONS_BY_ROLE } from "../../../../test/permissionFixtures";
+
+/** The profile each case's fixture stands for. */
+const mockProfile = () => String(useAuth().user?.id ?? "").startsWith("guest") ? "GUEST" : useAuth().user?.is_superuser ? "ADMINISTRATOR" : String(useAuth().user?.id ?? "").startsWith("resident") ? "RESIDENT" : "MANAGER";
+
+// IAM F5 (APRAS-49 §10.2): the component reads its *permissions* now, not a
+// role. Mocking the access module keeps each case's signal exactly where it
+// was — the `useAuth()` fixture this file already varies per test — while
+// removing the `/permissions/me` query from the render path, which is what
+// made a `QueryClientProvider` necessary.
+vi.mock("../../../../features/user-administration/access/useCanAccess", () => {
+  const build = (profile: string) => ({
+    has: (permission: string) =>
+      (PERMISSIONS_BY_ROLE[profile] ?? []).includes(permission),
+    hasModule: (moduleName: string) =>
+      (PERMISSIONS_BY_ROLE[profile] ?? []).some((permission) =>
+        permission.startsWith(`${moduleName}:`),
+      ),
+    isLoading: false,
+    all: new Set(PERMISSIONS_BY_ROLE[profile] ?? []),
+  });
+  return {
+    useEffectivePermissionSet: () => build(mockProfile()),
+    usePermissionSet: () => build(mockProfile()),
+    useCanAccess: () => ({ allowed: true, isLoading: false }),
+    useCanShowMenu: () => ({ allowed: true, isLoading: false }),
+  };
+});
+
 
 vi.mock("../../hooks/useReservations", () => ({
   useReservableSpaces: vi.fn(),
@@ -29,7 +51,7 @@ vi.mock(
     return {
       ...actual,
       useAuth: vi.fn(() => ({
-        user: { id: "resident-1", role: actual.UserRole.RESIDENT },
+        user: { id: "resident-1" },
       })),
     };
   },
@@ -37,17 +59,15 @@ vi.mock(
 
 vi.mock("../../../user-administration/context/SimulationContext", () => ({
   useSimulation: vi.fn(() => ({
-    simulatedRole: null,
-    simulatedUserTypeIds: [],
+    simulatedRoleIds: [],
     isSimulating: false,
-    setSimulatedRole: vi.fn(),
-    setSimulatedUserTypeIds: vi.fn(),
+    setSimulatedRoleIds: vi.fn(),
     stopSimulation: vi.fn(),
   })),
 }));
 
-vi.mock("../../../../hooks/useUserTypes", () => ({
-  useUserTypes: vi.fn(() => ({ data: [] })),
+vi.mock("../../../../hooks/useRoles", () => ({
+  useRoles: vi.fn(() => ({ data: [] })),
 }));
 
 const mockSpaces = [
@@ -120,7 +140,7 @@ describe("SpaceBookingPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(useAuth).mockReturnValue({
-      user: { id: "resident-1", role: UserRole.RESIDENT },
+      user: { id: "resident-1" },
     } as any);
     vi.mocked(useReservableSpaces).mockReturnValue({
       data: mockSpaces,
@@ -147,7 +167,7 @@ describe("SpaceBookingPage", () => {
 
   it("hides booking form for GUEST role", () => {
     vi.mocked(useAuth).mockReturnValue({
-      user: { id: "guest-1", role: UserRole.GUEST },
+      user: { id: "guest-1" },
     } as any); // skipcq: JS-0323
     render(<SpaceBookingPage />);
     fireEvent.click(screen.getByRole("button", { name: "Salão de Festas" }));
@@ -156,7 +176,7 @@ describe("SpaceBookingPage", () => {
 
   it("does not render 'My Reservations' section for GUEST", () => {
     vi.mocked(useAuth).mockReturnValue({
-      user: { id: "guest-1", role: UserRole.GUEST },
+      user: { id: "guest-1" },
     } as any); // skipcq: JS-0323
     render(<SpaceBookingPage />);
     expect(screen.queryByText("Minhas Reservas")).not.toBeInTheDocument();
@@ -164,7 +184,7 @@ describe("SpaceBookingPage", () => {
 
   it("renders 'Pending Approvals' section only for ADMINISTRATOR/DIRECTOR", () => {
     vi.mocked(useAuth).mockReturnValue({
-      user: { id: "admin-1", role: UserRole.ADMINISTRATOR },
+      user: { id: "admin-1", is_superuser: true },
     } as any); // skipcq: JS-0323
     vi.mocked(useSpaceReservations).mockReturnValue({
       data: [pendingReservation],
@@ -269,7 +289,7 @@ describe("SpaceBookingPage", () => {
 
   it("approve/reject buttons call the respective mutations", () => {
     vi.mocked(useAuth).mockReturnValue({
-      user: { id: "admin-1", role: UserRole.ADMINISTRATOR },
+      user: { id: "admin-1", is_superuser: true },
     } as any); // skipcq: JS-0323
     vi.mocked(useSpaceReservations).mockReturnValue({
       data: [pendingReservation],

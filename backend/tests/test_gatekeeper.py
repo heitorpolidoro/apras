@@ -1,18 +1,25 @@
 """Unit and integration tests for Gatekeeper check-in/check-out and Access Logs."""
 
-from datetime import datetime, timedelta
-import logging
 import uuid
+from datetime import datetime, timedelta
+
 import pytest
+from fastapi.testclient import TestClient
+from sqlmodel import Session
+
 from app.core.exceptions import (
-    AccessLogNotFoundError,
     AuthorizationExpiredError,
     AuthorizationInvalidDayError,
     AuthorizationInvalidShiftError,
     AuthorizationRevokedError,
     OpenEntryExistsError,
 )
-from app.models.enums import AuthorizationStatus, AuthorizationType, DayOfWeek, ShiftType, UserRole
+from app.models.enums import (
+    AuthorizationStatus,
+    AuthorizationType,
+    DayOfWeek,
+    ShiftType,
+)
 from app.models.user import User
 from app.schemas.lot import LotCreate
 from app.schemas.visitor import (
@@ -23,18 +30,18 @@ from app.schemas.visitor import (
 )
 from app.services.lot_service import LotService
 from app.services.visitor_service import VisitorService
-from fastapi.testclient import TestClient
-from sqlmodel import Session
+from tests.conftest import make_user
 
 
 @pytest.fixture
 def gatekeeper_user(session: Session) -> User:
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email="gatekeeper@test.com",
         full_name="Gatekeeper John",
         hashed_password="hashed_test_pass",
-        role=UserRole.MANAGER,
+        profile="MANAGER",
         cpf="52998224725",
     )
     session.add(user)

@@ -1,13 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  AlertTriangle,
-  Archive,
-  Box,
-  Layers,
-  Plus,
-  Search,
-} from "lucide-react";
+import { AlertTriangle, Archive, Box, Layers, Plus, Search,  } from "lucide-react";
 import { AlertModal } from "../../../components/ui/alert-modal";
 import { Button } from "../../../components/ui/button";
 import type {
@@ -18,16 +11,8 @@ import type {
   MovementFormData,
 } from "../../../types/asset";
 import { AssetCategory, AssetCondition } from "../../../types/asset";
-import { UserRole } from "../../../types/auth";
-import { useEffectiveIdentity } from "../../user-administration/context/useEffectiveIdentity";
-import {
-  useAssets,
-  useAssetSummary,
-  useCreateAsset,
-  useDeleteAsset,
-  useRecordMovement,
-  useUpdateAsset,
-} from "../hooks/useAssets";
+import { useEffectivePermissionSet } from "../../user-administration/access/useCanAccess";
+import { useAssets, useAssetSummary, useCreateAsset, useDeleteAsset, useRecordMovement, useUpdateAsset,  } from "../hooks/useAssets";
 import { AssetFormModal } from "./AssetFormModal";
 import { AssetMovementHistoryModal } from "./AssetMovementHistoryModal";
 import { AssetSummaryCards } from "./AssetSummaryCards";
@@ -38,10 +23,10 @@ type FilterTab = "all" | "fixed" | "consumable" | "low_stock";
 
 export const AssetsInventoryPage: React.FC = () => {
   const { t } = useTranslation();
-  const { role } = useEffectiveIdentity();
+  const { has } = useEffectivePermissionSet();
 
   const canManage =
-    role === UserRole.ADMINISTRATOR || role === UserRole.DIRECTOR;
+    has("assets:create");
   const canAdjust = canManage;
 
   const [activeTab, setActiveTab] = useState<FilterTab>("all");

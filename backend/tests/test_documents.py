@@ -1,17 +1,21 @@
-import json
 import uuid
+
 import pytest
-from app.core.exceptions import (
-    DocumentFolderNotFoundError,
-    DocumentNotFoundError,
-    FolderAccessDeniedError,
-    ForbiddenError,
-    InvalidFolderHierarchyError,
-)
+
 from app.core.security import create_access_token
 from app.models.document import DocumentFolder
-from app.models.enums import UserRole
 from app.models.user import User
+from tests.conftest import profile_role
+
+
+def _role_ids(session, *profiles: str) -> list[str]:
+    """Role ids for the named legacy profiles (IAM F5, APRAS-49 §6).
+
+    The folder ACL stores role **ids** since migration `0033`, so a fixture
+    that used to name enum values now resolves them through the same
+    `conftest.profile_role` rows `make_user` links its users to.
+    """
+    return [str(profile_role(session, profile).id) for profile in profiles]
 
 
 @pytest.fixture
@@ -26,14 +30,14 @@ def director_headers(normal_user: User):
     return {"Authorization": f"Bearer {token}"}
 
 
-def test_folder_crud_flow(client, admin_headers):
+def test_folder_crud_flow(client, admin_headers, session):
     # 1. Create root folder
     res = client.post(
         "/api/v1/documents/folders",
         json={
             "name": "Financeiro",
             "description": "Documentos financeiros",
-            "allowed_roles": ["ADMINISTRATOR", "DIRECTOR", "MANAGER", "RESIDENT"],
+            "allowed_role_ids": _role_ids(session, "ADMINISTRATOR", "DIRECTOR", "MANAGER", "RESIDENT"),
         },
         headers=admin_headers,
     )
@@ -42,7 +46,7 @@ def test_folder_crud_flow(client, admin_headers):
     assert root_folder["name"] == "Financeiro"
     assert root_folder["parent_id"] is None
     assert root_folder["document_count"] == 0
-    assert "ADMINISTRATOR" in root_folder["allowed_roles"]
+    assert _role_ids(session, "ADMINISTRATOR")[0] in root_folder["allowed_role_ids"]
 
     folder_id = root_folder["id"]
 
@@ -53,7 +57,7 @@ def test_folder_crud_flow(client, admin_headers):
             "name": "Balancetes 2026",
             "description": "Balancetes do ano 2026",
             "parent_id": folder_id,
-            "allowed_roles": ["ADMINISTRATOR", "DIRECTOR", "MANAGER"],
+            "allowed_role_ids": _role_ids(session, "ADMINISTRATOR", "DIRECTOR", "MANAGER"),
         },
         headers=admin_headers,
     )
@@ -61,13 +65,13 @@ def test_folder_crud_flow(client, admin_headers):
     subfolder = res_sub.json()
     assert subfolder["parent_id"] == folder_id
 
-    # 3. Update folder name, parent_id and allowed_roles
+    # 3. Update folder name, parent_id and allowed_role_ids
     res_up = client.put(
         f"/api/v1/documents/folders/{subfolder['id']}",
         json={
             "name": "Balancetes 2026 Renovado",
             "description": "Documentos financeiros atualizados",
-            "allowed_roles": ["ADMINISTRATOR", "DIRECTOR"],
+            "allowed_role_ids": _role_ids(session, "ADMINISTRATOR", "DIRECTOR"),
         },
         headers=admin_headers,
     )
@@ -106,7 +110,7 @@ def test_folder_validation_errors(client, admin_headers):
         "/api/v1/documents/folders",
         json={
             "name": "Orfan Folder",
-            "parent_id": str(uuid.uuid4()),
+            "parent_id": str(uuid.uuid4()), "allowed_role_ids": [],
         },
         headers=admin_headers,
     )
@@ -115,7 +119,7 @@ def test_folder_validation_errors(client, admin_headers):
     # Create a valid folder
     res_valid = client.post(
         "/api/v1/documents/folders",
-        json={"name": "Valid Folder"},
+        json={"name": "Valid Folder", "allowed_role_ids": []},
         headers=admin_headers,
     )
     valid_id = res_valid.json()["id"]
@@ -156,7 +160,7 @@ def test_document_crud_and_search(client, admin_headers):
     # Create folder
     res_f = client.post(
         "/api/v1/documents/folders",
-        json={"name": "Atas de Reunião"},
+        json={"name": "Atas de Reunião", "allowed_role_ids": []},
         headers=admin_headers,
     )
     folder_id = res_f.json()["id"]
@@ -238,7 +242,7 @@ def test_document_versioning(client, admin_headers):
     # Create folder & document
     res_f = client.post(
         "/api/v1/documents/folders",
-        json={"name": "Regulamento Interno"},
+        json={"name": "Regulamento Interno", "allowed_role_ids": []},
         headers=admin_headers,
     )
     folder_id = res_f.json()["id"]
@@ -288,7 +292,7 @@ def test_document_download_logging(client, admin_headers):
     # Create folder & document
     res_f = client.post(
         "/api/v1/documents/folders",
-        json={"name": "Publicações"},
+        json={"name": "Publicações", "allowed_role_ids": []},
         headers=admin_headers,
     )
     folder_id = res_f.json()["id"]
@@ -316,10 +320,10 @@ def test_document_download_logging(client, admin_headers):
 
 
 def test_invalid_json_roles_and_non_existent_folder_query(client, admin_headers, session):
-    # Insert folder with malformed allowed_roles_json manually
+    # Insert folder with malformed allowed_role_ids_json manually
     folder = DocumentFolder(
         name="Bad Roles Folder",
-        allowed_roles_json="INVALID_JSON",
+        allowed_role_ids_json="INVALID_JSON",
     )
     session.add(folder)
     session.commit()

@@ -8,7 +8,7 @@ import { permissionLabel } from "./permissionLabels";
  * The backend's two anti-escalation sentences are English, ungrammatical in
  * Portuguese, and carry raw `<module>:<action>` strings an operator has no
  * reason to read. They are recognised by their prefixes — copied verbatim from
- * `user_type_service.assert_can_grant` — and re-rendered through the **same**
+ * `role_service.assert_can_grant` — and re-rendered through the **same**
  * label resolver as the checkboxes, so a permission reads the same word in the
  * matrix and in the error.
  *
@@ -19,7 +19,7 @@ export const CANNOT_GRANT_PREFIX = "You cannot grant permissions you do not hold
 export const SUPERUSER_ONLY_PREFIX =
   "These permissions are granted by is_superuser only: ";
 
-const NAME_TAKEN_DETAIL = "A user type with this name already exists";
+const NAME_TAKEN_DETAIL = "A role with this name already exists";
 
 const labelled = (list: string, t: TFunction): string =>
   list
@@ -43,7 +43,7 @@ export const friendlyPermissionError = (err: unknown, t: TFunction): string => {
       });
     }
     if (detail === NAME_TAKEN_DETAIL) {
-      return t("groups.errors.nameTaken");
+      return t("roles.errors.nameTaken");
     }
   }
 

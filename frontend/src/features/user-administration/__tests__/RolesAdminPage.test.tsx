@@ -4,30 +4,26 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type React from "react";
-import GroupsAdminPage from "../pages/GroupsAdminPage";
+import RolesAdminPage from "../pages/RolesAdminPage";
 import apiClient from "../../../api/client";
 import * as AuthHook from "../context/AuthContext";
-import { UserRole } from "../../../types/auth";
 import { CANNOT_GRANT_PREFIX } from "../utils/permissionErrors";
 
-/** `/admin/groups` (APRAS-48 §6.1, ER-1). */
+/** `/admin/roles` (APRAS-48 §6.1, ER-1). */
 vi.mock("../../../api/client", () => ({
   default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() },
 }));
 
-const GROUPS = [
+const ROLES = [
   {
     id: "g-custom",
     name: "Conselho Fiscal",
-    allowed_menus: ["tasks"],
     role: null,
     permissions: ["finance:read", "finance:summary_read"],
   },
   {
     id: "g-role",
     name: "Diretor (papel)",
-    allowed_menus: [],
-    role: UserRole.DIRECTOR,
     permissions: ["tasks:read"],
   },
 ];
@@ -37,17 +33,15 @@ const USERS = [
     id: "u-1",
     email: "a@test.com",
     full_name: "Ana",
-    role: UserRole.RESIDENT,
     is_active: true,
-    user_types: [GROUPS[0]],
+    roles: [ROLES[0]],
   },
   {
     id: "u-2",
     email: "b@test.com",
     full_name: "Bruno",
-    role: UserRole.RESIDENT,
     is_active: true,
-    user_types: [],
+    roles: [],
   },
 ];
 
@@ -72,21 +66,21 @@ beforeEach(() => {
   vi.spyOn(AuthHook, "useAuth").mockReturnValue({
     isAuthenticated: true,
     isLoading: false,
-    user: { id: "admin", role: UserRole.ADMINISTRATOR } as never,
+    user: { id: "admin", is_superuser: true } as never,
     login: vi.fn() as never,
     logout: vi.fn(),
   });
   mockedGet.mockImplementation(((url: string) => {
-    if (url === "/user-types/") return Promise.resolve({ data: GROUPS });
+    if (url === "/roles/") return Promise.resolve({ data: ROLES });
     if (url === "/users/") return Promise.resolve({ data: USERS });
     return Promise.resolve({ data: [] });
   }) as never);
 });
 
-const renderPage = () => render(<GroupsAdminPage />, { wrapper: wrapper() });
+const renderPage = () => render(<RolesAdminPage />, { wrapper: wrapper() });
 
-describe("GroupsAdminPage", () => {
-  it("lists groups with their permission and member counts", async () => {
+describe("RolesAdminPage", () => {
+  it("lists roles with their permission and member counts", async () => {
     renderPage();
 
     const row = (await screen.findByText("Conselho Fiscal")).closest("tr");
@@ -101,38 +95,57 @@ describe("GroupsAdminPage", () => {
     expect(roleRow).toHaveTextContent("0");
   });
 
-  it("marks role-linked groups and offers no delete control", async () => {
+  it("offers a delete control on every row, historically named or not", async () => {
+    // The inversion (IAM F5, APRAS-49 §13): the `role` column that made six
+    // rows undeletable is gone, and with it the doctrine of "role-linked
+    // types that cannot be deleted or renamed". Deleting `Diretor (papel)`
+    // strips every director, and that is the operator's prerogative — so
+    // there is no badge to show and no button to withhold.
     renderPage();
 
     await screen.findByText("Diretor (papel)");
-    expect(screen.getByText("Grupo de papel (legado)")).toBeInTheDocument();
+    expect(screen.queryByText("Papel legado")).toBeNull();
     expect(
-      screen.queryByRole("button", { name: "Excluir Diretor (papel)" }),
-    ).toBeNull();
-    // The ordinary group keeps its delete control.
+      screen.getByRole("button", { name: "Excluir Diretor (papel)" }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Excluir Conselho Fiscal" }),
     ).toBeInTheDocument();
   });
 
-  it("creates a group", async () => {
+  it("counts an absent bundle as zero permissions", async () => {
+    // `permissions` is optional on `Role` so every pre-F2 fixture keeps
+    // type-checking; the listing must read its absence as an empty bundle.
+    mockedGet.mockImplementation(((url: string) => {
+      if (url === "/roles/")
+        return Promise.resolve({ data: [{ id: "g-bare", name: "Sem bundle" }] });
+      if (url === "/users/") return Promise.resolve({ data: [] });
+      return Promise.resolve({ data: [] });
+    }) as never);
+    renderPage();
+
+    await screen.findByText("Sem bundle");
+    const row = screen.getByText("Sem bundle").closest("tr")!;
+    expect(row.textContent).toContain("0");
+  });
+
+  it("creates a role", async () => {
     mockedPost.mockResolvedValue({ data: { id: "g-new" } } as never);
     renderPage();
     await screen.findByText("Conselho Fiscal");
 
-    await userEvent.type(screen.getByLabelText("Nome do grupo"), "Zeladoria");
+    await userEvent.type(screen.getByLabelText("Nome do papel"), "Zeladoria");
     await userEvent.click(screen.getByRole("button", { name: "Criar" }));
 
     await waitFor(() =>
-      expect(mockedPost).toHaveBeenCalledWith("/user-types/", {
+      expect(mockedPost).toHaveBeenCalledWith("/roles/", {
         name: "Zeladoria",
         permissions: [],
-        allowed_menus: [],
       }),
     );
   });
 
-  it("clones a group with its permission bundle pre-filled", async () => {
+  it("clones a role with its permission bundle pre-filled", async () => {
     mockedPost.mockResolvedValue({ data: { id: "g-clone" } } as never);
     renderPage();
     await screen.findByText("Conselho Fiscal");
@@ -141,17 +154,16 @@ describe("GroupsAdminPage", () => {
       screen.getByRole("button", { name: "Clonar Conselho Fiscal" }),
     );
 
-    const input = screen.getByLabelText("Nome do grupo") as HTMLInputElement;
+    const input = screen.getByLabelText("Nome do papel") as HTMLInputElement;
     expect(input.value).toBe("Conselho Fiscal (cópia)");
 
     await userEvent.click(screen.getByRole("button", { name: "Criar" }));
 
     await waitFor(() =>
-      expect(mockedPost).toHaveBeenCalledWith("/user-types/", {
+      expect(mockedPost).toHaveBeenCalledWith("/roles/", {
         name: "Conselho Fiscal (cópia)",
         // The source's bundle, verbatim; the clone carries no `role`.
         permissions: ["finance:read", "finance:summary_read"],
-        allowed_menus: [],
       }),
     );
   });
@@ -166,7 +178,7 @@ describe("GroupsAdminPage", () => {
     renderPage();
     await screen.findByText("Conselho Fiscal");
 
-    await userEvent.type(screen.getByLabelText("Nome do grupo"), "Zeladoria");
+    await userEvent.type(screen.getByLabelText("Nome do papel"), "Zeladoria");
     await userEvent.click(screen.getByRole("button", { name: "Criar" }));
 
     const alert = await screen.findByRole("alert");
@@ -175,7 +187,7 @@ describe("GroupsAdminPage", () => {
     expect(alert.textContent).not.toContain(CANNOT_GRANT_PREFIX);
   });
 
-  it("confirms before deleting a group, and does nothing when cancelled", async () => {
+  it("confirms before deleting a role, and does nothing when cancelled", async () => {
     const confirm = vi
       .spyOn(window, "confirm")
       .mockReturnValue(false);
@@ -187,14 +199,14 @@ describe("GroupsAdminPage", () => {
     );
 
     expect(confirm).toHaveBeenCalledWith(
-      "Excluir este grupo? Os usuários perdem as permissões que ele concede.",
+      "Excluir este papel? Os usuários perdem as permissões que ele concede.",
     );
-    // Deleting a group revokes permissions from every member at once, so a
+    // Deleting a role revokes permissions from every member at once, so a
     // declined confirmation must not reach the API at all.
     expect(mockedDelete).not.toHaveBeenCalled();
   });
 
-  it("deletes the group once the confirmation is accepted", async () => {
+  it("deletes the role once the confirmation is accepted", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
     mockedDelete.mockResolvedValue({ data: undefined } as never);
     renderPage();
@@ -205,16 +217,16 @@ describe("GroupsAdminPage", () => {
     );
 
     await waitFor(() =>
-      expect(mockedDelete).toHaveBeenCalledWith("/user-types/g-custom"),
+      expect(mockedDelete).toHaveBeenCalledWith("/roles/g-custom"),
     );
   });
 
-  it("shows a friendly message when deleting a role-linked group is refused", async () => {
+  it("shows a friendly message when deleting a role-linked role is refused", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
     mockedDelete.mockRejectedValue({
       response: {
         status: 403,
-        data: { detail: "Role-linked user types cannot be deleted" },
+        data: { detail: "Role-linked roles cannot be deleted" },
       },
     } as never);
     renderPage();
@@ -225,18 +237,18 @@ describe("GroupsAdminPage", () => {
     );
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Role-linked user types cannot be deleted",
+      "Role-linked roles cannot be deleted",
     );
   });
 
-  it("renders the empty state when there is no group at all", async () => {
+  it("renders the empty state when there is no role at all", async () => {
     mockedGet.mockImplementation(((url: string) =>
-      url === "/user-types/"
+      url === "/roles/"
         ? Promise.resolve({ data: [] })
         : Promise.resolve({ data: [] })) as never);
 
     renderPage();
 
-    expect(await screen.findByText("Nenhum grupo ainda.")).toBeInTheDocument();
+    expect(await screen.findByText("Nenhum papel ainda.")).toBeInTheDocument();
   });
 });

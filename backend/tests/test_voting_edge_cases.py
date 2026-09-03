@@ -4,6 +4,9 @@ import uuid
 from datetime import datetime, timedelta
 
 import pytest
+from fastapi.testclient import TestClient
+from sqlmodel import Session, select
+
 from app.core.exceptions import (
     AnonymousAssemblyError,
     ForbiddenError,
@@ -18,7 +21,6 @@ from app.models.enums import (
     AssemblyStatus,
     BallotRejectionReason,
     LotAssociationType,
-    UserRole,
     VoteKind,
     VoteStatus,
     VoteType,
@@ -26,8 +28,6 @@ from app.models.enums import (
 from app.models.voting import BallotRejection
 from app.schemas.voting import VoteCreate, VoteOptionCreate, VoteUpdate
 from app.services import voting_service
-from fastapi.testclient import TestClient
-from sqlmodel import Session, select
 from tests.voting_helpers import (
     auth_headers,
     link_user_to_lot,
@@ -55,7 +55,7 @@ def _cast(session, user, vote, label, lot=None):
 
 
 def test_resident_cannot_create_a_poll(session: Session):
-    resident = make_user(session, UserRole.RESIDENT)
+    resident = make_user(session, "RESIDENT")
     vote_in = VoteCreate(
         kind=VoteKind.ENQUETE,
         title="Enquete proibida",
@@ -68,8 +68,8 @@ def test_resident_cannot_create_a_poll(session: Session):
 
 
 def test_resident_without_lot_cannot_read_either_tally(session: Session):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
-    stranger = make_user(session, UserRole.RESIDENT)
+    admin = make_user(session, "ADMINISTRATOR")
+    stranger = make_user(session, "RESIDENT")
     assembly = make_assembly(session, admin)
     assembly_vote = make_vote(session, admin, assembly=assembly)
     poll = make_vote(session, admin, kind=VoteKind.ENQUETE)
@@ -81,8 +81,8 @@ def test_resident_without_lot_cannot_read_either_tally(session: Session):
 
 
 def test_resident_with_lot_can_read_the_tally(session: Session):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
-    owner = make_user(session, UserRole.RESIDENT)
+    admin = make_user(session, "ADMINISTRATOR")
+    owner = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, owner, lot)
     assembly = make_assembly(session, admin)
@@ -96,7 +96,7 @@ def test_resident_with_lot_can_read_the_tally(session: Session):
 def test_a_link_that_has_not_started_yet_does_not_grant_eligibility(
     session: Session,
 ):
-    owner = make_user(session, UserRole.RESIDENT)
+    owner = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     link = link_user_to_lot(session, owner, lot)
     link.start_date = datetime.utcnow() + timedelta(days=5)
@@ -108,7 +108,7 @@ def test_a_link_that_has_not_started_yet_does_not_grant_eligibility(
 
 
 def test_expired_link_does_not_grant_eligibility(session: Session):
-    owner = make_user(session, UserRole.RESIDENT)
+    owner = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(
         session, owner, lot, end_date=datetime.utcnow() - timedelta(days=1)
@@ -118,7 +118,7 @@ def test_expired_link_does_not_grant_eligibility(session: Session):
 
 
 def test_deleted_lot_is_not_eligible(session: Session):
-    owner = make_user(session, UserRole.RESIDENT)
+    owner = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, owner, lot)
     lot.is_deleted = True
@@ -129,16 +129,16 @@ def test_deleted_lot_is_not_eligible(session: Session):
 
 
 def test_poll_my_ballot_for_a_user_without_any_lot(session: Session):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
-    stranger = make_user(session, UserRole.RESIDENT)
+    admin = make_user(session, "ADMINISTRATOR")
+    stranger = make_user(session, "RESIDENT")
     poll = make_vote(session, admin, kind=VoteKind.ENQUETE)
 
     assert voting_service.get_my_ballots(session, stranger, poll) == []
 
 
 def test_guest_ballot_attempt_is_logged_as_role_forbidden(session: Session):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
-    guest = make_user(session, UserRole.GUEST)
+    admin = make_user(session, "ADMINISTRATOR")
+    guest = make_user(session, "GUEST")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, guest, lot)
     assembly = make_assembly(session, admin)
@@ -152,8 +152,8 @@ def test_guest_ballot_attempt_is_logged_as_role_forbidden(session: Session):
 
 
 def test_assembly_ballot_without_lot_or_with_unknown_lot(session: Session):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
-    owner = make_user(session, UserRole.RESIDENT)
+    admin = make_user(session, "ADMINISTRATOR")
+    owner = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, owner, lot)
     assembly = make_assembly(session, admin)
@@ -172,8 +172,8 @@ def test_assembly_ballot_without_lot_or_with_unknown_lot(session: Session):
 
 
 def test_assembly_retraction_without_lot_id(session: Session):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
-    owner = make_user(session, UserRole.RESIDENT)
+    admin = make_user(session, "ADMINISTRATOR")
+    owner = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, owner, lot)
     assembly = make_assembly(session, admin)
@@ -185,8 +185,8 @@ def test_assembly_retraction_without_lot_id(session: Session):
 
 
 def test_poll_ballot_without_any_active_lot_link_is_logged(session: Session):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
-    stranger = make_user(session, UserRole.RESIDENT)
+    admin = make_user(session, "ADMINISTRATOR")
+    stranger = make_user(session, "RESIDENT")
     poll = make_vote(session, admin, kind=VoteKind.ENQUETE)
 
     with pytest.raises(NoActiveLotLinkError):
@@ -197,8 +197,8 @@ def test_poll_ballot_without_any_active_lot_link_is_logged(session: Session):
 
 
 def test_cast_at_is_forced_to_increase_per_voter_key(session: Session):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
-    owner = make_user(session, UserRole.RESIDENT)
+    admin = make_user(session, "ADMINISTRATOR")
+    owner = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, owner, lot)
     assembly = make_assembly(session, admin)
@@ -218,7 +218,7 @@ def test_cast_at_is_forced_to_increase_per_voter_key(session: Session):
 
 
 def test_tally_of_a_closed_vote_without_snapshot_is_materialised(session: Session):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
+    admin = make_user(session, "ADMINISTRATOR")
     assembly = make_assembly(session, admin)
     vote = make_vote(session, admin, assembly=assembly, status=VoteStatus.CLOSED)
 
@@ -235,7 +235,7 @@ def test_tally_of_a_closed_vote_without_snapshot_is_materialised(session: Sessio
 def test_assembly_and_vote_not_found_return_404(
     client: TestClient, session: Session
 ):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
+    admin = make_user(session, "ADMINISTRATOR")
     headers = auth_headers(client, admin)
     missing = uuid.uuid4()
 
@@ -246,7 +246,7 @@ def test_assembly_and_vote_not_found_return_404(
 def test_assembly_listing_and_release_of_the_agenda(
     client: TestClient, session: Session
 ):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
+    admin = make_user(session, "ADMINISTRATOR")
     make_assembly(session, admin, status=AssemblyStatus.DRAFT, title="AGE 2026")
     headers = auth_headers(client, admin)
 
@@ -267,7 +267,7 @@ def test_assembly_listing_and_release_of_the_agenda(
 def test_closing_an_already_closed_assembly_returns_400(
     client: TestClient, session: Session
 ):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
+    admin = make_user(session, "ADMINISTRATOR")
     assembly = make_assembly(session, admin, status=AssemblyStatus.CLOSED)
 
     response = client.post(
@@ -279,7 +279,7 @@ def test_closing_an_already_closed_assembly_returns_400(
 def test_vote_listing_filters_by_kind_and_status(
     client: TestClient, session: Session
 ):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
+    admin = make_user(session, "ADMINISTRATOR")
     assembly = make_assembly(session, admin)
     make_vote(session, admin, assembly=assembly)
     make_vote(session, admin, kind=VoteKind.ENQUETE, status=VoteStatus.CLOSED)
@@ -293,7 +293,7 @@ def test_vote_listing_filters_by_kind_and_status(
 
 
 def test_updating_a_vote_replaces_its_options(session: Session):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
+    admin = make_user(session, "ADMINISTRATOR")
     assembly = make_assembly(session, admin)
     vote = make_vote(session, admin, assembly=assembly)
 
@@ -314,7 +314,7 @@ def test_updating_a_vote_replaces_its_options(session: Session):
 def test_updating_a_closed_vote_or_making_an_assembly_anonymous_fails(
     session: Session,
 ):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
+    admin = make_user(session, "ADMINISTRATOR")
     assembly = make_assembly(session, admin)
     vote = make_vote(session, admin, assembly=assembly)
 
@@ -336,8 +336,8 @@ def test_updating_a_closed_vote_or_making_an_assembly_anonymous_fails(
 
 
 def test_eligibility_management_rejects_unknown_lot_or_user(session: Session):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
-    spouse = make_user(session, UserRole.RESIDENT)
+    admin = make_user(session, "ADMINISTRATOR")
+    spouse = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
 
     with pytest.raises(LotNotFoundError):
@@ -355,7 +355,7 @@ def test_eligibility_management_rejects_unknown_lot_or_user(session: Session):
 
 
 def test_minutes_of_an_assembly_without_votes(session: Session):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
+    admin = make_user(session, "ADMINISTRATOR")
     assembly = make_assembly(session, admin, status=AssemblyStatus.CLOSED)
 
     assert voting_service.get_delinquency_barred_lots(session, assembly) == []
@@ -364,8 +364,8 @@ def test_minutes_of_an_assembly_without_votes(session: Session):
 
 
 def test_poll_tally_attributes_by_voter_name(session: Session):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
-    resident = make_user(session, UserRole.RESIDENT, full_name="Beltrano")
+    admin = make_user(session, "ADMINISTRATOR")
+    resident = make_user(session, "RESIDENT", full_name="Beltrano")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, resident, lot, LotAssociationType.INQUILINO)
     poll = make_vote(session, admin, kind=VoteKind.ENQUETE)
@@ -381,7 +381,7 @@ def test_poll_tally_attributes_by_voter_name(session: Session):
 def test_guest_cannot_browse_the_voting_surface(
     client: TestClient, session: Session
 ):
-    guest = make_user(session, UserRole.GUEST)
+    guest = make_user(session, "GUEST")
     headers = auth_headers(client, guest)
 
     assert client.get("/api/v1/votes/", headers=headers).status_code == 403
@@ -391,8 +391,8 @@ def test_guest_cannot_browse_the_voting_surface(
 def test_eligible_lots_endpoint_lists_the_units_the_caller_may_vote_for(
     client: TestClient, session: Session
 ):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
-    owner = make_user(session, UserRole.RESIDENT)
+    admin = make_user(session, "ADMINISTRATOR")
+    owner = make_user(session, "RESIDENT")
     lot_b = make_lot(session, "B", "2")
     lot_a = make_lot(session, "A", "1")
     make_lot(session, "C", "3")
@@ -429,8 +429,8 @@ def test_patch_assembly_cannot_close_it_and_unlock_the_minutes(
     result and the per-unit attribution of a vote that was still OPEN —
     and left `closed_at` NULL with no frozen snapshot.
     """
-    admin = make_user(session, UserRole.ADMINISTRATOR)
-    owner = make_user(session, UserRole.RESIDENT)
+    admin = make_user(session, "ADMINISTRATOR")
+    owner = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, owner, lot)
     assembly = make_assembly(session, admin)
@@ -460,7 +460,7 @@ def test_patch_assembly_cannot_close_it_and_unlock_the_minutes(
 
 def test_patch_assembly_still_opens_a_draft(client: TestClient, session: Session):
     """Only CLOSED is refused — DRAFT → OPEN stays a normal PATCH."""
-    admin = make_user(session, UserRole.ADMINISTRATOR)
+    admin = make_user(session, "ADMINISTRATOR")
     assembly = make_assembly(session, admin, status=AssemblyStatus.DRAFT)
 
     response = client.patch(
@@ -476,8 +476,8 @@ def test_patch_assembly_still_opens_a_draft(client: TestClient, session: Session
 
 def test_minutes_always_read_the_frozen_snapshot(session: Session):
     """A vote reaching the minutes without a snapshot is frozen, not recomputed."""
-    admin = make_user(session, UserRole.ADMINISTRATOR)
-    owner = make_user(session, UserRole.RESIDENT)
+    admin = make_user(session, "ADMINISTRATOR")
+    owner = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, owner, lot)
     assembly = make_assembly(session, admin)
@@ -505,8 +505,8 @@ def test_repeated_option_in_one_ballot_does_not_inflate_the_count(
     was accepted and counted five times, breaking "um voto por lote" in the
     published result and in the minutes.
     """
-    admin = make_user(session, UserRole.ADMINISTRATOR)
-    owner = make_user(session, UserRole.RESIDENT)
+    admin = make_user(session, "ADMINISTRATOR")
+    owner = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, owner, lot)
     assembly = make_assembly(session, admin)
@@ -533,8 +533,8 @@ def test_repeated_option_in_one_ballot_does_not_inflate_the_count(
 
 def test_stored_duplicate_selections_are_counted_once_on_recount(session: Session):
     """Rows already carrying duplicates cannot skew a recount either."""
-    admin = make_user(session, UserRole.ADMINISTRATOR)
-    owner = make_user(session, UserRole.RESIDENT)
+    admin = make_user(session, "ADMINISTRATOR")
+    owner = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, owner, lot)
     assembly = make_assembly(session, admin)

@@ -3,29 +3,32 @@
 import uuid
 
 import pytest
+from sqlmodel import Session
+
 from app.core.exceptions import (
     LotNotFoundError,
     PackageAccessForbiddenError,
     PackageAlreadyPickedUpError,
     PackageNotFoundError,
 )
-from app.models.enums import LotAssociationType, PackageStatus, UserRole
+from app.models.enums import LotAssociationType, PackageStatus
 from app.models.resident import Resident
 from app.models.user import User
 from app.schemas.lot import LotCreate, UserLotLinkCreate
 from app.schemas.package import PackageCreate, PackagePickup
 from app.services.lot_service import LotService
 from app.services.package_service import PackageService
-from sqlmodel import Session
+from tests.conftest import make_user
 
 
-def _make_user(session: Session, role: UserRole, cpf: str, email: str) -> User:
-    user = User(
+def _make_user(session: Session, role: str, cpf: str, email: str) -> User:
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email=email,
         full_name=f"User {email}",
         hashed_password="hash",
-        role=role,
+        profile=role,
         cpf=cpf,
     )
     session.add(user)
@@ -36,17 +39,17 @@ def _make_user(session: Session, role: UserRole, cpf: str, email: str) -> User:
 
 @pytest.fixture
 def resident_user(session: Session) -> User:
-    return _make_user(session, UserRole.RESIDENT, "22233344456", "resident_pkg@test.com")
+    return _make_user(session, "RESIDENT", "22233344456", "resident_pkg@test.com")
 
 
 @pytest.fixture
 def guest_user(session: Session) -> User:
-    return _make_user(session, UserRole.GUEST, "33344455567", "guest_pkg@test.com")
+    return _make_user(session, "GUEST", "33344455567", "guest_pkg@test.com")
 
 
 @pytest.fixture
 def porteiro_user(session: Session) -> User:
-    return _make_user(session, UserRole.PORTEIRO, "44455566678", "porteiro_pkg@test.com")
+    return _make_user(session, "PORTEIRO", "44455566678", "porteiro_pkg@test.com")
 
 
 def test_create_package_success(session: Session, normal_user: User):

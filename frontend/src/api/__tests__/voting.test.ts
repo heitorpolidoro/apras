@@ -1,9 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  getAssembly,
-  getVote,
-  updateAssembly,
-} from "../voting";
+import { getAssembly, getVote, updateAssembly,  } from "../voting";
 import apiClient from "../client";
 
 vi.mock("../client", () => ({

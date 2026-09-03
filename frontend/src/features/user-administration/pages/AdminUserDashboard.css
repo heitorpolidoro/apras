@@ -23,13 +23,13 @@
   flex-wrap: wrap;
 }
 
-.filter-group {
+.filter-role {
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-.filter-group select {
+.filter-role select {
   padding: 0.5rem;
   border: 1px solid #ccc;
   border-radius: 4px;

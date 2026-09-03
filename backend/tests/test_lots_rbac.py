@@ -1,24 +1,27 @@
 """RBAC security unit and integration tests for Lot management endpoints."""
 
 import uuid
+
 import pytest
+from fastapi.testclient import TestClient
+from sqlmodel import Session
+
 from app.core.security import create_access_token, get_password_hash
-from app.models.enums import UserRole
 from app.models.user import User
 from app.schemas.lot import LotCreate
 from app.services.lot_service import LotService
-from fastapi.testclient import TestClient
-from sqlmodel import Session
+from tests.conftest import make_user
 
 
 @pytest.fixture
 def director_user(session: Session) -> User:
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email="director@test.com",
         full_name="Director User",
         hashed_password=get_password_hash("password"),
-        role=UserRole.DIRECTOR,
+        profile="DIRECTOR",
         cpf="68093836069",
     )
     session.add(user)
@@ -28,12 +31,13 @@ def director_user(session: Session) -> User:
 
 @pytest.fixture
 def manager_user(session: Session) -> User:
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email="manager@test.com",
         full_name="Manager User",
         hashed_password=get_password_hash("password"),
-        role=UserRole.MANAGER,
+        profile="MANAGER",
         cpf="85638204090",
     )
     session.add(user)
@@ -43,12 +47,13 @@ def manager_user(session: Session) -> User:
 
 @pytest.fixture
 def guest_user(session: Session) -> User:
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email="guest@test.com",
         full_name="Guest User",
         hashed_password=get_password_hash("password"),
-        role=UserRole.GUEST,
+        profile="GUEST",
         cpf="48574698083",
     )
     session.add(user)

@@ -7,7 +7,6 @@ from app.core import security
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.db import get_session
-from app.models.enums import UserRole
 from app.models.tenant import DEFAULT_TENANT_ID, UserTenantLink
 from app.models.user import User
 from app.schemas.token import Token
@@ -55,8 +54,11 @@ def signup(
         full_name=user_in.full_name,
         hashed_password=security.get_password_hash(user_in.password),
         cpf=user_in.cpf,
-        # Force role
-        role=UserRole.GUEST,
+        # Zero roles and inactive (IAM F5, APRAS-49 §8.3). Signup used to
+        # force the `GUEST` enum value *and* `is_active=False`, which said the same
+        # thing twice: no permissions until an administrator acts. With the
+        # enum gone, a user with no role row holds nothing, so the flag alone
+        # carries the whole rule.
         is_active=False,  # Wait for approval
     )
     session.add(db_obj)

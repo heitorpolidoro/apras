@@ -1,11 +1,7 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import LotVoterEligibilityPanel from "../LotVoterEligibilityPanel";
-import {
-  useAddLotVoterEligibility,
-  useLotVoterEligibility,
-  useRemoveLotVoterEligibility,
-} from "../../hooks/useVoting";
+import { useAddLotVoterEligibility, useLotVoterEligibility, useRemoveLotVoterEligibility,  } from "../../hooks/useVoting";
 
 vi.mock("../../hooks/useVoting", () => ({
   useAddLotVoterEligibility: vi.fn(),

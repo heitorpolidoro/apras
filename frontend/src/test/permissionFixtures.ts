@@ -1,20 +1,24 @@
 import type { MyPermissions } from "../types/permissions";
 
 /**
- * The permission bundle each legacy `UserRole` holds today, as a **test
- * fixture** (APRAS-48 §8.2).
+ * The permission bundle each legacy profile holds, as a **test fixture**
+ * (APRAS-48 §8.2, amended by APRAS-49 §3.0).
  *
- * It is a verbatim snapshot of the backend's `LEGACY_ROLE_PERMISSIONS`
- * (`app/core/permissions.py`) at the IAM F4 merge base, taken so that the
- * route- and menu-gating tests parametrised over the six roles keep asserting
- * the *same* accesses they asserted when they were role-shaped — i.e. so the
- * §5.2 delta column is measured rather than assumed.
+ * It is a verbatim snapshot of the backend's `LEGACY_ROLE_PERMISSIONS` at the
+ * IAM F4 merge base, taken so that the route- and menu-gating tests
+ * parametrised over the six roles keep asserting the *same* accesses they
+ * asserted when they were role-shaped.
  *
- * It is deliberately **not** production code: `LEGACY_ROLE_PERMISSIONS` lives
- * only in the backend and IAM F5 deletes it, at which point this fixture goes
- * with the tests that need it. Excluded from coverage (`src/test/**`).
+ * IAM F5 deleted `LEGACY_ROLE_PERMISSIONS` from production, so its last
+ * recording now lives at `backend/tests/data/legacy_role_bundles.json`; the
+ * `NEW_TIER` union below mirrors what migration `0033` wrote onto the six
+ * historically-named rows, which is why this fixture keeps matching what
+ * `/permissions/me` really answers.
+ *
+ * It is deliberately **not** production code, and it is excluded from
+ * coverage (`src/test/**`).
  */
-export const PERMISSIONS_BY_ROLE: Record<string, string[]> = {
+const LEGACY_BUNDLES: Record<string, string[]> = {
   "ADMINISTRATOR": [
     "access_control:device_create",
     "access_control:device_regenerate_key",
@@ -149,10 +153,10 @@ export const PERMISSIONS_BY_ROLE: Record<string, string[]> = {
     "uploads:photo_create",
     "uploads:photo_read",
     "uploads:reject",
-    "user_types:create",
-    "user_types:delete",
-    "user_types:read",
-    "user_types:update",
+    "roles:create",
+    "roles:delete",
+    "roles:read",
+    "roles:update",
     "users:read",
     "users:update",
     "users:update_contact",
@@ -300,7 +304,7 @@ export const PERMISSIONS_BY_ROLE: Record<string, string[]> = {
     "uploads:photo_create",
     "uploads:photo_read",
     "uploads:reject",
-    "user_types:read",
+    "roles:read",
     "users:read",
     "visitors:create",
     "visitors:manage_any_lot",
@@ -384,7 +388,7 @@ export const PERMISSIONS_BY_ROLE: Record<string, string[]> = {
     "uploads:delete",
     "uploads:photo_create",
     "uploads:photo_read",
-    "user_types:read",
+    "roles:read",
     "users:read",
     "users:update_contact",
     "visitors:create",
@@ -429,7 +433,7 @@ export const PERMISSIONS_BY_ROLE: Record<string, string[]> = {
     "uploads:delete",
     "uploads:photo_create",
     "uploads:photo_read",
-    "user_types:read",
+    "roles:read",
     "users:read",
     "visitors:create",
     "visitors:read",
@@ -475,7 +479,7 @@ export const PERMISSIONS_BY_ROLE: Record<string, string[]> = {
     "uploads:delete",
     "uploads:photo_create",
     "uploads:photo_read",
-    "user_types:read",
+    "roles:read",
     "users:read",
     "visitors:create",
     "visitors:read",
@@ -514,13 +518,39 @@ export const PERMISSIONS_BY_ROLE: Record<string, string[]> = {
     "uploads:delete",
     "uploads:photo_create",
     "uploads:photo_read",
-    "user_types:read",
+    "roles:read",
     "users:read",
     "visitors:create",
     "visitors:read",
     "visitors:update"
   ]
 };
+
+/**
+ * The three permissions IAM F5 minted for the two tiers the retired enum
+ * compiled into `if` statements (APRAS-49 §3.0), and which migration `0033`
+ * backfilled onto the six historically-named rows.
+ *
+ * `MANAGER` deliberately gets neither task permission and nobody else gets
+ * the occurrence one: those two facts *are* the legacy tiers, now stored as
+ * data.
+ */
+export const NEW_TIER: Record<string, string[]> = {
+  ADMINISTRATOR: ["tasks:read_all", "tasks:update_any"],
+  DIRECTOR: ["tasks:read_all", "tasks:update_any"],
+  RESIDENT: ["tasks:read_all", "tasks:update_any"],
+  PORTEIRO: ["tasks:read_all", "tasks:update_any"],
+  MANAGER: ["occurrences:read_assigned"],
+  GUEST: [],
+};
+
+/** `LEGACY_BUNDLES` union `NEW_TIER`: what a profile really holds after F5. */
+export const PERMISSIONS_BY_ROLE: Record<string, string[]> = Object.fromEntries(
+  Object.entries(LEGACY_BUNDLES).map(([profile, permissions]) => [
+    profile,
+    [...new Set([...permissions, ...(NEW_TIER[profile] ?? [])])].sort(),
+  ]),
+);
 
 /** The `/permissions/me` payload a user of `role` would receive. */
 export const permissionsOf = (
@@ -531,11 +561,22 @@ export const permissionsOf = (
   permissions: [...new Set([...(PERMISSIONS_BY_ROLE[role] ?? []), ...extra])].sort(),
 });
 
-/** A ready-made `useMyPermissions()` return value for a settled query. */
-export const settledPermissions = (permissions: readonly string[]) => ({
+/**
+ * A ready-made `useMyPermissions()` return value for a settled query.
+ *
+ * `landing_path` (IAM F5, APRAS-49 §10.4) rides on this endpoint because it
+ * follows the **effective** identity: landing is a preference, not
+ * authorization, so simulating a porteiro shows the porteiro's landing. It
+ * defaults to `null` — most callers have no opinion about where to land.
+ */
+export const settledPermissions = (
+  permissions: readonly string[],
+  landing_path: string | null = null,
+) => ({
   data: {
     tenant_id: "00000000-0000-0000-0000-000000000001",
     permissions: [...permissions],
+    landing_path,
   },
   isPending: false,
   isError: false,
@@ -547,6 +588,10 @@ export const settledPermissions = (permissions: readonly string[]) => ({
  * `PERMISSIONS_BY_ROLE[ADMINISTRATOR]`, which is the *legacy* bundle.
  */
 export const ALL_PERMISSIONS: string[] = [
+  // IAM F5 (APRAS-49 §3.0): 156 -> 159.
+  "occurrences:read_assigned",
+  "tasks:read_all",
+  "tasks:update_any",
   "access_control:device_create",
   "access_control:device_regenerate_key",
   "access_control:device_update_status",
@@ -681,10 +726,10 @@ export const ALL_PERMISSIONS: string[] = [
   "uploads:photo_create",
   "uploads:photo_read",
   "uploads:reject",
-  "user_types:create",
-  "user_types:delete",
-  "user_types:read",
-  "user_types:update",
+  "roles:create",
+  "roles:delete",
+  "roles:read",
+  "roles:update",
   "users:read",
   "users:update",
   "users:update_contact",

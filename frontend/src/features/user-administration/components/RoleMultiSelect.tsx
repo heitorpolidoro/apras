@@ -3,22 +3,22 @@ import { useTranslation } from "react-i18next";
 import { ChevronDown } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { Badge } from "../../../components/ui/badge";
-import type { UserType } from "../../../types/auth";
+import type { Role } from "../../../types/auth";
 
-interface UserTypeMultiSelectProps {
-  userTypes: UserType[];
+interface RoleMultiSelectProps {
+  roles: Role[];
   selectedIds: string[];
   onChange: (ids: string[]) => void;
 }
 
 /**
- * Lightweight multi-select checkbox list for UserTypes, built on the
+ * Lightweight multi-select checkbox list for Roles, built on the
  * existing Button/Badge primitives. There is no multi-select primitive in
  * `components/ui` yet, so this is scoped to the admin role simulation
  * feature rather than added as a shared primitive.
  */
-const UserTypeMultiSelect: React.FC<UserTypeMultiSelectProps> = ({
-  userTypes,
+const RoleMultiSelect: React.FC<RoleMultiSelectProps> = ({
+  roles,
   selectedIds,
   onChange,
 }) => {
@@ -48,8 +48,8 @@ const UserTypeMultiSelect: React.FC<UserTypeMultiSelectProps> = ({
     }
   };
 
-  const selectedUserTypes = userTypes.filter((userType) =>
-    selectedIds.includes(userType.id),
+  const selectedRoles = roles.filter((role) =>
+    selectedIds.includes(role.id),
   );
 
   return (
@@ -64,14 +64,14 @@ const UserTypeMultiSelect: React.FC<UserTypeMultiSelectProps> = ({
         className="w-full justify-between font-normal"
       >
         <span className="flex flex-wrap gap-1 items-center overflow-hidden">
-          {selectedUserTypes.length === 0 ? (
+          {selectedRoles.length === 0 ? (
             <span className="text-muted-foreground">
-              {t("simulation.userTypesPlaceholder")}
+              {t("simulation.rolesPlaceholder")}
             </span>
           ) : (
-            selectedUserTypes.map((userType) => (
-              <Badge key={userType.id} variant="secondary">
-                {userType.name}
+            selectedRoles.map((role) => (
+              <Badge key={role.id} variant="secondary">
+                {role.name}
               </Badge>
             ))
           )}
@@ -85,23 +85,23 @@ const UserTypeMultiSelect: React.FC<UserTypeMultiSelectProps> = ({
           aria-multiselectable="true"
           className="absolute left-0 z-50 mt-1 w-full min-w-[14rem] max-h-64 overflow-y-auto rounded-md border border-input bg-popover p-1 shadow-md"
         >
-          {userTypes.length === 0 ? (
+          {roles.length === 0 ? (
             <li className="px-2 py-1.5 text-xs text-muted-foreground">
-              {t("simulation.noUserTypesAvailable")}
+              {t("simulation.noRolesAvailable")}
             </li>
           ) : (
-            userTypes.map((userType) => {
-              const checked = selectedIds.includes(userType.id);
+            roles.map((role) => {
+              const checked = selectedIds.includes(role.id);
               return (
-                <li key={userType.id}>
+                <li key={role.id}>
                   <label className="flex items-center gap-2 px-2 py-1.5 rounded-sm text-sm cursor-pointer hover:bg-accent">
                     <input
                       type="checkbox"
                       checked={checked}
-                      onChange={() => toggleId(userType.id)}
+                      onChange={() => toggleId(role.id)}
                       className="size-3.5 accent-primary"
                     />
-                    {userType.name}
+                    {role.name}
                   </label>
                 </li>
               );
@@ -113,4 +113,4 @@ const UserTypeMultiSelect: React.FC<UserTypeMultiSelectProps> = ({
   );
 };
 
-export default UserTypeMultiSelect;
+export default RoleMultiSelect;

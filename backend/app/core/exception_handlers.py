@@ -77,6 +77,7 @@ from app.core.exceptions import (
     TenantMembershipAlreadyExistsError,
     TenantMembershipNotFoundError,
     TenantNotFoundError,
+    UnknownRoleIdsError,
     UserLotLinkNotFoundError,
     VisitorNotFoundError,
     VoteAlreadyClosedError,
@@ -186,6 +187,7 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
         (
             FinanceCategoryTypeMismatchError,
             InvalidInvoiceFormatError,
+            UnknownRoleIdsError,
         ),
     ):
         status_code = status.HTTP_422_UNPROCESSABLE_ENTITY

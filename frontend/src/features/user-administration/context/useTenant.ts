@@ -9,7 +9,7 @@ import { useAuth } from "./AuthContext";
  * `TenantProvider` component: `react-refresh/only-export-components` flags a
  * module that mixes a component with plain function exports, and this task is
  * held to adding no new lint problem. It also matches the layout the sibling
- * hooks already use (`useEffectiveIdentity.ts`, `useMenuAccess.ts`).
+ * hooks already use (`useEffectiveIdentity.ts`).
  */
 export interface TenantContextValue {
   /** Dropdown options: the active tenants the caller may act in. */
@@ -63,7 +63,7 @@ export const useTenant = (): TenantContextValue =>
  * `AuthContext` resolves it from `/auth/me` *before* `setUser`, so
  * `!isLoading` means either "boot finished, tenant decided" or "no token,
  * nothing to decide". Gates every tenant-scoped query that can subscribe
- * above an auth guard — today exactly one, `useUserTypes`, which
+ * above an auth guard — today exactly one, `useRoles`, which
  * `Navbar` and `ProtectedRoute` both call above their own guards.
  */
 export const useActingTenantReady = (): boolean => !useAuth().isLoading;

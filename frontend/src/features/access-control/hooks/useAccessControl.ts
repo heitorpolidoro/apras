@@ -1,13 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  createDevice,
-  getAccessEvents,
-  getFacialTemplate,
-  listDevices,
-  regenerateDeviceKey,
-  syncFacialTemplate,
-  updateDeviceStatus,
-} from "../../../api/accessControl";
+import { createDevice, getAccessEvents, getFacialTemplate, listDevices, regenerateDeviceKey, syncFacialTemplate, updateDeviceStatus,  } from "../../../api/accessControl";
 import type {
   AccessDeviceCreate,
   AccessDeviceStatusUpdate,

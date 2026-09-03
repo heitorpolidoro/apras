@@ -3,11 +3,13 @@
 import itertools
 import uuid
 
-from app.models.enums import FeedbackCategory, FeedbackStatus, UserRole
+from sqlmodel import Session
+
+from app.models.enums import FeedbackCategory, FeedbackStatus
 from app.models.user import User
 from app.schemas.feedback import FeedbackCreate, FeedbackRespond
 from app.services.feedback_service import FeedbackService
-from sqlmodel import Session
+from tests.conftest import make_user
 
 _cpf_counter = itertools.count(20000000001)
 
@@ -17,13 +19,14 @@ def _next_cpf() -> str:
     return str(next(_cpf_counter))
 
 
-def _make_user(session: Session, role: UserRole, email: str) -> User:
-    user = User(
+def _make_user(session: Session, role: str, email: str) -> User:
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email=email,
-        full_name=f"User {role.value}",
+        full_name=f"User {role}",
         hashed_password="hash",
-        role=role,
+        profile=role,
         cpf=_next_cpf(),
     )
     session.add(user)
@@ -39,7 +42,7 @@ def test_anonymous_feedback_masked_even_for_reporter(
     the reporter" — a reporter viewing their own anonymous submission still
     gets a masked response.
     """
-    resident = _make_user(session, UserRole.GUEST, "resident_anon@example.com")
+    resident = _make_user(session, "GUEST", "resident_anon@example.com")
 
     fb = FeedbackService.create_feedback(
         session,
@@ -66,8 +69,8 @@ def test_anonymous_feedback_still_found_in_own_history(session: Session):
     """The list filter matches the raw, unmasked reporter_user_id column, so
     a resident can still find their own anonymous submission in their history.
     """
-    resident = _make_user(session, UserRole.GUEST, "resident_anon_history@example.com")
-    other_resident = _make_user(session, UserRole.GUEST, "resident_other_history@example.com")
+    resident = _make_user(session, "GUEST", "resident_anon_history@example.com")
+    other_resident = _make_user(session, "GUEST", "resident_other_history@example.com")
 
     fb = FeedbackService.create_feedback(
         session,
@@ -95,7 +98,7 @@ def test_anonymous_feedback_still_found_in_own_history(session: Session):
 def test_response_seen_by_reporter_flips_on_view_and_resets_on_new_response(
     session: Session, admin_user: User
 ):
-    resident = _make_user(session, UserRole.GUEST, "resident_notify@example.com")
+    resident = _make_user(session, "GUEST", "resident_notify@example.com")
 
     fb = FeedbackService.create_feedback(
         session,

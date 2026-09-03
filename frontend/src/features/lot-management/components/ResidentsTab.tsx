@@ -2,14 +2,7 @@ import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus, Search, Users } from "lucide-react";
 import { Button } from "../../../components/ui/button";
-import {
-  useCreateResident,
-  useDeactivateResident,
-  useLinkResidentUser,
-  useLotResidents,
-  useUnlinkResidentUser,
-  useUpdateResident,
-} from "../hooks/useResidents";
+import { useCreateResident, useDeactivateResident, useLinkResidentUser, useLotResidents, useUnlinkResidentUser, useUpdateResident,  } from "../hooks/useResidents";
 import type {
   ResidentCreatePayload,
   ResidentDetail,

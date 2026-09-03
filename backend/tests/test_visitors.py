@@ -1,15 +1,15 @@
 """Unit and integration tests for Visitor master profile management."""
 
 import uuid
+
 import pytest
-from app.core.exceptions import VisitorNotFoundError
-from app.models.enums import UserRole
-from app.models.user import User
-from app.models.visitor import Visitor
-from app.schemas.visitor import VisitorCreate, VisitorUpdate
-from app.services.visitor_service import VisitorService
 from fastapi.testclient import TestClient
 from sqlmodel import Session
+
+from app.core.exceptions import VisitorNotFoundError
+from app.models.user import User
+from app.schemas.visitor import VisitorCreate, VisitorUpdate
+from app.services.visitor_service import VisitorService
 
 
 def test_create_visitor_with_valid_cpf(session: Session):

@@ -5,28 +5,22 @@ import Navbar from "../components/Navbar";
 import * as AuthHook from "../context/AuthContext";
 import * as TenantHook from "../context/useTenant";
 import { useMyPermissions } from "../../../hooks/usePermissionQueries";
-import {
-  ALL_PERMISSIONS,
-  PERMISSIONS_BY_ROLE,
-  settledPermissions,
-} from "../../../test/permissionFixtures";
-import { UserRole, type User } from "../../../types/auth";
+import { ALL_PERMISSIONS, PERMISSIONS_BY_ROLE, settledPermissions,  } from "../../../test/permissionFixtures";
+import { type User } from "../../../types/auth";
 
 vi.mock("../context/SimulationContext", () => ({
   useSimulation: vi.fn(() => ({
-    simulatedRole: null,
-    simulatedUserTypeIds: [],
+    simulatedRoleIds: [],
     isSimulating: false,
-    setSimulatedRole: vi.fn(),
-    setSimulatedUserTypeIds: vi.fn(),
+    setSimulatedRoleIds: vi.fn(),
     stopSimulation: vi.fn(),
   })),
 }));
 
-vi.mock("../../../hooks/useUserTypes", () => ({
-  useUserTypes: vi.fn(() => ({
+vi.mock("../../../hooks/useRoles", () => ({
+  useRoles: vi.fn(() => ({
     data: [
-      { id: "type-1", name: "Test Type", allowed_menus: ["tasks", "categories"] },
+      { id: "type-1", name: "Test Type" },
     ],
   })),
 }));
@@ -44,9 +38,8 @@ const SYNDIC: Partial<User> = {
   id: "u-syndic",
   email: "syndic@test.com",
   full_name: "Síndico",
-  role: UserRole.RESIDENT,
   is_active: true,
-  user_types: [{ id: "type-1", name: "Test Type", allowed_menus: ["tasks"] }],
+  roles: [{ id: "type-1", name: "Test Type" }],
   tenants: [
     {
       tenant_id: TENANT_A,
@@ -79,7 +72,7 @@ const mockTenant = (actingTenantId: string, isActingTenantAdmin: boolean) => {
     settledPermissions(
       isActingTenantAdmin
         ? ALL_PERMISSIONS
-        : PERMISSIONS_BY_ROLE[UserRole.RESIDENT],
+        : PERMISSIONS_BY_ROLE["RESIDENT"],
     ) as never,
   );
 };

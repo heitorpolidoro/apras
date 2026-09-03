@@ -3,11 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Plus, ShieldCheck } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { useLots } from "../../lot-management/hooks/useLots";
-import {
-  useCreateAuthorization,
-  useLotAuthorizations,
-  useRevokeAuthorization,
-} from "../hooks/useVisitors";
+import { useCreateAuthorization, useLotAuthorizations, useRevokeAuthorization,  } from "../hooks/useVisitors";
 import { VisitorTable } from "./VisitorTable";
 import { AuthorizationFormModal } from "./AuthorizationFormModal";
 import { AuthorizationQrModal } from "./AuthorizationQrModal";

@@ -1,75 +1,42 @@
 import { useAuth } from "./AuthContext";
 import { useSimulation } from "./SimulationContext";
-import { useUserTypes } from "../../../hooks/useUserTypes";
-import type { UserRole } from "../../../types/auth";
 
 export interface EffectiveIdentity {
-  /** The role to use for permission decisions: simulated when simulating, real otherwise. */
-  role: UserRole | undefined;
-  /** The UserType ids to use for permission decisions: simulated when simulating, real otherwise. */
-  userTypeIds: string[];
-  /** `true` when the real Administrator is currently simulating another role. */
+  /** The role ids to use for display decisions: simulated when simulating. */
+  roleIds: string[];
+  /** `true` when a real administrator is currently simulating. */
   isSimulating: boolean;
 }
 
 /**
- * Returns the identity (role + UserType ids) that UI permission decisions
- * should use: the simulated role/UserTypes while an Administrator is
- * "viewing as" another role, or the real authenticated user's own
- * role/UserTypes otherwise.
+ * The role ids UI *display* decisions should use: the simulated selection
+ * while an administrator is "viewing as" other roles, or the real user's own
+ * memberships otherwise.
  *
- * Since APRAS-9, `userTypeIds` also folds in the id of the UserType
- * implicitly linked to the effective role (real or simulated), mirroring
- * the backend's `get_effective_user_type_ids`: a user/simulation with zero
- * explicitly-assigned UserTypes still gets their role-type id here. This is
- * the single fold-in point — `useMenuAccess`, `useTaskFiltering`,
- * `TaskList`, `TaskBoard`, and `simulatedPermissions` all consume
- * `userTypeIds` from this hook (directly or via `useEffectiveIdentity()`),
- * so none of them need any code change to inherit the role-type fallback.
+ * IAM F5 (APRAS-49 §10.3) deleted the `role` field. There is no enum left,
+ * and the role-implicit membership it used to fold in became a real
+ * `user_role_link` row at migration time, so `user.roles` is now the whole
+ * answer and this hook has no query of its own.
  *
- * Route guards (`ProtectedRoute`) intentionally do NOT use this hook for
- * requiredRole/requiredRoles checks — those must always reflect the real
- * user's access so the admin can never get locked out of ending a
- * simulation. The one exception is `requiredMenu` checks (via
- * `useMenuAccess`), which intentionally DO use simulated identity so
- * admin-role-simulation can preview menu-gated pages; this is safe because
- * the exit-simulation control (`SimulationBanner`) is rendered outside
- * `ProtectedRoute`/`<Routes>` in App.tsx and is always reachable.
- *
- * Since IAM F4 (APRAS-48) the single prop is `requiredAccess`, decided by
- * `useCanAccess` over the non-simulated permission set; the `requiredMenu`
- * exception survives as `AccessRule.legacyMenu`, still evaluated through
- * `useMenuAccess` and therefore still simulation-aware.
+ * **This hook is display-only.** Route guards read the *real* permission set
+ * through `useCanAccess`, which imports neither this hook nor
+ * `useSimulation` — the absence of those imports on that path is the
+ * mechanical guarantee that an administrator can never be locked out of
+ * ending a simulation (APRAS-35, re-pinned by
+ * `ProtectedRoute.permissions.test.tsx`). The one exception is
+ * `landing_path`, which follows the effective identity on purpose: landing
+ * is a preference, not authorization (§10.4).
  */
 export const useEffectiveIdentity = (): EffectiveIdentity => {
   const { user } = useAuth();
-  const { simulatedRole, simulatedUserTypeIds, isSimulating } =
-    useSimulation();
-  const { data: userTypes } = useUserTypes();
+  const { simulatedRoleIds, isSimulating } = useSimulation();
 
-  const roleTypeId = (role: UserRole | undefined): string | undefined =>
-    userTypes?.find((userType) => userType.role === role)?.id;
-
-  if (isSimulating && simulatedRole) {
-    const simulatedRoleTypeId = roleTypeId(simulatedRole);
-    return {
-      role: simulatedRole,
-      userTypeIds: simulatedRoleTypeId
-        ? [...new Set([...simulatedUserTypeIds, simulatedRoleTypeId])]
-        : simulatedUserTypeIds,
-      isSimulating: true,
-    };
+  if (isSimulating) {
+    return { roleIds: simulatedRoleIds, isSimulating: true };
   }
 
-  const explicitUserTypeIds =
-    user?.user_types?.map((userType) => userType.id) ?? [];
-  const realRoleTypeId = roleTypeId(user?.role);
-
   return {
-    role: user?.role,
-    userTypeIds: realRoleTypeId
-      ? [...new Set([...explicitUserTypeIds, realRoleTypeId])]
-      : explicitUserTypeIds,
+    roleIds: user?.roles?.map((role) => role.id) ?? [],
     isSimulating: false,
   };
 };

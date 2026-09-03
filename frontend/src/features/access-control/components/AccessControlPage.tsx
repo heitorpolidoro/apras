@@ -5,11 +5,7 @@ import { Button } from "../../../components/ui/button";
 import { DeviceTable } from "./DeviceTable";
 import { RegisterDeviceModal } from "./RegisterDeviceModal";
 import { FacialTemplateSyncPanel } from "./FacialTemplateSyncPanel";
-import {
-  useCreateDevice,
-  useDevices,
-  useRegenerateDeviceKey,
-} from "../hooks/useAccessControl";
+import { useCreateDevice, useDevices, useRegenerateDeviceKey,  } from "../hooks/useAccessControl";
 
 export const AccessControlPage: React.FC = () => {
   const { t } = useTranslation();

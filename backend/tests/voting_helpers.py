@@ -3,12 +3,13 @@
 import uuid
 from datetime import date, datetime, timedelta
 
+from sqlmodel import Session, select
+
 from app.core.security import get_password_hash
 from app.models.enums import (
     AssemblyStatus,
     AssemblyType,
     LotAssociationType,
-    UserRole,
     VoteKind,
     VoteStatus,
     VoteType,
@@ -16,7 +17,7 @@ from app.models.enums import (
 from app.models.lot import Lot, UserLotLink
 from app.models.user import User
 from app.models.voting import Assembly, LotVoterEligibility, Vote, VoteOption
-from sqlmodel import Session, select
+from tests.conftest import make_user as _make_profile_user
 
 _CPF_POOL = [
     "52998224725",
@@ -45,24 +46,27 @@ def _next_cpf(session: Session) -> str:
 
 def make_user(
     session: Session,
-    role: UserRole = UserRole.RESIDENT,
+    profile: str = "RESIDENT",
     email: str | None = None,
     full_name: str | None = None,
 ) -> User:
-    """Create and persist a user with the given role."""
+    """Create and persist a user carrying the legacy `profile` bundle.
+
+    The voting suite's own builder, kept at its own call shape so its ~130
+    call sites need only the second argument changed from an enum member to
+    the profile string it names (IAM F5, APRAS-49 §12.2 category 2). The
+    membership itself is `conftest.make_user`'s job.
+    """
     email = email or f"{uuid.uuid4().hex[:8]}@test.com"
-    user = User(
+    return _make_profile_user(
+        session,
+        profile=profile,
         id=uuid.uuid4(),
         email=email,
-        full_name=full_name or f"{role.value} {email}",
+        full_name=full_name or f"{profile} {email}",
         hashed_password=get_password_hash("pass"),
-        role=role,
         cpf=_next_cpf(session),
     )
-    session.add(user)
-    session.commit()
-    session.refresh(user)
-    return user
 
 
 def make_lot(

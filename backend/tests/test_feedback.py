@@ -4,13 +4,15 @@ import itertools
 import uuid
 
 import pytest
+from fastapi.testclient import TestClient
+from sqlmodel import Session
+
 from app.core.exceptions import FeedbackAccessForbiddenError, FeedbackNotFoundError
-from app.models.enums import FeedbackCategory, FeedbackStatus, UserRole
+from app.models.enums import FeedbackCategory, FeedbackStatus
 from app.models.user import User
 from app.schemas.feedback import FeedbackCreate, FeedbackRespond
 from app.services.feedback_service import FeedbackService
-from fastapi.testclient import TestClient
-from sqlmodel import Session
+from tests.conftest import make_user
 
 _cpf_counter = itertools.count(10000000001)
 
@@ -20,13 +22,14 @@ def _next_cpf() -> str:
     return str(next(_cpf_counter))
 
 
-def _make_user(session: Session, role: UserRole, email: str) -> User:
-    user = User(
+def _make_user(session: Session, role: str, email: str) -> User:
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email=email,
-        full_name=f"User {role.value}",
+        full_name=f"User {role}",
         hashed_password="hash",
-        role=role,
+        profile=role,
         cpf=_next_cpf(),
     )
     session.add(user)
@@ -38,16 +41,16 @@ def _make_user(session: Session, role: UserRole, email: str) -> User:
 @pytest.mark.parametrize(
     "role",
     [
-        UserRole.ADMINISTRATOR,
-        UserRole.DIRECTOR,
-        UserRole.MANAGER,
-        UserRole.GUEST,
-        UserRole.RESIDENT,
+        "ADMINISTRATOR",
+        "DIRECTOR",
+        "MANAGER",
+        "GUEST",
+        "RESIDENT",
     ],
 )
-def test_create_feedback_succeeds_for_every_role(session: Session, role: UserRole):
+def test_create_feedback_succeeds_for_every_role(session: Session, role: str):
     """create_feedback has no role restriction: every role, including GUEST, may submit."""
-    user = _make_user(session, role, f"reporter_{role.value.lower()}@example.com")
+    user = _make_user(session, role, f"reporter_{role.lower()}@example.com")
 
     feedback_in = FeedbackCreate(
         category=FeedbackCategory.SUGGESTION,
@@ -70,8 +73,8 @@ def test_create_feedback_succeeds_for_every_role(session: Session, role: UserRol
 def test_list_feedback_staff_sees_all_others_see_own(
     session: Session, admin_user: User
 ):
-    resident_a = _make_user(session, UserRole.GUEST, "resident_a@example.com")
-    resident_b = _make_user(session, UserRole.GUEST, "resident_b@example.com")
+    resident_a = _make_user(session, "GUEST", "resident_a@example.com")
+    resident_b = _make_user(session, "GUEST", "resident_b@example.com")
 
     fb_a = FeedbackService.create_feedback(
         session,
@@ -105,7 +108,7 @@ def test_list_feedback_staff_sees_all_others_see_own(
 def test_list_feedback_category_and_status_filters(
     session: Session, admin_user: User
 ):
-    resident = _make_user(session, UserRole.GUEST, "resident_filter@example.com")
+    resident = _make_user(session, "GUEST", "resident_filter@example.com")
 
     FeedbackService.create_feedback(
         session,
@@ -142,8 +145,8 @@ def test_get_feedback_not_found(session: Session, admin_user: User):
 
 
 def test_get_feedback_forbidden_for_non_reporter(session: Session):
-    resident = _make_user(session, UserRole.GUEST, "resident_owner@example.com")
-    other_resident = _make_user(session, UserRole.GUEST, "resident_other@example.com")
+    resident = _make_user(session, "GUEST", "resident_owner@example.com")
+    other_resident = _make_user(session, "GUEST", "resident_other@example.com")
 
     fb = FeedbackService.create_feedback(
         session,
@@ -156,8 +159,8 @@ def test_get_feedback_forbidden_for_non_reporter(session: Session):
 
 
 def test_respond_to_feedback_staff_only(session: Session, admin_user: User):
-    resident = _make_user(session, UserRole.GUEST, "resident_respond@example.com")
-    other_resident = _make_user(session, UserRole.GUEST, "resident_intruder@example.com")
+    resident = _make_user(session, "GUEST", "resident_respond@example.com")
+    other_resident = _make_user(session, "GUEST", "resident_intruder@example.com")
 
     fb = FeedbackService.create_feedback(
         session,
@@ -202,7 +205,7 @@ def test_respond_to_feedback_not_found(session: Session, admin_user: User):
 def test_feedback_api_endpoints(client: TestClient, session: Session):
     from app.core.security import create_access_token
 
-    resident = _make_user(session, UserRole.GUEST, "resident_api@example.com")
+    resident = _make_user(session, "GUEST", "resident_api@example.com")
     token = create_access_token(subject=resident.id)
     headers = {"Authorization": f"Bearer {token}"}
 

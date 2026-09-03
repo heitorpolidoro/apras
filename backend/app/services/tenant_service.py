@@ -12,40 +12,44 @@ from app.core.exceptions import (
     TenantNotFoundError,
 )
 from app.core.tenant_context import acting_tenant_scope
-from app.models.enums import UserRole
+from app.models.role import Role
 from app.models.tenant import Tenant, UserTenantLink
 from app.models.user import User
-from app.models.user_type import UserType
 from app.schemas.tenant import (
     TenantCreate,
     TenantMemberRead,
     TenantMembershipSummary,
     TenantUpdate,
 )
+from app.services.role_service import role_names_in
 
-# Human-readable names of the role-linked UserType rows seeded into every new
-# tenant, matching the five migration 0018 seeded into the default tenant plus
-# PORTEIRO, the role added afterwards by 0020.
-ROLE_TYPE_NAMES: dict[UserRole, str] = {
-    UserRole.ADMINISTRATOR: "Administrador (papel)",
-    UserRole.DIRECTOR: "Diretor (papel)",
-    UserRole.MANAGER: "Gerente (papel)",
-    UserRole.GUEST: "Convidado (papel)",
-    UserRole.RESIDENT: "Morador (papel)",
-    UserRole.PORTEIRO: "Porteiro (papel)",
-}
+#: The six historically-named ``Role`` rows every tenant gets: the five
+#: migration ``0018`` seeded into the default tenant plus ``Porteiro
+#: (papel)``, added afterwards by ``0020``.
+#:
+#: A plain tuple of **names** since IAM F5 (APRAS-49 §9.2): it was a
+#: ``dict`` keyed on the retired role enum, and idempotency was keyed on
+#: the ``role`` column migration ``0033`` dropped. Names are the key now.
+#: They are ordinary rows -- editable, renamable, deletable -- and this tuple
+#: is only what ``ensure_legacy_roles`` inserts when they are absent.
+LEGACY_ROLE_NAMES: tuple[str, ...] = (
+    "Administrador (papel)",
+    "Diretor (papel)",
+    "Gerente (papel)",
+    "Convidado (papel)",
+    "Morador (papel)",
+    "Porteiro (papel)",
+)
 
 
 class TenantService:
     """Service class for tenant and tenant-membership operations.
 
-    ``create_tenant`` seeds one role-linked ``UserType`` per ``UserRole``
-    into the new tenant (APRAS-42 §7.2). APRAS-41 deliberately did not,
-    because ``get_effective_user_type_ids`` resolved a role's UserType with a
-    tenant-blind ``.first()``; now that resolution is tenant-scoped the
-    opposite holds — without these rows a non-``ADMINISTRATOR`` member of a
-    new tenant has an empty effective-UserType set and is 403'd by
-    ``assert_menu_access`` on every gated menu.
+    ``create_tenant`` seeds the six historically-named ``Role`` rows into
+    every new tenant (``ensure_legacy_roles``, APRAS-42 §7.2). They carry
+    **no permissions** and grant nobody anything: they exist so that an
+    operator opening a fresh tenant finds the same six names every other
+    tenant has, and so that a migration or a script can address them by name.
     """
 
     @staticmethod
@@ -81,46 +85,41 @@ class TenantService:
         session.commit()
         session.refresh(tenant)
 
-        cls.ensure_role_types(session, tenant.id)
+        cls.ensure_legacy_roles(session, tenant.id)
 
         session.refresh(tenant)
         return tenant
 
     @staticmethod
-    def ensure_role_types(session: Session, tenant_id: UUID) -> int:
-        """Insert the role-linked ``UserType`` rows ``tenant_id`` is missing.
+    def ensure_legacy_roles(session: Session, tenant_id: UUID) -> int:
+        """Insert the six ``LEGACY_ROLE_NAMES`` rows ``tenant_id`` is missing.
 
-        Idempotent by construction: it reads the roles already present and
-        inserts only the gap, so it is safe to call on every tenant of an
-        install (``app/seed.py``) and on a brand-new one
-        (``create_tenant``). Tenants created before APRAS-42 have no
-        role-linked rows at all, and without them a non-``ADMINISTRATOR``
-        member has an empty effective-UserType set and is 403'd by
-        ``assert_menu_access`` on every gated menu; ``python -m app.seed`` is
-        the documented recovery path rather than a data step inside an
-        otherwise reversible migration (APRAS-43 §7).
+        It inserts rows with ``permissions = []`` and **grants nobody
+        anything**. Idempotent by construction: it reads the names already
+        present and inserts only the gap, so it is safe to call on every
+        tenant of an install (``app/seed.py``) and on a brand-new one
+        (``create_tenant``).
+
+        Keyed on **name** since IAM F5 (APRAS-49 §9.2): the ``role`` column
+        it used to key on was dropped by migration ``0033``, and
+        ``ix_role_tenant_name`` is what now guarantees at most one row per
+        ``(tenant, name)``.
 
         The acting tenant is swapped for the duration so both the read and
         the write see exactly ``tenant_id``: the ambient filter constrains
         the existence check and the write stamp puts the right id on every
-        inserted row. `ix_user_type_tenant_role` guarantees at most one row
-        per (tenant, role). This is the one production caller of
+        inserted row. This is the one production caller of
         ``acting_tenant_scope``.
 
         Returns:
             int: how many rows were inserted (0 on a complete tenant).
         """
         with acting_tenant_scope(session, tenant_id):
-            existing = {
-                user_type.role
-                for user_type in session.exec(
-                    select(UserType).where(UserType.role.is_not(None))
-                ).all()
-            }
+            existing = {role.name for role in session.exec(select(Role)).all()}
             missing = [
-                UserType(name=name, role=role, allowed_menus=[])
-                for role, name in ROLE_TYPE_NAMES.items()
-                if role not in existing
+                Role(name=name)
+                for name in LEGACY_ROLE_NAMES
+                if name not in existing
             ]
             if missing:
                 session.add_all(missing)
@@ -152,8 +151,8 @@ class TenantService:
     ) -> list[TenantMembershipSummary]:
         """List the *caller's own* memberships, ordered by tenant name.
 
-        Unlike :meth:`list_tenants`, this never widens for an
-        ``ADMINISTRATOR``: it answers "which tenants is this user a member
+        Unlike :meth:`list_tenants`, this never widens for a superuser: it
+        answers "which tenants is this user a member
         of, and where does the ``is_tenant_admin`` capability apply", which is
         what ``GET /api/v1/auth/me`` needs (APRAS-38 §3.2). A user with no
         memberships gets ``[]`` — never an error and never a synthesised
@@ -326,7 +325,7 @@ class TenantService:
             user_id=user.id,
             email=user.email,
             full_name=user.full_name,
-            role=user.role,
+            roles=role_names_in(user, link.tenant_id),
             linked_at=link.created_at,
             is_tenant_admin=link.is_tenant_admin,
         )

@@ -1,4 +1,3 @@
-import { UserRole } from "./auth";
 
 export const LotStatus = {
   VACANT: "VACANT",
@@ -39,7 +38,8 @@ export interface UserSummary {
   id: string;
   full_name: string;
   email: string;
-  role: UserRole;
+  /** The user's role names in the acting tenant, sorted (IAM F5 §8.2). */
+  roles: string[];
 }
 
 export interface UserLotLink {

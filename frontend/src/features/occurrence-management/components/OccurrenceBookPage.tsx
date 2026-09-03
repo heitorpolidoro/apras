@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BookOpen, Filter, Plus, Search } from "lucide-react";
 import type { OccurrenceCategory, OccurrenceStatus } from "../../../types/occurrence";
-import { useEffectiveIdentity } from "../../user-administration/context/useEffectiveIdentity";
+import { useEffectivePermissionSet } from "../../user-administration/access/useCanAccess";
 import { useOccurrences } from "../hooks/useOccurrences";
 import { NewOccurrenceModal } from "./NewOccurrenceModal";
 import { OccurrenceDetailsView } from "./OccurrenceDetailsView";
@@ -10,7 +10,7 @@ import { OccurrenceTable } from "./OccurrenceTable";
 
 export const OccurrenceBookPage: React.FC = () => {
   const { t } = useTranslation();
-  const { role } = useEffectiveIdentity();
+  const { has } = useEffectivePermissionSet();
 
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<OccurrenceCategory | "">("");
@@ -139,7 +139,7 @@ export const OccurrenceBookPage: React.FC = () => {
       {selectedOccurrenceId && (
         <OccurrenceDetailsView
           occurrenceId={selectedOccurrenceId}
-          userRole={role}
+          canManage={has("occurrences:manage_all")}
           onClose={() => setSelectedOccurrenceId(null)}
         />
       )}

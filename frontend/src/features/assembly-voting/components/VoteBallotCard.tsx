@@ -1,11 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../../components/ui/button";
-import {
-  useCastBallot,
-  useMyBallot,
-  useRetractBallot,
-} from "../hooks/useVoting";
+import { useCastBallot, useMyBallot, useRetractBallot,  } from "../hooks/useVoting";
 import type { MyBallotRead, VoteRead } from "../../../types/voting";
 
 interface EligibleLot {

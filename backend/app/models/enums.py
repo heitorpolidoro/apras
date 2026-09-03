@@ -22,17 +22,6 @@ class TaskPriority(StrEnum):
     URGENT = "URGENT"
 
 
-class UserRole(StrEnum):
-    """Enumeration for user roles."""
-
-    ADMINISTRATOR = "ADMINISTRATOR"
-    DIRECTOR = "DIRECTOR"
-    MANAGER = "MANAGER"
-    GUEST = "GUEST"
-    RESIDENT = "RESIDENT"
-    PORTEIRO = "PORTEIRO"
-
-
 class LotStatus(StrEnum):
     """Enumeration for lot status."""
 
@@ -200,13 +189,6 @@ class TransactionType(StrEnum):
 
     INCOME = "INCOME"
     EXPENSE = "EXPENSE"
-
-
-class MenuKey(StrEnum):
-    """Enumeration for menus/features gated by UserType.allowed_menus."""
-
-    TASKS = "tasks"
-    CATEGORIES = "categories"
 
 
 class FeedbackCategory(StrEnum):

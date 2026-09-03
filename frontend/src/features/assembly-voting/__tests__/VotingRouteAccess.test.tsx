@@ -2,13 +2,12 @@ import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "../../user-administration/components/ProtectedRoute";
-import { useAuth, UserRole } from "../../user-administration/context/AuthContext";
+import { useAuth } from "../../user-administration/context/AuthContext";
 import { useMyPermissions } from "../../../hooks/usePermissionQueries";
 import { ROUTE_ACCESS } from "../../user-administration/access/routeAccess";
-import {
-  PERMISSIONS_BY_ROLE,
-  settledPermissions,
-} from "../../../test/permissionFixtures";
+import { PERMISSIONS_BY_ROLE, settledPermissions,  } from "../../../test/permissionFixtures";
+
+
 
 vi.mock("../../user-administration/context/AuthContext", async () => {
   const actual = await vi.importActual<
@@ -16,14 +15,6 @@ vi.mock("../../user-administration/context/AuthContext", async () => {
   >("../../user-administration/context/AuthContext");
   return { ...actual, useAuth: vi.fn() };
 });
-
-vi.mock("../../user-administration/context/useEffectiveIdentity", () => ({
-  useEffectiveIdentity: vi.fn(() => ({ role: UserRole.RESIDENT })),
-}));
-
-vi.mock("../../user-administration/context/useMenuAccess", () => ({
-  useMenuAccess: vi.fn(() => true),
-}));
 
 vi.mock("../../../hooks/usePermissionQueries", () => ({
   useMyPermissions: vi.fn(),
@@ -36,13 +27,13 @@ vi.mock("../../../hooks/usePermissionQueries", () => ({
  * held, now kept only as the fixture selector for the parametrisation.
  */
 const VOTING_ROLES = [
-  UserRole.ADMINISTRATOR,
-  UserRole.DIRECTOR,
-  UserRole.MANAGER,
-  UserRole.RESIDENT,
+  "ADMINISTRATOR",
+  "DIRECTOR",
+  "MANAGER",
+  "RESIDENT",
 ];
 
-const renderVotingRoute = (role: UserRole) => {
+const renderVotingRoute = (role: string) => {
   vi.mocked(useAuth).mockReturnValue({
     isAuthenticated: true,
     isLoading: false,
@@ -79,7 +70,7 @@ describe("/voting route access", () => {
     expect(screen.getByText("Assembleias e Enquetes")).toBeInTheDocument();
   });
 
-  it.each([UserRole.PORTEIRO, UserRole.GUEST])(
+  it.each(["PORTEIRO", "GUEST"])(
     "keeps %s away from the voting screen",
     (role) => {
       renderVotingRoute(role);

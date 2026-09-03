@@ -3,7 +3,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from app.models.enums import LotAssociationType, LotStatus, UserRole
+from app.models.enums import LotAssociationType, LotStatus
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -11,7 +11,10 @@ class UserSummaryRead(BaseModel):
     id: UUID
     full_name: str
     email: str
-    role: UserRole
+    # The user's role **names** in the acting tenant, sorted (IAM F5,
+    # APRAS-49 §8.2). One shape for all three summary schemas, one i18n
+    # treatment (join with ", "), no new nested model.
+    roles: list[str] = []
 
     model_config = ConfigDict(from_attributes=True)
 

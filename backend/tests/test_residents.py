@@ -1,25 +1,22 @@
 """Unit and integration tests for Resident management service and endpoints."""
 
 import uuid
-from datetime import date
-import pytest
-from app.core.exceptions import (
-    ForbiddenError,
-    ResidentAlreadyLinkedError,
-    ResidentNotFoundError,
-    ResidentCPFConflictError,
-)
-from app.models.enums import LotAssociationType, LotStatus, ResidentRelationship, UserRole
-from app.models.lot import Lot, UserLotLink
-from app.models.user import User
-from app.models.resident import Resident
-from app.schemas.lot import LotCreate
-from app.schemas.resident import ResidentCreate, ResidentUpdate, LinkUserPayload
 
+import pytest
+from sqlmodel import Session
+
+from app.core.exceptions import (
+    ResidentAlreadyLinkedError,
+    ResidentCPFConflictError,
+    ResidentNotFoundError,
+)
+from app.models.enums import ResidentRelationship
+from app.models.user import User
+from app.schemas.lot import LotCreate
+from app.schemas.resident import ResidentCreate, ResidentUpdate
 from app.services.lot_service import LotService
 from app.services.resident_service import ResidentService
-from fastapi.testclient import TestClient
-from sqlmodel import Session
+from tests.conftest import make_user
 
 
 def test_cpf_validation_in_resident_schema():
@@ -149,12 +146,13 @@ def test_auto_link_user_on_signup(session: Session):
 
     # Now create user with matching CPF or email
     from app.core.security import get_password_hash
-    new_user = User(
+    new_user = make_user(
+        session,
         id=uuid.uuid4(),
         email="future@example.com",
         full_name="Future User",
         hashed_password=get_password_hash("pass"),
-        role=UserRole.GUEST,
+        profile="GUEST",
         cpf="99988877714",
     )
     session.add(new_user)

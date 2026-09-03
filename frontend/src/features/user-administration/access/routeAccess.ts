@@ -13,20 +13,14 @@ import type { AccessRule } from "../../../types/permissions";
  * module rule would be wrong, and each occurrence says why.
  */
 export const ROUTE_ACCESS: Record<string, AccessRule> = {
-  // TRANSITIONAL (IAM F4 -> F5): `legacyMenu` is the one place the frontend
-  // still consults `allowed_menus`, because `deps.assert_menu_access` is
-  // still enforced on 12 handlers (8 in tasks.py, 4 in categories.py). Making
-  // these two purely permission-derived would show a door the backend does
-  // not open. `landingRedirect` is the GUEST -> /welcome and
-  // PORTEIRO -> /gate landing rule, which is not authorization: a PORTEIRO
-  // genuinely holds `tasks:read`, so no permission predicate can express
-  // "pin the gatekeeper to the gate". Both fields die with F5 (§11).
-  "/dashboard": { module: "tasks", legacyMenu: "tasks", landingRedirect: true },
-  "/categories": {
-    module: "categories",
-    legacyMenu: "categories",
-    landingRedirect: true,
-  },
+  // `landingRedirect` marks the two routes that honour the caller's
+  // `landing_path` (IAM F5, APRAS-49 §10.4). Landing is not authorization —
+  // a PORTEIRO genuinely holds `tasks:read`, so no permission predicate can
+  // express "pin the gatekeeper to the gate" — which is why it is a
+  // preference stored on the role row rather than a rule. Its sibling
+  // `legacyMenu` died with the menu gate it read (§4.1).
+  "/dashboard": { module: "tasks", landingRedirect: true },
+  "/categories": { module: "categories", landingRedirect: true },
   "/lots": { module: "lots" },
   // A module rule would add PORTEIRO through `authorizations:gate_lookup`,
   // which is the gatehouse lookup, not the resident-facing screen.
@@ -56,11 +50,11 @@ export const ROUTE_ACCESS: Record<string, AccessRule> = {
   "/admin/photo-approvals": { anyOf: ["uploads:pending_read"] },
   "/admin/users": { anyOf: ["users:update"] },
   "/users/contact-info": { anyOf: ["users:update_contact"] },
-  "/admin/groups": {
-    anyOf: ["user_types:create", "user_types:update", "user_types:delete"],
+  "/admin/roles": {
+    anyOf: ["roles:create", "roles:update", "roles:delete"],
   },
-  "/admin/groups/:groupId": {
-    anyOf: ["user_types:create", "user_types:update", "user_types:delete"],
+  "/admin/roles/:roleId": {
+    anyOf: ["roles:create", "roles:update", "roles:delete"],
   },
 };
 
@@ -102,7 +96,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { path: "/purchases", labelKey: "nav.purchases" },
   { path: "/users/contact-info", labelKey: "nav.contactInfo" },
   { path: "/admin/users", labelKey: "nav.administration" },
-  { path: "/admin/groups", labelKey: "nav.groups" },
+  { path: "/admin/roles", labelKey: "nav.roles" },
   { path: "/admin/photo-approvals", labelKey: "nav.photoApprovals" },
   { path: "/admin/access-control", labelKey: "nav.accessControl" },
   { path: "/gate-monitor", labelKey: "nav.gateMonitor" },

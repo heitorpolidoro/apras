@@ -18,7 +18,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from app.core.security import create_access_token, get_password_hash
-from app.models.enums import UserRole
+from app.models.role import Role
 from app.models.tenant import (
     DEFAULT_TENANT_ID,
     DEFAULT_TENANT_NAME,
@@ -26,7 +26,7 @@ from app.models.tenant import (
     UserTenantLink,
 )
 from app.models.user import User
-from app.models.user_type import UserType
+from tests.conftest import make_user
 
 _CPF_COUNTER = iter(range(20_000, 99_999))
 
@@ -41,17 +41,18 @@ def _auth(user: User, tenant_id=None) -> dict[str, str]:
 def _make_user(
     session: Session,
     email: str,
-    role: UserRole = UserRole.RESIDENT,
-    user_types: list[UserType] | None = None,
+    role: str = "RESIDENT",
+    roles: list[Role] | None = None,
 ) -> User:
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email=email,
         full_name=email.split("@", maxsplit=1)[0],
         hashed_password=get_password_hash("password"),
-        role=role,
+        profile=role,
         cpf=f"9{next(_CPF_COUNTER):010d}"[:11],
-        user_types=user_types or [],
+        roles=roles or [],
     )
     session.add(user)
     session.commit()
@@ -154,11 +155,11 @@ def test_me_returns_empty_tenants_for_user_without_memberships(
 
 def test_me_keeps_existing_fields(session: Session, client: TestClient):
     """Today's `/auth/me` body is unchanged; `tenants` is purely additive."""
-    user_type = UserType(name="Me Fields Type", allowed_menus=["tasks"])
-    session.add(user_type)
+    role = Role(name="Me Fields Type")
+    session.add(role)
     session.commit()
     user = _make_user(
-        session, "me-fields@test.com", UserRole.DIRECTOR, user_types=[user_type]
+        session, "me-fields@test.com", "DIRECTOR", roles=[role]
     )
     session.add(UserTenantLink(user_id=user.id, tenant_id=DEFAULT_TENANT_ID))
     session.commit()
@@ -166,9 +167,13 @@ def test_me_keeps_existing_fields(session: Session, client: TestClient):
     body = client.get("/api/v1/auth/me", headers=_auth(user)).json()
 
     assert body["email"] == "me-fields@test.com"
-    assert body["role"] == UserRole.DIRECTOR.value
+    assert "role" not in body
+    assert "Diretor (papel)" in [row["name"] for row in body["roles"]]
     assert body["username"] == "me-fields"
-    assert [ut["name"] for ut in body["user_types"]] == ["Me Fields Type"]
+    assert sorted(ut["name"] for ut in body["roles"]) == [
+        "Diretor (papel)",
+        "Me Fields Type",
+    ]
     assert body["is_active"] is True
     assert body["cpf"] == user.cpf
 

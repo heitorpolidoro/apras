@@ -11,7 +11,7 @@
  * `useSyncExternalStore` and the context value can *be* the mirror in every
  * commit rather than a `useState` copy that lags it by one commit.
  */
-import { UserRole, type TenantMembership } from "../../../types/auth";
+import type { TenantMembership } from "../../../types/auth";
 
 const STORAGE_KEY = "actingTenantId";
 const TOKEN_KEY = "accessToken";
@@ -113,13 +113,17 @@ export const subscribeActingTenantId = (listener: () => void): (() => void) => {
  */
 export const resolveActingTenantId = (
   memberships: TenantMembership[],
-  role: UserRole | undefined,
+  isSuperuser: boolean | undefined,
   stored: string | null,
 ): string | null => {
   const active = memberships.filter((m) => m.is_active);
   if (stored !== null) {
     if (active.some((m) => m.tenant_id === stored)) return stored;
-    if (role === UserRole.ADMINISTRATOR) return stored;
+    // IAM F5 (APRAS-49 §10.4): the one consumer of `UserMeRead.is_superuser`.
+    // It runs before an acting tenant exists, so it cannot ask
+    // `/permissions/me`, and the flag is the exact successor of the
+    // `role === ADMINISTRATOR` test it replaces.
+    if (isSuperuser) return stored;
   }
   return active[0]?.tenant_id ?? null;
 };

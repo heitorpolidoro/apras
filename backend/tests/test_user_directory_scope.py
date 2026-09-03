@@ -14,11 +14,11 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
 from app.core.security import create_access_token, get_password_hash
-from app.models.enums import UserRole
+from app.models.role import Role
 from app.models.tenant import DEFAULT_TENANT_ID, Tenant, UserTenantLink
 from app.models.user import User
-from app.models.user_type import UserType
 from app.services.user_service import UserService
+from tests.conftest import make_user
 
 TENANT_A = DEFAULT_TENANT_ID
 
@@ -36,16 +36,17 @@ _CPF_COUNTER = iter(range(20_000, 99_999))
 def _make_user(
     session: Session,
     email: str,
-    role: UserRole = UserRole.RESIDENT,
+    role: str = "RESIDENT",
     tenants: tuple = (),
     is_tenant_admin_in=None,
 ) -> User:
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email=email,
         full_name=email.split("@", maxsplit=1)[0],
         hashed_password=get_password_hash("password"),
-        role=role,
+        profile=role,
         cpf=f"8{next(_CPF_COUNTER):010d}"[:11],
     )
     session.add(user)
@@ -72,7 +73,7 @@ def _make_user(
 def directory_admin_fixture(session: Session):
     """An ADMINISTRATOR whose only membership is tenant A."""
     return _make_user(
-        session, "dir-admin@test.com", UserRole.ADMINISTRATOR, (TENANT_A,)
+        session, "dir-admin@test.com", "ADMINISTRATOR", (TENANT_A,)
     )
 
 
@@ -82,7 +83,7 @@ def syndic_fixture(session: Session):
     return _make_user(
         session,
         "dir-syndic@test.com",
-        UserRole.RESIDENT,
+        "RESIDENT",
         (TENANT_A,),
         is_tenant_admin_in=TENANT_A,
     )
@@ -112,7 +113,7 @@ def dual_user_fixture(session: Session, tenant_b: Tenant):
 @pytest.fixture(name="second_admin")
 def second_admin_fixture(session: Session):
     return _make_user(
-        session, "dir-second-admin@test.com", UserRole.ADMINISTRATOR, (TENANT_A,)
+        session, "dir-second-admin@test.com", "ADMINISTRATOR", (TENANT_A,)
     )
 
 
@@ -237,19 +238,24 @@ def test_tenant_admin_gets_404_for_a_foreign_user(
 # ---------------------------------------------------------------------------
 
 
-def test_tenant_admin_cannot_grant_the_administrator_role(
+def test_a_tenant_admin_cannot_mint_a_superuser_through_this_route(
     tenant_client: TestClient, syndic: User, a_user: User
 ):
+    """The rule that replaced rule 1 (IAM F5, APRAS-49 §3.3 #2, §8.3).
+
+    F3 answered 403 to `{"role": "ADMINISTRATOR"}`. With the enum gone
+    `UserUpdate` carries neither `role` nor `is_superuser`, so those keys are
+    not fields at all: the request is accepted and writes nothing. The flag's
+    only API surface is the superuser-only route of §8.4.
+    """
     response = tenant_client.patch(
         f"/api/v1/users/{a_user.id}",
         headers=_auth(syndic, TENANT_A),
-        json={"role": UserRole.ADMINISTRATOR.value},
+        json={"role": "ADMINISTRATOR", "is_superuser": True},
     )
-    assert response.status_code == 403
-    assert (
-        response.json()["detail"]
-        == "Tenant administrators cannot grant the ADMINISTRATOR role"
-    )
+    assert response.status_code == 200
+    assert "is_superuser" not in response.json()
+    assert "role" not in response.json()
 
 
 def test_tenant_admin_cannot_modify_an_administrator(
@@ -290,10 +296,10 @@ def test_the_escalation_rules_never_fire_for_a_global_administrator(
     grant = tenant_client.patch(
         f"/api/v1/users/{a_user.id}",
         headers=headers,
-        json={"role": UserRole.ADMINISTRATOR.value},
+        json={"full_name": "Renamed By Superuser"},
     )
     assert grant.status_code == 200
-    assert grant.json()["role"] == UserRole.ADMINISTRATOR.value
+    assert grant.json()["full_name"] == "Renamed By Superuser"
 
     touch_admin = tenant_client.patch(
         f"/api/v1/users/{second_admin.id}",
@@ -313,7 +319,7 @@ def test_the_escalation_rules_never_fire_for_a_global_administrator(
 def test_contact_info_gains_no_escalation_rule(
     tenant_client: TestClient, syndic: User, dual_user: User
 ):
-    """Its schema exposes no role/is_active/user_type_ids, so only rule 0
+    """Its schema exposes no role/is_active/role_ids, so only rule 0
     applies — a target visible in the acting tenant is editable."""
     response = tenant_client.patch(
         f"/api/v1/users/{dual_user.id}/contact-info",
@@ -325,46 +331,46 @@ def test_contact_info_gains_no_escalation_rule(
 
 
 # ---------------------------------------------------------------------------
-# §7 — foreign user_type_ids are a 422, and foreign links are preserved
+# §7 — foreign role_ids are a 422, and foreign links are preserved
 # ---------------------------------------------------------------------------
 
 
 @pytest.fixture(name="typed_target")
 def typed_target_fixture(session: Session, tenant_b: Tenant):
-    """A user carrying one UserType in A and one in B."""
-    a_type = UserType(name="Tipo A", allowed_menus=[])
-    b_type = UserType(name="Tipo B", allowed_menus=[], tenant_id=tenant_b.id)
+    """A user carrying one Role in A and one in B."""
+    a_type = Role(name="Tipo A",)
+    b_type = Role(name="Tipo B",tenant_id=tenant_b.id)
     session.add_all([a_type, b_type])
     session.commit()
     session.refresh(a_type)
     session.refresh(b_type)
 
     user = _make_user(session, "dir-typed@test.com", tenants=(TENANT_A,))
-    user.user_types = [a_type, b_type]
+    user.roles = [a_type, b_type]
     session.add(user)
     session.commit()
     return {"user": user, "a_type": a_type, "b_type": b_type}
 
 
-def test_unknown_user_type_id_is_422(
+def test_unknown_role_id_is_422(
     tenant_client: TestClient, directory_admin: User, typed_target: dict
 ):
     response = tenant_client.patch(
         f"/api/v1/users/{typed_target['user'].id}",
         headers=_auth(directory_admin, TENANT_A),
-        json={"user_type_ids": [str(uuid.uuid4())]},
+        json={"role_ids": [str(uuid.uuid4())]},
     )
     assert response.status_code == 422
-    assert "Unknown user_type_ids" in str(response.json()["detail"])
+    assert "Unknown role_ids" in str(response.json()["detail"])
 
 
-def test_a_user_type_of_another_tenant_is_422(
+def test_a_role_of_another_tenant_is_422(
     tenant_client: TestClient, directory_admin: User, typed_target: dict
 ):
     response = tenant_client.patch(
         f"/api/v1/users/{typed_target['user'].id}",
         headers=_auth(directory_admin, TENANT_A),
-        json={"user_type_ids": [str(typed_target["b_type"].id)]},
+        json={"role_ids": [str(typed_target["b_type"].id)]},
     )
     assert response.status_code == 422
 
@@ -376,7 +382,7 @@ def test_valid_ids_return_200_and_preserve_the_foreign_link(
     session: Session,
     raw_session: Session,
 ):
-    new_type = UserType(name="Tipo A2", allowed_menus=[])
+    new_type = Role(name="Tipo A2",)
     session.add(new_type)
     session.commit()
     session.refresh(new_type)
@@ -384,21 +390,21 @@ def test_valid_ids_return_200_and_preserve_the_foreign_link(
     response = tenant_client.patch(
         f"/api/v1/users/{typed_target['user'].id}",
         headers=_auth(directory_admin, TENANT_A),
-        json={"user_type_ids": [str(new_type.id)]},
+        json={"role_ids": [str(new_type.id)]},
     )
     assert response.status_code == 200
     # The response body only shows the acting tenant's types.
-    assert [ut["id"] for ut in response.json()["user_types"]] == [str(new_type.id)]
+    assert [ut["id"] for ut in response.json()["roles"]] == [str(new_type.id)]
 
     raw_session.expire_all()
     stored = raw_session.get(User, typed_target["user"].id)
-    assert {ut.id for ut in stored.user_types} == {
+    assert {ut.id for ut in stored.roles} == {
         new_type.id,
         typed_target["b_type"].id,
     }
 
 
-def test_clearing_user_types_keeps_the_foreign_link(
+def test_clearing_roles_keeps_the_foreign_link(
     tenant_client: TestClient,
     directory_admin: User,
     typed_target: dict,
@@ -407,22 +413,22 @@ def test_clearing_user_types_keeps_the_foreign_link(
     response = tenant_client.patch(
         f"/api/v1/users/{typed_target['user'].id}",
         headers=_auth(directory_admin, TENANT_A),
-        json={"user_type_ids": []},
+        json={"role_ids": []},
     )
     assert response.status_code == 200
-    assert response.json()["user_types"] == []
+    assert response.json()["roles"] == []
 
     raw_session.expire_all()
     stored = raw_session.get(User, typed_target["user"].id)
-    assert {ut.id for ut in stored.user_types} == {typed_target["b_type"].id}
+    assert {ut.id for ut in stored.roles} == {typed_target["b_type"].id}
 
 
 # ---------------------------------------------------------------------------
-# §6.2 — every response body's `user_types` is acting-tenant only
+# §6.2 — every response body's `roles` is acting-tenant only
 # ---------------------------------------------------------------------------
 
 
-def test_every_user_route_filters_user_types_in_the_response(
+def test_every_user_route_filters_roles_in_the_response(
     tenant_client: TestClient, directory_admin: User, typed_target: dict
 ):
     headers = _auth(directory_admin, TENANT_A)
@@ -433,20 +439,20 @@ def test_every_user_route_filters_user_types_in_the_response(
     listing = tenant_client.get("/api/v1/users/", headers=headers)
     assert listing.status_code == 200
     row = next(row for row in listing.json() if row["id"] == target_id)
-    assert [ut["id"] for ut in row["user_types"]] == [a_type_id]
+    assert [ut["id"] for ut in row["roles"]] == [a_type_id]
 
     patched = tenant_client.patch(
         f"/api/v1/users/{target_id}", headers=headers, json={"full_name": "Typed"}
     )
-    assert [ut["id"] for ut in patched.json()["user_types"]] == [a_type_id]
+    assert [ut["id"] for ut in patched.json()["roles"]] == [a_type_id]
 
     contact = tenant_client.patch(
         f"/api/v1/users/{target_id}/contact-info",
         headers=headers,
         json={"phone": "11666666666"},
     )
-    assert [ut["id"] for ut in contact.json()["user_types"]] == [a_type_id]
-    assert b_type_id not in {ut["id"] for ut in contact.json()["user_types"]}
+    assert [ut["id"] for ut in contact.json()["roles"]] == [a_type_id]
+    assert b_type_id not in {ut["id"] for ut in contact.json()["roles"]}
 
 
 # ---------------------------------------------------------------------------
@@ -489,7 +495,7 @@ def test_orphan_users_are_invisible_outside_the_default_tenant(
     )
 
 
-def test_no_user_type_link_survives_a_missing_target(session: Session):
+def test_no_role_link_survives_a_missing_target(session: Session):
     """Sanity: the statement is a plain SELECT with no join fan-out."""
     rows = session.exec(select(User)).all()
     visible = session.exec(UserService.visible_users_statement(TENANT_A)).all()

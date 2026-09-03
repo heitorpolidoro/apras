@@ -3,14 +3,14 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import apiClient from "../../../api/client";
 import { useAuth } from "../context/AuthContext";
-import type { User, UserType } from "../../../types/auth";
+import type { User, Role } from "../../../types/auth";
 import { Link } from "react-router-dom";
 import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Select } from "../../../components/ui/select";
 import { AlertModal } from "../../../components/ui/alert-modal";
-import { useSetUserGroups } from "../hooks/useUserTypeMutations";
+import { useSetUserRoles } from "../hooks/useRoleMutations";
 import { friendlyPermissionError } from "../utils/permissionErrors";
 
 /**
@@ -18,16 +18,14 @@ import { friendlyPermissionError } from "../utils/permissionErrors";
  *
  * The role `<Select>` is **gone**: the write surface for `user.role` is
  * removed, so nobody can grant power by role in the one slice whose purpose
- * is to prove groups can do it. The role is still *displayed*, read-only,
- * under `admin.colRoleLegacy`, so an operator can diagnose a legacy bundle
- * during the transition — TRANSITIONAL (IAM F4 -> F5). No backend change was
- * needed: `UserUpdate.role` is already optional and there is no
- * `POST /users/` (signup forces GUEST). Consequence, stated so it is not
- * rediscovered as a bug: until F5 a role cannot be changed from the UI, and a
- * new signup stays GUEST and is made functional by adding them to groups.
+ * is to prove roles can do it. The role is still *displayed*, read-only,
+ * IAM F5 (APRAS-49 §10.2) removed the read-only "Cargo (legado)" column with
+ * the enum it displayed: a user's power is their role memberships and nothing
+ * else, so there is no second thing for an operator to diagnose. A new signup
+ * arrives with **zero** roles and is made functional by adding them to one.
  *
- * The inline "user types" card is gone too; the group editor now lives in one
- * place, `/admin/groups`.
+ * The inline "roles" card is gone too; the role editor now lives in one
+ * place, `/admin/roles`.
  */
 
 const AdminUserDashboard: React.FC = () => {
@@ -57,10 +55,10 @@ const AdminUserDashboard: React.FC = () => {
     },
   });
 
-  const { data: userTypes } = useQuery({
-    queryKey: ["user-types"],
+  const { data: roles } = useQuery({
+    queryKey: ["roles"],
     queryFn: async () => {
-      const response = await apiClient.get<UserType[]>("/user-types/");
+      const response = await apiClient.get<Role[]>("/roles/");
       return response.data;
     },
   });
@@ -71,7 +69,7 @@ const AdminUserDashboard: React.FC = () => {
       data,
     }: {
       userId: string;
-      data: Partial<User> & { user_type_ids?: string[] | null };
+      data: Partial<User> & { role_ids?: string[] | null };
     }) => {
       const response = await apiClient.patch<User>(`/users/${userId}`, data);
       return response.data;
@@ -88,9 +86,9 @@ const AdminUserDashboard: React.FC = () => {
     },
   });
 
-  // Membership, from the **user** side. The same mutation the group screen's
+  // Membership, from the **user** side. The same mutation the role screen's
   // members panel uses (§6.4), so both directions are one code path.
-  const setUserGroups = useSetUserGroups();
+  const setUserRoles = useSetUserRoles();
 
   const handleToggleActive = (user: User) => {
     if (user.id === currentUser?.id) {
@@ -106,16 +104,16 @@ const AdminUserDashboard: React.FC = () => {
   const openEditModal = (user: User) => {
     setEditingUser(user);
     setEditFullName(user.full_name);
-    setEditTypeIds(user.user_types?.map((ut) => ut.id) ?? []);
+    setEditTypeIds(user.roles?.map((ut) => ut.id) ?? []);
   };
 
   const handleSaveEdit = () => {
     /* v8 ignore next */
     if (!editingUser) return;
-    setUserGroups.mutate(
+    setUserRoles.mutate(
       {
         userId: editingUser.id,
-        userTypeIds: editTypeIds,
+        roleIds: editTypeIds,
         fullName: editFullName || undefined,
       },
       {
@@ -123,8 +121,8 @@ const AdminUserDashboard: React.FC = () => {
           setActionError(null);
           setEditingUser(null);
         },
-        // `assert_can_assign_user_types` can answer 403 here exactly as on the
-        // group screen; §6.5 renders it the same way in both.
+        // `assert_can_assign_roles` can answer 403 here exactly as on the
+        // role screen; §6.5 renders it the same way in both.
         onError: (err) => setActionError(friendlyPermissionError(err, t)),
       },
     );
@@ -163,13 +161,13 @@ const AdminUserDashboard: React.FC = () => {
         message={actionError ?? ""}
       />
 
-      {/* The group editor lives in one place now: /admin/groups (§7). */}
+      {/* The role editor lives in one place now: /admin/roles (§7). */}
       <div className="rounded-xl border bg-card p-4 mb-6 flex items-center justify-between gap-3 flex-wrap">
         <span className="text-sm text-muted-foreground">
-          {t("groups.subtitle")}
+          {t("roles.subtitle")}
         </span>
         <Button variant="outline" asChild>
-          <Link to="/admin/groups">{t("admin.manageGroups")}</Link>
+          <Link to="/admin/roles">{t("admin.manageRoles")}</Link>
         </Button>
       </div>
 
@@ -211,9 +209,6 @@ const AdminUserDashboard: React.FC = () => {
                 {/* TRANSITIONAL (IAM F4 -> F5): read-only, so an operator can
                     still diagnose a legacy role bundle during the transition. */}
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">
-                  {t("admin.colRoleLegacy")}
-                </th>
-                <th className="text-left px-4 py-3 font-semibold text-muted-foreground">
                   {t("admin.colType")}
                 </th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">
@@ -242,12 +237,9 @@ const AdminUserDashboard: React.FC = () => {
                     {user.email}
                   </td>
                   <td className="px-4 py-3">
-                    <Badge variant="secondary">{user.role}</Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    {user.user_types && user.user_types.length > 0 ? (
+                    {user.roles && user.roles.length > 0 ? (
                       <div className="flex flex-wrap gap-1">
-                        {user.user_types.map((ut) => (
+                        {user.roles.map((ut) => (
                           <Badge key={ut.id} variant="secondary">{ut.name}</Badge>
                         ))}
                       </div>
@@ -336,15 +328,15 @@ const AdminUserDashboard: React.FC = () => {
               </div>
               <div>
                 <label className="text-sm font-medium text-muted-foreground block mb-1">
-                  {t("admin.editGroups")}
+                  {t("admin.editRoles")}
                 </label>
                 <div className="max-h-40 overflow-y-auto border rounded-md p-2 space-y-2">
-                  {userTypes?.length === 0 && (
+                  {roles?.length === 0 && (
                     <span className="text-xs text-muted-foreground block">
                       {t("admin.noTypesYet")}
                     </span>
                   )}
-                  {userTypes?.map((ut) => {
+                  {roles?.map((ut) => {
                     const isChecked = editTypeIds.includes(ut.id);
                     return (
                       <label key={ut.id} className="flex items-center gap-2 text-sm cursor-pointer select-none">
@@ -373,7 +365,7 @@ const AdminUserDashboard: React.FC = () => {
               </Button>
               <Button
                 onClick={handleSaveEdit}
-                disabled={setUserGroups.isPending}
+                disabled={setUserRoles.isPending}
               >
                 {t("admin.save")}
               </Button>

@@ -1,14 +1,6 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  ChevronDown,
-  ChevronRight,
-  Folder as FolderIcon,
-  FolderOpen,
-  FolderPlus,
-  Pencil,
-  Trash2,
-} from "lucide-react";
+import { ChevronDown, ChevronRight, Folder as FolderIcon, FolderOpen, FolderPlus, Pencil, Trash2,  } from "lucide-react";
 import type { DocumentFolderTree } from "../../../types/document";
 
 interface FolderTreeSidebarProps {
@@ -49,7 +41,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({
   return (
     <div className="space-y-1">
       <div
-        className={`group flex items-center justify-between rounded-lg px-2 py-1.5 text-sm font-medium transition-colors cursor-pointer ${
+        className={`role flex items-center justify-between rounded-lg px-2 py-1.5 text-sm font-medium transition-colors cursor-pointer ${
           isSelected
             ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-400 font-semibold"
             : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"

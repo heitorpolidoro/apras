@@ -1,18 +1,12 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pencil, Trash2, Plus, Check, X, AlertTriangle } from "lucide-react";
-import {
-  useReservableSpaces,
-  useCreateReservableSpace,
-  useUpdateReservableSpace,
-  useDeactivateReservableSpace,
-} from "../hooks/useReservations";
+import { useReservableSpaces, useCreateReservableSpace, useUpdateReservableSpace, useDeactivateReservableSpace,  } from "../hooks/useReservations";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { AlertModal } from "../../../components/ui/alert-modal";
 import type { ReservableSpaceRead } from "../../../types/reservation";
-import { UserRole } from "../../../types/auth";
-import { useEffectiveIdentity } from "../../user-administration/context/useEffectiveIdentity";
+import { useEffectivePermissionSet } from "../../user-administration/access/useCanAccess";
 
 interface ApiError extends Error {
   response?: { data?: { detail?: string } };
@@ -33,8 +27,8 @@ const ReservableSpacesPage: React.FC = () => {
   const updateMutation = useUpdateReservableSpace();
   const deactivateMutation = useDeactivateReservableSpace();
 
-  const { role } = useEffectiveIdentity();
-  const canWrite = role === UserRole.ADMINISTRATOR || role === UserRole.DIRECTOR;
+  const { has } = useEffectivePermissionSet();
+  const canWrite = has("spaces:update");
 
   const [newName, setNewName] = useState("");
   const [newDescription, setNewDescription] = useState("");

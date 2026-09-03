@@ -3,17 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 import * as visitorsApi from "../../../api/visitors";
-import {
-  useAccessLogs,
-  useAuthorization,
-  useCheckIn,
-  useCheckOut,
-  useCreateAuthorization,
-  useCreateVisitor,
-  useLotAuthorizations,
-  useRevokeAuthorization,
-  useVisitors,
-} from "../hooks/useVisitors";
+import { useAccessLogs, useAuthorization, useCheckIn, useCheckOut, useCreateAuthorization, useCreateVisitor, useLotAuthorizations, useRevokeAuthorization, useVisitors,  } from "../hooks/useVisitors";
 
 vi.mock("../../../api/visitors");
 

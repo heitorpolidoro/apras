@@ -54,7 +54,7 @@ export const PERMISSION_MODULE_ORDER: readonly string[] = [
   "tasks",
   "categories",
   "users",
-  "user_types",
+  "roles",
   "lots",
   "residents",
   "finance",

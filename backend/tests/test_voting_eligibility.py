@@ -5,6 +5,8 @@ Covers the numbered backend tests of `docs/tasks/APRAS-33-spec.md`
 """
 
 import pytest
+from sqlmodel import Session, select
+
 from app.core.exceptions import (
     LotAlreadyVotedError,
     NoActiveBallotError,
@@ -14,14 +16,12 @@ from app.core.exceptions import (
 from app.models.enums import (
     BallotRejectionReason,
     LotAssociationType,
-    UserRole,
     VoteKind,
     VoteStatus,
 )
 from app.models.lot import UserLotLink
 from app.models.voting import BallotRejection, LotVoterEligibility
 from app.services import voting_service
-from sqlmodel import Session, select
 from tests.voting_helpers import (
     add_extra_eligibility,
     link_user_to_lot,
@@ -55,9 +55,9 @@ def _retract(session, user, vote, lot=None):
 
 
 def test_second_co_owner_is_blocked_once_the_first_has_voted(session: Session):
-    board = make_user(session, UserRole.ADMINISTRATOR)
-    owner_a = make_user(session, UserRole.RESIDENT, full_name="Owner A")
-    owner_b = make_user(session, UserRole.RESIDENT, full_name="Owner B")
+    board = make_user(session, "ADMINISTRATOR")
+    owner_a = make_user(session, "RESIDENT", full_name="Owner A")
+    owner_b = make_user(session, "RESIDENT", full_name="Owner B")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, owner_a, lot)
     link_user_to_lot(session, owner_b, lot)
@@ -82,8 +82,8 @@ def test_second_co_owner_is_blocked_once_the_first_has_voted(session: Session):
 
 
 def test_extra_eligible_can_vote_and_loses_the_right_when_removed(session: Session):
-    board = make_user(session, UserRole.ADMINISTRATOR)
-    spouse = make_user(session, UserRole.RESIDENT)
+    board = make_user(session, "ADMINISTRATOR")
+    spouse = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     eligibility = add_extra_eligibility(session, spouse, lot, added_by=board)
     assembly = make_assembly(session, board)
@@ -112,9 +112,9 @@ def test_extra_eligible_can_vote_and_loses_the_right_when_removed(session: Sessi
 
 
 def test_retraction_frees_the_lot_for_another_eligible_voter(session: Session):
-    board = make_user(session, UserRole.ADMINISTRATOR)
-    voter_a = make_user(session, UserRole.RESIDENT, full_name="A")
-    voter_b = make_user(session, UserRole.RESIDENT, full_name="B")
+    board = make_user(session, "ADMINISTRATOR")
+    voter_a = make_user(session, "RESIDENT", full_name="A")
+    voter_b = make_user(session, "RESIDENT", full_name="B")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, voter_a, lot)
     link_user_to_lot(session, voter_b, lot)
@@ -153,9 +153,9 @@ def test_retraction_frees_the_lot_for_another_eligible_voter(session: Session):
 def test_holder_who_lost_eligibility_can_still_retract_and_unlock_the_lot(
     session: Session,
 ):
-    board = make_user(session, UserRole.ADMINISTRATOR)
-    voter_a = make_user(session, UserRole.RESIDENT, full_name="A")
-    voter_b = make_user(session, UserRole.RESIDENT, full_name="B")
+    board = make_user(session, "ADMINISTRATOR")
+    voter_a = make_user(session, "RESIDENT", full_name="A")
+    voter_b = make_user(session, "RESIDENT", full_name="B")
     lot = make_lot(session, "A", "1")
     link_a = link_user_to_lot(session, voter_a, lot)
     link_user_to_lot(session, voter_b, lot)
@@ -179,8 +179,8 @@ def test_holder_who_lost_eligibility_can_still_retract_and_unlock_the_lot(
 
 
 def test_window_check_wins_over_missing_active_ballot(session: Session):
-    board = make_user(session, UserRole.ADMINISTRATOR)
-    owner = make_user(session, UserRole.RESIDENT)
+    board = make_user(session, "ADMINISTRATOR")
+    owner = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, owner, lot)
     assembly = make_assembly(session, board)
@@ -198,9 +198,9 @@ def test_window_check_wins_over_missing_active_ballot(session: Session):
 def test_assembly_my_ballot_is_visible_to_every_eligible_of_the_lot(
     session: Session,
 ):
-    board = make_user(session, UserRole.ADMINISTRATOR)
-    voter_a = make_user(session, UserRole.RESIDENT, full_name="A")
-    voter_b = make_user(session, UserRole.RESIDENT, full_name="B")
+    board = make_user(session, "ADMINISTRATOR")
+    voter_a = make_user(session, "RESIDENT", full_name="A")
+    voter_b = make_user(session, "RESIDENT", full_name="B")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, voter_a, lot)
     link_user_to_lot(session, voter_b, lot)
@@ -221,10 +221,10 @@ def test_assembly_my_ballot_is_visible_to_every_eligible_of_the_lot(
 
 
 def test_poll_my_ballot_shows_neighbours_when_not_anonymous(session: Session):
-    board = make_user(session, UserRole.ADMINISTRATOR)
-    resident_a = make_user(session, UserRole.RESIDENT, full_name="A")
-    resident_b = make_user(session, UserRole.RESIDENT, full_name="B")
-    outsider = make_user(session, UserRole.RESIDENT, full_name="C")
+    board = make_user(session, "ADMINISTRATOR")
+    resident_a = make_user(session, "RESIDENT", full_name="A")
+    resident_b = make_user(session, "RESIDENT", full_name="B")
+    outsider = make_user(session, "RESIDENT", full_name="C")
     lot = make_lot(session, "A", "1")
     other_lot = make_lot(session, "A", "2")
     link_user_to_lot(session, resident_a, lot)
@@ -245,9 +245,9 @@ def test_poll_my_ballot_shows_neighbours_when_not_anonymous(session: Session):
 
 
 def test_anonymous_poll_my_ballot_shows_only_own_masked_entry(session: Session):
-    board = make_user(session, UserRole.ADMINISTRATOR)
-    resident_a = make_user(session, UserRole.RESIDENT, full_name="A")
-    resident_b = make_user(session, UserRole.RESIDENT, full_name="B")
+    board = make_user(session, "ADMINISTRATOR")
+    resident_a = make_user(session, "RESIDENT", full_name="A")
+    resident_b = make_user(session, "RESIDENT", full_name="B")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, resident_a, lot)
     link_user_to_lot(session, resident_b, lot)
@@ -272,8 +272,8 @@ def test_anonymous_poll_my_ballot_shows_only_own_masked_entry(session: Session):
 
 
 def test_poll_retraction_removes_the_vote_and_is_not_repeatable(session: Session):
-    board = make_user(session, UserRole.ADMINISTRATOR)
-    resident = make_user(session, UserRole.RESIDENT)
+    board = make_user(session, "ADMINISTRATOR")
+    resident = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, resident, lot, LotAssociationType.INQUILINO)
     poll = make_vote(session, board, kind=VoteKind.ENQUETE)
@@ -289,8 +289,8 @@ def test_poll_retraction_removes_the_vote_and_is_not_repeatable(session: Session
 
 
 def test_poll_retraction_does_not_require_a_still_active_lot_link(session: Session):
-    board = make_user(session, UserRole.ADMINISTRATOR)
-    tenant = make_user(session, UserRole.RESIDENT)
+    board = make_user(session, "ADMINISTRATOR")
+    tenant = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     link = link_user_to_lot(session, tenant, lot, LotAssociationType.INQUILINO)
     poll = make_vote(session, board, kind=VoteKind.ENQUETE)
@@ -307,9 +307,9 @@ def test_poll_retraction_does_not_require_a_still_active_lot_link(session: Sessi
 
 
 def test_removing_extra_eligibility_deletes_the_row(session: Session):
-    board = make_user(session, UserRole.ADMINISTRATOR)
-    manager = make_user(session, UserRole.MANAGER)
-    spouse = make_user(session, UserRole.RESIDENT)
+    board = make_user(session, "ADMINISTRATOR")
+    manager = make_user(session, "MANAGER")
+    spouse = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
 
     created = voting_service.set_lot_voter_eligibility(

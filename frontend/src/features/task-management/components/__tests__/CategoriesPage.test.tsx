@@ -1,13 +1,37 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import CategoriesPage from "../CategoriesPage";
-import {
-  useCategories,
-  useCreateCategory,
-  useUpdateCategory,
-  useDeleteCategory,
-} from "../../hooks/useCategories";
-import { useAuth, UserRole } from "../../../user-administration/context/AuthContext";
+import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory,  } from "../../hooks/useCategories";
+import { useAuth } from "../../../user-administration/context/AuthContext";
+import { PERMISSIONS_BY_ROLE } from "../../../../test/permissionFixtures";
+
+/** The profile each case's fixture stands for. */
+const mockProfile = () => useAuth().user?.is_superuser ? "ADMINISTRATOR" : "MANAGER";
+
+// IAM F5 (APRAS-49 §10.2): the component reads its *permissions* now, not a
+// role. Mocking the access module keeps each case's signal exactly where it
+// was — the `useAuth()` fixture this file already varies per test — while
+// removing the `/permissions/me` query from the render path, which is what
+// made a `QueryClientProvider` necessary.
+vi.mock("../../../../features/user-administration/access/useCanAccess", () => {
+  const build = (profile: string) => ({
+    has: (permission: string) =>
+      (PERMISSIONS_BY_ROLE[profile] ?? []).includes(permission),
+    hasModule: (moduleName: string) =>
+      (PERMISSIONS_BY_ROLE[profile] ?? []).some((permission) =>
+        permission.startsWith(`${moduleName}:`),
+      ),
+    isLoading: false,
+    all: new Set(PERMISSIONS_BY_ROLE[profile] ?? []),
+  });
+  return {
+    useEffectivePermissionSet: () => build(mockProfile()),
+    usePermissionSet: () => build(mockProfile()),
+    useCanAccess: () => ({ allowed: true, isLoading: false }),
+    useCanShowMenu: () => ({ allowed: true, isLoading: false }),
+  };
+});
+
 
 vi.mock("../../hooks/useCategories", () => ({
   useCategories: vi.fn(),
@@ -25,31 +49,29 @@ vi.mock(
     return {
       ...actual,
       useAuth: vi.fn(() => ({
-        user: { id: "admin-1", role: actual.UserRole.ADMINISTRATOR },
+        user: { id: "admin-1", is_superuser: true },
       })),
     };
   },
 );
 
-// CategoriesPage now reads its effective role via useEffectiveIdentity, which
+// CategoriesPage now reads its effective role via useEffectivePermissionSet, which
 // combines useAuth (mocked above, varies per test) with useSimulation. Keep
 // simulation permanently inactive here so canWrite continues to reflect the
 // real user's role exactly like before this hook existed.
 vi.mock("../../../user-administration/context/SimulationContext", () => ({
   useSimulation: vi.fn(() => ({
-    simulatedRole: null,
-    simulatedUserTypeIds: [],
+    simulatedRoleIds: [],
     isSimulating: false,
-    setSimulatedRole: vi.fn(),
-    setSimulatedUserTypeIds: vi.fn(),
+    setSimulatedRoleIds: vi.fn(),
     stopSimulation: vi.fn(),
   })),
 }));
 
-// useEffectiveIdentity also calls useUserTypes (APRAS-9 role-type fold-in);
+// useEffectivePermissionSet also calls useRoles (APRAS-9 role-type fold-in);
 // mock it so these tests don't need a QueryClientProvider wrapper.
-vi.mock("../../../../hooks/useUserTypes", () => ({
-  useUserTypes: vi.fn(() => ({ data: [] })),
+vi.mock("../../../../hooks/useRoles", () => ({
+  useRoles: vi.fn(() => ({ data: [] })),
 }));
 
 const mockCategories = [
@@ -351,7 +373,7 @@ describe("CategoriesPage", () => {
 
   it("MANAGER user does not see the New Category button", () => {
     vi.mocked(useAuth).mockReturnValue({
-      user: { id: "manager-1", role: UserRole.MANAGER },
+      user: { id: "manager-1" },
     } as any); // skipcq: JS-0323
     render(<CategoriesPage />);
     expect(screen.queryByRole("button", { name: /Nova Categoria/i })).not.toBeInTheDocument();
@@ -359,7 +381,7 @@ describe("CategoriesPage", () => {
 
   it("ADMINISTRATOR user sees the New Category button", () => {
     vi.mocked(useAuth).mockReturnValue({
-      user: { id: "admin-1", role: UserRole.ADMINISTRATOR },
+      user: { id: "admin-1", is_superuser: true },
     } as any); // skipcq: JS-0323
     render(<CategoriesPage />);
     expect(screen.getByRole("button", { name: /Nova Categoria/i })).toBeInTheDocument();
@@ -367,7 +389,7 @@ describe("CategoriesPage", () => {
 
   it("MANAGER user does not see edit/delete buttons in category list", () => {
     vi.mocked(useAuth).mockReturnValue({
-      user: { id: "manager-1", role: UserRole.MANAGER },
+      user: { id: "manager-1" },
     } as any); // skipcq: JS-0323
     render(<CategoriesPage />);
     expect(document.querySelectorAll("svg.lucide-pencil")).toHaveLength(0);

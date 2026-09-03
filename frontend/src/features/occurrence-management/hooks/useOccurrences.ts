@@ -1,11 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  addTimelineNote,
-  createOccurrence,
-  getOccurrenceById,
-  getOccurrences,
-  updateOccurrenceStatus,
-} from "../../../api/occurrences";
+import { addTimelineNote, createOccurrence, getOccurrenceById, getOccurrences, updateOccurrenceStatus,  } from "../../../api/occurrences";
 import type {
   OccurrenceCreatePayload,
   OccurrenceFilterParams,

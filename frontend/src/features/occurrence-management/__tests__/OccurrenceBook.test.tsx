@@ -9,13 +9,23 @@ import { OccurrenceTimelineLog } from "../components/OccurrenceTimelineLog";
 import * as occurrencesApi from "../../../api/occurrences";
 import type { OccurrenceDetail, PaginatedOccurrencesResponse } from "../../../types/occurrence";
 
+import { PERMISSIONS_BY_ROLE } from "../../../test/permissionFixtures";
+
+/**
+ * The permission predicate a retired role value carried (IAM F5, §10.2).
+ *
+ * `PERMISSIONS_BY_ROLE` is the recorded legacy bundle, so a case that mocked
+ * `role: "MANAGER"` and now mocks `hasOf("MANAGER")` asserts the **same**
+ * outcome it always did — which is what makes this a re-expression rather
+ * than a new claim.
+ */
+const hasOf = (profile: string) => (permission: string) =>
+    (PERMISSIONS_BY_ROLE[profile] ?? []).includes(permission);
+
+
 vi.mock("../../../api/occurrences");
-vi.mock("../../user-administration/context/useEffectiveIdentity", () => ({
-  useEffectiveIdentity: () => ({
-    role: "ADMINISTRATOR",
-    userTypeIds: [],
-    isSimulating: false,
-  }),
+vi.mock("../../user-administration/access/useCanAccess", () => ({
+  useEffectivePermissionSet: () => ({ has: hasOf("ADMINISTRATOR") }),
 }));
 
 const mockOccurrencesList: PaginatedOccurrencesResponse = {
@@ -145,7 +155,7 @@ describe("Occurrence Management Feature Suite", () => {
     renderWithQuery(
       <OccurrenceDetailsView
         occurrenceId="occ-1"
-        userRole="ADMINISTRATOR"
+        canManage
         onClose={vi.fn()}
       />
     );
@@ -186,7 +196,7 @@ describe("Occurrence Management Feature Suite", () => {
       <OccurrenceTimelineLog
         occurrenceId="occ-1"
         timeline={mockOccurrenceDetail.timeline}
-        userRole="ADMINISTRATOR"
+        canManage
       />
     );
 

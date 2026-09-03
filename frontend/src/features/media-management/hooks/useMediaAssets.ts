@@ -1,12 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  uploadPhoto,
-  getPendingPhotos,
-  approvePhoto,
-  rejectPhoto,
-  deletePhoto,
-  getPhotoMetadata,
-} from '../../../api/uploads';
+import { uploadPhoto, getPendingPhotos, approvePhoto, rejectPhoto, deletePhoto, getPhotoMetadata,  } from '../../../api/uploads';
 import type { EntityType } from '../../../types/media_asset';
 
 export function usePendingPhotos(page: number = 1, limit: number = 20) {

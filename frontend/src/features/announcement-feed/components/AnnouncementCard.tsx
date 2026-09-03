@@ -1,12 +1,8 @@
 import React, { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { MessageCircle, CheckCheck, Pencil, Trash2 } from "lucide-react";
-import { useAuth, UserRole } from "../../user-administration/context/AuthContext";
-import {
-  useAnnouncementComments,
-  useDeleteAnnouncement,
-  useMarkAnnouncementRead,
-} from "../hooks/useAnnouncements";
+import { useEffectivePermissionSet } from "../../user-administration/access/useCanAccess";
+import { useAnnouncementComments, useDeleteAnnouncement, useMarkAnnouncementRead,  } from "../hooks/useAnnouncements";
 import { MediaCarousel } from "./MediaCarousel";
 import { CommentThread } from "./CommentThread";
 import type { Announcement } from "../../../types/announcement";
@@ -18,12 +14,14 @@ interface AnnouncementCardProps {
 
 export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({ announcement, onEdit }) => {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { has } = useEffectivePermissionSet();
   const markRead = useMarkAnnouncementRead();
   const deleteAnnouncement = useDeleteAnnouncement();
   const { data: comments } = useAnnouncementComments(announcement.id);
 
-  const isPublisher = user?.role === UserRole.ADMINISTRATOR || user?.role === UserRole.DIRECTOR;
+  // IAM F5 (APRAS-49 §10.2): `announcements:create` is the legacy
+  // {A, D} set exactly, so this is the same predicate as data.
+  const isPublisher = has("announcements:create");
 
   useEffect(() => {
     if (!announcement.is_read) {

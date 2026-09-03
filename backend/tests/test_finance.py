@@ -1,7 +1,7 @@
 """Business-logic tests for the Association Financial Area & Dashboard (APRAS-22)."""
 
-from datetime import date
 import uuid
+from datetime import date
 
 import pytest
 from fastapi import status
@@ -9,9 +9,10 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from app.core.security import create_access_token, get_password_hash
-from app.models.enums import TransactionType, UserRole
+from app.models.enums import TransactionType
 from app.models.finance import BudgetLine, FinanceCategory, FinancialTransaction
 from app.models.user import User
+from tests.conftest import make_user
 
 
 @pytest.fixture
@@ -22,12 +23,13 @@ def admin_headers(admin_user: User) -> dict:
 
 @pytest.fixture
 def manager_user(session: Session) -> User:
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email="manager_fin@test.com",
         full_name="Manager Financeiro",
         hashed_password=get_password_hash("password123"),
-        role=UserRole.MANAGER,
+        profile="MANAGER",
         cpf="12260662058",
     )
     session.add(user)

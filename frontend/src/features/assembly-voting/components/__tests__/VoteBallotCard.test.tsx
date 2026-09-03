@@ -1,11 +1,7 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import VoteBallotCard from "../VoteBallotCard";
-import {
-  useMyBallot,
-  useCastBallot,
-  useRetractBallot,
-} from "../../hooks/useVoting";
+import { useMyBallot, useCastBallot, useRetractBallot,  } from "../../hooks/useVoting";
 import type { MyBallotRead, VoteRead } from "../../../../types/voting";
 
 vi.mock("../../hooks/useVoting", () => ({

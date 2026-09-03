@@ -9,7 +9,7 @@ rotting.
 
 IAM F1 built the vocabulary and the plumbing only. IAM F2 (`APRAS-46`) is
 the enforcement swap, and amends exactly two assertions here: the
-reachability rule now admits `SCOPE_PERMISSIONS` (§4.2), and the `UserType`
+reachability rule now admits `SCOPE_PERMISSIONS` (§4.2), and the `Role`
 schemas now carry `permissions` (§9.1).
 """
 
@@ -18,15 +18,17 @@ import re
 from fastapi.routing import APIRoute
 
 from app.core.permissions import (
+    ADMIN_GAP_PERMISSIONS,
     PERMISSIONS,
     ROUTE_PERMISSIONS,
     SCOPE_PERMISSIONS,
+    TIER_PERMISSIONS,
     UNGUARDED_ROUTES,
     module_of,
     permission_for_route,
 )
 from app.main import app
-from app.schemas.user_type import UserTypeCreate, UserTypeRead, UserTypeUpdate
+from app.schemas.role import RoleCreate, RoleRead, RoleUpdate
 
 #: §3 — `<module>:<action>`, exactly one colon, snake_case on both sides.
 PERMISSION_RE = re.compile(r"^[a-z][a-z0-9_]*:[a-z][a-z0-9_]*$")
@@ -103,11 +105,39 @@ def test_every_catalogue_permission_is_reachable():
     dead unless it appears in the enforcement code, which
     `test_permission_enforcement.py`'s AST allowlist makes visible.
     """
-    assert set(ROUTE_PERMISSIONS.values()) | SCOPE_PERMISSIONS == PERMISSIONS
+    assert (
+        set(ROUTE_PERMISSIONS.values()) | SCOPE_PERMISSIONS | TIER_PERMISSIONS
+        == PERMISSIONS
+    )
 
 
 def test_scope_permissions_are_not_route_mapped():
     assert SCOPE_PERMISSIONS & set(ROUTE_PERMISSIONS.values()) == frozenset()
+
+
+def test_tier_permissions_are_not_route_mapped():
+    """IAM F5's three strings are in-code object predicates (§3.0)."""
+    assert TIER_PERMISSIONS & set(ROUTE_PERMISSIONS.values()) == frozenset()
+
+
+def test_tier_permissions_are_exactly_three():
+    assert set(TIER_PERMISSIONS) == {
+        "tasks:read_all",
+        "tasks:update_any",
+        "occurrences:read_assigned",
+    }
+
+
+def test_admin_gap_permissions_survives_the_enum():
+    """IAM F5 (APRAS-49 §8) keeps the constant and drops its role framing.
+
+    It records a property of the code -- `PackageService.get_my_lots` refuses
+    every caller holding `packages:queue_read` -- not of a retired enum, which
+    is why it outlives `LEGACY_ROLE_PERMISSIONS`. This is its only pin now
+    that `tests/test_legacy_role_permissions.py` is gone.
+    """
+    assert frozenset({"packages:my_lots_read"}) == ADMIN_GAP_PERMISSIONS
+    assert ADMIN_GAP_PERMISSIONS <= PERMISSIONS
 
 
 def test_scope_permissions_are_exactly_four():
@@ -124,23 +154,28 @@ def test_permission_strings_follow_the_convention():
     assert not bad, f"permissions violating <module>:<action>: {bad}"
 
 
-def test_unguarded_allowlist_is_twelve_routes():
-    assert len(UNGUARDED_ROUTES) == 12
+def test_unguarded_allowlist_is_thirteen_routes():
+    assert len(UNGUARDED_ROUTES) == 13
 
 
 def test_route_count_is_fully_accounted_for():
     """The registry accounts for the whole route table, with no overlap.
 
     The total is recomputed from `app.main.app` rather than hard-coded, so
-    the invariant survives a baseline shift; 192/180/12 is what to expect on
-    the IAM F4 (APRAS-48) tree, which added the two `/permissions` reads to
-    the allowlist and no row to `ROUTE_PERMISSIONS`.
+    the invariant survives a baseline shift; 193/180/13 is what to expect on
+    the IAM F5 (APRAS-49) tree, which added `PATCH
+    /api/v1/users/{user_id}/superuser` to the allowlist -- the only route and
+    the only allowlist entry that slice adds -- on top of the 192/180/12 IAM
+    F4 (APRAS-48) left. `len(ROUTE_PERMISSIONS)` staying at **180** is the
+    part that must hold unconditionally: it is what keeps the parity matrix
+    at 6 x 180 = 1080 cells and the golden file byte-identical.
     """
     total = len(_all_route_keys())
     assert set(ROUTE_PERMISSIONS) & UNGUARDED_ROUTES == set()
     assert len(ROUTE_PERMISSIONS) + len(UNGUARDED_ROUTES) == total
-    assert len(UNGUARDED_ROUTES) == 12
-    assert len(ROUTE_PERMISSIONS) == total - 12
+    assert len(UNGUARDED_ROUTES) == 13
+    assert len(ROUTE_PERMISSIONS) == total - 13
+    assert len(ROUTE_PERMISSIONS) == 180
 
 
 def test_every_router_module_has_at_least_one_permission():
@@ -170,27 +205,28 @@ def test_module_of_returns_the_module_segment():
     assert {module_of(p) for p in PERMISSIONS} == {p.split(":")[0] for p in PERMISSIONS}
 
 
-def test_user_type_schemas_expose_permissions():
+def test_role_schemas_expose_permissions():
     """The declared F1 -> F2 handoff (APRAS-46 §7.1).
 
     F1's ER-6 pinned these schemas *in F1*; IAM F2 is the slice that makes
-    groups editable, so the three schemas gain `permissions`. The assertion
-    stays exact, so a future field still fails CI.
+    roles editable, so the three schemas gained `permissions`. IAM F5
+    (APRAS-49 §8.1) dropped `allowed_menus` with the menu gate and `role`
+    with the enum, and added `landing_path`. The assertion stays exact, so a
+    future field still fails CI.
     """
-    assert set(UserTypeCreate.model_fields) == {
+    assert set(RoleCreate.model_fields) == {
         "name",
-        "allowed_menus",
         "permissions",
+        "landing_path",
     }
-    assert set(UserTypeUpdate.model_fields) == {
+    assert set(RoleUpdate.model_fields) == {
         "name",
-        "allowed_menus",
         "permissions",
+        "landing_path",
     }
-    assert set(UserTypeRead.model_fields) == {
+    assert set(RoleRead.model_fields) == {
         "id",
         "name",
-        "allowed_menus",
-        "role",
         "permissions",
+        "landing_path",
     }

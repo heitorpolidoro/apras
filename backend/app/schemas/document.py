@@ -7,16 +7,16 @@ class DocumentFolderCreate(BaseModel):
     name: str = Field(..., min_length=1)
     description: str | None = None
     parent_id: UUID | None = None
-    allowed_roles: list[str] = Field(
-        default=["ADMINISTRATOR", "DIRECTOR", "MANAGER", "RESIDENT"]
-    )
+    # Required (IAM F5, APRAS-49 §6): the column's default became `[]`, so a
+    # folder created without an explicit ACL would be invisible to everyone.
+    allowed_role_ids: list[str] = Field(...)
 
 
 class DocumentFolderUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
     parent_id: UUID | None = None
-    allowed_roles: list[str] | None = None
+    allowed_role_ids: list[str] | None = None
 
 
 class DocumentFolderRead(BaseModel):
@@ -26,7 +26,7 @@ class DocumentFolderRead(BaseModel):
     name: str
     description: str | None = None
     parent_id: UUID | None = None
-    allowed_roles: list[str] = []
+    allowed_role_ids: list[str] = []
     document_count: int = 0
     created_at: datetime
     updated_at: datetime

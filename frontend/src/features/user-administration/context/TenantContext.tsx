@@ -13,11 +13,7 @@ import apiClient from "../../../api/client";
 import type { Tenant } from "../../../types/auth";
 import { useAuth } from "./AuthContext";
 import { TenantContext, type TenantContextValue } from "./useTenant";
-import {
-  getActingTenantId,
-  setActingTenantId,
-  subscribeActingTenantId,
-} from "./tenantState";
+import { getActingTenantId, setActingTenantId, subscribeActingTenantId,  } from "./tenantState";
 
 export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({
   children,

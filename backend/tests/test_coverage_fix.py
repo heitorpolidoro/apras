@@ -1,9 +1,10 @@
 from unittest.mock import patch
 
-from app.core.config import settings
-from app.main import get_origins
 from fastapi.testclient import TestClient
 from sqlmodel import Session
+
+from app.core.config import settings
+from app.main import get_origins
 
 
 def test_get_origins_empty():

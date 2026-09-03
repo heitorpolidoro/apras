@@ -1,18 +1,12 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useEffectivePermissionSet } from "../../user-administration/access/useCanAccess";
 import { Pencil, Trash2, Plus, Check, X, AlertTriangle } from "lucide-react";
-import {
-  useCategories,
-  useCreateCategory,
-  useUpdateCategory,
-  useDeleteCategory,
-} from "../hooks/useCategories";
+import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory,  } from "../hooks/useCategories";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { AlertModal } from "../../../components/ui/alert-modal";
 import type { CategoryRead } from "../types";
-import { UserRole } from "../../../types/auth";
-import { useEffectiveIdentity } from "../../user-administration/context/useEffectiveIdentity";
 
 interface ApiError extends Error {
   response?: { data?: { detail?: string } };
@@ -67,8 +61,8 @@ const CategoriesPage: React.FC = () => {
   const updateMutation = useUpdateCategory();
   const deleteMutation = useDeleteCategory();
 
-  const { role } = useEffectiveIdentity();
-  const canWrite = role === UserRole.ADMINISTRATOR || role === UserRole.DIRECTOR;
+  const { has } = useEffectivePermissionSet();
+  const canWrite = has("categories:create");
 
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState("#6366f1");

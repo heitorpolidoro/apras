@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import type { TaskRead, TaskStatus, TaskPriority } from "../types";
-import type { UserRole } from "../../../types/auth";
-import { canSeeSimulatedTask } from "../utils/simulatedPermissions";
+import { canSeeSimulatedTask, type Has } from "../utils/simulatedPermissions";
 
 export interface TaskFilters {
   status?: TaskStatus | null;
@@ -15,19 +14,20 @@ export interface TaskFilters {
  */
 export interface SimulationFilterOptions {
   isSimulating: boolean;
-  role?: UserRole;
-  userTypeIds: string[];
+  /** The simulated permission predicate (IAM F5, APRAS-49 §10.3). */
+  has: Has;
+  roleIds: string[];
 }
 
 /**
  * Hook to filter a list of tasks based on status, priority, assigned user,
- * and — while an Administrator is simulating another role — the
- * simulated role/UserType's task visibility rules.
+ * and — while an administrator is simulating another role — the
+ * simulated roles' task visibility rules.
  *
  * @param tasks - The list of tasks to filter.
  * @param filters - The filter criteria.
  * @param simulation - Optional simulated identity used to additionally
- *   filter out tasks the simulated role/UserType would not see.
+ *   filter out tasks the simulated role/Role would not see.
  * @returns The filtered list of tasks.
  */
 export const useTaskFiltering = (
@@ -44,8 +44,8 @@ export const useTaskFiltering = (
         task.assigned_to_id !== filters.assigned_to_id
       )
         return false;
-      if (simulation?.isSimulating && simulation.role) {
-        if (!canSeeSimulatedTask(task, simulation.role, simulation.userTypeIds)) {
+      if (simulation?.isSimulating) {
+        if (!canSeeSimulatedTask(task, simulation.has, simulation.roleIds)) {
           return false;
         }
       }

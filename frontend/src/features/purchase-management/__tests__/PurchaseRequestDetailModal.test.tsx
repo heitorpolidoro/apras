@@ -3,16 +3,29 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PurchaseRequestDetailModal } from "../components/PurchaseRequestDetailModal";
 import * as purchasesApi from "../../../api/purchases";
-import { UserRole } from "../../../types/auth";
 import type { PurchaseRequestDetail } from "../../../types/purchase";
 import { PurchaseRequestStatus } from "../../../types/purchase";
 
+import { PERMISSIONS_BY_ROLE } from "../../../test/permissionFixtures";
+
+/**
+ * The permission predicate a retired role value carried (IAM F5, §10.2).
+ *
+ * `PERMISSIONS_BY_ROLE` is the recorded legacy bundle, so a case that mocked
+ * `role: "MANAGER"` and now mocks `hasOf("MANAGER")` asserts the **same**
+ * outcome it always did — which is what makes this a re-expression rather
+ * than a new claim.
+ */
+const hasOf = (profile: string) => (permission: string) =>
+    (PERMISSIONS_BY_ROLE[profile] ?? []).includes(permission);
+
+
 vi.mock("../../../api/purchases");
 
-let mockUserRole: UserRole = UserRole.DIRECTOR;
+let mockUserRole: string = "DIRECTOR";
 
-vi.mock("../../user-administration/context/useEffectiveIdentity", () => ({
-  useEffectiveIdentity: () => ({ role: mockUserRole, userTypes: [] }),
+vi.mock("../../user-administration/access/useCanAccess", () => ({
+  useEffectivePermissionSet: () => ({ has: hasOf(mockUserRole) }),
 }));
 
 const baseDetail: PurchaseRequestDetail = {
@@ -133,7 +146,7 @@ const renderModal = () => {
 describe("PurchaseRequestDetailModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUserRole = UserRole.DIRECTOR;
+    mockUserRole = "DIRECTOR";
     vi.mocked(purchasesApi.getPurchaseRequestById).mockResolvedValue(baseDetail);
     vi.mocked(purchasesApi.addQuote).mockResolvedValue(baseDetail.quotes[0]);
     vi.mocked(purchasesApi.updateQuote).mockResolvedValue(baseDetail.quotes[0]);
@@ -198,7 +211,7 @@ describe("PurchaseRequestDetailModal", () => {
   });
 
   it("does not render the choose control for a MANAGER", async () => {
-    mockUserRole = UserRole.MANAGER;
+    mockUserRole = "MANAGER";
     renderModal();
 
     await screen.findByText("Troca das bombas d'água");

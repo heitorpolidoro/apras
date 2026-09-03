@@ -11,9 +11,9 @@ from sqlmodel import Session
 
 from app.core.security import create_access_token, get_password_hash
 from app.models.announcement import AnnouncementReadReceipt
-from app.models.enums import UserRole
 from app.models.user import User
 from app.services import announcement_service
+from tests.conftest import make_user
 
 
 def _make_image_bytes(color: str = "blue") -> bytes:
@@ -37,12 +37,13 @@ def director_headers(normal_user: User):
 
 @pytest.fixture
 def resident_user(session: Session) -> User:
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email="resident_ann@test.com",
         full_name="Resident Ann",
         hashed_password=get_password_hash("password123"),
-        role=UserRole.RESIDENT,
+        profile="RESIDENT",
         cpf="93641136095",
     )
     session.add(user)
@@ -58,12 +59,13 @@ def resident_headers(resident_user: User):
 
 @pytest.fixture
 def guest_user(session: Session) -> User:
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email="guest_ann@test.com",
         full_name="Guest User",
         hashed_password=get_password_hash("password123"),
-        role=UserRole.GUEST,
+        profile="GUEST",
         cpf="96214676037",
     )
     session.add(user)

@@ -100,7 +100,7 @@ describe("LoginPage", () => {
 
   it("renders dev users and handles dev login", async () => {
     const mockDevUsers = [
-      { id: "1", full_name: "devadmin", email: "devadmin@test.com", is_active: true, role: "ADMINISTRATOR" },
+      { id: "1", full_name: "devadmin", email: "devadmin@test.com", is_active: true, is_superuser: true },
     ];
     (apiClient.get as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: mockDevUsers,
@@ -223,7 +223,7 @@ describe("LoginPage", () => {
 
   it("handles dev login failure", async () => {
     const mockDevUsers = [
-      { id: "1", full_name: "devadmin", email: "devadmin@test.com", is_active: true, role: "ADMINISTRATOR" },
+      { id: "1", full_name: "devadmin", email: "devadmin@test.com", is_active: true, is_superuser: true },
     ];
     (apiClient.get as any).mockResolvedValue({ data: mockDevUsers });
     (apiClient.post as any).mockRejectedValue(new Error("Dev login failed"));

@@ -32,8 +32,13 @@ const AuditTimeline: React.FC<AuditTimelineProps> = ({ taskId }) => {
   const formatAssignedValue = (entry: TaskHistoryRead, which: "old" | "new") => {
     const resolved = which === "old" ? entry.resolved_old_value : entry.resolved_new_value;
     if (resolved) {
-      const roleLabel = t(`roles.${resolved.role}`, { defaultValue: resolved.role });
-      return `${resolved.name} (${roleLabel})`;
+      // IAM F5 (APRAS-49 §8.2): the backend resolves an assignee to
+      // `{name, roles}` — the role *names* in the acting tenant — instead of
+      // a single enum value with an i18n label. The names are already
+      // human-readable ("Diretor (papel)"), so there is nothing left to
+      // translate and no `legacyRoles.*` lookup.
+      const roleLabel = resolved.roles.join(", ");
+      return roleLabel ? `${resolved.name} (${roleLabel})` : resolved.name;
     }
     const rawValue = which === "old" ? entry.old_value : entry.new_value;
     return formatValue(rawValue);

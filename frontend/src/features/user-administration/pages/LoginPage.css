@@ -29,26 +29,26 @@
   gap: 1rem;
 }
 
-.form-group {
+.form-role {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.form-group label {
+.form-role label {
   font-weight: 600;
   font-size: 0.9rem;
   color: #495057;
 }
 
-.form-group input {
+.form-role input {
   padding: 0.75rem;
   border: 1px solid #ccc;
   border-radius: 4px;
   font-size: 1rem;
 }
 
-.form-group input:focus {
+.form-role input:focus {
   outline: none;
   border-color: #007bff;
   box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);

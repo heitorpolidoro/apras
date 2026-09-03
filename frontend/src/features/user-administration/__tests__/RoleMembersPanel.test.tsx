@@ -3,35 +3,32 @@ import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type React from "react";
-import GroupMembersPanel from "../components/GroupMembersPanel";
+import RoleMembersPanel from "../components/RoleMembersPanel";
 import apiClient from "../../../api/client";
-import { UserRole } from "../../../types/auth";
 
-/** Membership from the group side (APRAS-48 §6.4). */
+/** Membership from the role side (APRAS-48 §6.4). */
 vi.mock("../../../api/client", () => ({
   default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() },
 }));
 
-const GROUP_ID = "g-custom";
-const OTHER_GROUP = { id: "g-other", name: "Outro", allowed_menus: [] };
-const THIS_GROUP = { id: GROUP_ID, name: "Conselho", allowed_menus: [] };
+const ROLE_ID = "g-custom";
+const OTHER_ROLE = { id: "g-other", name: "Outro" };
+const THIS_ROLE = { id: ROLE_ID, name: "Conselho" };
 
 const USERS = [
   {
     id: "u-member",
     email: "ana@test.com",
     full_name: "Ana",
-    role: UserRole.RESIDENT,
     is_active: true,
-    user_types: [OTHER_GROUP, THIS_GROUP],
+    roles: [OTHER_ROLE, THIS_ROLE],
   },
   {
     id: "u-outsider",
     email: "bruno@test.com",
     full_name: "Bruno",
-    role: UserRole.RESIDENT,
     is_active: true,
-    user_types: [OTHER_GROUP],
+    roles: [OTHER_ROLE],
   },
 ];
 
@@ -57,10 +54,10 @@ beforeEach(() => {
 });
 
 const renderPanel = () =>
-  render(<GroupMembersPanel groupId={GROUP_ID} />, { wrapper: wrapper() });
+  render(<RoleMembersPanel roleId={ROLE_ID} />, { wrapper: wrapper() });
 
-describe("GroupMembersPanel", () => {
-  it("lists the group's members", async () => {
+describe("RoleMembersPanel", () => {
+  it("lists the role's members", async () => {
     renderPanel();
 
     // Ana is the only member; the list item carries a Remover control.
@@ -68,7 +65,7 @@ describe("GroupMembersPanel", () => {
       await screen.findByRole("button", { name: "Remover Ana" }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Remover Bruno" })).toBeNull();
-    // Bruno is a member of another group only, so he is offered as a candidate.
+    // Bruno is a member of another role only, so he is offered as a candidate.
     expect(screen.getByRole("option", { name: "Bruno" })).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: "Ana" })).toBeNull();
   });
@@ -89,7 +86,7 @@ describe("GroupMembersPanel", () => {
       // The recomputed full list, never a delta: the same call and the same
       // payload shape the user-side modal makes.
       expect(mockedPatch).toHaveBeenCalledWith("/users/u-outsider", {
-        user_type_ids: ["g-other", GROUP_ID],
+        role_ids: ["g-other", ROLE_ID],
       }),
     );
   });
@@ -102,7 +99,7 @@ describe("GroupMembersPanel", () => {
 
     await waitFor(() =>
       expect(mockedPatch).toHaveBeenCalledWith("/users/u-member", {
-        user_type_ids: ["g-other"],
+        role_ids: ["g-other"],
       }),
     );
   });
@@ -126,7 +123,7 @@ describe("GroupMembersPanel", () => {
     expect(alert.textContent).not.toContain("You cannot grant");
   });
 
-  it("renders the empty state when the group has no member", async () => {
+  it("renders the empty state when the role has no member", async () => {
     mockedGet.mockImplementation(((url: string) =>
       url === "/users/"
         ? Promise.resolve({ data: [USERS[1]] })

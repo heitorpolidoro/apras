@@ -1,10 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { useTranslation } from "react-i18next";
-import {
-  CANNOT_GRANT_PREFIX,
-  SUPERUSER_ONLY_PREFIX,
-  friendlyPermissionError,
-} from "../utils/permissionErrors";
+import { CANNOT_GRANT_PREFIX, SUPERUSER_ONLY_PREFIX, friendlyPermissionError,  } from "../utils/permissionErrors";
 
 const { t } = useTranslation();
 
@@ -34,18 +30,18 @@ describe("friendlyPermissionError", () => {
     expect(message).not.toContain(SUPERUSER_ONLY_PREFIX);
   });
 
-  it("maps the duplicate-name 409 to groups.errors.nameTaken", () => {
+  it("maps the duplicate-name 409 to roles.errors.nameTaken", () => {
     const message = friendlyPermissionError(
-      apiError("A user type with this name already exists", 409),
+      apiError("A role with this name already exists", 409),
       t,
     );
 
-    expect(message).toBe("Já existe um grupo com esse nome.");
+    expect(message).toBe("Já existe um papel com esse nome.");
   });
 
   it("falls back to parseApiError for any other detail", () => {
-    expect(friendlyPermissionError(apiError("Role-linked user types cannot be deleted"), t)).toBe(
-      "Role-linked user types cannot be deleted",
+    expect(friendlyPermissionError(apiError("Role-linked roles cannot be deleted"), t)).toBe(
+      "Role-linked roles cannot be deleted",
     );
     expect(
       friendlyPermissionError(apiError([{ msg: "field required" }], 422), t),

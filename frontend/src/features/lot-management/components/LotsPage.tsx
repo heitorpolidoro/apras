@@ -1,13 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus, Search } from "lucide-react";
-import {
-  useLots,
-  useCreateLot,
-  useUpdateLot,
-  useDeleteLot,
-  useLinkUserLot,
-} from "../hooks/useLots";
+import { useLots, useCreateLot, useUpdateLot, useDeleteLot, useLinkUserLot,  } from "../hooks/useLots";
 import { LotTable } from "./LotTable";
 import { LotFormModal } from "./LotFormModal";
 import { UserLotAssignmentModal } from "./UserLotAssignmentModal";
@@ -16,16 +10,15 @@ import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import type { Lot, LotCreate, LotUpdate, UserLotLinkCreate } from "../../../types/lot";
 import { LotStatus } from "../../../types/lot";
-import { UserRole } from "../../../types/auth";
-import { useEffectiveIdentity } from "../../user-administration/context/useEffectiveIdentity";
+import { useEffectivePermissionSet } from "../../user-administration/access/useCanAccess";
 
 export const LotsPage: React.FC = () => {
   const { t } = useTranslation();
-  const identity = useEffectiveIdentity();
+  const { has } = useEffectivePermissionSet();
 
   const canManage =
-    identity.role === UserRole.ADMINISTRATOR || identity.role === UserRole.DIRECTOR;
-  const canDelete = identity.role === UserRole.ADMINISTRATOR;
+    has("lots:update");
+  const canDelete = has("lots:delete");
 
   const [search, setSearch] = useState("");
   const [selectedBlock, setSelectedBlock] = useState<string>("");

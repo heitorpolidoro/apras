@@ -1,17 +1,8 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PiggyBank, Plus, Tag, Wallet } from "lucide-react";
-import { useEffectiveIdentity } from "../../user-administration/context/useEffectiveIdentity";
-import {
-  useBudgetVsActual,
-  useCashBalance,
-  useCategories,
-  useCreateBudgetLine,
-  useCreateCategory,
-  useCreateTransaction,
-  useStatement,
-  useUploadInvoice,
-} from "../../../hooks/useFinance";
+import { useEffectivePermissionSet } from "../../user-administration/access/useCanAccess";
+import { useBudgetVsActual, useCashBalance, useCategories, useCreateBudgetLine, useCreateCategory, useCreateTransaction, useStatement, useUploadInvoice,  } from "../../../hooks/useFinance";
 import { Button } from "../../../components/ui/button";
 import { CashBalanceCard } from "./CashBalanceCard";
 import { StatementChart } from "./StatementChart";
@@ -25,12 +16,12 @@ const currentYear = new Date().getFullYear();
 
 export const FinanceDashboardPage: React.FC = () => {
   const { t } = useTranslation();
-  const { role } = useEffectiveIdentity();
+  const { has } = useEffectivePermissionSet();
 
   const canManageCategories =
-    role === "ADMINISTRATOR" || role === "DIRECTOR";
+    has("finance:category_create");
   const canCreateTransaction =
-    role === "ADMINISTRATOR" || role === "DIRECTOR" || role === "MANAGER";
+    has("finance:transaction_create");
 
   const [fiscalYear, setFiscalYear] = useState(currentYear);
   const [transactionModalOpen, setTransactionModalOpen] = useState(false);

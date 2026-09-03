@@ -1,12 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../../components/ui/button";
-import {
-  type ResidentCreatePayload,
-  type ResidentDetail,
-  ResidentRelationship,
-  type ResidentUpdatePayload,
-} from "../../../types/resident";
+import { type ResidentCreatePayload, type ResidentDetail, ResidentRelationship, type ResidentUpdatePayload,  } from "../../../types/resident";
 
 interface ResidentFormModalProps {
   isOpen: boolean;

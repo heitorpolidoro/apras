@@ -1,9 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import apiClient from "../client";
-import {
-  setActingTenantId,
-  clearActingTenantId,
-} from "../../features/user-administration/context/tenantState";
+import { setActingTenantId, clearActingTenantId,  } from "../../features/user-administration/context/tenantState";
 
 /**
  * The interceptor is exercised directly, exactly as `client.test.ts` already

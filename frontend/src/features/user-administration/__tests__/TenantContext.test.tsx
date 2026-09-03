@@ -6,12 +6,8 @@ import apiClient from "../../../api/client";
 import * as AuthHook from "../context/AuthContext";
 import { TenantProvider } from "../context/TenantContext";
 import { useTenant } from "../context/useTenant";
-import {
-  getActingTenantId,
-  clearActingTenantId,
-  setActingTenantId,
-} from "../context/tenantState";
-import { UserRole, type User } from "../../../types/auth";
+import { getActingTenantId, clearActingTenantId, setActingTenantId,  } from "../context/tenantState";
+import { type User } from "../../../types/auth";
 
 vi.mock("../../../api/client", () => ({
   default: { get: vi.fn() },
@@ -78,7 +74,7 @@ describe("TenantContext", () => {
   });
 
   it("lists every tenant returned by GET /tenants for an ADMINISTRATOR", async () => {
-    mockAuth({ id: "u1", role: UserRole.ADMINISTRATOR, tenants: [] });
+    mockAuth({ id: "u1", is_superuser: true, tenants: [] });
     sessionStorage.setItem("accessToken", "token");
     setActingTenantId(TENANT_A);
 
@@ -94,7 +90,7 @@ describe("TenantContext", () => {
   });
 
   it("filters inactive tenants out of the options", async () => {
-    mockAuth({ id: "u1", role: UserRole.ADMINISTRATOR, tenants: [] });
+    mockAuth({ id: "u1", is_superuser: true, tenants: [] });
     sessionStorage.setItem("accessToken", "token");
     setActingTenantId(TENANT_A);
 
@@ -111,7 +107,6 @@ describe("TenantContext", () => {
   it("reports isActingTenantAdmin only for the acting membership", async () => {
     mockAuth({
       id: "u1",
-      role: UserRole.RESIDENT,
       tenants: [
         {
           tenant_id: TENANT_A,
@@ -149,7 +144,7 @@ describe("TenantContext", () => {
   });
 
   it("reconciles a stored tenant id that is no longer an option", async () => {
-    mockAuth({ id: "u1", role: UserRole.ADMINISTRATOR, tenants: [] });
+    mockAuth({ id: "u1", is_superuser: true, tenants: [] });
     sessionStorage.setItem("accessToken", "token");
     // A tenant that was deactivated, or whose membership was revoked.
     setActingTenantId("dddddddd-dddd-dddd-dddd-dddddddddddd");
@@ -163,7 +158,7 @@ describe("TenantContext", () => {
   });
 
   it("selects the first option for a zero-membership ADMINISTRATOR with no stored id", async () => {
-    mockAuth({ id: "u1", role: UserRole.ADMINISTRATOR, tenants: [] });
+    mockAuth({ id: "u1", is_superuser: true, tenants: [] });
     sessionStorage.setItem("accessToken", "token");
 
     renderProbe();
@@ -174,7 +169,7 @@ describe("TenantContext", () => {
   });
 
   it("leaves a zero-option user on the backend fallback (no selection)", async () => {
-    mockAuth({ id: "u1", role: UserRole.RESIDENT, tenants: [] });
+    mockAuth({ id: "u1", tenants: [] });
     sessionStorage.setItem("accessToken", "token");
     mockedGet.mockResolvedValue({ data: [] });
 
@@ -199,7 +194,7 @@ describe("TenantContext", () => {
   });
 
   it("useTenant returns the fail-closed zero value without a provider", () => {
-    mockAuth({ id: "u1", role: UserRole.ADMINISTRATOR });
+    mockAuth({ id: "u1", is_superuser: true });
 
     render(<Probe />);
 
@@ -209,7 +204,7 @@ describe("TenantContext", () => {
   });
 
   it("the zero value's setActingTenant is an inert no-op", () => {
-    mockAuth({ id: "u1", role: UserRole.ADMINISTRATOR });
+    mockAuth({ id: "u1", is_superuser: true });
     // A mutable holder written from an effect, not an outer `let` assigned
     // during render: the render body must stay free of side effects.
     const captured: { setActingTenant: ((id: string) => void) | null } = {

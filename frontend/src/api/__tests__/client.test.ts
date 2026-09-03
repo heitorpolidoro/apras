@@ -1,9 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import apiClient from "../client";
-import {
-  setSimulationState,
-  getSimulationState,
-} from "../../features/user-administration/context/simulationState";
+import { setSimulationState, getSimulationState,  } from "../../features/user-administration/context/simulationState";
 
 describe("apiClient", () => {
   beforeEach(() => {

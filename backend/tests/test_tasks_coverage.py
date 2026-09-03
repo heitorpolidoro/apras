@@ -1,14 +1,15 @@
 import uuid
 
 import pytest
-from app.core.security import get_password_hash
-from app.models.category import Category
-from app.models.enums import TaskPriority, TaskStatus, UserRole
-from app.models.task import Task
-from app.models.user import User
-from app.models.user_type import UserType
 from fastapi.testclient import TestClient
 from sqlmodel import Session
+
+from app.core.security import get_password_hash
+from app.models.category import Category
+from app.models.enums import TaskPriority, TaskStatus
+from app.models.role import Role
+from app.models.task import Task
+from tests.conftest import make_user
 
 
 def get_token(client, username, password):
@@ -23,33 +24,36 @@ def setup_data_fixture(session: Session):
     # DIRECTOR is subject to the tasks menu gate (assert_menu_access,
     # APRAS-8); grant director1 standing access since these tests exercise
     # pre-existing task visibility/filter behavior, not the menu gate.
-    director_type = UserType(name="Director Cov Type", allowed_menus=["tasks"])
+    director_type = Role(name="Director Cov Type",)
     session.add(director_type)
     session.commit()
 
-    admin = User(
+    admin = make_user(
+        session,
         id=uuid.uuid4(),
         email="admin_cov@test.com",
         full_name="Admin Cov",
         hashed_password=get_password_hash("pass"),
-        role=UserRole.ADMINISTRATOR,
+        profile="ADMINISTRATOR",
         cpf="11144477735",
     )
-    director1 = User(
+    director1 = make_user(
+        session,
         id=uuid.uuid4(),
         email="dir1_cov@test.com",
         full_name="Director 1",
         hashed_password=get_password_hash("pass"),
-        role=UserRole.DIRECTOR,
+        profile="DIRECTOR",
         cpf="08050681057",
-        user_types=[director_type],
+        roles=[director_type],
     )
-    director2 = User(
+    director2 = make_user(
+        session,
         id=uuid.uuid4(),
         email="dir2_cov@test.com",
         full_name="Director 2",
         hashed_password=get_password_hash("pass"),
-        role=UserRole.DIRECTOR,
+        profile="DIRECTOR",
         cpf="07491723040",
     )
     category = Category(

@@ -11,11 +11,25 @@ import type {
   ProjectUpdate,
 } from '../../../types/project';
 
+import { PERMISSIONS_BY_ROLE } from "../../../test/permissionFixtures";
+
+/**
+ * The permission predicate a retired role value carried (IAM F5, §10.2).
+ *
+ * `PERMISSIONS_BY_ROLE` is the recorded legacy bundle, so a case that mocked
+ * `role: "MANAGER"` and now mocks `hasOf("MANAGER")` asserts the **same**
+ * outcome it always did — which is what makes this a re-expression rather
+ * than a new claim.
+ */
+const hasOf = (profile: string) => (permission: string) =>
+    (PERMISSIONS_BY_ROLE[profile] ?? []).includes(permission);
+
+
 vi.mock('../../../api/projects');
 
-const mockEffectiveIdentity = vi.fn();
-vi.mock('../../user-administration/context/useEffectiveIdentity', () => ({
-  useEffectiveIdentity: () => mockEffectiveIdentity(),
+const mockPermissionSet = vi.fn();
+vi.mock('../../user-administration/access/useCanAccess', () => ({
+  useEffectivePermissionSet: () => mockPermissionSet(),
 }));
 
 const mockProject: ConstructionProject = {
@@ -97,11 +111,7 @@ const openProjectDetail = async () => {
 describe('ConstructionTrackerPage handlers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockEffectiveIdentity.mockReturnValue({
-      role: 'ADMINISTRATOR',
-      userTypeIds: [],
-      isSimulating: false,
-    });
+    mockPermissionSet.mockReturnValue({ has: hasOf('ADMINISTRATOR') });
     vi.mocked(projectsApi.getProjects).mockResolvedValue(mockProjectsResponse);
     vi.mocked(projectsApi.getProjectDetail).mockResolvedValue(mockProjectDetail);
     vi.mocked(projectsApi.createProject).mockResolvedValue(mockProject);
@@ -331,11 +341,7 @@ describe('ConstructionTrackerPage handlers', () => {
   });
 
   it('hides every create/edit/delete control from a non-managing role', async () => {
-    mockEffectiveIdentity.mockReturnValue({
-      role: 'RESIDENT',
-      userTypeIds: [],
-      isSimulating: false,
-    });
+    mockPermissionSet.mockReturnValue({ has: hasOf('RESIDENT') });
     renderPage();
     await screen.findByText('Reforma da Quadra');
 

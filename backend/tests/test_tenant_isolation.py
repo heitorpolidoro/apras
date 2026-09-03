@@ -27,7 +27,7 @@ from pydantic import BaseModel
 from sqlmodel import Session, SQLModel, select
 
 import app.schemas
-from app.api.deps import get_effective_user_type_ids
+from app.api.deps import get_effective_role_ids
 from app.core.security import create_access_token, get_password_hash
 from app.core.tenant_context import TENANT_SCOPED_MODELS, acting_tenant_scope
 from app.models.access_control import AccessDevice, FacialAccessEvent, FacialTemplate
@@ -47,7 +47,6 @@ from app.models.enums import (
     OccurrenceCategory,
     PhotoApprovalStatus,
     TransactionType,
-    UserRole,
     VoteKind,
     VoteType,
 )
@@ -61,12 +60,14 @@ from app.models.project import ConstructionProject, ProjectMilestone, ProjectUpd
 from app.models.purchase import PurchaseQuote, PurchaseQuoteDecision, PurchaseRequest
 from app.models.reservation import ReservableSpace, SpaceReservation
 from app.models.resident import Resident
+from app.models.role import Role
 from app.models.task import Task
 from app.models.tenant import DEFAULT_TENANT_ID, Tenant, UserTenantLink
 from app.models.user import User
-from app.models.user_type import UserType
 from app.models.visitor import AccessLog, Visitor, VisitorAuthorization
 from app.models.voting import Assembly, LotVoterEligibility, Vote
+from app.services.tenant_service import LEGACY_ROLE_NAMES
+from tests.conftest import make_user
 from tests.test_tenant_models import INHERITED_TABLES
 
 TENANT_A = DEFAULT_TENANT_ID
@@ -127,7 +128,7 @@ def _seed_tenant(raw: Session, tenant_id, actor: User, tag: str) -> dict:  # noq
         return obj
 
     category = add("category", Category(name=f"Cat {tag}", color="#123456"))
-    add("user_type", UserType(name=f"Type {tag}", allowed_menus=["tasks"]))
+    add("role", Role(name=f"Type {tag}",))
     lot = add("lot", Lot(block=f"B{tag}", lot_number=f"{tag}1"))
     reservable = add("reservable_space", ReservableSpace(name=f"Space {tag}"))
     folder = add("document_folder", DocumentFolder(name=f"Folder {tag}"))
@@ -409,7 +410,7 @@ def test_harness_gives_each_request_its_own_session(
 COLLECTION_ENDPOINTS = [
     ("/api/v1/tasks/", "task"),
     ("/api/v1/categories/", "category"),
-    ("/api/v1/user-types/", "user_type"),
+    ("/api/v1/roles/", "role"),
     ("/api/v1/lots/", "lot"),
     ("/api/v1/visitors", "visitor"),
     ("/api/v1/access-logs", "access_log"),
@@ -538,8 +539,8 @@ BY_ID_CASES = [
     ("GET", "/api/v1/tasks/{id}/comments", "task", None),
     ("PATCH", "/api/v1/categories/{id}", "category", {"name": "hijack"}),
     ("DELETE", "/api/v1/categories/{id}", "category", None),
-    ("PATCH", "/api/v1/user-types/{id}", "user_type", {"name": "hijack"}),
-    ("DELETE", "/api/v1/user-types/{id}", "user_type", None),
+    ("PATCH", "/api/v1/roles/{id}", "role", {"name": "hijack"}),
+    ("DELETE", "/api/v1/roles/{id}", "role", None),
     ("GET", "/api/v1/residents/{id}", "resident", None),
     ("DELETE", "/api/v1/residents/{id}", "resident", None),
     ("GET", "/api/v1/visitors/{id}", "visitor", None),
@@ -886,12 +887,13 @@ def test_porteiro_stays_inside_its_tenant(
     tenant_client: TestClient, seeded, session: Session
 ):
     """A gatekeeper's condo-wide flows are confined by the ambient filter."""
-    porteiro = User(
+    porteiro = make_user(
+        session,
         id=uuid.uuid4(),
         email="porteiro-a@test.com",
         full_name="Porteiro A",
         hashed_password=get_password_hash("password"),
-        role=UserRole.PORTEIRO,
+        profile="PORTEIRO",
         cpf="70768527086",
     )
     session.add(porteiro)
@@ -947,12 +949,13 @@ def test_unknown_tenant_is_403_for_everyone_else(
     tenant_client: TestClient, session: Session
 ):
     """A non-administrator is never told whether a tenant exists."""
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email="director-a@test.com",
         full_name="Director A",
         hashed_password=get_password_hash("password"),
-        role=UserRole.DIRECTOR,
+        profile="DIRECTOR",
         cpf="45317828791",
     )
     session.add(user)
@@ -966,12 +969,13 @@ def test_unknown_tenant_is_403_for_everyone_else(
 def test_non_member_of_an_existing_tenant_is_403(
     tenant_client: TestClient, session: Session, tenant_b: Tenant
 ):
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email="director-b@test.com",
         full_name="Director B",
         hashed_password=get_password_hash("password"),
-        role=UserRole.DIRECTOR,
+        profile="DIRECTOR",
         cpf="19100000034",
     )
     session.add(user)
@@ -1017,12 +1021,13 @@ def test_zero_memberships_fall_back_to_the_default_tenant(
 ):
     """Zero memberships → the default tenant, which is what every existing
     test fixture relies on."""
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email="no-membership@test.com",
         full_name="No Membership",
         hashed_password=get_password_hash("password"),
-        role=UserRole.ADMINISTRATOR,
+        profile="ADMINISTRATOR",
         cpf="63311527079",
     )
     session.add(user)
@@ -1192,15 +1197,19 @@ def test_registry_covers_every_scoped_table():
 
 
 # ---------------------------------------------------------------------------
-# 9. Per-tenant role-linked UserType seeding (§7)
+# 9. Per-tenant role-linked Role seeding (§7)
 # ---------------------------------------------------------------------------
 
 
-def test_creating_a_tenant_seeds_its_role_linked_user_types(
+def test_creating_a_tenant_seeds_its_role_linked_roles(
     tenant_client: TestClient, raw_session: Session, user_in_tenant_a: User
 ):
-    """Without these rows a non-administrator member of a new tenant has an
-    empty effective-UserType set and is 403'd by every gated menu."""
+    """Every new tenant gets the six historically-named rows.
+
+    They carry `permissions = []` and grant nobody anything (IAM F5, §9.2);
+    they exist so an operator opening a fresh tenant finds the same six names
+    every other tenant has.
+    """
     response = tenant_client.post(
         "/api/v1/tenants",
         headers=_auth(user_in_tenant_a),
@@ -1211,10 +1220,10 @@ def test_creating_a_tenant_seeds_its_role_linked_user_types(
 
     raw_session.expire_all()
     seeded_types = raw_session.exec(
-        select(UserType).where(UserType.tenant_id == new_id)
+        select(Role).where(Role.tenant_id == new_id)
     ).all()
-    assert {ut.role for ut in seeded_types} == set(UserRole)
-    assert all(ut.allowed_menus == [] for ut in seeded_types)
+    assert {ut.name for ut in seeded_types} == set(LEGACY_ROLE_NAMES)
+    assert all(ut.permissions == [] for ut in seeded_types)
 
 
 def test_creating_a_tenant_does_not_touch_the_acting_tenants_types(
@@ -1222,7 +1231,7 @@ def test_creating_a_tenant_does_not_touch_the_acting_tenants_types(
 ):
     """`acting_tenant_scope` stamps the *new* tenant, not the acting one."""
     before = len(
-        raw_session.exec(select(UserType).where(UserType.tenant_id == TENANT_A)).all()
+        raw_session.exec(select(Role).where(Role.tenant_id == TENANT_A)).all()
     )
     response = tenant_client.post(
         "/api/v1/tenants",
@@ -1233,40 +1242,40 @@ def test_creating_a_tenant_does_not_touch_the_acting_tenants_types(
 
     raw_session.expire_all()
     after = len(
-        raw_session.exec(select(UserType).where(UserType.tenant_id == TENANT_A)).all()
+        raw_session.exec(select(Role).where(Role.tenant_id == TENANT_A)).all()
     )
     assert after == before
 
 
-def test_effective_user_types_resolve_the_acting_tenants_role_type(
+def test_effective_roles_resolve_the_acting_tenants_role_type(
     session: Session, raw_session: Session, tenant_b: Tenant
 ):
-    """`get_effective_user_type_ids` reads the acting tenant from the session
+    """`get_effective_role_ids` reads the acting tenant from the session
     and falls back to the default tenant when there is none (§7.1)."""
-    a_type = UserType(name="Diretor (papel)", role=UserRole.DIRECTOR)
-    b_type = UserType(
-        name="Diretor (papel) B", role=UserRole.DIRECTOR, tenant_id=tenant_b.id
-    )
-    raw_session.add_all([a_type, b_type])
-    raw_session.commit()
-    raw_session.refresh(a_type)
-    raw_session.refresh(b_type)
+    b_type = Role(name="Diretor (papel) B", tenant_id=tenant_b.id)
+    session.add(b_type)
+    session.commit()
+    session.refresh(b_type)
 
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email="effective@test.com",
         full_name="Effective",
         hashed_password=get_password_hash("password"),
-        role=UserRole.DIRECTOR,
+        profile="DIRECTOR",
         cpf="55566677720",
     )
-    raw_session.add(user)
-    raw_session.commit()
+    a_type = user.roles[0]
+    user.roles = [a_type, b_type]
+    session.add(user)
+    session.commit()
 
     with Session(session.get_bind()) as probe:
-        assert get_effective_user_type_ids(user, probe) == {a_type.id}
+        probe_user = probe.get(User, user.id)
+        assert get_effective_role_ids(probe_user, probe) == {a_type.id}
         with acting_tenant_scope(probe, tenant_b.id):
-            assert get_effective_user_type_ids(user, probe) == {b_type.id}
+            assert get_effective_role_ids(probe_user, probe) == {b_type.id}
 
 
 def test_zero_memberships_with_an_unusable_default_tenant_is_400(
@@ -1280,12 +1289,13 @@ def test_zero_memberships_with_an_unusable_default_tenant_is_400(
     session.add(default_tenant)
     session.commit()
 
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email="orphan@test.com",
         full_name="Orphan",
         hashed_password=get_password_hash("password"),
-        role=UserRole.ADMINISTRATOR,
+        profile="ADMINISTRATOR",
         cpf="12345678062",
     )
     session.add(user)

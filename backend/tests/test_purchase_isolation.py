@@ -32,10 +32,10 @@ from sqlmodel import Session, select
 
 from app.core.security import create_access_token
 from app.models.asset import Asset, InventoryMovement
-from app.models.enums import UserRole
 from app.models.finance import FinancialTransaction
 from app.models.project import ConstructionProject
 from app.models.user import User
+from tests.conftest import make_user
 
 _BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -339,12 +339,13 @@ def _headers(user: User) -> dict[str, str]:
 
 @pytest.fixture
 def board_user(session: Session) -> User:
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email="board_iso@test.com",
         full_name="Board Member",
         hashed_password="hash",
-        role=UserRole.DIRECTOR,
+        profile="DIRECTOR",
         cpf="99999999999",
     )
     session.add(user)

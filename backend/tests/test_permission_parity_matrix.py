@@ -34,16 +34,13 @@ from pathlib import Path
 import pytest
 from fastapi.routing import APIRoute
 
-from app.core.permissions import (
-    LEGACY_ROLE_PERMISSIONS,
-    ROUTE_PERMISSIONS,
-    UNGUARDED_ROUTES,
-)
+from app.core.permissions import ROUTE_PERMISSIONS, UNGUARDED_ROUTES
 from app.main import app
-from app.models.enums import UserRole
 from tests import matrix_world
+from tests.conftest import bundle
 from tests.matrix_world import (
     CELLS,
+    PARITY_PROFILES,
     PATH_PARAMS,
     QUERY_PARAMS,
     REQUEST_BODIES,
@@ -60,6 +57,21 @@ BASELINE_PATH = BACKEND_ROOT / "tests" / "data" / "parity_matrix_baseline.json"
 HARNESS_PATH = BACKEND_ROOT / "tests" / "matrix_world.py"
 
 EXPECTED_CELL_COUNT = 1080
+
+#: The only edit IAM F5 (APRAS-49 §11.1) makes to the golden file's *keys*,
+#: and it makes it **here** rather than by re-recording: `/api/v1/user-types`
+#: became `/api/v1/roles`, a pure rename with no authorization content, so
+#: `tests/data/parity_matrix_baseline.json` stays byte-identical
+#: (`git diff --stat` on that path is empty after F5) and keeps its
+#: `_meta.merge_base_sha = 02c2025…`. Four `(method, path)` entries live under
+#: these two path strings — `GET`/`POST` on the collection, `PATCH`/`DELETE`
+#: on the item — so `4 x 6 profiles = 24` cells are re-keyed and **no value
+#: moves**.
+F5_PATH_RENAMES: dict[str, str] = {
+    "/api/v1/user-types/": "/api/v1/roles/",
+    "/api/v1/user-types/{user_type_id}": "/api/v1/roles/{role_id}",
+}
+
 WRITE_METHODS = frozenset({"POST", "PUT", "PATCH"})
 EXPECTED_REQUEST_BODY_COUNT = 89
 META_KEYS = frozenset(
@@ -73,8 +85,8 @@ META_KEYS = frozenset(
 
 #: A *denied* cell normally answers 403. These six answer something else, and
 #: the reason is derivable rather than asserted by fiat: `tasks:read`,
-#: `tasks:update` and `tasks:comment` are each `{A, D, M, R, P}` in
-#: `LEGACY_ROLE_PERMISSIONS`, so GUEST is the only denied role on the six task
+#: `tasks:update` and `tasks:comment` are each `{A, D, M, R, P}` in the
+#: recorded bundles, so GUEST is the only denied profile on the six task
 #: routes that reach `assert_manager_can_see_task` (which raises
 #: `TaskNotFoundError`) or the `list_tasks` empty-list early return.
 DENIAL_SHAPE_OVERRIDES: dict[tuple[str, str, str], tuple[int, str]] = {
@@ -238,13 +250,25 @@ def matrix_run(tmp_path_factory):
 
 
 def load_baseline() -> dict:
-    """The committed golden file. Missing means **fail**, never skip."""
+    """The committed golden file, with F5's two path renames applied.
+
+    Missing means **fail**, never skip. `F5_PATH_RENAMES` is applied to the
+    *keys* on the way in and never written back: the file on disk stays the
+    one recorded at `_meta.merge_base_sha`, before a single guard was
+    converted (§11.1).
+    """
     assert BASELINE_PATH.exists(), (
         f"the parity baseline {BASELINE_PATH} is missing; it is recorded by "
         "`uv run python -m tests.tools.record_parity_baseline` and a deleted "
         "baseline must be a red run, not a green one"
     )
-    return json.loads(BASELINE_PATH.read_text(encoding="utf-8"))
+    baseline = json.loads(BASELINE_PATH.read_text(encoding="utf-8"))
+    for by_method in baseline["cells"].values():
+        for by_path in by_method.values():
+            for old, new in F5_PATH_RENAMES.items():
+                if old in by_path:
+                    by_path[new] = by_path.pop(old)
+    return baseline
 
 
 def baseline_status(baseline: dict, role: str, method: str, path: str) -> int:
@@ -252,7 +276,14 @@ def baseline_status(baseline: dict, role: str, method: str, path: str) -> int:
 
 
 def holds(role: str, method: str, path: str) -> bool:
-    return ROUTE_PERMISSIONS[(method, path)] in LEGACY_ROLE_PERMISSIONS[UserRole(role)]
+    """Whether `role`'s **profile bundle** carries the route's permission.
+
+    IAM F5 (APRAS-49 §11.1) re-pointed this from `LEGACY_ROLE_PERMISSIONS`,
+    which no longer exists, at `conftest.bundle` -- the same
+    `legacy_role_bundles.json` union `matrix_world` gives the six actors and
+    migration `0033` writes onto the real rows. One source, three readers.
+    """
+    return ROUTE_PERMISSIONS[(method, path)] in bundle(role)
 
 
 #: Divergences accumulated by the parametrised cells, reported in one sorted
@@ -267,13 +298,13 @@ _DIVERGENCES: list[tuple[str, str, str, int, int]] = []
 
 def test_matrix_covers_every_permission_mapped_route():
     assert {(method, path) for _role, method, path in CELLS} == set(ROUTE_PERMISSIONS)
-    assert len(CELLS) == len(UserRole) * len(ROUTE_PERMISSIONS)
+    assert len(CELLS) == len(PARITY_PROFILES) * len(ROUTE_PERMISSIONS)
     assert len(CELLS) == EXPECTED_CELL_COUNT
 
 
-def test_the_twelve_unguarded_routes_are_the_only_ones_excluded():
+def test_the_thirteen_unguarded_routes_are_the_only_ones_excluded():
     """No cell may be dropped for any reason other than being unguarded."""
-    assert len(UNGUARDED_ROUTES) == 12
+    assert len(UNGUARDED_ROUTES) == 13
     assert not (set(ROUTE_PERMISSIONS) & UNGUARDED_ROUTES)
 
 

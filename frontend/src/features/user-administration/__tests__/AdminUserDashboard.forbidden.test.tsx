@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import AdminUserDashboard from "../pages/AdminUserDashboard";
 import * as AuthHook from "../context/AuthContext";
 import apiClient from "../../../api/client";
-import { UserRole, type User } from "../../../types/auth";
+import { type User } from "../../../types/auth";
 
 /**
  * After switching into a tenant where the capability is absent, the backend
@@ -24,8 +24,8 @@ vi.mock("../../../api/client", () => ({
   },
 }));
 
-vi.mock("../../../hooks/useUserTypes", () => ({
-  useUserTypes: vi.fn(() => ({ data: [] })),
+vi.mock("../../../hooks/useRoles", () => ({
+  useRoles: vi.fn(() => ({ data: [] })),
 }));
 
 const mockedGet = vi.mocked(apiClient.get);
@@ -55,7 +55,6 @@ describe("AdminUserDashboard under a 403", () => {
         id: "u-syndic",
         email: "syndic@test.com",
         full_name: "Síndico",
-        role: UserRole.RESIDENT,
         is_active: true,
       } as User,
       isAuthenticated: true,

@@ -11,7 +11,7 @@ import AdminUserDashboard from "./features/user-administration/pages/AdminUserDa
 import ContactInfoDashboard from "./features/user-administration/pages/ContactInfoDashboard";
 import GuestWelcomePage from "./features/user-administration/pages/GuestWelcomePage";
 import ProtectedRoute from "./features/user-administration/components/ProtectedRoute";
-import { AuthProvider, useAuth } from "./features/user-administration/context/AuthContext";
+import { AuthProvider } from "./features/user-administration/context/AuthContext";
 import { SimulationProvider } from "./features/user-administration/context/SimulationContext";
 import { TenantProvider } from "./features/user-administration/context/TenantContext";
 import Navbar from "./features/user-administration/components/Navbar";
@@ -33,10 +33,9 @@ import SpaceBookingPage from "./features/space-reservation-management/components
 import AssemblyVotingPage from "./features/assembly-voting/components/AssemblyVotingPage";
 import AssetsInventoryPage from "./features/asset-management/components/AssetsInventoryPage";
 import PurchaseRequestsPage from "./features/purchase-management/components/PurchaseRequestsPage";
-import GroupsAdminPage from "./features/user-administration/pages/GroupsAdminPage";
-import GroupDetailPage from "./features/user-administration/pages/GroupDetailPage";
+import RolesAdminPage from "./features/user-administration/pages/RolesAdminPage";
+import RoleDetailPage from "./features/user-administration/pages/RoleDetailPage";
 import { ROUTE_ACCESS } from "./features/user-administration/access/routeAccess";
-import { UserRole } from "./types/auth";
 import "./App.css";
 
 /**
@@ -46,17 +45,24 @@ import "./App.css";
  * the brief isLoading window where `user` is still undefined) goes to
  * /dashboard as before.
  */
+/**
+ * Where "/" lands the caller.
+ *
+ * IAM F5 (APRAS-49 §10.4) replaced the three-way enum switch with data:
+ * `GET /permissions/me` returns the first non-null `landing_path` among the
+ * caller's roles in the acting tenant, ordered by role name. Landing is a
+ * *preference*, not authorization — a PORTEIRO genuinely holds `tasks:read`,
+ * so no predicate over the catalogue could separate "pin the gatekeeper to
+ * the gate" from "the board can also open the gate" — which is why it lives
+ * on the role row and is operator-editable, a feature the hard-coded switch
+ * never had.
+ */
 export const RootRedirect: React.FC = () => {
-  const { user } = useAuth();
-  let target = "/dashboard";
-  if (user?.role === UserRole.GUEST) {
-    target = "/welcome";
-  } else if (user?.role === UserRole.PORTEIRO) {
-    target = "/gate";
-  }
-  return <Navigate to={target} replace />;
+  const { data } = useMyPermissions();
+  return <Navigate to={data?.landing_path ?? "/dashboard"} replace />;
 };
 
+import { useMyPermissions } from "./hooks/usePermissionQueries";
 function App() {
   return (
     <AuthProvider>
@@ -292,21 +298,21 @@ function App() {
                 />
 
                 <Route
-                  path="/admin/groups"
+                  path="/admin/roles"
                   element={
-                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/admin/groups"]}>
-                      <GroupsAdminPage />
+                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/admin/roles"]}>
+                      <RolesAdminPage />
                     </ProtectedRoute>
                   }
                 />
 
                 <Route
-                  path="/admin/groups/:groupId"
+                  path="/admin/roles/:roleId"
                   element={
                     <ProtectedRoute
-                      requiredAccess={ROUTE_ACCESS["/admin/groups/:groupId"]}
+                      requiredAccess={ROUTE_ACCESS["/admin/roles/:roleId"]}
                     >
-                      <GroupDetailPage />
+                      <RoleDetailPage />
                     </ProtectedRoute>
                   }
                 />

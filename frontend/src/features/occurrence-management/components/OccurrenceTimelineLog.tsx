@@ -7,13 +7,15 @@ import { useAddTimelineNote } from "../hooks/useOccurrences";
 interface OccurrenceTimelineLogProps {
   occurrenceId: string;
   timeline: OccurrenceTimeline[];
-  userRole?: string;
+  /** IAM F5 (APRAS-49): `occurrences:manage_all` is the legacy {A, D}
+   *  set exactly, so the prop carries the decision instead of a role. */
+  canManage?: boolean;
 }
 
 export const OccurrenceTimelineLog: React.FC<OccurrenceTimelineLogProps> = ({
   occurrenceId,
   timeline,
-  userRole,
+  canManage,
 }) => {
   const { t } = useTranslation();
   const [noteText, setNoteText] = useState("");
@@ -22,7 +24,7 @@ export const OccurrenceTimelineLog: React.FC<OccurrenceTimelineLogProps> = ({
 
   const addNoteMutation = useAddTimelineNote();
 
-  const isManagement = userRole === "ADMINISTRATOR" || userRole === "DIRECTOR";
+  const isManagement = Boolean(canManage);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

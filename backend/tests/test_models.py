@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from app.models.enums import TaskPriority, TaskStatus, UserRole
+from app.models.enums import TaskPriority, TaskStatus
 from app.models.task import Task, TaskHistory
 from app.models.user import User
 
@@ -10,12 +10,12 @@ def test_user_model_creation():
     user = User(
         email="testuser@test.com",
         hashed_password="hash",
-        full_name="Test User",
-        role=UserRole.DIRECTOR,
-        cpf="98715891000",
+        full_name="Test User",        cpf="98715891000",
     )
     assert user.username == "testuser"
-    assert user.role == UserRole.DIRECTOR
+    # IAM F5 (APRAS-49): the enum column and its `DIRECTOR` default are
+    # gone. A user with no memberships holds nothing.
+    assert user.roles == []
     assert user.is_active is True
 
 
@@ -24,9 +24,7 @@ def test_user_model_profile_fields_default_to_none():
     user = User(
         email="noprofile@test.com",
         hashed_password="hash",
-        full_name="No Profile",
-        role=UserRole.DIRECTOR,
-        cpf="98715891000",
+        full_name="No Profile",        cpf="98715891000",
     )
     assert user.phone is None
     assert user.address is None
@@ -37,9 +35,7 @@ def test_user_model_profile_fields_accept_strings():
     user = User(
         email="withprofile@test.com",
         hashed_password="hash",
-        full_name="With Profile",
-        role=UserRole.DIRECTOR,
-        cpf="11144477735",
+        full_name="With Profile",        cpf="11144477735",
         phone="+55 11 91234-5678",
         address="Rua das Flores, 123",
     )

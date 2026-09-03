@@ -1,9 +1,5 @@
 import React, { useState } from 'react';
-import {
-  usePendingPhotos,
-  useApprovePhoto,
-  useRejectPhoto,
-} from '../hooks/useMediaAssets';
+import { usePendingPhotos, useApprovePhoto, useRejectPhoto,  } from '../hooks/useMediaAssets';
 import type { MediaAssetRead } from '../../../types/media_asset';
 
 export const PhotoApprovalQueuePage: React.FC = () => {

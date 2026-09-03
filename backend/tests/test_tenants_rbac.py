@@ -14,27 +14,28 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from app.core.security import create_access_token
-from app.models.enums import UserRole
 from app.models.tenant import DEFAULT_TENANT_ID, DEFAULT_TENANT_NAME
 from app.models.user import User
+from tests.conftest import make_user
 
 NON_ADMIN_ROLES = [
-    UserRole.DIRECTOR,
-    UserRole.MANAGER,
-    UserRole.RESIDENT,
-    UserRole.PORTEIRO,
-    UserRole.GUEST,
+    "DIRECTOR",
+    "MANAGER",
+    "RESIDENT",
+    "PORTEIRO",
+    "GUEST",
 ]
 
 
-def _make_user(session: Session, role: UserRole) -> User:
+def _make_user(session: Session, role: str) -> User:
     identifier = uuid.uuid4()
-    user = User(
+    user = make_user(
+        session,
         id=identifier,
-        email=f"{role.value.lower()}-{identifier}@test.com",
-        full_name=f"{role.value} User",
+        email=f"{role.lower()}-{identifier}@test.com",
+        full_name=f"{role} User",
         hashed_password="hash",
-        role=role,
+        profile=role,
         cpf=str(identifier.int % 10**11).zfill(11),
     )
     session.add(user)
@@ -49,17 +50,17 @@ def _headers(user: User) -> dict[str, str]:
 
 @pytest.fixture
 def admin(session: Session) -> User:
-    return _make_user(session, UserRole.ADMINISTRATOR)
+    return _make_user(session, "ADMINISTRATOR")
 
 
 @pytest.mark.parametrize("role", NON_ADMIN_ROLES)
 def test_create_tenant_is_403_for_non_admin(
-    client: TestClient, session: Session, role: UserRole
+    client: TestClient, session: Session, role: str
 ):
     user = _make_user(session, role)
 
     response = client.post(
-        "/api/v1/tenants", json={"name": f"Nope {role.value}"}, headers=_headers(user)
+        "/api/v1/tenants", json={"name": f"Nope {role}"}, headers=_headers(user)
     )
 
     assert response.status_code == 403
@@ -75,7 +76,7 @@ def test_create_tenant_is_201_for_admin(client: TestClient, admin: User):
 
 @pytest.mark.parametrize("role", NON_ADMIN_ROLES)
 def test_update_tenant_is_403_for_non_admin(
-    client: TestClient, session: Session, role: UserRole
+    client: TestClient, session: Session, role: str
 ):
     user = _make_user(session, role)
 
@@ -100,7 +101,7 @@ def test_update_tenant_is_200_for_admin(client: TestClient, admin: User):
 
 @pytest.mark.parametrize("role", NON_ADMIN_ROLES)
 def test_add_member_is_403_for_non_admin(
-    client: TestClient, session: Session, role: UserRole
+    client: TestClient, session: Session, role: str
 ):
     user = _make_user(session, role)
 
@@ -116,7 +117,7 @@ def test_add_member_is_403_for_non_admin(
 def test_add_member_is_201_for_admin(
     client: TestClient, session: Session, admin: User
 ):
-    member = _make_user(session, UserRole.RESIDENT)
+    member = _make_user(session, "RESIDENT")
 
     response = client.post(
         f"/api/v1/tenants/{DEFAULT_TENANT_ID}/members",
@@ -129,7 +130,7 @@ def test_add_member_is_201_for_admin(
 
 @pytest.mark.parametrize("role", NON_ADMIN_ROLES)
 def test_remove_member_is_403_for_non_admin(
-    client: TestClient, session: Session, admin: User, role: UserRole
+    client: TestClient, session: Session, admin: User, role: str
 ):
     user = _make_user(session, role)
     client.post(
@@ -149,7 +150,7 @@ def test_remove_member_is_403_for_non_admin(
 def test_remove_member_is_204_for_admin(
     client: TestClient, session: Session, admin: User
 ):
-    member = _make_user(session, UserRole.RESIDENT)
+    member = _make_user(session, "RESIDENT")
     client.post(
         f"/api/v1/tenants/{DEFAULT_TENANT_ID}/members",
         json={"user_id": str(member.id)},
@@ -177,7 +178,7 @@ def test_list_tenants_is_global_for_admin(client: TestClient, admin: User):
 
 @pytest.mark.parametrize("role", NON_ADMIN_ROLES)
 def test_list_tenants_is_own_memberships_only_for_non_admin(
-    client: TestClient, session: Session, admin: User, role: UserRole
+    client: TestClient, session: Session, admin: User, role: str
 ):
     user = _make_user(session, role)
     client.post("/api/v1/tenants", json={"name": "Invisível"}, headers=_headers(admin))

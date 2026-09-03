@@ -4,6 +4,7 @@ import { FolderPlus, X } from "lucide-react";
 import type { DocumentFolderTree } from "../../../types/document";
 import { Input } from "../../../components/ui/input";
 import { Button } from "../../../components/ui/button";
+import { useRoles } from "../../../hooks/useRoles";
 
 interface FolderFormModalProps {
   isOpen: boolean;
@@ -14,8 +15,6 @@ interface FolderFormModalProps {
   onSubmit: (data: any) => Promise<void>;
   isLoading?: boolean;
 }
-
-const ALL_ROLES = ["ADMINISTRATOR", "DIRECTOR", "MANAGER", "RESIDENT"];
 
 export const FolderFormModal: React.FC<FolderFormModalProps> = ({
   isOpen,
@@ -32,7 +31,14 @@ export const FolderFormModal: React.FC<FolderFormModalProps> = ({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [parentId, setParentId] = useState<string | "">("");
-  const [allowedRoles, setAllowedRoles] = useState<string[]>(ALL_ROLES);
+  // IAM F5 (APRAS-49 §6): the list is every role of the tenant, not the six
+  // hard-coded legacy names — a folder can now be scoped to any role. The
+  // default is empty because the backend's default is `[]` and
+  // `DocumentFolderCreate.allowed_role_ids` is required: a folder created
+  // without an explicit ACL would be invisible to everyone, so the caller
+  // is made to say.
+  const { data: roles } = useRoles();
+  const [allowedRoles, setAllowedRoles] = useState<string[]>([]);
 
   const flattenFolders = (
     items: DocumentFolderTree[],
@@ -56,12 +62,12 @@ export const FolderFormModal: React.FC<FolderFormModalProps> = ({
       setName(initialData.name);
       setDescription(initialData.description || "");
       setParentId(initialData.parent_id || "");
-      setAllowedRoles(initialData.allowed_roles || ALL_ROLES);
+      setAllowedRoles(initialData.allowed_role_ids || []);
     } else {
       setName("");
       setDescription("");
       setParentId(initialParentId || "");
-      setAllowedRoles(ALL_ROLES);
+      setAllowedRoles([]);
     }
   }, [initialData, initialParentId, isOpen]);
 
@@ -81,7 +87,7 @@ export const FolderFormModal: React.FC<FolderFormModalProps> = ({
       name,
       description: description || undefined,
       parent_id: parentId || null,
-      allowed_roles: allowedRoles,
+      allowed_role_ids: allowedRoles,
     });
     onClose();
   };
@@ -150,18 +156,18 @@ export const FolderFormModal: React.FC<FolderFormModalProps> = ({
               {t("documents.allowedRolesLabel", "Perfis com Acesso")}
             </label>
             <div className="grid grid-cols-2 gap-2 mt-2">
-              {ALL_ROLES.map((role) => (
+              {(roles ?? []).map((role) => (
                 <label
-                  key={role}
+                  key={role.id}
                   className="flex items-center space-x-2 text-sm text-slate-700 dark:text-slate-300 cursor-pointer"
                 >
                   <input
                     type="checkbox"
-                    checked={allowedRoles.includes(role)}
-                    onChange={() => handleRoleToggle(role)}
+                    checked={allowedRoles.includes(role.id)}
+                    onChange={() => handleRoleToggle(role.id)}
                     className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                   />
-                  <span>{role}</span>
+                  <span>{role.name}</span>
                 </label>
               ))}
             </div>

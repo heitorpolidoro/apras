@@ -1,7 +1,7 @@
 """Tests for Construction & Capital Improvement Project Tracking module (T007)."""
 
-from datetime import date
 import uuid
+from datetime import date
 
 import pytest
 from fastapi import status
@@ -9,19 +9,21 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from app.core.security import create_access_token, get_password_hash
-from app.models.enums import MilestoneStatus, ProjectStatus, UserRole
+from app.models.enums import MilestoneStatus, ProjectStatus
 from app.models.project import ConstructionProject, ProjectMilestone, ProjectUpdate
 from app.models.user import User
+from tests.conftest import make_user
 
 
 @pytest.fixture
 def director_user(session: Session) -> User:
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email="director@test.com",
         full_name="Director User",
         hashed_password=get_password_hash("password123"),
-        role=UserRole.DIRECTOR,
+        profile="DIRECTOR",
         cpf="84411604085",
     )
     session.add(user)
@@ -31,12 +33,13 @@ def director_user(session: Session) -> User:
 
 @pytest.fixture
 def manager_user(session: Session) -> User:
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email="manager@test.com",
         full_name="Manager User",
         hashed_password=get_password_hash("password123"),
-        role=UserRole.MANAGER,
+        profile="MANAGER",
         cpf="12260662058",
     )
     session.add(user)
@@ -46,12 +49,13 @@ def manager_user(session: Session) -> User:
 
 @pytest.fixture
 def resident_user(session: Session) -> User:
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email="resident@test.com",
         full_name="Resident User",
         hashed_password=get_password_hash("password123"),
-        role=UserRole.RESIDENT,
+        profile="RESIDENT",
         cpf="46816405073",
     )
     session.add(user)

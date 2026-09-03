@@ -20,10 +20,10 @@ from sqlmodel import Session
 from app.api import deps
 from app.core.permissions import PERMISSIONS, SUPERUSER_ONLY_PERMISSIONS, module_of
 from app.core.security import create_access_token, get_password_hash
-from app.models.enums import UserRole
+from app.models.role import Role
 from app.models.tenant import DEFAULT_TENANT_ID, Tenant, UserTenantLink
 from app.models.user import User
-from app.models.user_type import UserType
+from tests.conftest import make_user
 
 CATALOGUE_URL = "/api/v1/permissions/"
 ME_URL = "/api/v1/permissions/me"
@@ -41,23 +41,24 @@ def _auth(user: User, tenant_id=DEFAULT_TENANT_ID) -> dict[str, str]:
 
 def _user(
     session: Session,
-    role: UserRole = UserRole.RESIDENT,
+    role: str = "RESIDENT",
     *,
     is_superuser: bool = False,
     tenants: tuple = (DEFAULT_TENANT_ID,),
     tenant_admin_in=None,
-    user_types: tuple = (),
+    roles: tuple = (),
 ) -> User:
     """A persisted user with explicit memberships and groups."""
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email=f"{uuid.uuid4().hex[:12]}@permissions.example.com",
-        full_name=f"{role.value} permissions case",
+        full_name=f"{role} permissions case",
         hashed_password=get_password_hash("password"),
-        role=role,
+        profile=role,
         cpf=str(next(_cpf_counter)),
         is_superuser=is_superuser,
-        user_types=list(user_types),
+        roles=list(roles),
     )
     session.add(user)
     session.commit()
@@ -75,8 +76,8 @@ def _user(
 
 
 def _group(session: Session, permissions: list[str], tenant_id=DEFAULT_TENANT_ID):
-    """A group (UserType) in `tenant_id` carrying `permissions`."""
-    group = UserType(
+    """A group (Role) in `tenant_id` carrying `permissions`."""
+    group = Role(
         name=f"Grupo {uuid.uuid4().hex[:8]}",
         tenant_id=tenant_id,
         permissions=permissions,
@@ -143,9 +144,9 @@ def test_me_returns_the_effective_permissions_of_the_acting_tenant(
     group_in_a = _group(session, ["finance:read"])
     user = _user(
         session,
-        UserRole.GUEST,
+        "GUEST",
         tenants=(DEFAULT_TENANT_ID, tenant_b.id),
-        user_types=(group_in_a,),
+        roles=(group_in_a,),
     )
 
     in_a = client.get(ME_URL, headers=_auth(user, DEFAULT_TENANT_ID)).json()
@@ -178,7 +179,7 @@ def test_me_for_a_superuser_is_the_whole_catalogue(
     client: TestClient, session: Session
 ):
     """The global flag is answered before any tenant is resolved."""
-    user = _user(session, UserRole.DIRECTOR, is_superuser=True)
+    user = _user(session, "DIRECTOR", is_superuser=True)
 
     body = client.get(ME_URL, headers=_auth(user)).json()
 
@@ -188,7 +189,7 @@ def test_me_for_a_superuser_is_the_whole_catalogue(
 def test_me_matches_get_effective_permissions(client: TestClient, session: Session):
     """The route adds nothing of its own: it is `deps`, sorted."""
     group = _group(session, ["occurrences:read", "documents:download"])
-    user = _user(session, user_types=(group,))
+    user = _user(session, roles=(group,))
 
     body = client.get(ME_URL, headers=_auth(user)).json()
 

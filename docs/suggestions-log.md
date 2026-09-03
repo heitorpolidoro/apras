@@ -153,6 +153,17 @@
 - (da revisao da APRAS-40) 11.1 (~l.1288-1301): expressar 'bundles de legacy_role_bundles.json ∪ NEW_TIER' como fonte de um helper bundle(profile), porque a APRAS-40 divide holds() em bundle()/holds_by_bundle()/holds() com branch de superuser; lookup inlined no call site obriga a 40 a re-dividir.
 - (da revisao da APRAS-40) l.90 apaga o 'role framing' de ADMIN_GAP_PERMISSIONS - a constante em si precisa sobreviver a F5 (a 40 le para MATRIX_ADMIN_GAP; ha fallback, clareza e nao bloqueio).
 
+- (code review) 11 virgulas finais soltas deixadas pelo sweep dos kwargs allowed_menus (test_guest_rbac.py:38, test_tasks_coverage.py:27, test_tenant_isolation.py:131, test_task_visible_to_multi_target.py:38,39,111,166,202, test_tasks_rbac.py:210,225, test_tenant_models.py:133) - proximo ruff format expande cada chamada.
+- (code review) test_user_admin.py:302: sem caso para payload superset cross-tenant role_ids=[a_role.id, b_role.id] - o unico cujo veredito mudou com o estreitamento S3; pinar.
+- (code review) LANDING_PATHS duplicado em RoleDetailPage.tsx:25 vs schemas/role.py:15, com teste assertando copia hardcoded - servir do backend ou pinar contra a API.
+- (code review) roles.py PATCH gravava landing_path=NULL quando omitido (corrigido na F5); padrao a vigiar em todo schema Update com default None.
+
+- (QA) greps do ER-3/ER-6 nao ficam literalmente vazios apos word-boundary: document_service.py:52, permissions.py:610, deps.py:203 e comentarios/assercoes de ausencia em testes - nenhum simbolo sobrevive; corrigir a afirmacao no relatorio.
+- (QA) ruff COM819 2 -> 17, tudo em backend/tests (virgulas do sweep), --fix-avel; test_tenant_isolation.py tem 4 assercoes mudadas (2 inevitaveis, colunas dropadas) nao registradas nos desvios.
+- (QA, pre-existente) PATCH /roles/{id} da 500 em nome duplicado (ix_role_tenant_name) onde POST da 409 - tratar IntegrityError no PATCH.
+- (QA) RoleUpdate exige name, entao PATCH so de permissions da 422 - tornar name opcional (sentinel None como os demais).
+- (QA, pre-existente) GET /roles/ esta em ROUTE_PERMISSIONS como roles:read mas guardado so por get_current_user - alinhar guard ou mapeamento (candidato a tarefa de divida IAM junto com os itens da F3/F4).
+
 ## [APRAS-39] Modularizar features por tenant — 2026-09-01
 
 - S1: ER-7 diz '5 -> 7' flat enquanto vizinhos usam 'predicted'; a 49 pode levar a base a 6 (PATCH superuser) - aplicar o mesmo hedge para 6 -> 8 nao ler como falha.

@@ -2,11 +2,11 @@
 
 Groups **become editable** in this slice — that is what makes the permission
 bundle reachable at all — so the same slice has to close the escalation it
-opens. The rule is one function, `user_type_service.assert_can_grant`, applied
+opens. The rule is one function, `role_service.assert_can_grant`, applied
 to the **resulting** set: an author may only put into a group permissions they
 themselves hold. It runs on all three grant surfaces:
-`POST /api/v1/user-types/`, `PATCH /api/v1/user-types/{id}` and the
-`user_type_ids` path of `PATCH /api/v1/users/{id}` — because an author who
+`POST /api/v1/roles/`, `PATCH /api/v1/roles/{id}` and the
+`role_ids` path of `PATCH /api/v1/users/{id}` — because an author who
 cannot *create* an over-privileged group could otherwise hand an existing one
 to a confederate.
 
@@ -27,33 +27,34 @@ from app.api import deps
 from app.core import tenant_context
 from app.core.permissions import PERMISSIONS, SUPERUSER_ONLY_PERMISSIONS
 from app.core.security import create_access_token, get_password_hash
-from app.models.enums import UserRole
+from app.models.role import Role
 from app.models.tenant import DEFAULT_TENANT_ID, UserTenantLink
 from app.models.user import User
-from app.models.user_type import UserType
+from tests.conftest import make_user
 
 _cpf_counter = itertools.count(90_000_000_000)
 
-#: The board's "groups:manage" is `user_types:create` + `user_types:update`;
+#: The board's "groups:manage" is `roles:create` + `roles:update`;
 #: its "finance:manage" is instantiated as `finance:category_create`. Neither
 #: board string exists in the catalogue, so §12.4 pins the concrete ones.
-GROUPS_MANAGE = ("user_types:create", "user_types:update")
+GROUPS_MANAGE = ("roles:create", "roles:update")
 FINANCE_MANAGE = "finance:category_create"
 
 
 def _make_user(
     session: Session,
-    role: UserRole,
+    role: str,
     *,
     tenant_admin: bool,
     is_superuser: bool = False,
 ) -> User:
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email=f"{uuid.uuid4().hex[:12]}@escalation.example.com",
-        full_name=f"{role.value} escalation",
+        full_name=f"{role} escalation",
         hashed_password=get_password_hash("password"),
-        role=role,
+        profile=role,
         cpf=str(next(_cpf_counter)),
         is_superuser=is_superuser,
     )
@@ -93,14 +94,14 @@ def _group_author(session: Session) -> User:
     assignment surface of §9.3, is route-guarded on it: without it case 4
     would 403 before `assert_can_grant` ever ran, for the wrong reason.
     """
-    user = _make_user(session, UserRole.RESIDENT, tenant_admin=False)
-    group = UserType(
+    user = _make_user(session, "RESIDENT", tenant_admin=False)
+    group = Role(
         name=f"Autor {uuid.uuid4().hex[:8]}",
         permissions=[*GROUPS_MANAGE, "users:update"],
     )
     session.add(group)
     session.commit()
-    user.user_types.append(group)
+    user.roles.append(group)
     session.add(user)
     session.commit()
     session.refresh(user)
@@ -114,7 +115,7 @@ def _superuser(session: Session) -> User:
     APRAS-47 §3.3 keeps in lockstep with it.
     """
     return _make_user(
-        session, UserRole.DIRECTOR, tenant_admin=False, is_superuser=True
+        session, "DIRECTOR", tenant_admin=False, is_superuser=True
     )
 
 
@@ -138,7 +139,7 @@ def test_the_author_cannot_create_a_group_carrying_a_permission_they_lack(
     assert FINANCE_MANAGE not in held
 
     response = client.post(
-        "/api/v1/user-types/",
+        "/api/v1/roles/",
         headers=_headers(author),
         json={"name": "Escalado", "permissions": [FINANCE_MANAGE]},
     )
@@ -146,7 +147,7 @@ def test_the_author_cannot_create_a_group_carrying_a_permission_they_lack(
     assert response.status_code == 403
     assert FINANCE_MANAGE in response.json()["detail"]
 
-    listing = client.get("/api/v1/user-types/", headers=_headers(author))
+    listing = client.get("/api/v1/roles/", headers=_headers(author))
     assert listing.status_code == 200
     assert not [row for row in listing.json() if row["name"] == "Escalado"]
 
@@ -158,18 +159,18 @@ def test_the_author_can_create_a_group_carrying_only_what_they_hold(
     author = _group_author(session)
 
     response = client.post(
-        "/api/v1/user-types/",
+        "/api/v1/roles/",
         headers=_headers(author),
-        json={"name": "Legítimo", "permissions": ["user_types:update"]},
+        json={"name": "Legítimo", "permissions": ["roles:update"]},
     )
 
     assert response.status_code == 201
-    assert response.json()["permissions"] == ["user_types:update"]
+    assert response.json()["permissions"] == ["roles:update"]
 
     created_id = response.json()["id"]
-    listing = client.get("/api/v1/user-types/", headers=_headers(author))
+    listing = client.get("/api/v1/roles/", headers=_headers(author))
     stored = next(row for row in listing.json() if row["id"] == created_id)
-    assert stored["permissions"] == ["user_types:update"]
+    assert stored["permissions"] == ["roles:update"]
 
 
 # ---------------------------------------------------------------------------
@@ -182,7 +183,7 @@ def test_patching_a_group_with_an_unheld_permission_is_403_and_writes_nothing(
 ):
     author = _group_author(session)
     created = client.post(
-        "/api/v1/user-types/",
+        "/api/v1/roles/",
         headers=_headers(author),
         json={"name": "Editável", "permissions": []},
     )
@@ -191,7 +192,7 @@ def test_patching_a_group_with_an_unheld_permission_is_403_and_writes_nothing(
     before = _effective(session, author)
 
     response = client.patch(
-        f"/api/v1/user-types/{group_id}",
+        f"/api/v1/roles/{group_id}",
         headers=_headers(author),
         json={"name": "Editável", "permissions": [FINANCE_MANAGE]},
     )
@@ -199,7 +200,7 @@ def test_patching_a_group_with_an_unheld_permission_is_403_and_writes_nothing(
     assert response.status_code == 403
     assert FINANCE_MANAGE in response.json()["detail"]
 
-    listing = client.get("/api/v1/user-types/", headers=_headers(author))
+    listing = client.get("/api/v1/roles/", headers=_headers(author))
     stored = next(row for row in listing.json() if row["id"] == group_id)
     assert stored["permissions"] == []
     # Escalation is not reachable by self-assignment either: the author's own
@@ -210,10 +211,10 @@ def test_patching_a_group_with_an_unheld_permission_is_403_and_writes_nothing(
 def test_patching_a_group_without_the_permissions_field_leaves_the_bundle(
     client: TestClient, session: Session
 ):
-    """`UserTypeUpdate.permissions` is `None`-sentinelled on purpose (§9.1)."""
+    """`RoleUpdate.permissions` is `None`-sentinelled on purpose (§9.1)."""
     author = _superuser(session)
     created = client.post(
-        "/api/v1/user-types/",
+        "/api/v1/roles/",
         headers=_headers(author),
         json={"name": "Com bundle", "permissions": ["tasks:read"]},
     )
@@ -221,7 +222,7 @@ def test_patching_a_group_without_the_permissions_field_leaves_the_bundle(
     group_id = created.json()["id"]
 
     response = client.patch(
-        f"/api/v1/user-types/{group_id}",
+        f"/api/v1/roles/{group_id}",
         headers=_headers(author),
         json={"name": "Renomeado"},
     )
@@ -240,18 +241,18 @@ def test_assigning_an_over_privileged_group_through_patch_users_is_403(
     client: TestClient, session: Session
 ):
     author = _group_author(session)
-    over_privileged = UserType(name="Financeiro", permissions=[FINANCE_MANAGE])
+    over_privileged = Role(name="Financeiro", permissions=[FINANCE_MANAGE])
     session.add(over_privileged)
     session.commit()
     session.refresh(over_privileged)
 
-    target = _make_user(session, UserRole.GUEST, tenant_admin=False)
-    before = [user_type.id for user_type in target.user_types]
+    target = _make_user(session, "GUEST", tenant_admin=False)
+    before = [role.id for role in target.roles]
 
     response = client.patch(
         f"/api/v1/users/{target.id}",
         headers=_headers(author),
-        json={"user_type_ids": [str(over_privileged.id)]},
+        json={"role_ids": [str(over_privileged.id)]},
     )
 
     assert response.status_code == 403
@@ -259,28 +260,28 @@ def test_assigning_an_over_privileged_group_through_patch_users_is_403(
 
     session.expire_all()
     refreshed = session.get(User, target.id)
-    assert [user_type.id for user_type in refreshed.user_types] == before
+    assert [role.id for role in refreshed.roles] == before
 
 
 def test_assigning_a_group_the_author_can_grant_succeeds(
     client: TestClient, session: Session
 ):
     author = _group_author(session)
-    allowed = UserType(name="Grupo permitido", permissions=["user_types:update"])
+    allowed = Role(name="Grupo permitido", permissions=["roles:update"])
     session.add(allowed)
     session.commit()
     session.refresh(allowed)
 
-    target = _make_user(session, UserRole.GUEST, tenant_admin=False)
+    target = _make_user(session, "GUEST", tenant_admin=False)
 
     response = client.patch(
         f"/api/v1/users/{target.id}",
         headers=_headers(author),
-        json={"user_type_ids": [str(allowed.id)]},
+        json={"role_ids": [str(allowed.id)]},
     )
 
     assert response.status_code == 200
-    assert [row["id"] for row in response.json()["user_types"]] == [str(allowed.id)]
+    assert [row["id"] for row in response.json()["roles"]] == [str(allowed.id)]
 
 
 # ---------------------------------------------------------------------------
@@ -305,7 +306,7 @@ def test_a_superuser_may_grant_everything_except_the_superuser_only_four(
         assert permission in _effective(session, author)
 
     allowed = client.post(
-        "/api/v1/user-types/",
+        "/api/v1/roles/",
         headers=_headers(author),
         json={
             "name": "Quase tudo",
@@ -316,7 +317,7 @@ def test_a_superuser_may_grant_everything_except_the_superuser_only_four(
 
     for permission in sorted(SUPERUSER_ONLY_PERMISSIONS):
         refused = client.post(
-            "/api/v1/user-types/",
+            "/api/v1/roles/",
             headers=_headers(author),
             json={"name": f"Só superusuário {permission}", "permissions": [permission]},
         )
@@ -333,7 +334,7 @@ def test_an_unknown_permission_string_is_422(client: TestClient, session: Sessio
     author = _superuser(session)
 
     response = client.post(
-        "/api/v1/user-types/",
+        "/api/v1/roles/",
         headers=_headers(author),
         json={"name": "Inventado", "permissions": ["finance:manage"]},
     )
@@ -343,11 +344,11 @@ def test_an_unknown_permission_string_is_422(client: TestClient, session: Sessio
 
 def test_a_stored_unknown_string_still_resolves(session: Session):
     """F1's tolerance rule: a hand-edited row stays visible, not vanishing."""
-    user = _make_user(session, UserRole.GUEST, tenant_admin=False)
-    hand_edited = UserType(name="Editado à mão", permissions=["finance:manage"])
+    user = _make_user(session, "GUEST", tenant_admin=False)
+    hand_edited = Role(name="Editado à mão", permissions=["finance:manage"])
     session.add(hand_edited)
     session.commit()
-    user.user_types.append(hand_edited)
+    user.roles.append(hand_edited)
     session.add(user)
     session.commit()
 
@@ -360,7 +361,7 @@ def test_patching_a_group_with_an_explicit_null_bundle_leaves_it_alone(
     """`"permissions": null` is the same "leave it" sentinel as omitting it."""
     author = _superuser(session)
     created = client.post(
-        "/api/v1/user-types/",
+        "/api/v1/roles/",
         headers=_headers(author),
         json={"name": "Bundle nulo", "permissions": ["tasks:read"]},
     )
@@ -368,7 +369,7 @@ def test_patching_a_group_with_an_explicit_null_bundle_leaves_it_alone(
     group_id = created.json()["id"]
 
     response = client.patch(
-        f"/api/v1/user-types/{group_id}",
+        f"/api/v1/roles/{group_id}",
         headers=_headers(author),
         json={"name": "Bundle nulo", "permissions": None},
     )

@@ -122,7 +122,7 @@ def acting_tenant_scope(session: Session, tenant_id: UUID) -> Iterator[None]:
     """Temporarily act in ``tenant_id``, restoring the previous scope after.
 
     There is exactly one production caller: seeding a *new* tenant's
-    role-linked ``UserType`` rows from inside a request that acts in a
+    role-linked ``Role`` rows from inside a request that acts in a
     different tenant (``TenantService.create_tenant``). Any second caller
     needs a review comment justifying it.
     """

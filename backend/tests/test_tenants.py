@@ -12,18 +12,19 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from app.core.security import create_access_token
-from app.models.enums import UserRole
 from app.models.tenant import DEFAULT_TENANT_ID, DEFAULT_TENANT_NAME, Tenant
 from app.models.user import User
+from tests.conftest import make_user
 
 
-def _make_user(session: Session, role: UserRole, email: str, cpf: str) -> User:
-    user = User(
+def _make_user(session: Session, role: str, email: str, cpf: str) -> User:
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email=email,
         full_name=f"User {email}",
         hashed_password="hash",
-        role=role,
+        profile=role,
         cpf=cpf,
     )
     session.add(user)
@@ -38,12 +39,12 @@ def _headers(user: User) -> dict[str, str]:
 
 @pytest.fixture
 def admin(session: Session) -> User:
-    return _make_user(session, UserRole.ADMINISTRATOR, "tenant_admin@test.com", "11111111111")
+    return _make_user(session, "ADMINISTRATOR", "tenant_admin@test.com", "11111111111")
 
 
 @pytest.fixture
 def resident(session: Session) -> User:
-    return _make_user(session, UserRole.RESIDENT, "tenant_resident@test.com", "22222222222")
+    return _make_user(session, "RESIDENT", "tenant_resident@test.com", "22222222222")
 
 
 def test_create_tenant_returns_201(client: TestClient, admin: User):
@@ -229,7 +230,8 @@ def test_add_member_returns_201_with_the_user_details(
     assert body["user_id"] == str(resident.id)
     assert body["email"] == resident.email
     assert body["full_name"] == resident.full_name
-    assert body["role"] == UserRole.RESIDENT.value
+    # `TenantMemberRead.role` became `roles: list[str]` (§8.2).
+    assert body["roles"] == ["Morador (papel)"]
     assert body["linked_at"]
 
 

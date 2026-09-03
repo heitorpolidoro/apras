@@ -1,51 +1,54 @@
 import uuid
 
 import pytest
-from app.core.security import get_password_hash
-from app.models.category import Category
-from app.models.enums import UserRole
-from app.models.user import User
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
+from app.core.security import get_password_hash
+from app.models.category import Category
+from tests.conftest import bundle, make_user, profile_role
 
-def test_manager_role_value_exists():
-    """MANAGER must exist as a valid UserRole value."""
-    from app.models.enums import UserRole
 
-    assert UserRole.MANAGER == "MANAGER"
+def test_the_manager_profile_still_names_a_real_role(session: Session):
+    """The successor of "MANAGER must exist as a valid `UserRole` value"."""
+    role = profile_role(session, "MANAGER")
+
+    assert role.name == "Gerente (papel)"
+    assert set(role.permissions) == bundle("MANAGER")
 
 
 @pytest.fixture(name="test_data")
 def test_data_fixture(session: Session):
-    from app.models.user_type import UserType
+    from app.models.role import Role
 
     # DIRECTOR is now subject to the tasks/categories menu gate
     # (assert_menu_access, APRAS-8); grant standing access so this fixture's
     # director keeps the "full CRUD on all tasks" behavior these RBAC tests
     # exercise, unrelated to the menu gate itself.
-    director_type = UserType(
-        name="Director RBAC Type", allowed_menus=["tasks", "categories"]
+    director_type = Role(
+        name="Director RBAC Type",
     )
     session.add(director_type)
     session.commit()
 
-    admin = User(
+    admin = make_user(
+        session,
         id=uuid.uuid4(),
         email="admin_rbac@test.com",
         full_name="Admin Test",
         hashed_password=get_password_hash("pass"),
-        role=UserRole.ADMINISTRATOR,
+        profile="ADMINISTRATOR",
         cpf="52998224725",
     )
-    director = User(
+    director = make_user(
+        session,
         id=uuid.uuid4(),
         email="director_rbac@test.com",
         full_name="Director Test",
         hashed_password=get_password_hash("pass"),
-        role=UserRole.DIRECTOR,
+        profile="DIRECTOR",
         cpf="11144477735",
-        user_types=[director_type],
+        roles=[director_type],
     )
     category = Category(id=uuid.uuid4(), name="Test Category", color="#FFFFFF")
     session.add(admin)
@@ -135,16 +138,15 @@ def test_assert_can_edit_task_manager_unassigned(session: Session, test_data):
 
     from app.api.deps import assert_can_edit_task
     from app.core.security import get_password_hash
-    from app.models.enums import UserRole
     from app.models.task import Task
-    from app.models.user import User
 
-    manager = User(
+    manager = make_user(
+        session,
         id=_uuid.uuid4(),
         email="mgr_tmp@test.com",
         full_name="Manager Tmp",
         hashed_password=get_password_hash("pass"),
-        role=UserRole.MANAGER,
+        profile="MANAGER",
         cpf="08050681057",
     )
     session.add(manager)
@@ -165,19 +167,19 @@ def test_assert_can_edit_task_manager_other_user_raises(session: Session, test_d
     import uuid as _uuid
 
     import pytest
+
     from app.api.deps import assert_can_edit_task
     from app.core.exceptions import ForbiddenError
     from app.core.security import get_password_hash
-    from app.models.enums import UserRole
     from app.models.task import Task
-    from app.models.user import User
 
-    manager = User(
+    manager = make_user(
+        session,
         id=_uuid.uuid4(),
         email="mgr_tmp2@test.com",
         full_name="Manager Tmp2",
         hashed_password=get_password_hash("pass"),
-        role=UserRole.MANAGER,
+        profile="MANAGER",
         cpf="07491723040",
     )
     session.add(manager)
@@ -196,16 +198,16 @@ def test_assert_can_edit_task_manager_other_user_raises(session: Session, test_d
 
 @pytest.fixture(name="manager_type")
 def manager_type_fixture(session: Session):
-    """Create and persist a user type for manager.
+    """Create and persist a role for manager.
 
-    Also grants "tasks" menu access: manager_type is the only UserType
+    Also grants "tasks" menu access: manager_type is the only Role
     assigned to `manager_user` in these tests, so it must carry standing
     tasks access for the pre-existing visibility/RBAC assertions below to
     keep exercising what they were designed to test, independent of the
     new menu gate (APRAS-8).
     """
-    from app.models.user_type import UserType
-    ut = UserType(name="Test Manager Type", allowed_menus=["tasks"])
+    from app.models.role import Role
+    ut = Role(name="Test Manager Type",)
     session.add(ut)
     session.commit()
     return ut
@@ -213,14 +215,14 @@ def manager_type_fixture(session: Session):
 
 @pytest.fixture(name="other_type")
 def other_type_fixture(session: Session):
-    """A second UserType, distinct from `manager_type` and held by nobody
+    """A second Role, distinct from `manager_type` and held by nobody
     in these tests — used to build tasks targeted away from the Manager
     (replacing the old single-FK tests' use of an arbitrary random uuid,
     which can no longer represent "a real target the Manager lacks" once
-    `visible_to` only ever contains ids resolved to real UserType rows)."""
-    from app.models.user_type import UserType
+    `visible_to` only ever contains ids resolved to real Role rows)."""
+    from app.models.role import Role
 
-    ut = UserType(name="Other RBAC Type", allowed_menus=[])
+    ut = Role(name="Other RBAC Type",)
     session.add(ut)
     session.commit()
     return ut
@@ -233,13 +235,14 @@ def manager_user_fixture(session: Session, manager_type):
 
     from app.core.security import get_password_hash
 
-    manager = User(
+    manager = make_user(
+        session,
         id=_uuid.uuid4(),
         email="manager_rbac@test.com",
         full_name="Manager Test",
         hashed_password=get_password_hash("pass"),
-        role=UserRole.MANAGER,
-        user_types=[manager_type],
+        profile="MANAGER",
+        roles=[manager_type],
         cpf="70323955008",
     )
     session.add(manager)
@@ -309,7 +312,7 @@ def test_manager_gets_404_for_invisible_task(
     mgr_token = get_token(client, "manager_rbac", "pass")
     category_id = str(test_data["category"].id)
 
-    # Task is targeted at a UserType the Manager doesn't belong to.
+    # Task is targeted at a Role the Manager doesn't belong to.
     resp = client.post(
         "/api/v1/tasks/",
         headers={"Authorization": f"Bearer {dir_token}"},
@@ -421,7 +424,7 @@ def test_task_model_has_no_visible_to_id_field():
 
 
 def test_task_read_schema_includes_visible_to():
-    """TaskRead schema must expose `visible_to` (list of UserTypeRead), not
+    """TaskRead schema must expose `visible_to` (list of RoleRead), not
     the old `visible_to_id`/`visible_to_name` single-value fields."""
     from app.schemas.task import TaskRead
 
@@ -439,11 +442,16 @@ def test_task_update_schema_includes_visible_to_ids():
     assert update.visible_to_ids == [target_id]
 
 
-def test_manager_create_task_defaults_visible_to_explicit_user_type(
+def test_manager_create_task_defaults_visible_to_explicit_role(
     client: TestClient, test_data, manager_user, manager_type
 ):
-    """Tasks created by MANAGER with no explicit targets default to the
-    Manager's explicit UserType ids (APRAS-11)."""
+    """A scoped author's task defaults to *all* the roles they belong to.
+
+    APRAS-11 said "the Manager's explicit Role ids". Since IAM F5 that
+    includes the `Gerente (papel)` profile row `make_user` links, because the
+    role-implicit membership became a real link at migration time (§7.2 step
+    2): explicit and effective are the same set now.
+    """
     token = get_token(client, "manager_rbac", "pass")
     response = client.post(
         "/api/v1/tasks/",
@@ -455,7 +463,8 @@ def test_manager_create_task_defaults_visible_to_explicit_user_type(
     )
     assert response.status_code == 200
     visible_to_ids = {vt["id"] for vt in response.json()["visible_to"]}
-    assert visible_to_ids == {str(manager_type.id)}
+    assert str(manager_type.id) in visible_to_ids
+    assert visible_to_ids == {str(role.id) for role in manager_user.roles}
 
 
 def test_admin_create_task_defaults_to_empty_visible_to(
@@ -500,7 +509,7 @@ def test_manager_list_only_sees_targeted_tasks(
     manager_type,
     other_type,
 ):
-    """MANAGER only sees tasks targeted to their UserType."""
+    """MANAGER only sees tasks targeted to their Role."""
     from app.models.task import Task
 
     hidden = Task(
@@ -666,7 +675,7 @@ def test_manager_can_change_visible_to_ids_within_effective_set(
     client: TestClient, session: Session, test_data, manager_user, manager_type
 ):
     """MANAGER can set visible_to_ids as long as every id is within their
-    effective UserType ids."""
+    effective Role ids."""
     from app.models.task import Task
 
     visible = Task(

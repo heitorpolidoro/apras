@@ -16,6 +16,7 @@ from app.schemas.resident import (
     ResidentUpdate,
     ResidentUserSummary,
 )
+from app.services.role_service import role_names_in
 from app.services.resident_service import ResidentService
 from fastapi import APIRouter, Depends, status
 from sqlmodel import Session
@@ -37,7 +38,7 @@ def _to_detail_read(resident) -> ResidentDetailRead:
             id=resident.user.id,
             full_name=resident.user.full_name,
             email=resident.user.email,
-            role=resident.user.role,
+            roles=role_names_in(resident.user, resident.tenant_id),
         )
 
     lot_summary = None

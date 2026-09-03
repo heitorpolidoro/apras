@@ -35,8 +35,19 @@ MIGRATION = os.path.join(
 )
 
 
+#: Tables migration `0028` named under a spelling a later migration changed.
+#: `0028` is a historical artefact and must keep saying `user_type`; migration
+#: `0032` (IAM F5, APRAS-49 §2.3) renamed that table to `role`. Mapping here
+#: is what keeps this comparison about *which* tables are scoped rather than
+#: about what they were called in 2026-08.
+_RENAMED_SINCE_0028: dict[str, str] = {"user_type": "role"}
+
+
 def _migration_scoped_tables() -> tuple[str, ...]:
-    """Read `_TENANT_SCOPED_TABLES` out of migration 0028 with `ast`."""
+    """Read `_TENANT_SCOPED_TABLES` out of migration 0028 with `ast`.
+
+    Names are returned under their **current** spelling (`_RENAMED_SINCE_0028`).
+    """
     with open(MIGRATION, encoding="utf-8") as handle:
         tree = ast.parse(handle.read(), filename=MIGRATION)
     for node in tree.body:
@@ -47,7 +58,10 @@ def _migration_scoped_tables() -> tuple[str, ...]:
             targets = [node.target]
         for target in targets:
             if isinstance(target, ast.Name) and target.id == "_TENANT_SCOPED_TABLES":
-                return tuple(ast.literal_eval(node.value))
+                return tuple(
+                    _RENAMED_SINCE_0028.get(name, name)
+                    for name in ast.literal_eval(node.value)
+                )
     raise AssertionError("_TENANT_SCOPED_TABLES not found")
 
 

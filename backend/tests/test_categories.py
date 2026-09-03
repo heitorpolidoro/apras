@@ -1,10 +1,12 @@
 import uuid
 
+from fastapi.testclient import TestClient
+from sqlmodel import Session
+
 from app.models.category import Category
 from app.schemas.category import CategoryCreate, CategoryUpdate
 from app.services.category_service import CategoryService
-from fastapi.testclient import TestClient
-from sqlmodel import Session
+from tests.conftest import make_user
 
 
 def get_token(client, username, password):
@@ -262,15 +264,15 @@ def test_director_can_create_category(client: TestClient, session: Session, norm
 def test_manager_cannot_create_category(client: TestClient, session: Session, admin_user):
     """MANAGER gets 403 when trying to create a category."""
     import uuid as _uuid
+
     from app.core.security import get_password_hash
-    from app.models.enums import UserRole
-    from app.models.user import User
-    manager = User(
+    manager = make_user(
+        session,
         id=_uuid.uuid4(),
         email="mgr_cat_test@test.com",
         full_name="Manager Cat",
         hashed_password=get_password_hash("pass"),
-        role=UserRole.MANAGER,
+        profile="MANAGER",
         cpf="08050681057",
     )
     session.add(manager)
@@ -292,15 +294,15 @@ def test_manager_cannot_create_category(client: TestClient, session: Session, ad
 def test_manager_cannot_update_category(client: TestClient, session: Session, admin_user):
     """MANAGER gets 403 when trying to update a category."""
     import uuid as _uuid
+
     from app.core.security import get_password_hash
-    from app.models.enums import UserRole
-    from app.models.user import User
-    manager = User(
+    manager = make_user(
+        session,
         id=_uuid.uuid4(),
         email="mgr_cat_upd@test.com",
         full_name="Manager Cat Upd",
         hashed_password=get_password_hash("pass"),
-        role=UserRole.MANAGER,
+        profile="MANAGER",
         cpf="07491723040",
     )
     session.add(manager)

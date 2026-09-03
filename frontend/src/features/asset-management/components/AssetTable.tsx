@@ -1,12 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import {
-  AlertTriangle,
-  ArrowUpDown,
-  Edit2,
-  History,
-  Trash2,
-} from "lucide-react";
+import { AlertTriangle, ArrowUpDown, Edit2, History, Trash2,  } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import type { Asset } from "../../../types/asset";
 import { AssetCondition } from "../../../types/asset";

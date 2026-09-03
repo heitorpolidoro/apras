@@ -6,6 +6,7 @@ import TaskCard from "./TaskCard";
 import { useTaskFiltering, type TaskFilters } from "../hooks/useTaskFiltering";
 import { getStatusLabel } from "../utils/taskUtils";
 import { useEffectiveIdentity } from "../../user-administration/context/useEffectiveIdentity";
+import { useEffectivePermissionSet } from "../../user-administration/access/useCanAccess";
 import { canEditSimulatedTask } from "../utils/simulatedPermissions";
 
 interface TaskBoardProps {
@@ -26,11 +27,12 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
   onTaskClick,
 }) => {
   const { t } = useTranslation();
-  const { role, userTypeIds, isSimulating } = useEffectiveIdentity();
+  const { roleIds, isSimulating } = useEffectiveIdentity();
+  const { has } = useEffectivePermissionSet();
   const filteredTasks = useTaskFiltering(tasks, filters, {
     isSimulating,
-    role,
-    userTypeIds,
+    has,
+    roleIds,
   });
 
   if (isLoading) {
@@ -126,8 +128,8 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
                     task={task}
                     onClick={() => onTaskClick?.(task.id)}
                     readOnly={
-                      isSimulating && !!role
-                        ? !canEditSimulatedTask(task, role, userTypeIds)
+                      isSimulating
+                        ? !canEditSimulatedTask(task, has, roleIds)
                         : false
                     }
                   />

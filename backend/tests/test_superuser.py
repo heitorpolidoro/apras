@@ -18,78 +18,72 @@ from sqlmodel import Session, select
 from app.api import deps
 from app.core import tenant_context
 from app.core.permissions import (
-    LEGACY_ROLE_PERMISSIONS,
     PERMISSIONS,
     ROUTE_PERMISSIONS,
     SUPERUSER_ONLY_PERMISSIONS,
 )
 from app.core.security import create_access_token, get_password_hash
-from app.models.enums import UserRole
+from app.models.role import Role
 from app.models.tenant import DEFAULT_TENANT_ID, Tenant, UserTenantLink
 from app.models.user import User
-from app.models.user_type import UserType
+from tests.conftest import bundle, make_user
 
 _cpf_counter = itertools.count(70_000_000_000)
 
 
 def _make_user(
-    session: Session | None,
-    role: UserRole,
+    session: Session,
+    role: str,
     *,
     is_superuser: bool | None = None,
 ) -> User:
-    """Build (and optionally persist) a user with an explicit flag."""
-    data = {
+    """Persist a user of the `role` profile with an explicit flag.
+
+    `session` stopped being optional with IAM F5 (APRAS-49): a user's power
+    is their role memberships, so there is no in-memory-only shape left to
+    build. The four `__init__`-default cases this module used to run against
+    `session=None` are the ones §3.3 #4 deletes with the enum.
+    """
+    kwargs = {
         "id": uuid.uuid4(),
         "email": f"{uuid.uuid4().hex[:12]}@superuser.example.com",
-        "full_name": f"{role.value} superuser case",
+        "full_name": f"{role} superuser case",
         "hashed_password": get_password_hash("password"),
-        "role": role,
         "cpf": str(next(_cpf_counter)),
     }
     if is_superuser is not None:
-        data["is_superuser"] = is_superuser
-    user = User(**data)
-    if session is not None:
-        session.add(user)
-        session.commit()
-        session.refresh(user)
-    return user
+        kwargs["is_superuser"] = is_superuser
+    return make_user(session, profile=role, **kwargs)
 
 
 # ---------------------------------------------------------------------------
-# 19 -- the creation-time default (§3.3)
+# 19 -- the creation-time default (§3.3), deleted with the enum
 # ---------------------------------------------------------------------------
+#
+# F3 shipped a TRANSITIONAL `User.__init__` that defaulted `is_superuser`
+# from `role == ADMINISTRATOR`, and four cases pinned it. IAM F5 (APRAS-49
+# §3.3 #4) deleted it with the enum, so the column is the *only* source and
+# there is nothing left to default from. What survives is the sentence those
+# four cases were really about:
 
 
-def test_an_administrator_defaults_to_superuser():
-    assert _make_user(None, UserRole.ADMINISTRATOR).is_superuser is True
-
-
-def test_an_explicit_false_beats_the_administrator_default():
-    assert (
-        _make_user(None, UserRole.ADMINISTRATOR, is_superuser=False).is_superuser
-        is False
+def test_the_flag_is_the_only_source_of_truth(session: Session):
+    """No constructor, no role, no membership sets `is_superuser` implicitly."""
+    assert not hasattr(User, "__init__") or "is_superuser" not in (
+        User.__init__.__doc__ or ""
     )
+    assert _make_user(session, "DIRECTOR", is_superuser=False).is_superuser is False
+    assert _make_user(session, "DIRECTOR", is_superuser=True).is_superuser is True
 
 
-def test_a_non_administrator_is_not_a_superuser_by_default():
-    assert _make_user(None, UserRole.DIRECTOR).is_superuser is False
-
-
-def test_an_explicit_true_on_a_non_administrator_is_kept():
-    assert _make_user(None, UserRole.DIRECTOR, is_superuser=True).is_superuser is True
-
-
-def test_a_stored_administrator_with_the_flag_off_reads_back_off(session: Session):
-    """`__init__` is not reached on DB load, so the column is the source of truth."""
-    user = _make_user(session, UserRole.ADMINISTRATOR, is_superuser=False)
+def test_a_stored_user_with_the_flag_off_reads_back_off(session: Session):
+    """The column is the source of truth on load, as it always was."""
+    user = _make_user(session, "ADMINISTRATOR", is_superuser=False)
     session.expire_all()
 
     reloaded = session.get(User, user.id)
     session.refresh(reloaded)
 
-    assert reloaded.role is UserRole.ADMINISTRATOR
     assert reloaded.is_superuser is False
 
 
@@ -104,7 +98,7 @@ def _superuser(session: Session) -> User:
     The point of the module: these assertions are about `is_superuser`, and a
     DIRECTOR is what makes them unable to pass for the wrong reason.
     """
-    user = _make_user(session, UserRole.DIRECTOR, is_superuser=True)
+    user = _make_user(session, "DIRECTOR", is_superuser=True)
     session.add(UserTenantLink(user_id=user.id, tenant_id=DEFAULT_TENANT_ID))
     session.commit()
     return user
@@ -112,7 +106,7 @@ def _superuser(session: Session) -> User:
 
 def _tenant_admin_of_a(session: Session, tenant_b: Tenant) -> User:
     """A RESIDENT holding the capability on A and a plain membership on B."""
-    user = _make_user(session, UserRole.RESIDENT, is_superuser=False)
+    user = _make_user(session, "RESIDENT", is_superuser=False)
     session.add(
         UserTenantLink(
             user_id=user.id, tenant_id=DEFAULT_TENANT_ID, is_tenant_admin=True
@@ -160,38 +154,44 @@ def test_a_tenant_admin_holds_the_whole_catalogue_in_the_granting_tenant(
     assert deps.get_effective_permissions(user, session) == PERMISSIONS
 
 
-def test_a_tenant_admin_of_a_holds_only_their_role_bundle_in_b(
+def test_a_tenant_admin_of_a_holds_nothing_at_all_in_b(
     session: Session, tenant_b: Tenant
 ):
-    """The non-leakage case. Set equality, so the precondition is asserted."""
+    """The non-leakage case, and it got **stronger** with IAM F5.
+
+    F3 could only assert "their role bundle" here, because
+    `LEGACY_ROLE_PERMISSIONS[user.role]` was a *global* contributor: the
+    fallback followed the user across the tenant boundary even though no role
+    row did. APRAS-49 §3.2 deleted it, so acting in a tenant where the user
+    holds no role row now yields the **empty set** — the answer the
+    capability's scoping was always meant to produce.
+    """
     user = _tenant_admin_of_a(session, tenant_b)
     tenant_context.set_acting_tenant(session, tenant_b.id)
 
-    # Only meaningful if nothing else contributes: no UserType resolves for
-    # this user in B, and no UserType reachable in B carries a bundle.
-    assert deps.get_effective_user_type_ids(user, session) == set()
+    assert deps.get_effective_role_ids(user, session) == set()
     reachable = session.exec(
-        select(UserType).where(UserType.tenant_id == tenant_b.id)
+        select(Role).where(Role.tenant_id == tenant_b.id)
     ).all()
-    assert all(user_type.permissions == [] for user_type in reachable)
+    assert all(role.permissions == [] for role in reachable)
 
-    assert (
-        deps.get_effective_permissions(user, session)
-        == LEGACY_ROLE_PERMISSIONS[UserRole.RESIDENT]
-    )
+    assert deps.get_effective_permissions(user, session) == frozenset()
 
 
 def test_a_tenant_admin_holds_only_their_role_bundle_with_no_acting_tenant(
     session: Session, tenant_b: Tenant
 ):
-    """`is_acting_tenant_admin` has no DEFAULT_TENANT_ID fallback, on purpose."""
+    """`is_acting_tenant_admin` has no DEFAULT_TENANT_ID fallback, on purpose.
+
+    `get_effective_role_ids` *does* fall back to the default tenant when no
+    acting tenant is resolved (a bare `Session`, `app/seed.py`, Alembic), so
+    the answer here is the user's default-tenant bundle and **not** the
+    catalogue: the capability contributes nothing without a tenant.
+    """
     user = _tenant_admin_of_a(session, tenant_b)
 
     assert tenant_context.acting_tenant_id(session) is None
-    assert (
-        deps.get_effective_permissions(user, session)
-        == LEGACY_ROLE_PERMISSIONS[UserRole.RESIDENT]
-    )
+    assert deps.get_effective_permissions(user, session) == bundle("RESIDENT")
 
 
 def test_a_superuser_holds_the_documented_administrator_gap(session: Session):
@@ -202,7 +202,7 @@ def test_a_superuser_holds_the_documented_administrator_gap(session: Session):
     assert "packages:my_lots_read" in deps.get_effective_permissions(user, session)
     assert (
         "packages:my_lots_read"
-        not in LEGACY_ROLE_PERMISSIONS[UserRole.ADMINISTRATOR]
+        not in bundle("ADMINISTRATOR")
     )
 
 
@@ -259,7 +259,7 @@ def test_every_global_write_succeeds_for_a_superuser(
 ):
     """A DIRECTOR-role user carrying the flag passes all five."""
     actor = _superuser(session)
-    target = _make_user(session, UserRole.GUEST, is_superuser=False)
+    target = _make_user(session, "GUEST", is_superuser=False)
 
     statuses = {
         label: response.status_code
@@ -279,10 +279,10 @@ def test_every_global_write_is_403_for_an_administrator_without_the_flag(
     client: TestClient, session: Session, tenant_b: Tenant
 ):
     """The proof that the column, and not the enum, is what is read."""
-    actor = _make_user(session, UserRole.ADMINISTRATOR, is_superuser=False)
+    actor = _make_user(session, "ADMINISTRATOR", is_superuser=False)
     session.add(UserTenantLink(user_id=actor.id, tenant_id=DEFAULT_TENANT_ID))
     session.commit()
-    target = _make_user(session, UserRole.GUEST, is_superuser=False)
+    target = _make_user(session, "GUEST", is_superuser=False)
 
     for label, response in _five_writes(client, actor, tenant_b, target):
         assert response.status_code == 403, label
@@ -293,12 +293,12 @@ def test_every_global_write_is_403_for_a_tenant_admin_of_the_target_tenant(
     client: TestClient, session: Session, tenant_b: Tenant
 ):
     """Parity with `test_tenant_admin.py`, restated here as this module's boundary."""
-    actor = _make_user(session, UserRole.RESIDENT, is_superuser=False)
+    actor = _make_user(session, "RESIDENT", is_superuser=False)
     session.add(
         UserTenantLink(user_id=actor.id, tenant_id=tenant_b.id, is_tenant_admin=True)
     )
     session.commit()
-    target = _make_user(session, UserRole.GUEST, is_superuser=False)
+    target = _make_user(session, "GUEST", is_superuser=False)
 
     for label, response in _five_writes(client, actor, tenant_b, target):
         assert response.status_code == 403, label
@@ -308,7 +308,7 @@ def test_setting_the_capability_is_403_for_a_tenant_admin_and_200_for_a_superuse
     client: TestClient, session: Session, tenant_b: Tenant
 ):
     """Granting *and* revoking `is_tenant_admin` is superuser-only."""
-    syndic = _make_user(session, UserRole.RESIDENT, is_superuser=False)
+    syndic = _make_user(session, "RESIDENT", is_superuser=False)
     session.add(
         UserTenantLink(user_id=syndic.id, tenant_id=tenant_b.id, is_tenant_admin=True)
     )
@@ -352,7 +352,7 @@ def _scoped_auth(user: User, tenant_id=DEFAULT_TENANT_ID) -> dict[str, str]:
     }
 
 
-def _member(session: Session, role: UserRole, *, tenant_admin: bool = False) -> User:
+def _member(session: Session, role: str, *, tenant_admin: bool = False) -> User:
     user = _make_user(session, role, is_superuser=False)
     session.add(
         UserTenantLink(
@@ -370,7 +370,7 @@ def test_the_superuser_flag_is_not_settable_through_patch_users(
 ):
     """`UserUpdate` has no `is_superuser` field, so the body is inert."""
     author = _superuser(session)
-    target = _member(session, UserRole.GUEST)
+    target = _member(session, "GUEST")
 
     response = client.patch(
         f"/api/v1/users/{target.id}",
@@ -388,9 +388,9 @@ def test_a_group_carrying_a_superuser_only_permission_is_403_even_for_a_superuse
     client: TestClient, session: Session
 ):
     """The point is that the group would be a lie, not that the author is untrusted."""
-    for author in (_superuser(session), _member(session, UserRole.RESIDENT, tenant_admin=True)):
+    for author in (_superuser(session), _member(session, "RESIDENT", tenant_admin=True)):
         response = client.post(
-            "/api/v1/user-types/",
+            "/api/v1/roles/",
             headers=_scoped_auth(author),
             json={"name": f"Falso {uuid.uuid4().hex[:6]}", "permissions": ["tenants:create"]},
         )
@@ -399,7 +399,7 @@ def test_a_group_carrying_a_superuser_only_permission_is_403_even_for_a_superuse
         assert "tenants:create" in response.json()["detail"]
 
     assert not session.exec(
-        select(UserType).where(UserType.name.like("Falso %"))
+        select(Role).where(Role.name.like("Falso %"))
     ).all()
 
 
@@ -408,7 +408,7 @@ def test_patching_a_group_to_add_a_superuser_only_permission_is_403(
 ):
     author = _superuser(session)
     created = client.post(
-        "/api/v1/user-types/",
+        "/api/v1/roles/",
         headers=_scoped_auth(author),
         json={"name": "Editável su", "permissions": ["tasks:read"]},
     )
@@ -416,7 +416,7 @@ def test_patching_a_group_to_add_a_superuser_only_permission_is_403(
     group_id = created.json()["id"]
 
     response = client.patch(
-        f"/api/v1/user-types/{group_id}",
+        f"/api/v1/roles/{group_id}",
         headers=_scoped_auth(author),
         json={
             "name": "Editável su",
@@ -427,35 +427,43 @@ def test_patching_a_group_to_add_a_superuser_only_permission_is_403(
     assert response.status_code == 403
     assert "tenants:members_set_admin" in response.json()["detail"]
 
-    listing = client.get("/api/v1/user-types/", headers=_scoped_auth(author))
+    listing = client.get("/api/v1/roles/", headers=_scoped_auth(author))
     stored = next(row for row in listing.json() if row["id"] == group_id)
     assert stored["permissions"] == ["tasks:read"]
 
 
-def test_a_tenant_admin_cannot_grant_the_administrator_role(
+def test_a_tenant_admin_cannot_grant_is_superuser_through_the_user_route(
     client: TestClient, session: Session
 ):
-    syndic = _member(session, UserRole.RESIDENT, tenant_admin=True)
-    target = _member(session, UserRole.GUEST)
+    """The rule it replaces, and why it is stronger (IAM F5 §3.3 #2, §8.3).
+
+    F3 refused `{"role": "ADMINISTRATOR"}` with a 403. `UserUpdate` now
+    carries neither `role` nor `is_superuser`, so the payload is simply not a
+    field: the request succeeds and writes **nothing**, and the flag's only
+    API surface is the superuser-only route of §8.4, which a tenant admin
+    cannot call at all. That is what discharges APRAS-46 §12.5's inherited
+    escalation hole rather than merely guarding it.
+    """
+    syndic = _member(session, "RESIDENT", tenant_admin=True)
+    target = _member(session, "GUEST")
 
     response = client.patch(
         f"/api/v1/users/{target.id}",
         headers=_scoped_auth(syndic),
-        json={"role": "ADMINISTRATOR"},
+        json={"is_superuser": True, "role": "ADMINISTRATOR"},
     )
 
-    assert response.status_code == 403
-    assert (
-        response.json()["detail"]
-        == "Tenant administrators cannot grant the ADMINISTRATOR role"
-    )
+    assert response.status_code == 200
+    assert "is_superuser" not in response.json()
+    session.expire_all()
+    assert session.get(User, target.id).is_superuser is False
 
 
 def test_a_tenant_admin_cannot_modify_a_superuser_of_any_role(
     client: TestClient, session: Session
 ):
     """Rule 2 now protects a DIRECTOR-role superuser, which the merge base did not."""
-    syndic = _member(session, UserRole.RESIDENT, tenant_admin=True)
+    syndic = _member(session, "RESIDENT", tenant_admin=True)
     root = _superuser(session)
 
     response = client.patch(
@@ -471,28 +479,37 @@ def test_a_tenant_admin_cannot_modify_a_superuser_of_any_role(
     )
 
 
-def test_promoting_and_demoting_moves_the_column_with_the_role(
+def test_the_role_change_mirror_is_gone_and_replaced(
     client: TestClient, session: Session
 ):
-    """§7.3's mirror: the enum and the column never drift while both exist."""
-    author = _superuser(session)
-    target = _member(session, UserRole.GUEST)
+    """F3 §7.3's mirror, and its successor (IAM F5 §3.3 #5, §8.4).
 
-    promoted = client.patch(
-        f"/api/v1/users/{target.id}",
+    The mirror existed so that *demoting* an administrator did not strand
+    `is_superuser` set. Deleting it with `UserUpdate.role` would have deleted
+    the only API **revoke** with it, so it is replaced rather than merely
+    removed: `PATCH /users/{id}/superuser` gives the grant *and* the revoke
+    an explicit, superuser-only home, and its zero-superuser guard is
+    strictly stronger than what the mirror provided.
+    """
+    author = _superuser(session)
+    target = _member(session, "GUEST")
+
+    granted = client.patch(
+        f"/api/v1/users/{target.id}/superuser",
         headers=_scoped_auth(author),
-        json={"role": "ADMINISTRATOR"},
+        json={"is_superuser": True},
     )
-    assert promoted.status_code == 200
+    assert granted.status_code == 200
+    assert granted.json()["is_superuser"] is True
     session.expire_all()
     assert session.get(User, target.id).is_superuser is True
 
-    demoted = client.patch(
-        f"/api/v1/users/{target.id}",
+    revoked = client.patch(
+        f"/api/v1/users/{target.id}/superuser",
         headers=_scoped_auth(author),
-        json={"role": "DIRECTOR"},
+        json={"is_superuser": False},
     )
-    assert demoted.status_code == 200
+    assert revoked.status_code == 200
     session.expire_all()
     assert session.get(User, target.id).is_superuser is False
 
@@ -535,7 +552,7 @@ def test_a_resident_tenant_admin_is_routed_to_the_queue(
     Exactly what an ADMINISTRATOR living in the condominium already
     experiences: no information is lost, only the route changes.
     """
-    syndic = _member(session, UserRole.RESIDENT, tenant_admin=True)
+    syndic = _member(session, "RESIDENT", tenant_admin=True)
 
     refused = client.get("/api/v1/packages/my-lots", headers=_scoped_auth(syndic))
     assert refused.status_code == 403
@@ -551,7 +568,7 @@ def test_a_resident_tenant_admin_is_routed_to_the_queue(
 def test_a_tenant_admin_upload_is_auto_approved(client: TestClient, session: Session):
     """They hold `uploads:auto_approve`, which is what "administrator-level in
     this tenant" means; an ADMINISTRATOR behaves the same way today."""
-    syndic = _member(session, UserRole.RESIDENT, tenant_admin=True)
+    syndic = _member(session, "RESIDENT", tenant_admin=True)
 
     response = client.post(
         "/api/v1/uploads/photo",

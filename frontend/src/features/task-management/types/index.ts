@@ -45,14 +45,12 @@ export interface CategoryRead {
 }
 
 /**
- * Interface for reading user type data nested inside a TaskRead's
+ * Interface for reading role data nested inside a TaskRead's
  * `visible_to` list.
  */
-export interface UserTypeRead {
+export interface RoleRead {
   id: string;
   name: string;
-  allowed_menus: string[];
-  role?: string | null;
 }
 
 /**
@@ -88,7 +86,7 @@ export interface TaskCreate extends Omit<
   due_date?: Date | string | null;
   assigned_to_id?: string | null;
   category_id: string;
-  /** UUIDs of the UserTypes this task is targeted to; empty means visible
+  /** UUIDs of the Roles this task is targeted to; empty means visible
    * to every Manager. */
   visible_to_ids?: string[];
 }
@@ -99,7 +97,7 @@ export interface TaskCreate extends Omit<
 export interface TaskUpdate extends Partial<TaskBase> {
   status?: TaskStatus;
   priority?: TaskPriority;
-  /** UUIDs of the UserTypes this task is targeted to; empty means visible
+  /** UUIDs of the Roles this task is targeted to; empty means visible
    * to every Manager. */
   visible_to_ids?: string[];
 }
@@ -124,9 +122,9 @@ export interface TaskRead extends TaskBase {
   category_name?: string | null;
   /** The hex color of the category. */
   category_color?: string | null;
-  /** The UserTypes this task is targeted to; empty means visible to every
+  /** The Roles this task is targeted to; empty means visible to every
    * Manager. */
-  visible_to: UserTypeRead[];
+  visible_to: RoleRead[];
 }
 
 /**
@@ -150,9 +148,9 @@ export interface TaskHistoryRead {
   /** When the change occurred. */
   timestamp: Date | string;
   /** Resolved user info for assigned_to_id old value. */
-  resolved_old_value: { name: string; role: string } | null;
+  resolved_old_value: { name: string; roles: string[] } | null;
   /** Resolved user info for assigned_to_id new value. */
-  resolved_new_value: { name: string; role: string } | null;
+  resolved_new_value: { name: string; roles: string[] } | null;
 }
 
 /**

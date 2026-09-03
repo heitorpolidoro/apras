@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useUserTypes } from "../../../hooks/useUserTypes";
+import { useEffectivePermissionSet } from "../../user-administration/access/useCanAccess";
+import { useRoles } from "../../../hooks/useRoles";
 import { TaskPriority, TaskStatus } from "../types";
 import type { TaskRead, TaskCreate, TaskUpdate } from "../types";
-import { UserRole } from "../../../types/auth";
 import { useEffectiveIdentity } from "../../user-administration/context/useEffectiveIdentity";
 import { useCreateTask, useUpdateTask } from "../hooks/useTasks";
 import { useCategories } from "../hooks/useCategories";
@@ -15,7 +15,7 @@ import { Select } from "../../../components/ui/select";
 import { Label } from "../../../components/ui/label";
 import { AlertModal } from "../../../components/ui/alert-modal";
 import { getStatusLabel } from "../utils/taskUtils";
-import UserTypeMultiSelect from "../../user-administration/components/UserTypeMultiSelect";
+import RoleMultiSelect from "../../user-administration/components/RoleMultiSelect";
 
 interface TaskFormProps {
   task?: TaskRead;
@@ -25,14 +25,15 @@ interface TaskFormProps {
 
 const TaskForm: React.FC<TaskFormProps> = ({ task, onSuccess, onCancel }) => {
   const { t } = useTranslation();
-  const { role, isSimulating } = useEffectiveIdentity();
+  const { isSimulating } = useEffectiveIdentity();
+  const { has } = useEffectivePermissionSet();
   const isEditing = !!task;
   const createTaskMutation = useCreateTask();
   const updateTaskMutation = useUpdateTask();
   const { data: users } = useAssignableUsers();
   const { data: categories } = useCategories();
 
-  const { data: userTypes } = useUserTypes();
+  const { data: roles } = useRoles();
 
   const isLoading =
     createTaskMutation.isPending || updateTaskMutation.isPending;
@@ -68,7 +69,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSuccess, onCancel }) => {
       },
     );
     // `visible_to_ids` has no matching key on TaskRead (it reads from the
-    // nested `visible_to` list of UserTypeRead objects instead), so it's
+    // nested `visible_to` list of RoleRead objects instead), so it's
     // computed separately rather than through the generic key-to-key loop
     // above.
     initial.visible_to_ids = task?.visible_to?.map((ut) => ut.id) ?? [];
@@ -290,11 +291,15 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSuccess, onCancel }) => {
           />
         </div>
 
-        {role !== UserRole.MANAGER && (
+        {/* IAM F5 (APRAS-49 §10.5 b): `tasks:read_all` is the legacy
+            {A, D, R, P} set, so this also hides the editor from a GUEST
+            -- who holds no `tasks:create`/`tasks:update` and cannot
+            reach this form at all. Recorded, unreachable. */}
+        {has("tasks:read_all") && (
           <div className="flex flex-col gap-1.5">
             <Label>{t("tasks.form.visibleToLabel")}</Label>
-            <UserTypeMultiSelect
-              userTypes={userTypes ?? []}
+            <RoleMultiSelect
+              roles={roles ?? []}
               selectedIds={formData.visible_to_ids as string[]}
               onChange={handleVisibleToIdsChange}
             />

@@ -1,12 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  uploadPhoto,
-  getPendingPhotos,
-  approvePhoto,
-  rejectPhoto,
-  deletePhoto,
-  getPhotoMetadata,
-} from "../uploads";
+import { uploadPhoto, getPendingPhotos, approvePhoto, rejectPhoto, deletePhoto, getPhotoMetadata,  } from "../uploads";
 import apiClient from "../client";
 
 vi.mock("../client", () => ({

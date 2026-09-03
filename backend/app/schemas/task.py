@@ -4,7 +4,7 @@ from datetime import datetime
 from uuid import UUID
 
 from app.models.enums import TaskPriority, TaskStatus
-from app.schemas.user_type import UserTypeRead
+from app.schemas.role import RoleRead
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -50,7 +50,7 @@ class TaskRead(TaskBase):
     assigned_to_name: str | None = None
     category_name: str | None = None
     category_color: str | None = None
-    visible_to: list[UserTypeRead] = []
+    visible_to: list[RoleRead] = []
 
     model_config = ConfigDict(from_attributes=True)
 

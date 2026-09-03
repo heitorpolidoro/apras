@@ -43,7 +43,6 @@ from .enums import (
     TaskPriority,
     TaskStatus,
     TransactionType,
-    UserRole,
     VoteKind,
     VoteStatus,
     VoteType,
@@ -58,6 +57,8 @@ from .project import ConstructionProject, ProjectMilestone, ProjectUpdate
 from .purchase import PurchaseQuote, PurchaseQuoteDecision, PurchaseRequest
 from .reservation import ReservableSpace, SpaceReservation
 from .resident import Resident
+from .role import Role
+from .role_link import UserRoleLink
 from .task import Task, TaskHistory
 from .tenant import (
     DEFAULT_TENANT_ID,
@@ -66,8 +67,6 @@ from .tenant import (
     UserTenantLink,
 )
 from .user import User
-from .user_type import UserType
-from .user_type_link import UserUserTypeLink
 from .visitor import AccessLog, Visitor, VisitorAuthorization
 from .voting import (
     Assembly,
@@ -142,6 +141,7 @@ __all__ = [
     "ReservationStatus",
     "Resident",
     "ResidentRelationship",
+    "Role",
     "ShiftType",
     "SpaceReservation",
     "StorageProvider",
@@ -153,10 +153,8 @@ __all__ = [
     "TransactionType",
     "User",
     "UserLotLink",
-    "UserRole",
+    "UserRoleLink",
     "UserTenantLink",
-    "UserType",
-    "UserUserTypeLink",
     "Visitor",
     "VisitorAuthorization",
     "Vote",

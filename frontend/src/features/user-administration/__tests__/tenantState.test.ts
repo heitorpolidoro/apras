@@ -1,12 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import {
-  getActingTenantId,
-  setActingTenantId,
-  clearActingTenantId,
-  subscribeActingTenantId,
-  resolveActingTenantId,
-} from "../context/tenantState";
-import { UserRole, type TenantMembership } from "../../../types/auth";
+import { getActingTenantId, setActingTenantId, clearActingTenantId, subscribeActingTenantId, resolveActingTenantId,  } from "../context/tenantState";
+import { type TenantMembership } from "../../../types/auth";
 
 const TENANT_A = "11111111-1111-1111-1111-111111111111";
 const TENANT_B = "22222222-2222-2222-2222-222222222222";
@@ -108,7 +102,7 @@ describe("tenantState", () => {
       ];
 
       expect(
-        resolveActingTenantId(memberships, UserRole.RESIDENT, TENANT_B),
+        resolveActingTenantId(memberships, false, TENANT_B),
       ).toBe(TENANT_B);
     });
 
@@ -118,7 +112,7 @@ describe("tenantState", () => {
         membership({ tenant_id: TENANT_B }),
       ];
 
-      expect(resolveActingTenantId(memberships, UserRole.RESIDENT, null)).toBe(
+      expect(resolveActingTenantId(memberships, false, null)).toBe(
         TENANT_A,
       );
     });
@@ -130,9 +124,9 @@ describe("tenantState", () => {
       ];
 
       expect(
-        resolveActingTenantId(memberships, UserRole.RESIDENT, TENANT_A),
+        resolveActingTenantId(memberships, false, TENANT_A),
       ).toBe(TENANT_B);
-      expect(resolveActingTenantId(memberships, UserRole.RESIDENT, null)).toBe(
+      expect(resolveActingTenantId(memberships, false, null)).toBe(
         TENANT_B,
       );
     });
@@ -144,16 +138,16 @@ describe("tenantState", () => {
       const memberships = [membership({ tenant_id: TENANT_A })];
 
       expect(
-        resolveActingTenantId(memberships, UserRole.ADMINISTRATOR, TENANT_C),
+        resolveActingTenantId(memberships, true, TENANT_C),
       ).toBe(TENANT_C);
       expect(
-        resolveActingTenantId(memberships, UserRole.RESIDENT, TENANT_C),
+        resolveActingTenantId(memberships, false, TENANT_C),
       ).toBe(TENANT_A);
     });
 
     it("returns null for a user with no memberships", () => {
-      expect(resolveActingTenantId([], UserRole.RESIDENT, null)).toBeNull();
-      expect(resolveActingTenantId([], UserRole.RESIDENT, TENANT_A)).toBeNull();
+      expect(resolveActingTenantId([], false, null)).toBeNull();
+      expect(resolveActingTenantId([], false, TENANT_A)).toBeNull();
     });
   });
 });

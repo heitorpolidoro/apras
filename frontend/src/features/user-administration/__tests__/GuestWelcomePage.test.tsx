@@ -3,7 +3,6 @@ import { describe, it, expect, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import GuestWelcomePage from "../pages/GuestWelcomePage";
 import * as AuthHook from "../context/AuthContext";
-import { UserRole } from "../context/AuthContext";
 
 describe("GuestWelcomePage", () => {
   it("renders the user's name and email plus an explanatory message", () => {
@@ -14,7 +13,6 @@ describe("GuestWelcomePage", () => {
         id: "guest-1",
         email: "guest@example.com",
         full_name: "Guest User",
-        role: UserRole.GUEST,
         is_active: true,
       } as any,
       login: vi.fn() as any,
@@ -41,7 +39,6 @@ describe("GuestWelcomePage", () => {
         id: "guest-1",
         email: "guest@example.com",
         full_name: "Guest User",
-        role: UserRole.GUEST,
         is_active: true,
       } as any,
       login: vi.fn() as any,

@@ -4,7 +4,6 @@ import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import ContactInfoDashboard from "../pages/ContactInfoDashboard";
 import * as AuthHook from "../context/AuthContext";
-import { UserRole } from "../context/AuthContext";
 import apiClient from "../../../api/client";
 
 vi.mock("../../../api/client", () => ({
@@ -22,7 +21,6 @@ const mockCurrentUser = {
   id: "manager-1",
   email: "manager@example.com",
   full_name: "Manager User",
-  role: UserRole.MANAGER,
   is_active: true,
 };
 
@@ -31,7 +29,6 @@ const mockUsers = [
     id: "user-1",
     email: "user1@example.com",
     full_name: "User One",
-    role: UserRole.DIRECTOR,
     is_active: true,
     phone: "11999998888",
     address: "Rua A, 123",
@@ -40,7 +37,7 @@ const mockUsers = [
     id: "user-2",
     email: "user2@example.com",
     full_name: "User Two",
-    role: UserRole.ADMINISTRATOR,
+    is_superuser: true,
     is_active: true,
     phone: null,
     address: null,

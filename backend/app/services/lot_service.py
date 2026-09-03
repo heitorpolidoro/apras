@@ -3,6 +3,9 @@
 from datetime import datetime
 from uuid import UUID
 
+from sqlalchemy import func
+from sqlmodel import Session, select
+
 from app.core.exceptions import (
     DomainError,
     LotAlreadyExistsError,
@@ -22,8 +25,7 @@ from app.schemas.lot import (
     UserLotLinkRead,
     UserSummaryRead,
 )
-from sqlalchemy import func
-from sqlmodel import Session, select
+from app.services.role_service import role_names_here
 
 
 class LotService:
@@ -108,7 +110,7 @@ class LotService:
                     id=user.id,
                     full_name=user.full_name,
                     email=user.email,
-                    role=user.role,
+                    roles=role_names_here(user, session),
                 )
                 user_link_reads.append(
                     UserLotLinkRead(

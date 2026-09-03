@@ -1,15 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  getDocumentFolders,
-  createDocumentFolder,
-  updateDocumentFolder,
-  deleteDocumentFolder,
-  getDocuments,
-  createDocument,
-  createDocumentVersion,
-  downloadDocument,
-  deleteDocument,
-} from "../documents";
+import { getDocumentFolders, createDocumentFolder, updateDocumentFolder, deleteDocumentFolder, getDocuments, createDocument, createDocumentVersion, downloadDocument, deleteDocument,  } from "../documents";
 import apiClient from "../client";
 
 vi.mock("../client", () => ({
@@ -35,14 +25,14 @@ describe("documents api client", () => {
         createDocumentFolder({
           name: "Atas",
           parent_id: null,
-          allowed_roles: ["ADMINISTRADOR"],
+          allowed_role_ids: ["ADMINISTRADOR"],
         }),
       ).resolves.toEqual({ id: "f-1" });
 
       expect(apiClient.post).toHaveBeenCalledWith("/documents/folders", {
         name: "Atas",
         parent_id: null,
-        allowed_roles: ["ADMINISTRADOR"],
+        allowed_role_ids: ["ADMINISTRADOR"],
       });
     });
 

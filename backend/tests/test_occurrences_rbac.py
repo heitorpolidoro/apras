@@ -1,9 +1,10 @@
 """RBAC and visibility security tests for Occurrences."""
 
 import pytest
+from sqlmodel import Session
 
 from app.core.exceptions import OccurrenceAccessForbiddenError
-from app.models.enums import OccurrenceCategory, OccurrenceStatus, UserRole
+from app.models.enums import OccurrenceCategory, OccurrenceStatus
 from app.models.user import User
 from app.schemas.occurrence import (
     OccurrenceCreate,
@@ -11,25 +12,27 @@ from app.schemas.occurrence import (
     TimelineNoteCreate,
 )
 from app.services.occurrence_service import OccurrenceService
-from sqlmodel import Session
+from tests.conftest import make_user
 
 
 def test_private_occurrence_visibility(
     session: Session, admin_user: User, normal_user: User
 ):
     # Create standard resident user
-    resident = User(
+    resident = make_user(
+        session,
         email="resident_private@example.com",
         full_name="Morador Privado",
         hashed_password="hash",
-        role=UserRole.GUEST,
+        profile="GUEST",
         cpf="11122233344",
     )
-    other_resident = User(
+    other_resident = make_user(
+        session,
         email="resident2@example.com",
         full_name="Outro Morador",
         hashed_password="hash",
-        role=UserRole.GUEST,
+        profile="GUEST",
         cpf="22233344455",
     )
     session.add(resident)
@@ -67,18 +70,20 @@ def test_private_occurrence_visibility(
 def test_anonymous_occurrence_masking(
     session: Session, admin_user: User, normal_user: User
 ):
-    resident = User(
+    resident = make_user(
+        session,
         email="resident_anon_reporter@example.com",
         full_name="Autor Anônimo",
         hashed_password="hash",
-        role=UserRole.GUEST,
+        profile="GUEST",
         cpf="33344455566",
     )
-    other_resident = User(
+    other_resident = make_user(
+        session,
         email="resident_anon_viewer@example.com",
         full_name="Leitor Residente",
         hashed_password="hash",
-        role=UserRole.GUEST,
+        profile="GUEST",
         cpf="44455566677",
     )
     session.add(resident)
@@ -110,11 +115,12 @@ def test_anonymous_occurrence_masking(
 
 
 def test_internal_timeline_note_stripping(session: Session, admin_user: User):
-    resident = User(
+    resident = make_user(
+        session,
         email="resident_timeline@example.com",
         full_name="Morador Timeline",
         hashed_password="hash",
-        role=UserRole.GUEST,
+        profile="GUEST",
         cpf="55566677788",
     )
     session.add(resident)
@@ -164,11 +170,12 @@ def test_internal_timeline_note_stripping(session: Session, admin_user: User):
 
 
 def test_status_update_permissions(session: Session):
-    resident = User(
+    resident = make_user(
+        session,
         email="resident_update@example.com",
         full_name="Morador Sem Permissão",
         hashed_password="hash",
-        role=UserRole.GUEST,
+        profile="GUEST",
         cpf="66677788899",
     )
     session.add(resident)

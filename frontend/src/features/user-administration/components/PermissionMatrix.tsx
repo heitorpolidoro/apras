@@ -1,11 +1,7 @@
 import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../../components/ui/button";
-import {
-  moduleLabel,
-  permissionLabel,
-  sortModules,
-} from "../utils/permissionLabels";
+import { moduleLabel, permissionLabel, sortModules,  } from "../utils/permissionLabels";
 import type { PermissionDescriptor } from "../../../types/permissions";
 import type { PermissionSet } from "../access/useCanAccess";
 
@@ -29,10 +25,11 @@ interface PermissionMatrixProps {
  *
  * A disabled box that is **already checked** in the stored bundle stays
  * checked and disabled and is resent unchanged on save: otherwise renaming a
- * group would silently strip the permissions its author cannot grant.
+ * role would silently strip the permissions its author cannot grant.
  *
- * There are deliberately **no menu checkboxes** — `allowed_menus` is derived
- * from the selection on save (`deriveAllowedMenus`).
+ * There are deliberately **no menu checkboxes**: the menu gate they would
+ * have edited was deleted by IAM F5 (APRAS-49 §4.1), and a role's permissions
+ * are now the only thing that decides what its members see.
  */
 const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
   descriptors,
@@ -44,13 +41,13 @@ const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
   const selectedSet = useMemo(() => new Set(selected), [selected]);
 
   const byModule = useMemo(() => {
-    const groups = new Map<string, PermissionDescriptor[]>();
+    const roles = new Map<string, PermissionDescriptor[]>();
     for (const descriptor of descriptors) {
-      const bucket = groups.get(descriptor.module);
+      const bucket = roles.get(descriptor.module);
       if (bucket) bucket.push(descriptor);
-      else groups.set(descriptor.module, [descriptor]);
+      else roles.set(descriptor.module, [descriptor]);
     }
-    return groups;
+    return roles;
   }, [descriptors]);
 
   const modules = useMemo(

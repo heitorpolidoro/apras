@@ -1,17 +1,17 @@
 """Unit and API integration tests for Occurrence management."""
 
 from datetime import datetime
-import json
+
 import pytest
+from fastapi.testclient import TestClient
+from sqlmodel import Session
 
 from app.core.exceptions import OccurrenceNotFoundError
 from app.models.enums import (
     OccurrenceCategory,
     OccurrencePriority,
     OccurrenceStatus,
-    UserRole,
 )
-from app.models.lot import Lot
 from app.models.user import User
 from app.schemas.lot import LotCreate
 from app.schemas.occurrence import (
@@ -22,8 +22,7 @@ from app.schemas.occurrence import (
 from app.services.lot_service import LotService
 from app.services.occurrence_service import OccurrenceService
 from app.services.protocol_generator import generate_occurrence_protocol
-from fastapi.testclient import TestClient
-from sqlmodel import Session
+from tests.conftest import make_user
 
 
 def test_protocol_generator_sequential(session: Session):
@@ -37,11 +36,12 @@ def test_protocol_generator_sequential(session: Session):
         title="Barulho excessivo",
         description="Som alto após as 22h",
     )
-    user = User(
+    user = make_user(
+        session,
         email="test_protocol@example.com",
         full_name="Tester",
         hashed_password="hash",
-        role=UserRole.GUEST,
+        profile="GUEST",
         cpf="11122233344",
     )
     session.add(user)

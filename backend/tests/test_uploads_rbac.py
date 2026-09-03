@@ -1,14 +1,15 @@
 import io
 import uuid
+
 import pytest
-from PIL import Image
 from fastapi import status
 from fastapi.testclient import TestClient
+from PIL import Image
 from sqlmodel import Session
 
-from app.core.security import get_password_hash, create_access_token
-from app.models.enums import UserRole
+from app.core.security import create_access_token, get_password_hash
 from app.models.user import User
+from tests.conftest import make_user
 
 
 def create_test_image_bytes() -> bytes:
@@ -20,12 +21,13 @@ def create_test_image_bytes() -> bytes:
 
 @pytest.fixture
 def resident_user1(session: Session) -> User:
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email="resident1@test.com",
         full_name="Resident One",
         hashed_password=get_password_hash("password123"),
-        role=UserRole.RESIDENT,
+        profile="RESIDENT",
         cpf="22233344455",
     )
     session.add(user)
@@ -35,12 +37,13 @@ def resident_user1(session: Session) -> User:
 
 @pytest.fixture
 def resident_user2(session: Session) -> User:
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email="resident2@test.com",
         full_name="Resident Two",
         hashed_password=get_password_hash("password123"),
-        role=UserRole.RESIDENT,
+        profile="RESIDENT",
         cpf="33344455566",
     )
     session.add(user)

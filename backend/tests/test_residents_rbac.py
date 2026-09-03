@@ -1,27 +1,31 @@
 """RBAC security unit and integration tests for Resident management endpoints."""
 
 import uuid
+
 import pytest
+from fastapi.testclient import TestClient
+from sqlmodel import Session
+
 from app.core.security import create_access_token, get_password_hash
-from app.models.enums import LotAssociationType, LotStatus, ResidentRelationship, UserRole
-from app.models.lot import Lot, UserLotLink
+from app.models.enums import ResidentRelationship
+from app.models.lot import UserLotLink
 from app.models.user import User
 from app.schemas.lot import LotCreate
 from app.schemas.resident import ResidentCreate
 from app.services.lot_service import LotService
 from app.services.resident_service import ResidentService
-from fastapi.testclient import TestClient
-from sqlmodel import Session
+from tests.conftest import make_user
 
 
 @pytest.fixture
 def director_user(session: Session) -> User:
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email="director_res@test.com",
         full_name="Director User",
         hashed_password=get_password_hash("password"),
-        role=UserRole.DIRECTOR,
+        profile="DIRECTOR",
         cpf="22233344405",
     )
     session.add(user)
@@ -31,12 +35,13 @@ def director_user(session: Session) -> User:
 
 @pytest.fixture
 def manager_user(session: Session) -> User:
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email="manager_res@test.com",
         full_name="Manager User",
         hashed_password=get_password_hash("password"),
-        role=UserRole.MANAGER,
+        profile="MANAGER",
         cpf="99988877714",
     )
     session.add(user)
@@ -46,12 +51,13 @@ def manager_user(session: Session) -> User:
 
 @pytest.fixture
 def guest_user(session: Session) -> User:
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email="guest_res@test.com",
         full_name="Guest User",
         hashed_password=get_password_hash("password"),
-        role=UserRole.GUEST,
+        profile="GUEST",
         cpf="33344455540",
     )
     session.add(user)

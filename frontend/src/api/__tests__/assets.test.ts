@@ -1,14 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  createAsset,
-  deleteAsset,
-  getAssetById,
-  getAssets,
-  getAssetSummary,
-  getInventoryMovements,
-  recordMovement,
-  updateAsset,
-} from "../assets";
+import { createAsset, deleteAsset, getAssetById, getAssets, getAssetSummary, getInventoryMovements, recordMovement, updateAsset,  } from "../assets";
 import apiClient from "../client";
 
 vi.mock("../client", () => ({

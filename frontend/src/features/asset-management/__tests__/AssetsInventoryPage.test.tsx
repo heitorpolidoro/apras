@@ -3,19 +3,29 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AssetsInventoryPage } from "../components/AssetsInventoryPage";
 import * as assetsApi from "../../../api/assets";
-import { UserRole } from "../../../types/auth";
 import type { Asset, AssetSummary } from "../../../types/asset";
 import { AssetCategory, AssetCondition } from "../../../types/asset";
 
+import { PERMISSIONS_BY_ROLE } from "../../../test/permissionFixtures";
+
+/**
+ * The permission predicate a retired role value carried (IAM F5, §10.2).
+ *
+ * `PERMISSIONS_BY_ROLE` is the recorded legacy bundle, so a case that mocked
+ * `role: "MANAGER"` and now mocks `hasOf("MANAGER")` asserts the **same**
+ * outcome it always did — which is what makes this a re-expression rather
+ * than a new claim.
+ */
+const hasOf = (profile: string) => (permission: string) =>
+    (PERMISSIONS_BY_ROLE[profile] ?? []).includes(permission);
+
+
 vi.mock("../../../api/assets");
 
-let mockUserRole: UserRole = UserRole.ADMINISTRATOR;
+let mockUserRole: string = "ADMINISTRATOR";
 
-vi.mock("../../user-administration/context/useEffectiveIdentity", () => ({
-  useEffectiveIdentity: () => ({
-    role: mockUserRole,
-    userTypes: [],
-  }),
+vi.mock("../../user-administration/access/useCanAccess", () => ({
+  useEffectivePermissionSet: () => ({ has: hasOf(mockUserRole) }),
 }));
 
 const queryClient = new QueryClient({
@@ -60,7 +70,7 @@ const mockSummary: AssetSummary = {
 describe("AssetsInventoryPage component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUserRole = UserRole.ADMINISTRATOR;
+    mockUserRole = "ADMINISTRATOR";
     vi.mocked(assetsApi.getAssets).mockResolvedValue({
       items: [mockAsset],
       total: 1,
@@ -167,7 +177,7 @@ describe("AssetsInventoryPage component", () => {
   });
 
   it("hides create button for Manager role", async () => {
-    mockUserRole = UserRole.MANAGER;
+    mockUserRole = "MANAGER";
     renderPage();
 
     expect(screen.queryByText("Novo Item / Ativo")).not.toBeInTheDocument();

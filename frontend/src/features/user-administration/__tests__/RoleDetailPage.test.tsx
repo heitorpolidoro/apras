@@ -3,12 +3,11 @@ import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import GroupDetailPage from "../pages/GroupDetailPage";
+import RoleDetailPage from "../pages/RoleDetailPage";
 import apiClient from "../../../api/client";
 import * as AuthHook from "../context/AuthContext";
-import { UserRole } from "../../../types/auth";
 
-/** `/admin/groups/:groupId` (APRAS-48 §6.3, ER-1 and ER-4). */
+/** `/admin/roles/:roleId` (APRAS-48 §6.3, ER-1 and ER-4). */
 vi.mock("../../../api/client", () => ({
   default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() },
 }));
@@ -30,25 +29,23 @@ const MY_PERMISSIONS = [
   "categories:read",
   "finance:read",
   "tasks:read",
-  "user_types:update",
+  "roles:update",
 ];
 
-const CUSTOM_GROUP = {
+const CUSTOM_ROLE = {
   id: "g-custom",
   name: "Conselho Fiscal",
-  allowed_menus: [] as string[],
-  role: null,
   permissions: ["finance:read"],
 };
 
 const mockedGet = vi.mocked(apiClient.get);
 const mockedPatch = vi.mocked(apiClient.patch);
 
-let groups: unknown[] = [];
+let roles: unknown[] = [];
 
 const install = () => {
   mockedGet.mockImplementation(((url: string) => {
-    if (url === "/user-types/") return Promise.resolve({ data: groups });
+    if (url === "/roles/") return Promise.resolve({ data: roles });
     if (url === "/permissions/") return Promise.resolve({ data: CATALOGUE });
     if (url === "/permissions/me") {
       return Promise.resolve({
@@ -60,15 +57,15 @@ const install = () => {
   }) as never);
 };
 
-const renderDetail = (groupId = "g-custom") => {
+const renderDetail = (roleId = "g-custom") => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={[`/admin/groups/${groupId}`]}>
+      <MemoryRouter initialEntries={[`/admin/roles/${roleId}`]}>
         <Routes>
-          <Route path="/admin/groups/:groupId" element={<GroupDetailPage />} />
+          <Route path="/admin/roles/:roleId" element={<RoleDetailPage />} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -82,20 +79,20 @@ const box = (permission: string) =>
 
 beforeEach(() => {
   vi.clearAllMocks();
-  groups = [CUSTOM_GROUP];
+  roles = [CUSTOM_ROLE];
   vi.spyOn(AuthHook, "useAuth").mockReturnValue({
     isAuthenticated: true,
     isLoading: false,
-    user: { id: "admin", role: UserRole.ADMINISTRATOR } as never,
+    user: { id: "admin", is_superuser: true } as never,
     login: vi.fn() as never,
     logout: vi.fn(),
   });
   install();
-  mockedPatch.mockResolvedValue({ data: CUSTOM_GROUP } as never);
+  mockedPatch.mockResolvedValue({ data: CUSTOM_ROLE } as never);
 });
 
-describe("GroupDetailPage", () => {
-  it("groups the checkboxes by module", async () => {
+describe("RoleDetailPage", () => {
+  it("roles the checkboxes by module", async () => {
     renderDetail();
 
     await waitFor(() => expect(box("finance:read")).not.toBeNull());
@@ -147,7 +144,7 @@ describe("GroupDetailPage", () => {
 
   it("keeps an already-granted permission the author cannot grant checked and resends it", async () => {
     // Stored with a permission the author does NOT hold.
-    groups = [{ ...CUSTOM_GROUP, permissions: ["finance:read", "tasks:delete"] }];
+    roles = [{ ...CUSTOM_ROLE, permissions: ["finance:read", "tasks:delete"] }];
     renderDetail();
 
     await waitFor(() => expect(box("tasks:delete")).not.toBeNull());
@@ -161,13 +158,88 @@ describe("GroupDetailPage", () => {
 
     await waitFor(() => expect(mockedPatch).toHaveBeenCalled());
     const [url, body] = mockedPatch.mock.calls[0] as [string, { permissions: string[] }];
-    expect(url).toBe("/user-types/g-custom");
+    expect(url).toBe("/roles/g-custom");
     // Resent unchanged: editing a name never strips what the author cannot grant.
     expect(body.permissions).toContain("tasks:delete");
     expect(body.permissions).toContain("finance:read");
   });
 
-  it("derives allowed_menus from the selected permissions on save", async () => {
+  it("opens a role whose bundle field is absent with nothing selected", async () => {
+    // `permissions` is optional on `Role` so every pre-F2 fixture keeps
+    // type-checking; the editor must treat its absence as an empty bundle
+    // rather than crash on `.includes`.
+    roles = [{ id: "g-custom", name: "Sem bundle" }];
+    renderDetail();
+
+    await waitFor(() => expect(box("finance:read")).not.toBeNull());
+    expect(box("finance:read")!.checked).toBe(false);
+  });
+
+  it("offers the landing-path control and round-trips its value (§10.4)", async () => {
+    // The feature §10.4 promises and the hard-coded enum switch never had:
+    // an operator decides where a role's members land. It is *always* sent,
+    // and `null` when "none" is picked — which is why the backend reads
+    // `model_fields_set` rather than a `None` sentinel: an explicit null has
+    // to stay distinguishable from an absent field (CR1).
+    roles = [{ ...CUSTOM_ROLE, landing_path: "/gate" }];
+    renderDetail();
+
+    const select = (await screen.findByLabelText(
+      "Página inicial do papel",
+    )) as HTMLSelectElement;
+    expect(select.value).toBe("/gate");
+
+    await userEvent.selectOptions(select, "/welcome");
+    await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+    await waitFor(() => expect(mockedPatch).toHaveBeenCalled());
+    const [, body] = mockedPatch.mock.calls[0] as [
+      string,
+      { landing_path: string | null },
+    ];
+    expect(body.landing_path).toBe("/welcome");
+  });
+
+  it("sends an explicit null when the operator clears the landing path", async () => {
+    roles = [{ ...CUSTOM_ROLE, landing_path: "/gate" }];
+    renderDetail();
+
+    const select = (await screen.findByLabelText(
+      "Página inicial do papel",
+    )) as HTMLSelectElement;
+    await userEvent.selectOptions(select, "");
+    await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+    await waitFor(() => expect(mockedPatch).toHaveBeenCalled());
+    const [, body] = mockedPatch.mock.calls[0] as [
+      string,
+      { landing_path: string | null },
+    ];
+    expect(body.landing_path).toBeNull();
+  });
+
+  it("offers only the allowlisted paths, so the control cannot mint a redirect", async () => {
+    renderDetail();
+
+    const select = (await screen.findByLabelText(
+      "Página inicial do papel",
+    )) as HTMLSelectElement;
+    expect([...select.options].map((option) => option.value)).toEqual([
+      "",
+      "/dashboard",
+      "/gate",
+      "/welcome",
+      "/announcements",
+      "/occurrences",
+    ]);
+  });
+
+  it("sends no allowed_menus at all (IAM F5 §4.1)", async () => {
+    // F4's editor derived the two legacy menu keys from the selected
+    // permissions and sent them **unioned with the stored value**, so that a
+    // rename could not silently revoke a role's backend menu access. The
+    // column is gone, so the derivation goes with it — hand-off item 5 of
+    // F4's list, and the one a grep almost misses.
     renderDetail();
 
     await waitFor(() => expect(box("tasks:read")).not.toBeNull());
@@ -178,42 +250,22 @@ describe("GroupDetailPage", () => {
     await waitFor(() => expect(mockedPatch).toHaveBeenCalled());
     const [, body] = mockedPatch.mock.calls[0] as [
       string,
-      { allowed_menus: string[]; permissions: string[] },
+      Record<string, unknown>,
     ];
-    expect(body.allowed_menus).toEqual(["categories", "tasks"]);
+    expect(body).not.toHaveProperty("allowed_menus");
     expect(body.permissions).toEqual(
       expect.arrayContaining(["tasks:read", "categories:read"]),
     );
   });
 
-  it("never revokes a menu key the group already had", async () => {
-    // §2.3: stored with `allowed_menus: ["tasks"]` and zero `tasks:*`
-    // permissions — the state of every operator-configured group today.
-    groups = [
-      { ...CUSTOM_GROUP, allowed_menus: ["tasks"], permissions: ["finance:read"] },
-    ];
-    renderDetail();
-
-    await waitFor(() => expect(box("finance:read")).not.toBeNull());
-    await userEvent.clear(screen.getByLabelText("Nome"));
-    await userEvent.type(screen.getByLabelText("Nome"), "Renomeado");
-    await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
-
-    await waitFor(() => expect(mockedPatch).toHaveBeenCalled());
-    const [, body] = mockedPatch.mock.calls[0] as [
-      string,
-      { allowed_menus: string[] },
-    ];
-    expect(body.allowed_menus).toEqual(["tasks"]);
-  });
-
-  it("blocks renaming a role-linked group", async () => {
-    groups = [
+  it("lets a historically-named role be renamed like any other", async () => {
+    // The inversion (§13): the `role` column that made `Diretor (papel)`
+    // read-only is gone, so the name field is an ordinary input and the
+    // "Papel legado" badge has nothing left to mark.
+    roles = [
       {
         id: "g-role",
         name: "Diretor (papel)",
-        allowed_menus: [],
-        role: UserRole.DIRECTOR,
         permissions: [],
       },
     ];
@@ -221,11 +273,11 @@ describe("GroupDetailPage", () => {
 
     await waitFor(() => expect(box("finance:read")).not.toBeNull());
     const input = screen.getByLabelText("Nome") as HTMLInputElement;
-    expect(input.readOnly).toBe(true);
-    expect(screen.getByText("Grupo de papel (legado)")).toBeInTheDocument();
+    expect(input.readOnly).toBe(false);
+    expect(screen.queryByText("Papel legado")).toBeNull();
 
-    // Its permissions stay editable — that is why the row is shown at all.
-    expect(box("finance:read")!.disabled).toBe(false);
+    await userEvent.clear(input);
+    await userEvent.type(input, "Conselho");
     await userEvent.click(box("finance:read")!);
     await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
 
@@ -234,7 +286,7 @@ describe("GroupDetailPage", () => {
       string,
       { name: string; permissions: string[] },
     ];
-    expect(body.name).toBe("Diretor (papel)");
+    expect(body.name).toBe("Conselho");
     expect(body.permissions).toEqual(["finance:read"]);
   });
 
@@ -257,7 +309,7 @@ describe("GroupDetailPage", () => {
     expect(box("finance:read")!.checked).toBe(false);
   });
 
-  it("shows a friendly 403 and answers a missing group with a message", async () => {
+  it("shows a friendly 403 and answers a missing role with a message", async () => {
     mockedPatch.mockRejectedValue({
       response: {
         status: 403,
@@ -277,9 +329,9 @@ describe("GroupDetailPage", () => {
     expect(alert.textContent).not.toContain("is_superuser only");
   });
 
-  it("renders a not-found message for an unknown group id", async () => {
+  it("renders a not-found message for an unknown role id", async () => {
     renderDetail("g-missing");
 
-    expect(await screen.findByText("Grupo não encontrado.")).toBeInTheDocument();
+    expect(await screen.findByText("Papel não encontrado.")).toBeInTheDocument();
   });
 });

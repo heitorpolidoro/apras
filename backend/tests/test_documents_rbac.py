@@ -1,19 +1,32 @@
 import uuid
+
 import pytest
-from app.core.security import create_access_token, get_password_hash
-from app.models.enums import UserRole
-from app.models.user import User
 from sqlmodel import Session
+
+from app.core.security import create_access_token, get_password_hash
+from app.models.user import User
+from tests.conftest import make_user, profile_role
+
+
+def _role_ids(session, *profiles: str) -> list[str]:
+    """Role ids for the named legacy profiles (IAM F5, APRAS-49 §6).
+
+    The folder ACL stores role **ids** since migration `0033`, so a fixture
+    that used to name enum values now resolves them through the same
+    `conftest.profile_role` rows `make_user` links its users to.
+    """
+    return [str(profile_role(session, profile).id) for profile in profiles]
 
 
 @pytest.fixture
 def resident_user(session: Session):
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email="resident@test.com",
         full_name="Resident User",
         hashed_password=get_password_hash("password"),
-        role=UserRole.RESIDENT,
+        profile="RESIDENT",
         cpf="12345678909",
     )
     session.add(user)
@@ -23,12 +36,13 @@ def resident_user(session: Session):
 
 @pytest.fixture
 def manager_user(session: Session):
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email="manager@test.com",
         full_name="Manager User",
         hashed_password=get_password_hash("password"),
-        role=UserRole.MANAGER,
+        profile="MANAGER",
         cpf="98765432100",
     )
     session.add(user)
@@ -38,12 +52,13 @@ def manager_user(session: Session):
 
 @pytest.fixture
 def guest_user(session: Session):
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email="guest@test.com",
         full_name="Guest User",
         hashed_password=get_password_hash("password"),
-        role=UserRole.GUEST,
+        profile="GUEST",
         cpf="11122233344",
     )
     session.add(user)
@@ -75,13 +90,13 @@ def guest_headers(guest_user: User):
     return {"Authorization": f"Bearer {token}"}
 
 
-def test_folder_visibility_filtering(client, admin_headers, resident_headers, manager_headers, guest_headers):
+def test_folder_visibility_filtering(client, admin_headers, resident_headers, manager_headers, guest_headers, session):
     # Admin creates 2 folders: one for Manager only, one for Resident & Manager
     res_m = client.post(
         "/api/v1/documents/folders",
         json={
             "name": "Gestão Interna",
-            "allowed_roles": ["ADMINISTRATOR", "DIRECTOR", "MANAGER"],
+            "allowed_role_ids": _role_ids(session, "ADMINISTRATOR", "DIRECTOR", "MANAGER"),
         },
         headers=admin_headers,
     )
@@ -92,7 +107,7 @@ def test_folder_visibility_filtering(client, admin_headers, resident_headers, ma
         "/api/v1/documents/folders",
         json={
             "name": "Transparência Geral",
-            "allowed_roles": ["ADMINISTRATOR", "DIRECTOR", "MANAGER", "RESIDENT"],
+            "allowed_role_ids": _role_ids(session, "ADMINISTRATOR", "DIRECTOR", "MANAGER", "RESIDENT"),
         },
         headers=admin_headers,
     )
@@ -126,12 +141,12 @@ def test_folder_visibility_filtering(client, admin_headers, resident_headers, ma
 
 
 def test_non_admin_cannot_mutate_folders_or_documents(
-    client, admin_headers, resident_headers
+    client, admin_headers, resident_headers, session
 ):
     # Create folder as admin
     res_f = client.post(
         "/api/v1/documents/folders",
-        json={"name": "Folder", "allowed_roles": ["RESIDENT"]},
+        json={"name": "Folder", "allowed_role_ids": _role_ids(session, "RESIDENT")},
         headers=admin_headers,
     )
     folder_id = res_f.json()["id"]
@@ -139,7 +154,7 @@ def test_non_admin_cannot_mutate_folders_or_documents(
     # Resident tries to create subfolder
     res_sub = client.post(
         "/api/v1/documents/folders",
-        json={"name": "Sub", "parent_id": folder_id},
+        json={"name": "Sub", "parent_id": folder_id, "allowed_role_ids": []},
         headers=resident_headers,
     )
     assert res_sub.status_code == 403
@@ -171,14 +186,14 @@ def test_non_admin_cannot_mutate_folders_or_documents(
 
 
 def test_document_access_denied_for_forbidden_folder(
-    client, admin_headers, resident_headers
+    client, admin_headers, resident_headers, session
 ):
     # Admin creates folder restricted to MANAGER
     res_f = client.post(
         "/api/v1/documents/folders",
         json={
             "name": "Manager Secret",
-            "allowed_roles": ["ADMINISTRATOR", "DIRECTOR", "MANAGER"],
+            "allowed_role_ids": _role_ids(session, "ADMINISTRATOR", "DIRECTOR", "MANAGER"),
         },
         headers=admin_headers,
     )

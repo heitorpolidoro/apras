@@ -1,17 +1,22 @@
 import json
 from datetime import datetime
 from uuid import UUID
+
 from sqlmodel import Session, func, select
 
-from app.api.deps import has_permission
+from app.api.deps import get_effective_role_ids, has_permission
+from app.core import tenant_context
 from app.core.exceptions import (
     DocumentFolderNotFoundError,
     DocumentNotFoundError,
     FolderAccessDeniedError,
     ForbiddenError,
     InvalidFolderHierarchyError,
+    UnknownRoleIdsError,
 )
 from app.models.document import AssociationDocument, DocumentDownloadLog, DocumentFolder
+from app.models.role import Role
+from app.models.tenant import DEFAULT_TENANT_ID
 from app.models.user import User
 from app.schemas.document import (
     AssociationDocumentCreate,
@@ -30,24 +35,82 @@ def _check_admin_or_director(user: User, session: Session, permission: str) -> N
         raise ForbiddenError("Not enough privileges")
 
 
+def _assert_role_ids_resolve(session: Session, role_ids: list[str]) -> None:
+    """Refuse an ACL naming ids that are not roles of the acting tenant.
+
+    The sibling of `endpoints/users.py::_assign_roles`' own check, and made
+    necessary by the same change: since IAM F5 (APRAS-49 §6) the ACL holds
+    role **ids**, so a wrong entry no longer looks wrong. A name typo used
+    to be visible in the stored JSON; a mistyped, stale or foreign uuid is
+    not, and it produces a folder that is simply invisible to everyone --
+    the exact outcome the required-field decision in `DocumentFolderCreate`
+    already exists to prevent.
+
+    Two shapes of "not a role of this tenant" are refused together:
+
+    * a string that is not a uuid at all -- which includes `'ADMINISTRATOR'`
+      and the five other legacy `UserRole` values, i.e. what an un-migrated
+      client still sends;
+    * a uuid that resolves to no role, or to a role of another tenant. The
+      tenant narrowing is explicit because the id arrives in a request body
+      rather than through a relationship, and the ambient filter covers
+      neither (APRAS-42 §4.2).
+
+    An empty list is legal and deliberately so: it means "staff only", the
+    `documents:folder_create` bypass still reaches the folder, and the
+    required-field rule already forced the author to say it out loud.
+    """
+    if not role_ids:
+        return
+
+    parsed: dict[UUID, str] = {}
+    unresolved: set[str] = set()
+    for raw in role_ids:
+        try:
+            parsed[UUID(str(raw))] = str(raw)
+        except (ValueError, AttributeError, TypeError):
+            unresolved.add(str(raw))
+
+    if parsed:
+        tenant_id = tenant_context.acting_tenant_id(session) or DEFAULT_TENANT_ID
+        found = session.exec(
+            select(Role.id).where(
+                Role.id.in_(parsed.keys()), Role.tenant_id == tenant_id
+            )
+        ).all()
+        unresolved |= {
+            original
+            for role_id, original in parsed.items()
+            if role_id not in set(found)
+        }
+
+    if unresolved:
+        raise UnknownRoleIdsError(unresolved)
+
+
 def get_accessible_folder_ids(session: Session, user: User) -> set[UUID]:
+    """Folder ids `user` may see: the staff bypass, else the per-folder ACL.
+
+    IAM F5 (APRAS-49 §6): the ACL is a list of **role ids** and is
+    intersected with the caller's own roles, replacing the `user.role.value`
+    string match the enum made possible. The staff bypass is verbatim.
+    """
     folders = session.exec(select(DocumentFolder)).all()
-    # The all-folders staff bypass. `documents:folder_create` is the {A, D}
-    # permission of this module; the per-folder ACL below is the object
-    # dimension and stays keyed on the role string (F5 owns it).
+    # The all-folders staff bypass. `documents:folder_create` is the module's
+    # authoring permission; the per-folder ACL below is the object dimension.
     if has_permission(user, session, "documents:folder_create"):
         return {f.id for f in folders}
 
+    my_role_ids = {str(role_id) for role_id in get_effective_role_ids(user, session)}
     accessible_ids: set[UUID] = set()
-    role_str = user.role.value if hasattr(user.role, "value") else str(user.role)
 
     for folder in folders:
         try:
-            roles = json.loads(folder.allowed_roles_json)
-            if isinstance(roles, list) and role_str in roles:
-                accessible_ids.add(folder.id)
+            allowed = json.loads(folder.allowed_role_ids_json)
         except (json.JSONDecodeError, TypeError):
             continue
+        if isinstance(allowed, list) and {str(item) for item in allowed} & my_role_ids:
+            accessible_ids.add(folder.id)
 
     return accessible_ids
 
@@ -72,7 +135,8 @@ def get_folder_tree(session: Session, user: User) -> list[DocumentFolderTreeRead
     folder_map: dict[UUID, DocumentFolderTreeRead] = {}
     for f in folders:
         try:
-            roles = json.loads(f.allowed_roles_json) if f.allowed_roles_json else []
+            raw = f.allowed_role_ids_json
+            roles = json.loads(raw) if raw else []
         except (json.JSONDecodeError, TypeError):
             roles = []
 
@@ -81,7 +145,7 @@ def get_folder_tree(session: Session, user: User) -> list[DocumentFolderTreeRead
             name=f.name,
             description=f.description,
             parent_id=f.parent_id,
-            allowed_roles=roles,
+            allowed_role_ids=roles,
             document_count=doc_counts.get(f.id, 0),
             created_at=f.created_at,
             updated_at=f.updated_at,
@@ -103,18 +167,19 @@ def create_folder(
     session: Session, user: User, folder_in: DocumentFolderCreate
 ) -> DocumentFolderRead:
     _check_admin_or_director(user, session, "documents:folder_create")
+    _assert_role_ids_resolve(session, folder_in.allowed_role_ids)
 
     if folder_in.parent_id:
         parent = session.get(DocumentFolder, folder_in.parent_id)
         if not parent:
             raise DocumentFolderNotFoundError(folder_in.parent_id)
 
-    roles_json = json.dumps(folder_in.allowed_roles)
+    role_ids_json = json.dumps(folder_in.allowed_role_ids)
     folder = DocumentFolder(
         name=folder_in.name,
         description=folder_in.description,
         parent_id=folder_in.parent_id,
-        allowed_roles_json=roles_json,
+        allowed_role_ids_json=role_ids_json,
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow(),
     )
@@ -127,7 +192,7 @@ def create_folder(
         name=folder.name,
         description=folder.description,
         parent_id=folder.parent_id,
-        allowed_roles=folder_in.allowed_roles,
+        allowed_role_ids=folder_in.allowed_role_ids,
         document_count=0,
         created_at=folder.created_at,
         updated_at=folder.updated_at,
@@ -164,8 +229,9 @@ def update_folder(
         folder.name = folder_in.name
     if folder_in.description is not None:
         folder.description = folder_in.description
-    if folder_in.allowed_roles is not None:
-        folder.allowed_roles_json = json.dumps(folder_in.allowed_roles)
+    if folder_in.allowed_role_ids is not None:
+        _assert_role_ids_resolve(session, folder_in.allowed_role_ids)
+        folder.allowed_role_ids_json = json.dumps(folder_in.allowed_role_ids)
 
     folder.updated_at = datetime.utcnow()
     session.add(folder)
@@ -173,7 +239,8 @@ def update_folder(
     session.refresh(folder)
 
     try:
-        roles = json.loads(folder.allowed_roles_json) if folder.allowed_roles_json else []
+        raw = folder.allowed_role_ids_json
+        roles = json.loads(raw) if raw else []
     except (json.JSONDecodeError, TypeError):
         roles = []
 
@@ -188,7 +255,7 @@ def update_folder(
         name=folder.name,
         description=folder.description,
         parent_id=folder.parent_id,
-        allowed_roles=roles,
+        allowed_role_ids=roles,
         document_count=doc_count,
         created_at=folder.created_at,
         updated_at=folder.updated_at,

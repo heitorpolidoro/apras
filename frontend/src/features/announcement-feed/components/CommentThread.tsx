@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Send, Trash2 } from "lucide-react";
-import { useAuth, UserRole } from "../../user-administration/context/AuthContext";
+import { useAuth } from "../../user-administration/context/AuthContext";
+import { useEffectivePermissionSet } from "../../user-administration/access/useCanAccess";
 import { useAddComment, useDeleteComment } from "../hooks/useAnnouncements";
 import type { AnnouncementComment } from "../../../types/announcement";
 
@@ -13,12 +14,18 @@ interface CommentThreadProps {
 export const CommentThread: React.FC<CommentThreadProps> = ({ announcementId, comments }) => {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { has } = useEffectivePermissionSet();
   const [content, setContent] = useState("");
   const addComment = useAddComment();
   const deleteComment = useDeleteComment();
 
-  const isGuest = user?.role === UserRole.GUEST;
-  const isPublisher = user?.role === UserRole.ADMINISTRATOR || user?.role === UserRole.DIRECTOR;
+  // IAM F5 (APRAS-49 §10.5 a): a deliberate delta. `isGuest` hid the
+  // comment box from GUEST only; `announcements:comment` is the legacy
+  // {A, D, M, R} set, so it also hides it from PORTEIRO -- whose comment
+  // the backend already answers 403. This removes a UI that promised
+  // something the API refuses.
+  const cannotComment = !has("announcements:comment");
+  const isPublisher = has("announcements:create");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,7 +74,7 @@ export const CommentThread: React.FC<CommentThreadProps> = ({ announcementId, co
         )}
       </div>
 
-      {!isGuest && (
+      {!cannotComment && (
         <form onSubmit={handleSubmit} className="flex items-center gap-2">
           <input
             type="text"

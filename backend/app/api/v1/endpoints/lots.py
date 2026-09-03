@@ -20,6 +20,7 @@ from app.schemas.lot import (
 )
 from app.schemas.voting import LotVoterEligibilityCreate, LotVoterEligibilityRead
 from app.services import voting_service
+from app.services.role_service import role_names_here
 from app.services.lot_service import LotService
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlmodel import Session
@@ -150,7 +151,7 @@ def link_user_to_lot(
             id=user.id,
             full_name=user.full_name,
             email=user.email,
-            role=user.role,
+            roles=role_names_here(user, session),
         ),
     )
 

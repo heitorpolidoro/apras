@@ -1,10 +1,9 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { useEffectivePermissionSet } from "../../../user-administration/access/useCanAccess";
 import LotVotingAdminPanel from "../LotVotingAdminPanel";
 import { useLots } from "../../../lot-management/hooks/useLots";
 import { useUpdateLotDelinquency } from "../../hooks/useVoting";
-import { useEffectiveIdentity } from "../../../user-administration/context/useEffectiveIdentity";
-import { UserRole } from "../../../../types/auth";
 
 vi.mock("../../../lot-management/hooks/useLots", () => ({
   useLots: vi.fn(),
@@ -20,8 +19,8 @@ vi.mock("../../hooks/useVoting", () => ({
   })),
 }));
 
-vi.mock("../../../user-administration/context/useEffectiveIdentity", () => ({
-  useEffectiveIdentity: vi.fn(),
+vi.mock("../../../user-administration/access/useCanAccess", () => ({
+  useEffectivePermissionSet: vi.fn(),
 }));
 
 const lot = {
@@ -43,8 +42,8 @@ const selectLot = () =>
 describe("LotVotingAdminPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useEffectiveIdentity).mockReturnValue({
-      role: UserRole.ADMINISTRATOR,
+    vi.mocked(useEffectivePermissionSet).mockReturnValue({
+      has: () => true,
     } as never);
     vi.mocked(useLots).mockReturnValue({
       data: { items: [lot], total: 1, skip: 0, limit: 100 },
@@ -100,8 +99,8 @@ describe("LotVotingAdminPanel", () => {
   });
 
   it("hides the delinquency action from a MANAGER but keeps the voter list", () => {
-    vi.mocked(useEffectiveIdentity).mockReturnValue({
-      role: UserRole.MANAGER,
+    vi.mocked(useEffectivePermissionSet).mockReturnValue({
+      has: () => false,
     } as never);
 
     render(<LotVotingAdminPanel />);

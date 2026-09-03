@@ -388,7 +388,7 @@ describe("AuditTimeline", () => {
           timestamp: "2023-10-27T10:00:00Z",
           changed_by_id: "admin-1",
           resolved_old_value: null,
-          resolved_new_value: { name: "João Silva", role: "DIRECTOR" },
+          resolved_new_value: { name: "João Silva", roles: ["Diretor (papel)"] },
         },
       ],
       isLoading: false,
@@ -400,7 +400,8 @@ describe("AuditTimeline", () => {
     });
     fireEvent.click(toggleBtn);
 
-    // Should show "João Silva (Diretor)" not the raw UUID
+    // Should show "João Silva (Diretor (papel))" -- the role **names**
+    // since IAM F5 (§8.2) -- and not the raw UUID.
     expect(screen.getByText(/João Silva/)).toBeInTheDocument();
     expect(screen.getByText(/Diretor/)).toBeInTheDocument();
     expect(screen.queryByText("some-uuid")).not.toBeInTheDocument();

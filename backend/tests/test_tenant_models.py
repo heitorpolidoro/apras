@@ -24,13 +24,13 @@ from sqlmodel import Session, SQLModel
 
 from app.models.category import Category
 from app.models.lot import Lot
+from app.models.role import Role
 from app.models.tenant import (
     DEFAULT_TENANT_ID,
     DEFAULT_TENANT_NAME,
     Tenant,
     UserTenantLink,
 )
-from app.models.user_type import UserType
 
 _BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MIGRATION = os.path.join(
@@ -43,7 +43,7 @@ INHERITED_TABLES = {
     "taskcomment": "task",
     "taskhistory": "task",
     "task_visible_to_link": "task",
-    "user_user_type_link": "user_type",
+    "user_role_link": "role",
     "user_lot_link": "lot",
     "announcement_media": "announcement",
     "announcement_comment": "announcement",
@@ -89,10 +89,21 @@ def _migration_constant(name: str) -> tuple[str, ...]:
     raise AssertionError(f"{name} not found in {MIGRATION}")
 
 
+#: Tables migration `0028` named under a spelling a later migration changed.
+#: `0028` is a historical artefact and must keep saying `user_type`; migration
+#: `0032` (IAM F5, APRAS-49 §2.3) renamed that table to `role`. Mapping here
+#: is what keeps these cases about *which* tables are scoped rather than about
+#: what they were called in 2026-08.
+_RENAMED_SINCE_0028: dict[str, str] = {"user_type": "role"}
+
+
 @pytest.fixture(name="scoped_tables")
 def scoped_tables_fixture() -> tuple[str, ...]:
-    """The `_TENANT_SCOPED_TABLES` tuple declared by migration 0028."""
-    return _migration_constant("_TENANT_SCOPED_TABLES")
+    """`_TENANT_SCOPED_TABLES` from migration 0028, under current spellings."""
+    return tuple(
+        _RENAMED_SINCE_0028.get(name, name)
+        for name in _migration_constant("_TENANT_SCOPED_TABLES")
+    )
 
 
 def test_default_tenant_id_is_the_well_known_uuid():
@@ -119,13 +130,13 @@ def test_scoped_models_default_to_the_default_tenant(session: Session):
     tenant — this is what keeps every pre-existing test and every existing
     endpoint working unchanged."""
     category = Category(name="Manutenção")
-    user_type = UserType(name="Some Type", allowed_menus=[])
+    role = Role(name="Some Type",)
     lot = Lot(block="A", lot_number="12")
-    session.add_all([category, user_type, lot])
+    session.add_all([category, role, lot])
     session.commit()
 
     assert category.tenant_id == DEFAULT_TENANT_ID
-    assert user_type.tenant_id == DEFAULT_TENANT_ID
+    assert role.tenant_id == DEFAULT_TENANT_ID
     assert lot.tenant_id == DEFAULT_TENANT_ID
 
 

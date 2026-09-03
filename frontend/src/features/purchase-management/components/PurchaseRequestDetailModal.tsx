@@ -3,21 +3,14 @@ import { useTranslation } from "react-i18next";
 import { Award, CheckCircle2, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
-import { UserRole } from "../../../types/auth";
 import type {
   DecisionFormData,
   PurchaseQuote,
   QuoteFormData,
 } from "../../../types/purchase";
 import { PurchaseRequestStatus } from "../../../types/purchase";
-import { useEffectiveIdentity } from "../../user-administration/context/useEffectiveIdentity";
-import {
-  useAddQuote,
-  useDeleteQuote,
-  usePurchaseRequest,
-  useSelectQuote,
-  useUpdateQuote,
-} from "../hooks/usePurchaseRequests";
+import { useEffectivePermissionSet } from "../../user-administration/access/useCanAccess";
+import { useAddQuote, useDeleteQuote, usePurchaseRequest, useSelectQuote, useUpdateQuote,  } from "../hooks/usePurchaseRequests";
 import { formatCurrency, formatDateTime } from "../utils/formatters";
 import { QuoteFormModal } from "./QuoteFormModal";
 import { SelectQuoteModal } from "./SelectQuoteModal";
@@ -32,7 +25,7 @@ export const PurchaseRequestDetailModal: React.FC<
   PurchaseRequestDetailModalProps
 > = ({ isOpen, onClose, requestId }) => {
   const { t } = useTranslation();
-  const { role } = useEffectiveIdentity();
+  const { has } = useEffectivePermissionSet();
 
   const [isQuoteFormOpen, setIsQuoteFormOpen] = useState<boolean>(false);
   const [editingQuote, setEditingQuote] = useState<PurchaseQuote | null>(null);
@@ -49,7 +42,7 @@ export const PurchaseRequestDetailModal: React.FC<
   if (!isOpen || !requestId) return null;
 
   const canDecide =
-    role === UserRole.ADMINISTRATOR || role === UserRole.DIRECTOR;
+    has("purchases:decide");
   const isOpenRequest = detail?.status === PurchaseRequestStatus.OPEN;
   const quotesEditable = !!detail && isOpenRequest;
 

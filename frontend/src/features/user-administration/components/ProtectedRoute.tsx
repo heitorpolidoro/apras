@@ -1,8 +1,8 @@
 import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useAuth, UserRole } from "../context/AuthContext";
-import { useEffectiveIdentity } from "../context/useEffectiveIdentity";
+import { useAuth } from "../context/AuthContext";
+import { useMyPermissions } from "../../../hooks/usePermissionQueries";
 import { useCanAccess } from "../access/useCanAccess";
 import type { AccessRule } from "../../../types/permissions";
 
@@ -51,11 +51,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const { isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
   const { allowed, isLoading: isAccessLoading } = useCanAccess(requiredAccess);
-  // TRANSITIONAL (IAM F4 -> F5): the GUEST/PORTEIRO landing redirects are not
-  // authorization — a PORTEIRO genuinely holds `tasks:read` — so they keep
-  // reading the effective role, on exactly the two routes that carry
-  // `landingRedirect` (§2.4).
-  const { role: effectiveRole } = useEffectiveIdentity();
+  // The landing redirect is not authorization — a PORTEIRO genuinely holds
+  // `tasks:read` — so it reads the caller's `landing_path` preference, on
+  // exactly the two routes that carry `landingRedirect` (IAM F5 §10.4).
+  // `/permissions/me` is the effective-set endpoint, so this follows the
+  // simulated identity by construction, which is what makes simulating a
+  // porteiro show the porteiro's landing.
+  const { data: myPermissions } = useMyPermissions();
+  const landingPath = myPermissions?.landing_path ?? null;
 
   if (isLoading) return <Spinner />;
 
@@ -63,12 +66,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (requiredAccess?.landingRedirect && effectiveRole === UserRole.GUEST) {
-    return <Navigate to="/welcome" replace />;
-  }
-
-  if (requiredAccess?.landingRedirect && effectiveRole === UserRole.PORTEIRO) {
-    return <Navigate to="/gate" replace />;
+  if (
+    requiredAccess?.landingRedirect &&
+    landingPath &&
+    landingPath !== location.pathname
+  ) {
+    return <Navigate to={landingPath} replace />;
   }
 
   // Without this the page would flash "Acesso restrito" on every cold load,

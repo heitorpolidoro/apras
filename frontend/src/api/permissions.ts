@@ -5,7 +5,7 @@ import type { MyPermissions, PermissionDescriptor } from "../types/permissions";
  * The two `/permissions` reads (APRAS-48 §3).
  *
  * The paths are written **exactly** as FastAPI mounts them — `/permissions/`
- * with the trailing slash (like `/user-types/`) and `/permissions/me`
+ * with the trailing slash (like `/roles/`) and `/permissions/me`
  * without — because a mismatch costs a 307 redirect that drops the
  * `Authorization` header on some proxies. `TenantContext` already carries the
  * same warning for `/tenants`.

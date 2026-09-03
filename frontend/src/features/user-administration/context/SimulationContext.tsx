@@ -6,29 +6,24 @@ import React, {
   useEffect,
   useMemo,
 } from "react";
-import { UserRole, type UserRole as UserRoleType } from "../../../types/auth";
-import {
-  setSimulationState,
-  registerSimulationReset,
-} from "./simulationState";
+import { setSimulationState, registerSimulationReset,  } from "./simulationState";
 
-const STORAGE_ROLE_KEY = "simulation.role";
-const STORAGE_USER_TYPE_IDS_KEY = "simulation.userTypeIds";
+const STORAGE_USER_TYPE_IDS_KEY = "simulation.roleIds";
 
-const VALID_ROLES: ReadonlySet<string> = new Set(Object.values(UserRole));
-
+/**
+ * IAM F5 (APRAS-49 §10.3) deleted `simulatedRole`: there is no enum left to
+ * simulate, and a simulation is now exactly a set of roles. `isSimulating`
+ * is therefore "at least one role is selected" rather than "a role value has
+ * been picked", which is the same statement in the model that exists.
+ */
 interface SimulationContextType {
-  /** The role currently being simulated, or `null` when not simulating. */
-  simulatedRole: UserRoleType | null;
-  /** The UserType ids currently selected for the simulation. */
-  simulatedUserTypeIds: string[];
-  /** `true` once a role has been picked. */
+  /** The role ids currently selected for the simulation. */
+  simulatedRoleIds: string[];
+  /** `true` once at least one role has been selected. */
   isSimulating: boolean;
-  /** Sets the simulated role. Passing `null` deactivates the simulation. */
-  setSimulatedRole: (role: UserRoleType | null) => void;
-  /** Sets the simulated UserType id selection. */
-  setSimulatedUserTypeIds: (ids: string[]) => void;
-  /** Clears the simulated role and UserType selection. */
+  /** Sets the simulated role id selection. */
+  setSimulatedRoleIds: (ids: string[]) => void;
+  /** Clears the simulated role selection. */
   stopSimulation: () => void;
 }
 
@@ -36,17 +31,8 @@ const SimulationContext = createContext<SimulationContextType | undefined>(
   undefined,
 );
 
-/** Reads the persisted simulated role, discarding stale/invalid values. */
-function readStoredRole(): UserRoleType | null {
-  const stored = sessionStorage.getItem(STORAGE_ROLE_KEY);
-  if (stored && VALID_ROLES.has(stored)) {
-    return stored as UserRoleType;
-  }
-  return null;
-}
-
-/** Reads the persisted simulated UserType id selection. */
-function readStoredUserTypeIds(): string[] {
+/** Reads the persisted simulated Role id selection. */
+function readStoredRoleIds(): string[] {
   const stored = sessionStorage.getItem(STORAGE_USER_TYPE_IDS_KEY);
   if (!stored) return [];
   try {
@@ -61,37 +47,23 @@ function readStoredUserTypeIds(): string[] {
 export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [simulatedRole, setSimulatedRoleState] = useState<UserRoleType | null>(
-    readStoredRole,
-  );
-  const [simulatedUserTypeIds, setSimulatedUserTypeIdsState] = useState<
+  const [simulatedRoleIds, setSimulatedRoleIdsState] = useState<
     string[]
-  >(readStoredUserTypeIds);
+  >(readStoredRoleIds);
 
-  const isSimulating = simulatedRole !== null;
+  const isSimulating = simulatedRoleIds.length > 0;
 
   useEffect(() => {
     setSimulationState({ isSimulating });
   }, [isSimulating]);
 
-  const setSimulatedRole = useCallback((role: UserRoleType | null) => {
-    setSimulatedRoleState(role);
-    if (role === null) {
-      sessionStorage.removeItem(STORAGE_ROLE_KEY);
-    } else {
-      sessionStorage.setItem(STORAGE_ROLE_KEY, role);
-    }
-  }, []);
-
-  const setSimulatedUserTypeIds = useCallback((ids: string[]) => {
-    setSimulatedUserTypeIdsState(ids);
+  const setSimulatedRoleIds = useCallback((ids: string[]) => {
+    setSimulatedRoleIdsState(ids);
     sessionStorage.setItem(STORAGE_USER_TYPE_IDS_KEY, JSON.stringify(ids));
   }, []);
 
   const stopSimulation = useCallback(() => {
-    setSimulatedRoleState(null);
-    setSimulatedUserTypeIdsState([]);
-    sessionStorage.removeItem(STORAGE_ROLE_KEY);
+    setSimulatedRoleIdsState([]);
     sessionStorage.removeItem(STORAGE_USER_TYPE_IDS_KEY);
   }, []);
 
@@ -104,21 +76,12 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const value = useMemo(
     () => ({
-      simulatedRole,
-      simulatedUserTypeIds,
+      simulatedRoleIds,
       isSimulating,
-      setSimulatedRole,
-      setSimulatedUserTypeIds,
+      setSimulatedRoleIds,
       stopSimulation,
     }),
-    [
-      simulatedRole,
-      simulatedUserTypeIds,
-      isSimulating,
-      setSimulatedRole,
-      setSimulatedUserTypeIds,
-      stopSimulation,
-    ],
+    [simulatedRoleIds, isSimulating, setSimulatedRoleIds, stopSimulation],
   );
 
   return (

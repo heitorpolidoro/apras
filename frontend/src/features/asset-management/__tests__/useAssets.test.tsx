@@ -3,16 +3,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as assetsApi from "../../../api/assets";
-import {
-  useAsset,
-  useAssets,
-  useAssetSummary,
-  useCreateAsset,
-  useDeleteAsset,
-  useInventoryMovements,
-  useRecordMovement,
-  useUpdateAsset,
-} from "../hooks/useAssets";
+import { useAsset, useAssets, useAssetSummary, useCreateAsset, useDeleteAsset, useInventoryMovements, useRecordMovement, useUpdateAsset,  } from "../hooks/useAssets";
 import type {
   Asset,
   AssetDetail,

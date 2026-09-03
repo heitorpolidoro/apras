@@ -1,13 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  createResident,
-  deleteResident,
-  getLotResidents,
-  getResidentDetail,
-  linkResidentUser,
-  unlinkResidentUser,
-  updateResident,
-} from "../../../api/residents";
+import { createResident, deleteResident, getLotResidents, getResidentDetail, linkResidentUser, unlinkResidentUser, updateResident,  } from "../../../api/residents";
 import type {
   ResidentCreatePayload,
   ResidentUpdatePayload,

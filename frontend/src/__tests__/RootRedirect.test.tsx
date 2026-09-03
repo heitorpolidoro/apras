@@ -1,9 +1,39 @@
 import { render, screen } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { RootRedirect } from "../App";
-import * as AuthHook from "../features/user-administration/context/AuthContext";
-import { UserRole } from "../features/user-administration/context/AuthContext";
+import { useMyPermissions } from "../hooks/usePermissionQueries";
+
+/**
+ * IAM F5 (APRAS-49 §10.4): the landings became **data**.
+ *
+ * `RootRedirect` was a three-way switch on the enum. F4 recorded these
+ * redirects as role-shaped and un-expressible in permissions, and it was
+ * right: a PORTEIRO holds `tasks:read` and `gate:checkin`, and so do A/D/M,
+ * so no predicate over the catalogue separates "pin the gatekeeper to the
+ * gate" from "the board can also open the gate". Landing is a *preference*,
+ * not authorization — so it lives on the role row and arrives through
+ * `GET /permissions/me`.
+ *
+ * The navigations asserted below are the ones this module always asserted;
+ * only the fixture moved from a role value to a `landing_path`.
+ */
+
+vi.mock("../hooks/usePermissionQueries", () => ({
+  useMyPermissions: vi.fn(),
+}));
+
+const withLanding = (landing_path: string | null) => {
+  vi.mocked(useMyPermissions).mockReturnValue({
+    data: {
+      tenant_id: "00000000-0000-0000-0000-000000000001",
+      permissions: [],
+      landing_path,
+    },
+    isPending: false,
+    isError: false,
+  } as never);
+};
 
 const renderRoot = () =>
   render(
@@ -18,20 +48,12 @@ const renderRoot = () =>
   );
 
 describe("RootRedirect", () => {
-  it("sends an active GUEST (real role) to /welcome", () => {
-    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
-      isAuthenticated: true,
-      isLoading: false,
-      user: {
-        id: "guest-1",
-        email: "guest@example.com",
-        full_name: "Guest User",
-        role: UserRole.GUEST,
-        is_active: true,
-      } as any,
-      login: vi.fn() as any,
-      logout: vi.fn(),
-    });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("sends a caller whose landing_path is /welcome there", () => {
+    withLanding("/welcome");
 
     renderRoot();
 
@@ -39,20 +61,8 @@ describe("RootRedirect", () => {
     expect(screen.queryByText("Dashboard Page")).toBeNull();
   });
 
-  it("sends an active PORTEIRO (real role) to /gate", () => {
-    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
-      isAuthenticated: true,
-      isLoading: false,
-      user: {
-        id: "porteiro-1",
-        email: "porteiro@example.com",
-        full_name: "Porteiro User",
-        role: UserRole.PORTEIRO,
-        is_active: true,
-      } as any,
-      login: vi.fn() as any,
-      logout: vi.fn(),
-    });
+  it("sends a caller whose landing_path is /gate there", () => {
+    withLanding("/gate");
 
     renderRoot();
 
@@ -61,61 +71,38 @@ describe("RootRedirect", () => {
     expect(screen.queryByText("Welcome Page")).toBeNull();
   });
 
-  it("sends every other real role to /dashboard (unchanged behavior)", () => {
-    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
-      isAuthenticated: true,
-      isLoading: false,
-      user: {
-        id: "director-1",
-        email: "director@example.com",
-        full_name: "Director User",
-        role: UserRole.DIRECTOR,
-        is_active: true,
-      } as any,
-      login: vi.fn() as any,
-      logout: vi.fn(),
-    });
-
-    renderRoot();
-
-    expect(screen.getByText("Dashboard Page")).toBeInTheDocument();
-    expect(screen.queryByText("Welcome Page")).toBeNull();
-  });
-
-  it("defaults to /dashboard while the user is still undefined (isLoading window)", () => {
-    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
-      isAuthenticated: false,
-      isLoading: true,
-      user: undefined as any,
-      login: vi.fn() as any,
-      logout: vi.fn(),
-    });
+  it("sends everyone else to /dashboard (unchanged behaviour)", () => {
+    withLanding(null);
 
     renderRoot();
 
     expect(screen.getByText("Dashboard Page")).toBeInTheDocument();
   });
 
-  it("uses the real role, not a simulated one, for an Administrator's own root redirect", () => {
-    // Even if some other part of the app is simulating GUEST, RootRedirect
-    // reads useAuth() directly (real identity) and is unaffected.
-    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
-      isAuthenticated: true,
-      isLoading: false,
-      user: {
-        id: "admin-1",
-        email: "admin@example.com",
-        full_name: "Admin User",
-        role: UserRole.ADMINISTRATOR,
-        is_active: true,
-      } as any,
-      login: vi.fn() as any,
-      logout: vi.fn(),
-    });
+  it("defaults to /dashboard while the query is still settling", () => {
+    vi.mocked(useMyPermissions).mockReturnValue({
+      data: undefined,
+      isPending: true,
+      isError: false,
+    } as never);
 
     renderRoot();
 
     expect(screen.getByText("Dashboard Page")).toBeInTheDocument();
-    expect(screen.queryByText("Welcome Page")).toBeNull();
+  });
+
+  it("lands a multi-role user on the first landing_path by role name", () => {
+    // "First non-null, ordered by role name" is total and deterministic, but
+    // it is only *identical* to the retired enum switch for users with one
+    // landing-carrying role: a user holding both `Administrador (papel)` and
+    // `Porteiro (papel)` lands on `/dashboard`, where the switch — keyed on a
+    // single global value — would also have. The backend picks; this asserts
+    // the frontend honours whatever it picked, and nothing more.
+    withLanding("/dashboard");
+
+    renderRoot();
+
+    expect(screen.getByText("Dashboard Page")).toBeInTheDocument();
+    expect(screen.queryByText("Gate Page")).toBeNull();
   });
 });

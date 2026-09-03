@@ -29,7 +29,7 @@ describe("PackageStatusPage", () => {
     } as any);
   });
 
-  it("renders packages grouped by the resident's own linked lot(s)", () => {
+  it("renders packages roleed by the resident's own linked lot(s)", () => {
     vi.mocked(packageHooks.useMyPackages).mockReturnValue({
       isLoading: false,
       lotsWithPackages: [

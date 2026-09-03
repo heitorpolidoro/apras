@@ -5,17 +5,52 @@ from datetime import datetime, timedelta
 from app.core.config import settings
 from app.core.security import get_password_hash
 from app.models.category import Category
-from app.models.enums import TaskPriority, TaskStatus, UserRole
+from app.models.enums import TaskPriority, TaskStatus
 from app.models.task import Task
 from app.models.tenant import DEFAULT_TENANT_ID, Tenant, UserTenantLink
 from app.models.user import User
-from app.models.user_type import UserType
+from app.models.role import Role
 from app.services.tenant_service import TenantService
 from sqlalchemy import text
 from sqlmodel import Session, create_engine, select
 
+#: The three demo profiles' bundles (APRAS-49 §9.1, ER-4).
+#:
+#: **The dev demo's opinion, not a product default.** F1's "nothing is
+#: seeded with permissions" decision binds `ensure_legacy_roles` and every
+#: migration; it does not bind this script, whose whole job is to produce a
+#: usable demo. `app/` must not read `tests/data/legacy_role_bundles.json`,
+#: so the three sets are spelled here, deliberately small and readable rather
+#: than a reproduction of the retired enum's 155/144/83 strings.
+DEMO_BUNDLES: dict[str, list[str]] = {
+    "Administrador (papel)": [
+        "roles:read", "roles:create", "roles:update", "roles:delete",
+        "users:read", "users:update", "users:update_contact",
+        "tasks:read", "tasks:read_all", "tasks:create", "tasks:update",
+        "tasks:update_any", "tasks:delete", "tasks:comment",
+        "categories:read", "categories:create", "categories:update",
+        "categories:delete",
+    ],
+    "Diretor (papel)": [
+        "roles:read", "users:read",
+        "tasks:read", "tasks:read_all", "tasks:create", "tasks:update",
+        "tasks:update_any", "tasks:comment",
+        "categories:read", "categories:create", "categories:update",
+        "announcements:read", "announcements:create",
+    ],
+    "Gerente (papel)": [
+        "roles:read", "users:read",
+        # Deliberately **no** `tasks:read_all` / `tasks:update_any`: that
+        # absence *is* the legacy MANAGER tier, now stored as data instead of
+        # compiled into an `if` (APRAS-49 §3.0).
+        "tasks:read", "tasks:create", "tasks:update", "tasks:comment",
+        "categories:read",
+        "occurrences:read", "occurrences:read_assigned",
+    ],
+}
 
-def seed_db() -> None:
+
+def seed_db() -> None:  # noqa: PLR0915
     engine = create_engine(settings.database_url)
     with Session(engine) as session:
         print("🌱 Iniciando seed de desenvolvimento...")
@@ -24,7 +59,8 @@ def seed_db() -> None:
         session.execute(text("TRUNCATE TABLE task CASCADE;"))
         session.execute(text('TRUNCATE TABLE "user" CASCADE;'))
         session.execute(text("TRUNCATE TABLE category CASCADE;"))
-        session.execute(text("TRUNCATE TABLE user_type CASCADE;"))
+        session.execute(text("TRUNCATE TABLE role CASCADE;"))
+        session.execute(text("TRUNCATE TABLE user_role_link CASCADE;"))
         session.commit()
 
         # 2. Categorias
@@ -47,8 +83,18 @@ def seed_db() -> None:
             session.refresh(cat)
         print(f"✅ {len(categories)} categorias criadas.")
 
-        # 3. Tipos de Usuário
-        user_types_data = [
+        # 3. Papéis
+        #
+        # The TRUNCATE above wiped every role row, so the six historically
+        # named ones are recreated first and the demo bundles are written
+        # onto three of them. `app/` must not read a test fixture, so
+        # `DEMO_BUNDLES` below is a literal in this file: it is **the dev
+        # demo's opinion, not a product default**. Nothing outside this
+        # script ever seeds a permission — `ensure_legacy_roles` and every
+        # migration except `0033` insert `permissions = []` (APRAS-49 §9.1).
+        TenantService.ensure_legacy_roles(session, DEFAULT_TENANT_ID)
+
+        roles_data = [
             "Diretor Comercial",
             "Diretor Financeiro",
             "Gerente Operacional",
@@ -56,16 +102,29 @@ def seed_db() -> None:
             "Analista",
         ]
 
-        user_types: dict[str, UserType] = {}
-        for type_name in user_types_data:
-            ut = UserType(name=type_name)
+        roles: dict[str, Role] = {}
+        for type_name in roles_data:
+            ut = Role(name=type_name)
             session.add(ut)
-            user_types[type_name] = ut
-
+            roles[type_name] = ut
         session.commit()
-        for ut in user_types.values():
+        for ut in roles.values():
             session.refresh(ut)
-        print(f"✅ {len(user_types)} tipos de usuário criados.")
+
+        by_name: dict[str, Role] = {
+            role.name: role for role in session.exec(select(Role)).all()
+        }
+        for name, bundle in DEMO_BUNDLES.items():
+            by_name[name].permissions = sorted(bundle)
+            session.add(by_name[name])
+        # The two landing preferences the enum switch used to hard-code
+        # (APRAS-49 §10.4), so the dev demo shows the feature.
+        by_name["Porteiro (papel)"].landing_path = "/gate"
+        by_name["Convidado (papel)"].landing_path = "/welcome"
+        session.add(by_name["Porteiro (papel)"])
+        session.add(by_name["Convidado (papel)"])
+        session.commit()
+        print(f"✅ {len(by_name)} papéis criados.")
 
         # 4. Usuários
         admin = User(
@@ -73,9 +132,10 @@ def seed_db() -> None:
             email="admin@apras.com",
             hashed_password=get_password_hash("test_admin_password"),
             full_name="Administrador do Sistema",
-            role=UserRole.ADMINISTRATOR,
+            is_superuser=True,
             is_active=True,
             cpf="52998224725",
+            roles=[by_name["Administrador (papel)"]],
         )
         session.add(admin)
 
@@ -101,10 +161,9 @@ def seed_db() -> None:
                 email=d_data["email"],
                 hashed_password=get_password_hash("test_user_password"),
                 full_name=d_data["full_name"],
-                role=UserRole.DIRECTOR,
                 is_active=True,
                 cpf=d_data["cpf"],
-                user_types=[user_types[d_data["full_name"]]],
+                roles=[by_name["Diretor (papel)"], roles[d_data["full_name"]]],
             )
             session.add(user)
             diretores.append(user)
@@ -114,8 +173,7 @@ def seed_db() -> None:
             email="gerente1@apras.com",
             hashed_password=get_password_hash("test_user_password"),
             full_name="Gerente Operacional",
-            role=UserRole.MANAGER,
-            user_types=[user_types["Gerente Operacional"]],
+            roles=[by_name["Gerente (papel)"], roles["Gerente Operacional"]],
             is_active=True,
             cpf="07491723040",
         )
@@ -138,6 +196,12 @@ def seed_db() -> None:
             )
         session.commit()
         print(f"✅ {1 + len(diretores) + 1} usuários criados.")
+        # The model at a glance: who holds what, printed per profile.
+        for seeded_user in [admin, *diretores, manager]:
+            session.refresh(seeded_user)
+            names = ", ".join(sorted(role.name for role in seeded_user.roles))
+            flag = " [is_superuser]" if seeded_user.is_superuser else ""
+            print(f"   • {seeded_user.email}: {names or '(sem papéis)'}{flag}")
 
         # 5. Tarefas
         now = datetime.now()
@@ -262,17 +326,14 @@ def seed_db() -> None:
         session.commit()
         print(f"✅ {len(tasks_data)} tarefas criadas.")
 
-        # 6. Tipos de usuário ligados a papéis, para *todos* os tenants.
-        # The TRUNCATE above wipes the role-linked UserType rows migration
-        # 0018/0020 seeded, and tenants created before APRAS-42 never had
-        # them; without them a non-ADMINISTRATOR member has an empty
-        # effective-UserType set and is 403'd on every gated menu. This is
-        # the documented dev recovery path (APRAS-43 §7) — idempotent, so
-        # running the seed twice inserts nothing the second time.
-        seeded_role_types = 0
+        # 6. Os seis papéis históricos, em *todos* os tenants.
+        # The TRUNCATE above wiped them and tenants created before APRAS-42
+        # never had them. Idempotent, so the default tenant (already done in
+        # step 3) contributes nothing here.
+        seeded_roles = 0
         for tenant in session.exec(select(Tenant)).all():
-            seeded_role_types += TenantService.ensure_role_types(session, tenant.id)
-        print(f"✅ {seeded_role_types} tipos de usuário por papel garantidos.")
+            seeded_roles += TenantService.ensure_legacy_roles(session, tenant.id)
+        print(f"✅ {seeded_roles} papéis históricos garantidos nos demais tenants.")
 
         print("🚀 Seed concluído com sucesso!")
 

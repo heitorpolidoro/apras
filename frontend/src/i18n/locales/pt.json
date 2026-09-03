@@ -5,7 +5,7 @@
     "logout": "Sair",
     "close": "Fechar",
     "restrictedAccess": "Acesso restrito",
-    "restrictedAccessMessage": "Você não tem acesso a esta funcionalidade. Peça a um Administrador para liberá-la para o seu Tipo de Usuário."
+    "restrictedAccessMessage": "Você não tem acesso a esta funcionalidade. Peça a um Administrador para liberá-la para o seu papel."
   },
   "nav": {
     "tasks": "Tarefas",
@@ -29,7 +29,7 @@
     "voting": "Assembleias",
     "assets": "Patrimônio & Estoque",
     "purchases": "Cotações de Compra",
-    "groups": "Grupos"
+    "roles": "Papéis"
   },
   "accessControl": {
     "title": "Controle de Acesso",
@@ -136,13 +136,6 @@
     "validationError": "Erro de validação: {{messages}}",
     "genericError": "Ocorreu um erro ao realizar o cadastro. Tente novamente mais tarde."
   },
-  "roles": {
-    "ADMINISTRATOR": "Administrador",
-    "DIRECTOR": "Diretor",
-    "MANAGER": "Gerente",
-    "GUEST": "Convidado",
-    "PORTEIRO": "Porteiro"
-  },
   "admin": {
     "title": "Gerenciamento de Usuários",
     "backToDashboard": "Voltar ao Dashboard",
@@ -175,8 +168,8 @@
     "errorLoadingTypes": "Erro ao carregar tipos.",
     "noTypesYet": "Nenhum tipo cadastrado.",
     "colRoleLegacy": "Cargo (legado)",
-    "editGroups": "Grupos",
-    "manageGroups": "Gerenciar grupos"
+    "editRoles": "Papéis",
+    "manageRoles": "Gerenciar papéis"
   },
   "contactInfo": {
     "title": "Informações de Contato",
@@ -258,7 +251,7 @@
       "managerVisible": "Visível para gerentes",
       "visibleToLabel": "Visibilidade",
       "visibleToAll": "Público (Todos)",
-      "visibleToHelper": "Restringir a visibilidade desta tarefa a um tipo de usuário específico."
+      "visibleToHelper": "Restringir a visibilidade desta tarefa a um papel específico."
     },
     "details": {
       "description": "Descrição",
@@ -304,17 +297,15 @@
   },
   "simulation": {
     "toggleButton": "Simular",
-    "roleLabel": "Papel",
-    "roleSelectPlaceholder": "Selecione um papel",
-    "userTypesLabel": "Tipos de Usuário",
-    "userTypesPlaceholder": "Selecionar tipos de usuário",
-    "noUserTypesAvailable": "Nenhum tipo de usuário disponível.",
+    "rolesLabel": "Papéis",
+    "rolesPlaceholder": "Selecionar papéis",
+    "noRolesAvailable": "Nenhum papel disponível.",
     "stopButton": "Encerrar simulação",
-    "bannerLabel": "Visualizando como: {{role}} ({{userTypes}})",
-    "noUserTypes": "nenhum tipo de usuário",
+    "bannerLabel": "Visualizando como: {{roles}}",
+    "noRoles": "nenhum papel",
     "readOnlyTask": "Somente leitura nesta visualização simulada",
     "mutationBlocked": "Ação bloqueada: você está em modo de simulação.",
-    "permissionsPreviewNote": "A prévia mostra os menus dos grupos simulados; o seu próprio acesso às páginas não muda."
+    "permissionsPreviewNote": "A prévia mostra os menus dos papéis simulados; o seu próprio acesso às páginas não muda."
   },
   "lots": {
     "title": "Cadastro de Lotes",
@@ -1302,7 +1293,7 @@
       "tasks": "Tarefas",
       "tenants": "Condomínios",
       "uploads": "Envios",
-      "user_types": "Grupos",
+      "roles": "Papéis",
       "users": "Usuários",
       "visitors": "Visitantes",
       "votes": "Votações"
@@ -1407,13 +1398,16 @@
       "validation": "Dados inválidos: {{messages}}"
     }
   },
-  "groups": {
-    "title": "Grupos",
-    "subtitle": "Grupos reúnem permissões e são atribuídos aos usuários.",
-    "loading": "Carregando grupos…",
-    "empty": "Nenhum grupo ainda.",
-    "notFound": "Grupo não encontrado.",
-    "namePlaceholder": "Nome do grupo",
+  "roles": {
+    "title": "Papéis",
+    "subtitle": "Papéis reúnem permissões e são atribuídos aos usuários.",
+    "loading": "Carregando papéis…",
+    "empty": "Nenhum papel ainda.",
+    "notFound": "Papel não encontrado.",
+    "namePlaceholder": "Nome do papel",
+        "landingPath": "Página inicial do papel",
+    "landingPathNone": "(Nenhuma — vai para o Dashboard)",
+    "landingPathHint": "Para onde os membros deste papel são levados ao entrar. É uma preferência, não uma permissão.",
     "name": "Nome",
     "create": "Criar",
     "edit": "Editar",
@@ -1421,14 +1415,14 @@
     "delete": "Excluir",
     "save": "Salvar",
     "cancel": "Cancelar",
-    "back": "Voltar aos grupos",
-    "colName": "Grupo",
+    "back": "Voltar aos papéis",
+    "colName": "Papel",
     "colPermissions": "Permissões",
     "colMembers": "Membros",
     "colActions": "Ações",
-    "confirmDelete": "Excluir este grupo? Os usuários perdem as permissões que ele concede.",
+    "confirmDelete": "Excluir este papel? Os usuários perdem as permissões que ele concede.",
     "cloneSuffix": " (cópia)",
-    "roleLinkedBadge": "Grupo de papel (legado)",
+    "roleLinkedBadge": "Papel legado",
     "roleLinkedHint": "Criado pela migração de papéis: não pode ser excluído nem renomeado, mas suas permissões são editáveis.",
     "members": "Membros",
     "membersEmpty": "Nenhum membro ainda.",
@@ -1437,7 +1431,7 @@
     "membersSelect": "Escolha um usuário",
     "membersLoading": "Carregando membros…",
     "errors": {
-      "nameTaken": "Já existe um grupo com esse nome."
+      "nameTaken": "Já existe um papel com esse nome."
     }
   }
 }

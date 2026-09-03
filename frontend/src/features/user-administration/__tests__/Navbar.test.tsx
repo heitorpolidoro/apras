@@ -3,8 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import * as AuthHook from "../context/AuthContext";
-import { UserRole } from "../context/AuthContext";
-import { useUserTypes } from "../../../hooks/useUserTypes";
+import { useRoles } from "../../../hooks/useRoles";
 import { useMyPermissions } from "../../../hooks/usePermissionQueries";
 import {
   PERMISSIONS_BY_ROLE,
@@ -19,21 +18,20 @@ import {
 vi.mock("../context/SimulationContext", () => ({
   useSimulation: vi.fn(() => ({
     simulatedRole: null,
-    simulatedUserTypeIds: [],
+    simulatedRoleIds: [],
     isSimulating: false,
     setSimulatedRole: vi.fn(),
-    setSimulatedUserTypeIds: vi.fn(),
+    setSimulatedRoleIds: vi.fn(),
     stopSimulation: vi.fn(),
   })),
 }));
 
-// SimulationControls (rendered only for a real ADMINISTRATOR) fetches
-// UserTypes; avoid a real network call in tests. Also backs useMenuAccess
-// (via useEffectiveIdentity), so it includes a type granting tasks/categories
-// access for the DIRECTOR fixtures below that assign it via user_types.
-vi.mock("../../../hooks/useUserTypes", () => ({
-  useUserTypes: vi.fn(() => ({
-    data: [{ id: "type-1", name: "Test Type", allowed_menus: ["tasks", "categories"] }],
+// SimulationControls (rendered only for a caller holding `roles:update`)
+// fetches the tenant's roles; avoid a real network call in tests. The menus
+// themselves derive from `/permissions/me`, not from this list.
+vi.mock("../../../hooks/useRoles", () => ({
+  useRoles: vi.fn(() => ({
+    data: [{ id: "type-1", name: "Test Type" }],
   })),
 }));
 
@@ -50,7 +48,9 @@ beforeEach(() => {
   vi.mocked(useMyPermissions).mockImplementation(
     () =>
       settledPermissions(
-        PERMISSIONS_BY_ROLE[AuthHook.useAuth().user?.role ?? ""] ?? [],
+        (AuthHook.useAuth().user?.roles ?? []).flatMap(
+          (item) => PERMISSIONS_BY_ROLE[item.name] ?? [],
+        ),
       ) as never,
   );
 });
@@ -83,9 +83,9 @@ describe("Navbar", () => {
 
         email: "test@example.com",
         full_name: "Test User",
-        role: UserRole.DIRECTOR,
+        is_superuser: false,
+        roles: [{ id: "profile-director", name: "DIRECTOR" }, { id: "type-1", name: "Test Type" }],
         is_active: true,
-        user_types: [{ id: "type-1", name: "Test Type" }],
       } as any,
       login: vi.fn() as any,
       logout: vi.fn(),
@@ -113,7 +113,8 @@ describe("Navbar", () => {
 
         email: "admin@example.com",
         full_name: "Admin User",
-        role: UserRole.ADMINISTRATOR,
+        is_superuser: true,
+        roles: [{ id: "profile-administrator", name: "ADMINISTRATOR" }],
         is_active: true,
       },
       login: vi.fn() as any,
@@ -138,9 +139,9 @@ describe("Navbar", () => {
 
         email: "test@example.com",
         full_name: "Test User",
-        role: UserRole.DIRECTOR,
+        is_superuser: false,
+        roles: [{ id: "profile-director", name: "DIRECTOR" }, { id: "type-1", name: "Test Type" }],
         is_active: true,
-        user_types: [{ id: "type-1", name: "Test Type" }],
       } as any,
       login: vi.fn() as any,
       logout: vi.fn(),
@@ -165,7 +166,8 @@ describe("Navbar", () => {
 
         email: "admin@example.com",
         full_name: "Admin User",
-        role: UserRole.ADMINISTRATOR,
+        is_superuser: true,
+        roles: [{ id: "profile-administrator", name: "ADMINISTRATOR" }],
         is_active: true,
       },
       login: vi.fn() as any,
@@ -192,7 +194,8 @@ describe("Navbar", () => {
 
         email: "test@example.com",
         full_name: "Test User",
-        role: UserRole.DIRECTOR,
+        is_superuser: false,
+        roles: [{ id: "profile-director", name: "DIRECTOR" }],
         is_active: true,
       },
       login: vi.fn() as any,
@@ -218,9 +221,9 @@ describe("Navbar", () => {
 
         email: "test@example.com",
         full_name: "Test User",
-        role: UserRole.DIRECTOR,
+        is_superuser: false,
+        roles: [{ id: "profile-director", name: "DIRECTOR" }, { id: "type-1", name: "Test Type" }],
         is_active: true,
-        user_types: [{ id: "type-1", name: "Test Type" }],
       } as any,
       login: vi.fn() as any,
       logout: vi.fn(),
@@ -236,7 +239,7 @@ describe("Navbar", () => {
     expect(link.className).toContain("text-primary");
   });
 
-  it("renders user type name when user has a type label", () => {
+  it("renders role name when user has a role label", () => {
     vi.spyOn(AuthHook, "useAuth").mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
@@ -245,9 +248,9 @@ describe("Navbar", () => {
 
         email: "test@example.com",
         full_name: "Test User",
-        role: UserRole.DIRECTOR,
+        is_superuser: false,
+        roles: [{ id: "profile-director", name: "DIRECTOR" }, { name: "Gerente" }],
         is_active: true,
-        user_types: [{ name: "Gerente" }],
       } as any,
       login: vi.fn() as any,
       logout: vi.fn(),
@@ -259,7 +262,8 @@ describe("Navbar", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("Gerente")).toBeInTheDocument();
+    // The badge joins **every** role name (§8.2), not a single enum label.
+    expect(screen.getByText("DIRECTOR, Gerente")).toBeInTheDocument();
   });
 
   it("renders the simulation toggle for a real ADMINISTRATOR", () => {
@@ -270,7 +274,8 @@ describe("Navbar", () => {
         id: "1",
         email: "admin@example.com",
         full_name: "Admin User",
-        role: UserRole.ADMINISTRATOR,
+        is_superuser: true,
+        roles: [{ id: "profile-administrator", name: "ADMINISTRATOR" }],
         is_active: true,
       },
       login: vi.fn() as any,
@@ -294,7 +299,8 @@ describe("Navbar", () => {
         id: "1",
         email: "director@example.com",
         full_name: "Director User",
-        role: UserRole.DIRECTOR,
+        is_superuser: false,
+        roles: [{ id: "profile-director", name: "DIRECTOR" }],
         is_active: true,
       },
       login: vi.fn() as any,
@@ -318,7 +324,8 @@ describe("Navbar", () => {
         id: "1",
         email: "admin@example.com",
         full_name: "Admin User",
-        role: UserRole.ADMINISTRATOR,
+        is_superuser: true,
+        roles: [{ id: "profile-administrator", name: "ADMINISTRATOR" }],
         is_active: true,
       },
       login: vi.fn() as any,
@@ -342,7 +349,8 @@ describe("Navbar", () => {
         id: "1",
         email: "manager@example.com",
         full_name: "Manager User",
-        role: UserRole.MANAGER,
+        is_superuser: false,
+        roles: [{ id: "profile-manager", name: "MANAGER" }],
         is_active: true,
       },
       login: vi.fn() as any,
@@ -366,7 +374,8 @@ describe("Navbar", () => {
         id: "1",
         email: "director@example.com",
         full_name: "Director User",
-        role: UserRole.DIRECTOR,
+        is_superuser: false,
+        roles: [{ id: "profile-director", name: "DIRECTOR" }],
         is_active: true,
       },
       login: vi.fn() as any,
@@ -390,7 +399,8 @@ describe("Navbar", () => {
         id: "1",
         email: "guest@example.com",
         full_name: "Guest User",
-        role: UserRole.GUEST,
+        is_superuser: false,
+        roles: [{ id: "profile-guest", name: "GUEST" }],
         is_active: true,
       },
       login: vi.fn() as any,
@@ -415,9 +425,9 @@ describe("Navbar", () => {
 
         email: "test@example.com",
         full_name: "Test User",
-        role: UserRole.DIRECTOR,
+        is_superuser: false,
+        roles: [{ id: "profile-director", name: "DIRECTOR" }, { id: "type-1", name: "Test Type" }],
         is_active: true,
-        user_types: [{ id: "type-1", name: "Test Type" }],
       } as any,
       login: vi.fn() as any,
       logout: vi.fn(),
@@ -433,9 +443,9 @@ describe("Navbar", () => {
     expect(screen.getByText("Tarefas")).toBeInTheDocument();
   });
 
-  // ── UserType-gated Tarefas/Categorias links (APRAS-8) ───────────────────
+  // ── Role-gated Tarefas/Categorias links (APRAS-8) ───────────────────
 
-  it("hides Tarefas and Categorias links for a DIRECTOR with no UserType", () => {
+  it("shows Tarefas and Categorias to a DIRECTOR, gate or no gate (§4.2)", () => {
     vi.spyOn(AuthHook, "useAuth").mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
@@ -443,7 +453,8 @@ describe("Navbar", () => {
         id: "1",
         email: "director@example.com",
         full_name: "Director User",
-        role: UserRole.DIRECTOR,
+        is_superuser: false,
+        roles: [{ id: "profile-director", name: "DIRECTOR" }],
         is_active: true,
       },
       login: vi.fn() as any,
@@ -456,11 +467,17 @@ describe("Navbar", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.queryByText("Tarefas")).toBeNull();
-    expect(screen.queryByText("Categorias")).toBeNull();
+    // **The frontend twin of §4.2's widening.** This case asserted the
+    // opposite while `useMenuAccess` ANDed `allowed_menus` on top of the
+    // permission: a DIRECTOR belonging to no menu-granting role saw neither
+    // link, even though the bundle carried `tasks:read` and the backend
+    // would have answered 403 on the way in. IAM F5 deleted the gate from
+    // all 12 handlers, so the menu and the API agree by construction.
+    expect(screen.getByText("Tarefas")).toBeInTheDocument();
+    expect(screen.getByText("Categorias")).toBeInTheDocument();
   });
 
-  it("hides Tarefas and Categorias links when the assigned UserType grants neither", () => {
+  it("hides Tarefas and Categorias from a caller whose bundle grants neither", () => {
     vi.spyOn(AuthHook, "useAuth").mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
@@ -468,16 +485,19 @@ describe("Navbar", () => {
         id: "1",
         email: "director@example.com",
         full_name: "Director User",
-        role: UserRole.DIRECTOR,
+        is_superuser: false,
+        roles: [{ id: "type-2", name: "No Access Type" }],
         is_active: true,
-        user_types: [{ id: "type-2", name: "No Access Type" }],
       } as any,
       login: vi.fn() as any,
       logout: vi.fn(),
     });
-    vi.mocked(useUserTypes).mockReturnValue({
-      data: [{ id: "type-2", name: "No Access Type", allowed_menus: [] }],
+    vi.mocked(useRoles).mockReturnValue({
+      data: [{ id: "type-2", name: "No Access Type" }],
     } as any); // skipcq: JS-0323
+    vi.mocked(useMyPermissions).mockReturnValue(
+      settledPermissions([]) as never,
+    );
 
     render(
       <MemoryRouter initialEntries={["/dashboard"]}>
@@ -489,7 +509,7 @@ describe("Navbar", () => {
     expect(screen.queryByText("Categorias")).toBeNull();
   });
 
-  it("shows only Tarefas when the UserType grants tasks but not categories", () => {
+  it("shows only Tarefas when the role grants tasks but not categories", () => {
     vi.spyOn(AuthHook, "useAuth").mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
@@ -497,16 +517,20 @@ describe("Navbar", () => {
         id: "1",
         email: "director@example.com",
         full_name: "Director User",
-        role: UserRole.DIRECTOR,
+        is_superuser: false,
+        roles: [{ id: "type-3", name: "Tasks Only" }],
         is_active: true,
-        user_types: [{ id: "type-3", name: "Tasks Only" }],
       } as any,
       login: vi.fn() as any,
       logout: vi.fn(),
     });
-    vi.mocked(useUserTypes).mockReturnValue({
-      data: [{ id: "type-3", name: "Tasks Only", allowed_menus: ["tasks"] }],
+    vi.mocked(useRoles).mockReturnValue({
+      data: [{ id: "type-3", name: "Tasks Only" }],
     } as any); // skipcq: JS-0323
+    // The role's *bundle* is what decides now, not a menu key.
+    vi.mocked(useMyPermissions).mockReturnValue(
+      settledPermissions(["tasks:read"]) as never,
+    );
 
     render(
       <MemoryRouter initialEntries={["/dashboard"]}>
@@ -528,13 +552,14 @@ describe("Navbar", () => {
         id: "1",
         email: "porteiro@example.com",
         full_name: "Porteiro User",
-        role: UserRole.PORTEIRO,
+        is_superuser: false,
+        roles: [{ id: "profile-porteiro", name: "PORTEIRO" }],
         is_active: true,
       } as any,
       login: vi.fn() as any,
       logout: vi.fn(),
     });
-    vi.mocked(useUserTypes).mockReturnValue({ data: [] } as any); // skipcq: JS-0323
+    vi.mocked(useRoles).mockReturnValue({ data: [] } as any); // skipcq: JS-0323
 
     render(
       <MemoryRouter initialEntries={["/gate"]}>
@@ -544,9 +569,13 @@ describe("Navbar", () => {
 
     expect(screen.getByText("APRAS")).toBeDefined();
     expect(screen.getByText(/nav\.gate|Portaria/)).toBeInTheDocument();
-    // Menu-gated and PORTEIRO holds no `tasks`/`categories` menu key.
-    expect(screen.queryByText("Tarefas")).toBeNull();
-    expect(screen.queryByText("Categorias")).toBeNull();
+    // §4.2's widening, third and last sighting: PORTEIRO genuinely holds
+    // `tasks:read` and `categories:read`, and the `allowed_menus` gate that
+    // hid the two links in front of those permissions is gone. The backend
+    // has always answered 200 on both — `parity_matrix_baseline.json` says
+    // so — and the menu now says the same thing.
+    expect(screen.getByText("Tarefas")).toBeInTheDocument();
+    expect(screen.getByText("Categorias")).toBeInTheDocument();
     // §5.2 accepted widenings: PORTEIRO genuinely holds `lots:read`,
     // `packages:queue_read` and `reservations:read`, so the backend has always
     // answered these three 200. The link now says so.
@@ -566,7 +595,7 @@ describe("Navbar", () => {
     expect(screen.queryByText(/nav\.gateMonitor|Monitor da Portaria/)).toBeNull();
   });
 
-  it("shows Tarefas and Categorias for ADMINISTRATOR even with no UserType", () => {
+  it("shows Tarefas and Categorias for ADMINISTRATOR even with no Role", () => {
     vi.spyOn(AuthHook, "useAuth").mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
@@ -574,13 +603,14 @@ describe("Navbar", () => {
         id: "1",
         email: "admin@example.com",
         full_name: "Admin User",
-        role: UserRole.ADMINISTRATOR,
+        is_superuser: true,
+        roles: [{ id: "profile-administrator", name: "ADMINISTRATOR" }],
         is_active: true,
       },
       login: vi.fn() as any,
       logout: vi.fn(),
     });
-    vi.mocked(useUserTypes).mockReturnValue({ data: [] } as any); // skipcq: JS-0323
+    vi.mocked(useRoles).mockReturnValue({ data: [] } as any); // skipcq: JS-0323
 
     render(
       <MemoryRouter initialEntries={["/dashboard"]}>

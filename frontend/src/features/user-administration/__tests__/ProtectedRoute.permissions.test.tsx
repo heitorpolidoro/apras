@@ -8,13 +8,10 @@ import ProtectedRoute from "../components/ProtectedRoute";
 import apiClient from "../../../api/client";
 import * as AuthHook from "../context/AuthContext";
 import { useSimulation } from "../context/SimulationContext";
-import { useUserTypes } from "../../../hooks/useUserTypes";
+import { useRoles } from "../../../hooks/useRoles";
 import { ROUTE_ACCESS } from "../access/routeAccess";
-import {
-  ALL_PERMISSIONS,
-  PERMISSIONS_BY_ROLE,
-} from "../../../test/permissionFixtures";
-import { UserRole, type User, type UserType } from "../../../types/auth";
+import { ALL_PERMISSIONS, PERMISSIONS_BY_ROLE,  } from "../../../test/permissionFixtures";
+import { type User, type Role } from "../../../types/auth";
 
 /**
  * ER-2's route half, through the real query stack.
@@ -31,16 +28,14 @@ vi.mock("../context/SimulationContext", () => ({
   useSimulation: vi.fn(),
 }));
 
-vi.mock("../../../hooks/useUserTypes", () => ({
-  useUserTypes: vi.fn(() => ({ data: [] })),
+vi.mock("../../../hooks/useRoles", () => ({
+  useRoles: vi.fn(() => ({ data: [] })),
 }));
 
 const NOT_SIMULATING = {
-  simulatedRole: null,
-  simulatedUserTypeIds: [],
+  simulatedRoleIds: [],
   isSimulating: false,
-  setSimulatedRole: vi.fn(),
-  setSimulatedUserTypeIds: vi.fn(),
+  setSimulatedRoleIds: vi.fn(),
   stopSimulation: vi.fn(),
 };
 
@@ -59,7 +54,7 @@ const answer = (permissions: readonly string[], pending = false) => {
   }) as never);
 };
 
-const authAs = (role: UserRole, userTypes: UserType[] = []) => {
+const authAs = (role: string, roles: Role[] = []) => {
   vi.spyOn(AuthHook, "useAuth").mockReturnValue({
     isAuthenticated: true,
     isLoading: false,
@@ -69,12 +64,12 @@ const authAs = (role: UserRole, userTypes: UserType[] = []) => {
       full_name: "Usuário",
       role,
       is_active: true,
-      user_types: userTypes,
+      roles: roles,
     } as User,
     login: vi.fn() as never,
     logout: vi.fn(),
   });
-  vi.mocked(useUserTypes).mockReturnValue({ data: userTypes } as never);
+  vi.mocked(useRoles).mockReturnValue({ data: roles } as never);
 };
 
 const withClient = (ui: React.ReactElement) => {
@@ -107,7 +102,7 @@ beforeEach(() => {
 
 describe("ProtectedRoute gating on /permissions/me", () => {
   it("renders the page when the rule's module permission is held", async () => {
-    authAs(UserRole.RESIDENT);
+    authAs("RESIDENT");
     answer(["finance:read"]);
 
     renderRoute("/finance", "Financeiro");
@@ -116,7 +111,7 @@ describe("ProtectedRoute gating on /permissions/me", () => {
   });
 
   it('renders "Acesso restrito" when it is not', async () => {
-    authAs(UserRole.RESIDENT);
+    authAs("RESIDENT");
     answer(["tasks:read"]);
 
     renderRoute("/finance", "Financeiro");
@@ -126,7 +121,7 @@ describe("ProtectedRoute gating on /permissions/me", () => {
   });
 
   it("renders the spinner while /permissions/me is pending", () => {
-    authAs(UserRole.RESIDENT);
+    authAs("RESIDENT");
     answer([], true);
 
     const { container } = renderRoute("/finance", "Financeiro");
@@ -139,7 +134,7 @@ describe("ProtectedRoute gating on /permissions/me", () => {
   it("admits a tenant_admin holding the whole catalogue to /admin/users", async () => {
     // IAM F3: the capability is not a role, it is the whole catalogue in the
     // granting tenant — so a RESIDENT síndico passes a `users:update` rule.
-    authAs(UserRole.RESIDENT);
+    authAs("RESIDENT");
     answer(ALL_PERMISSIONS);
 
     renderRoute("/admin/users", "Administração");
@@ -150,8 +145,8 @@ describe("ProtectedRoute gating on /permissions/me", () => {
   it("admits an administrator to /admin/photo-approvals", async () => {
     // A pre-existing bug, corrected: the old DIRECTOR-only prop locked out the
     // very administrator the Navbar was already offering the link to.
-    authAs(UserRole.ADMINISTRATOR);
-    answer(PERMISSIONS_BY_ROLE[UserRole.ADMINISTRATOR]);
+    authAs("ADMINISTRATOR");
+    answer(PERMISSIONS_BY_ROLE["ADMINISTRATOR"]);
 
     renderRoute("/admin/photo-approvals", "Aprovações");
 
@@ -159,33 +154,30 @@ describe("ProtectedRoute gating on /permissions/me", () => {
   });
 
   it("keeps route access on the real permission set while simulating", async () => {
-    const RESIDENT_TYPE: UserType = {
+    const RESIDENT_TYPE: Role = {
       id: "type-resident",
       name: "Morador (papel)",
-      allowed_menus: [],
-      role: UserRole.RESIDENT,
-      // The simulated groups grant no `user_types:*` at all.
+      // The simulated roles grant no `roles:*` at all.
       permissions: ["occurrences:read"],
     };
-    authAs(UserRole.ADMINISTRATOR, [RESIDENT_TYPE]);
-    // The real administrator holds the group-administration permission.
-    answer(["user_types:update", "occurrences:read"]);
+    authAs("ADMINISTRATOR", [RESIDENT_TYPE]);
+    // The real administrator holds the role-administration permission.
+    answer(["roles:update", "occurrences:read"]);
     vi.mocked(useSimulation).mockReturnValue({
       ...NOT_SIMULATING,
-      simulatedRole: UserRole.RESIDENT,
-      simulatedUserTypeIds: ["type-resident"],
+      simulatedRoleIds: ["type-resident"],
       isSimulating: true,
     });
 
     withClient(
-      <MemoryRouter initialEntries={["/admin/groups"]}>
+      <MemoryRouter initialEntries={["/admin/roles"]}>
         <Navbar />
         <Routes>
           <Route
-            path="/admin/groups"
+            path="/admin/roles"
             element={
-              <ProtectedRoute requiredAccess={ROUTE_ACCESS["/admin/groups"]}>
-                <div>Editor de Grupos</div>
+              <ProtectedRoute requiredAccess={ROUTE_ACCESS["/admin/roles"]}>
+                <div>Editor de Papéis</div>
               </ProtectedRoute>
             }
           />
@@ -194,13 +186,13 @@ describe("ProtectedRoute gating on /permissions/me", () => {
     );
 
     // Authorization reads the REAL set: the page renders.
-    expect(await screen.findByText("Editor de Grupos")).toBeInTheDocument();
+    expect(await screen.findByText("Editor de Papéis")).toBeInTheDocument();
     // …and the Navbar in the same tree shows the RESIDENT menu set, i.e. the
-    // simulated groups' permissions and nothing the real admin holds beyond
+    // simulated roles' permissions and nothing the real admin holds beyond
     // them. One ROUTE_ACCESS rule, two hooks, two answers — by design.
     expect(
       screen.getByRole("link", { name: "Livro de Ocorrências" }),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Grupos" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Papéis" })).toBeNull();
   });
 });

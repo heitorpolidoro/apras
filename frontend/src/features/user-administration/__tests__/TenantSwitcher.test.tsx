@@ -6,7 +6,7 @@ import apiClient from "../../../api/client";
 import Navbar from "../components/Navbar";
 import * as AuthHook from "../context/AuthContext";
 import * as TenantHook from "../context/useTenant";
-import { UserRole, type Tenant, type User } from "../../../types/auth";
+import { type Tenant, type User } from "../../../types/auth";
 import { PERMISSIONS_BY_ROLE } from "../../../test/permissionFixtures";
 import pt from "../../../i18n/locales/pt.json";
 import en from "../../../i18n/locales/en.json";
@@ -25,19 +25,17 @@ vi.mock("../../../api/client", () => ({
 
 vi.mock("../context/SimulationContext", () => ({
   useSimulation: vi.fn(() => ({
-    simulatedRole: null,
-    simulatedUserTypeIds: [],
+    simulatedRoleIds: [],
     isSimulating: false,
-    setSimulatedRole: vi.fn(),
-    setSimulatedUserTypeIds: vi.fn(),
+    setSimulatedRoleIds: vi.fn(),
     stopSimulation: vi.fn(),
   })),
 }));
 
-vi.mock("../../../hooks/useUserTypes", () => ({
-  useUserTypes: vi.fn(() => ({
+vi.mock("../../../hooks/useRoles", () => ({
+  useRoles: vi.fn(() => ({
     data: [
-      { id: "type-1", name: "Test Type", allowed_menus: ["tasks", "categories"] },
+      { id: "type-1", name: "Test Type" },
     ],
   })),
 }));
@@ -57,9 +55,8 @@ const USER: Partial<User> = {
   id: "u1",
   email: "resident@test.com",
   full_name: "Morador",
-  role: UserRole.RESIDENT,
   is_active: true,
-  user_types: [{ id: "type-1", name: "Test Type", allowed_menus: ["tasks"] }],
+  roles: [{ id: "type-1", name: "Test Type" }],
 };
 
 const setActingTenant = vi.fn();
@@ -81,7 +78,7 @@ const renderNavbar = () => {
       ? Promise.resolve({
           data: {
             tenant_id: TENANT_A.id,
-            permissions: PERMISSIONS_BY_ROLE[UserRole.RESIDENT],
+            permissions: PERMISSIONS_BY_ROLE["RESIDENT"],
           },
         })
       : Promise.resolve({ data: [] })) as never);

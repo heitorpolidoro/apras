@@ -1,14 +1,15 @@
 import io
 import uuid
+
 import pytest
-from PIL import Image
 from fastapi import status
 from fastapi.testclient import TestClient
+from PIL import Image
 from sqlmodel import Session
 
-from app.core.security import get_password_hash, create_access_token
-from app.models.enums import UserRole, EntityType, PhotoApprovalStatus
+from app.core.security import create_access_token, get_password_hash
 from app.models.user import User
+from tests.conftest import make_user
 
 
 def create_test_image_bytes(format: str = "JPEG", size: tuple[int, int] = (200, 200), color: str = "red") -> bytes:
@@ -21,12 +22,13 @@ def create_test_image_bytes(format: str = "JPEG", size: tuple[int, int] = (200, 
 
 @pytest.fixture
 def resident_user(session: Session) -> User:
-    user = User(
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email="resident@test.com",
         full_name="Resident User",
         hashed_password=get_password_hash("password123"),
-        role=UserRole.RESIDENT,
+        profile="RESIDENT",
         cpf="11122233344",
     )
     session.add(user)

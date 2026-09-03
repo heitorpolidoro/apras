@@ -2,6 +2,9 @@ import uuid
 from datetime import datetime, timedelta
 
 import pytest
+from fastapi.testclient import TestClient
+from sqlmodel import Session
+
 from app.core.exceptions import (
     ForbiddenError,
     ReservableSpaceNotFoundError,
@@ -9,13 +12,12 @@ from app.core.exceptions import (
     SpaceReservationNotFoundError,
 )
 from app.core.security import get_password_hash
-from app.models.enums import ReservationStatus, UserRole
+from app.models.enums import ReservationStatus
 from app.models.reservation import ReservableSpace, SpaceReservation
 from app.models.user import User
 from app.schemas.reservation import SpaceReservationCreate
 from app.services.reservation_service import SpaceReservationService
-from fastapi.testclient import TestClient
-from sqlmodel import Session
+from tests.conftest import make_user
 
 
 def get_token(client, username, password):
@@ -25,13 +27,14 @@ def get_token(client, username, password):
     return response.json()["access_token"]
 
 
-def make_user(session: Session, role: UserRole, email: str, cpf: str) -> User:
-    user = User(
+def _local_user(session: Session, role: str, email: str, cpf: str) -> User:
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email=email,
-        full_name=f"{role.value} User",
+        full_name=f"{role} User",
         hashed_password=get_password_hash("pass"),
-        role=role,
+        profile=role,
         cpf=cpf,
     )
     session.add(user)
@@ -62,7 +65,7 @@ def dt(hour: int, day: int = 1) -> datetime:
 
 def test_create_reservation_auto_confirms_when_no_approval_required(session: Session):
     space = make_space(session, requires_approval=False)
-    resident = make_user(session, UserRole.RESIDENT, "res1@test.com", "52998224725")
+    resident = _local_user(session, "RESIDENT", "res1@test.com", "52998224725")
 
     reservation_in = SpaceReservationCreate(
         space_id=space.id, start_time=dt(10), end_time=dt(11)
@@ -77,7 +80,7 @@ def test_create_reservation_auto_confirms_when_no_approval_required(session: Ses
 
 def test_create_reservation_pending_when_approval_required(session: Session):
     space = make_space(session, requires_approval=True)
-    resident = make_user(session, UserRole.RESIDENT, "res2@test.com", "11144477735")
+    resident = _local_user(session, "RESIDENT", "res2@test.com", "11144477735")
 
     reservation_in = SpaceReservationCreate(
         space_id=space.id, start_time=dt(10), end_time=dt(11)
@@ -90,7 +93,7 @@ def test_create_reservation_pending_when_approval_required(session: Session):
 
 
 def test_create_reservation_space_not_found(session: Session):
-    resident = make_user(session, UserRole.RESIDENT, "res3@test.com", "98765432100")
+    resident = _local_user(session, "RESIDENT", "res3@test.com", "98765432100")
     reservation_in = SpaceReservationCreate(
         space_id=uuid.uuid4(), start_time=dt(10), end_time=dt(11)
     )
@@ -106,7 +109,7 @@ def test_create_reservation_inactive_space_not_found(session: Session):
     session.add(space)
     session.commit()
 
-    resident = make_user(session, UserRole.RESIDENT, "res4@test.com", "07491723040")
+    resident = _local_user(session, "RESIDENT", "res4@test.com", "07491723040")
     reservation_in = SpaceReservationCreate(
         space_id=space.id, start_time=dt(10), end_time=dt(11)
     )
@@ -130,8 +133,8 @@ def test_end_time_must_be_after_start_time():
 
 def test_double_booking_same_space_rejected(session: Session):
     space = make_space(session)
-    resident1 = make_user(session, UserRole.RESIDENT, "db1@test.com", "80661003005")
-    resident2 = make_user(session, UserRole.RESIDENT, "db2@test.com", "42245900069")
+    resident1 = _local_user(session, "RESIDENT", "db1@test.com", "80661003005")
+    resident2 = _local_user(session, "RESIDENT", "db2@test.com", "42245900069")
 
     SpaceReservationService.create_reservation(
         session=session,
@@ -153,8 +156,8 @@ def test_double_booking_same_space_rejected(session: Session):
 
 def test_adjacent_non_overlapping_windows_succeed(session: Session):
     space = make_space(session)
-    resident1 = make_user(session, UserRole.RESIDENT, "adj1@test.com", "16899535009")
-    resident2 = make_user(session, UserRole.RESIDENT, "adj2@test.com", "63093783050")
+    resident1 = _local_user(session, "RESIDENT", "adj1@test.com", "16899535009")
+    resident2 = _local_user(session, "RESIDENT", "adj2@test.com", "63093783050")
 
     SpaceReservationService.create_reservation(
         session=session,
@@ -176,8 +179,8 @@ def test_adjacent_non_overlapping_windows_succeed(session: Session):
 def test_overlap_on_different_spaces_both_succeed(session: Session):
     space1 = make_space(session, name="Space A")
     space2 = make_space(session, name="Space B")
-    resident1 = make_user(session, UserRole.RESIDENT, "diff1@test.com", "36658136090")
-    resident2 = make_user(session, UserRole.RESIDENT, "diff2@test.com", "94120611030")
+    resident1 = _local_user(session, "RESIDENT", "diff1@test.com", "36658136090")
+    resident2 = _local_user(session, "RESIDENT", "diff2@test.com", "94120611030")
 
     SpaceReservationService.create_reservation(
         session=session,
@@ -198,8 +201,8 @@ def test_overlap_on_different_spaces_both_succeed(session: Session):
 
 def test_cancelled_reservation_does_not_block_new_one(session: Session):
     space = make_space(session)
-    resident1 = make_user(session, UserRole.RESIDENT, "canc1@test.com", "27466066070")
-    resident2 = make_user(session, UserRole.RESIDENT, "canc2@test.com", "83236077000")
+    resident1 = _local_user(session, "RESIDENT", "canc1@test.com", "27466066070")
+    resident2 = _local_user(session, "RESIDENT", "canc2@test.com", "83236077000")
 
     first = SpaceReservationService.create_reservation(
         session=session,
@@ -224,8 +227,8 @@ def test_cancelled_reservation_does_not_block_new_one(session: Session):
 
 def test_rejected_reservation_does_not_block_new_one(session: Session):
     space = make_space(session)
-    resident1 = make_user(session, UserRole.RESIDENT, "rej1@test.com", "72741118060")
-    resident2 = make_user(session, UserRole.RESIDENT, "rej2@test.com", "39053344705")
+    resident1 = _local_user(session, "RESIDENT", "rej1@test.com", "72741118060")
+    resident2 = _local_user(session, "RESIDENT", "rej2@test.com", "39053344705")
 
     first = SpaceReservationService.create_reservation(
         session=session,
@@ -255,7 +258,7 @@ def test_rejected_reservation_does_not_block_new_one(session: Session):
 
 def test_approve_reservation_success(session: Session, admin_user):
     space = make_space(session, requires_approval=True)
-    resident = make_user(session, UserRole.RESIDENT, "app1@test.com", "45274582030")
+    resident = _local_user(session, "RESIDENT", "app1@test.com", "45274582030")
 
     reservation = SpaceReservationService.create_reservation(
         session=session,
@@ -279,7 +282,7 @@ def test_approve_reservation_success(session: Session, admin_user):
 
 def test_reject_reservation_success(session: Session, admin_user):
     space = make_space(session, requires_approval=True)
-    resident = make_user(session, UserRole.RESIDENT, "rej_a@test.com", "89523533060")
+    resident = _local_user(session, "RESIDENT", "rej_a@test.com", "89523533060")
 
     reservation = SpaceReservationService.create_reservation(
         session=session,
@@ -301,8 +304,8 @@ def test_reject_reservation_success(session: Session, admin_user):
 
 def test_reject_frees_slot_for_new_reservation(session: Session, admin_user):
     space = make_space(session, requires_approval=True)
-    resident1 = make_user(session, UserRole.RESIDENT, "rej_f1@test.com", "05946739020")
-    resident2 = make_user(session, UserRole.RESIDENT, "rej_f2@test.com", "18328142080")
+    resident1 = _local_user(session, "RESIDENT", "rej_f1@test.com", "05946739020")
+    resident2 = _local_user(session, "RESIDENT", "rej_f2@test.com", "18328142080")
 
     first = SpaceReservationService.create_reservation(
         session=session,
@@ -337,8 +340,8 @@ def test_overlapping_pending_requests_can_coexist_before_decision(session: Sessi
     still awaiting a decision.
     """
     space = make_space(session, requires_approval=True)
-    resident1 = make_user(session, UserRole.RESIDENT, "coex1@test.com", "16899535009")
-    resident2 = make_user(session, UserRole.RESIDENT, "coex2@test.com", "63093783050")
+    resident1 = _local_user(session, "RESIDENT", "coex1@test.com", "16899535009")
+    resident2 = _local_user(session, "RESIDENT", "coex2@test.com", "63093783050")
 
     first = SpaceReservationService.create_reservation(
         session=session,
@@ -374,8 +377,8 @@ def test_approve_conflicting_pending_returns_409_and_leaves_first_pending(
     than silently double-booking the space.
     """
     space = make_space(session, requires_approval=True)
-    resident1 = make_user(session, UserRole.RESIDENT, "conf1@test.com", "60259444020")
-    resident2 = make_user(session, UserRole.RESIDENT, "conf2@test.com", "01382907040")
+    resident1 = _local_user(session, "RESIDENT", "conf1@test.com", "60259444020")
+    resident2 = _local_user(session, "RESIDENT", "conf2@test.com", "01382907040")
 
     first = SpaceReservationService.create_reservation(
         session=session,
@@ -417,7 +420,7 @@ def test_approve_conflicting_pending_returns_409_and_leaves_first_pending(
 
 def test_decide_reservation_forbidden_for_non_staff(session: Session):
     space = make_space(session, requires_approval=True)
-    resident = make_user(session, UserRole.RESIDENT, "nonstaff1@test.com", "70099142080")
+    resident = _local_user(session, "RESIDENT", "nonstaff1@test.com", "70099142080")
 
     reservation = SpaceReservationService.create_reservation(
         session=session,
@@ -452,7 +455,7 @@ def test_decide_reservation_not_found(session: Session, admin_user):
 
 def test_owner_can_cancel_future_reservation(session: Session):
     space = make_space(session)
-    resident = make_user(session, UserRole.RESIDENT, "cancel1@test.com", "38381384000")
+    resident = _local_user(session, "RESIDENT", "cancel1@test.com", "38381384000")
 
     future_start = datetime.utcnow() + timedelta(days=1)
     future_end = future_start + timedelta(hours=1)
@@ -472,7 +475,7 @@ def test_owner_can_cancel_future_reservation(session: Session):
 
 def test_owner_cannot_cancel_past_reservation(session: Session):
     space = make_space(session)
-    resident = make_user(session, UserRole.RESIDENT, "cancel2@test.com", "26314366005")
+    resident = _local_user(session, "RESIDENT", "cancel2@test.com", "26314366005")
 
     reservation = SpaceReservation(
         space_id=space.id,
@@ -492,8 +495,8 @@ def test_owner_cannot_cancel_past_reservation(session: Session):
 
 def test_owner_cannot_cancel_someone_elses_reservation(session: Session):
     space = make_space(session)
-    owner = make_user(session, UserRole.RESIDENT, "owner1@test.com", "56321863030")
-    other = make_user(session, UserRole.RESIDENT, "other1@test.com", "71563824020")
+    owner = _local_user(session, "RESIDENT", "owner1@test.com", "56321863030")
+    other = _local_user(session, "RESIDENT", "other1@test.com", "71563824020")
 
     future_start = datetime.utcnow() + timedelta(days=1)
     reservation = SpaceReservation(
@@ -516,7 +519,7 @@ def test_staff_can_cancel_any_reservation_including_started(
     session: Session, admin_user
 ):
     space = make_space(session)
-    resident = make_user(session, UserRole.RESIDENT, "staffcancel@test.com", "94356633080")
+    resident = _local_user(session, "RESIDENT", "staffcancel@test.com", "94356633080")
 
     reservation = SpaceReservation(
         space_id=space.id,
@@ -543,7 +546,7 @@ def test_cancel_not_found(session: Session, admin_user):
 
 def test_cancel_already_cancelled_not_found(session: Session):
     space = make_space(session)
-    resident = make_user(session, UserRole.RESIDENT, "cancel3@test.com", "48252394050")
+    resident = _local_user(session, "RESIDENT", "cancel3@test.com", "48252394050")
 
     reservation = SpaceReservation(
         space_id=space.id,
@@ -568,7 +571,7 @@ def test_cancel_already_cancelled_not_found(session: Session):
 
 def test_get_reservation_owner_can_view(session: Session):
     space = make_space(session)
-    resident = make_user(session, UserRole.RESIDENT, "getr1@test.com", "78785936000")
+    resident = _local_user(session, "RESIDENT", "getr1@test.com", "78785936000")
 
     reservation = SpaceReservationService.create_reservation(
         session=session,
@@ -585,7 +588,7 @@ def test_get_reservation_owner_can_view(session: Session):
 
 def test_get_reservation_staff_can_view_any(session: Session, admin_user):
     space = make_space(session)
-    resident = make_user(session, UserRole.RESIDENT, "getr2@test.com", "24866969000")
+    resident = _local_user(session, "RESIDENT", "getr2@test.com", "24866969000")
 
     reservation = SpaceReservationService.create_reservation(
         session=session,
@@ -602,8 +605,8 @@ def test_get_reservation_staff_can_view_any(session: Session, admin_user):
 
 def test_get_reservation_non_owner_non_staff_gets_not_found(session: Session):
     space = make_space(session)
-    owner = make_user(session, UserRole.RESIDENT, "getr3@test.com", "36960452080")
-    other = make_user(session, UserRole.RESIDENT, "getr4@test.com", "50801204070")
+    owner = _local_user(session, "RESIDENT", "getr3@test.com", "36960452080")
+    other = _local_user(session, "RESIDENT", "getr4@test.com", "50801204070")
 
     reservation = SpaceReservationService.create_reservation(
         session=session,
@@ -625,8 +628,8 @@ def test_get_reservation_non_owner_non_staff_gets_not_found(session: Session):
 
 def test_non_staff_sees_others_masked_and_own_unmasked(session: Session):
     space = make_space(session)
-    owner = make_user(session, UserRole.RESIDENT, "list1@test.com", "82081904040")
-    other = make_user(session, UserRole.RESIDENT, "list2@test.com", "40275107030")
+    owner = _local_user(session, "RESIDENT", "list1@test.com", "82081904040")
+    other = _local_user(session, "RESIDENT", "list2@test.com", "40275107030")
 
     own_res = SpaceReservationService.create_reservation(
         session=session,
@@ -661,8 +664,8 @@ def test_non_staff_sees_others_masked_and_own_unmasked(session: Session):
 
 def test_masked_list_excludes_cancelled_and_rejected(session: Session):
     space = make_space(session)
-    owner = make_user(session, UserRole.RESIDENT, "list3@test.com", "68221929080")
-    other = make_user(session, UserRole.RESIDENT, "list4@test.com", "17045135080")
+    owner = _local_user(session, "RESIDENT", "list3@test.com", "68221929080")
+    other = _local_user(session, "RESIDENT", "list4@test.com", "17045135080")
 
     other_res = SpaceReservationService.create_reservation(
         session=session,
@@ -687,7 +690,7 @@ def test_staff_sees_full_detail_for_every_row_regardless_of_space_id(
     session: Session, admin_user
 ):
     space = make_space(session)
-    resident = make_user(session, UserRole.RESIDENT, "list5@test.com", "95487566010")
+    resident = _local_user(session, "RESIDENT", "list5@test.com", "95487566010")
 
     reservation = SpaceReservationService.create_reservation(
         session=session,
@@ -706,8 +709,8 @@ def test_staff_sees_full_detail_for_every_row_regardless_of_space_id(
 
 def test_non_staff_default_no_filters_returns_own_rows_only(session: Session):
     space = make_space(session)
-    owner = make_user(session, UserRole.RESIDENT, "list6@test.com", "07295852080")
-    other = make_user(session, UserRole.RESIDENT, "list7@test.com", "62910268060")
+    owner = _local_user(session, "RESIDENT", "list6@test.com", "07295852080")
+    other = _local_user(session, "RESIDENT", "list7@test.com", "62910268060")
 
     own_res = SpaceReservationService.create_reservation(
         session=session,
@@ -733,8 +736,8 @@ def test_non_staff_default_no_filters_returns_own_rows_only(session: Session):
 
 def test_staff_default_no_filters_returns_everything(session: Session, admin_user):
     space = make_space(session)
-    resident1 = make_user(session, UserRole.RESIDENT, "list8@test.com", "76887475000")
-    resident2 = make_user(session, UserRole.RESIDENT, "list9@test.com", "43958787070")
+    resident1 = _local_user(session, "RESIDENT", "list8@test.com", "76887475000")
+    resident2 = _local_user(session, "RESIDENT", "list9@test.com", "43958787070")
 
     r1 = SpaceReservationService.create_reservation(
         session=session,
@@ -765,7 +768,7 @@ def test_mine_true_overrides_space_id_even_for_admin(session: Session, admin_use
     """
     space1 = make_space(session, name="Space Mine Test A")
     space2 = make_space(session, name="Space Mine Test B")
-    resident = make_user(session, UserRole.RESIDENT, "mine1@test.com", "01488803090")
+    resident = _local_user(session, "RESIDENT", "mine1@test.com", "01488803090")
 
     # admin_user books a reservation on space1 (their own row).
     admin_res = SpaceReservationService.create_reservation(
@@ -821,7 +824,7 @@ def test_create_reservation_endpoint_success(
     client: TestClient, session: Session
 ):
     space = make_space(session)
-    make_user(session, UserRole.RESIDENT, "ep1@test.com", "88289649000")
+    _local_user(session, "RESIDENT", "ep1@test.com", "88289649000")
     token = get_token(client, "ep1", "pass")
 
     response = client.post(
@@ -841,7 +844,7 @@ def test_create_reservation_endpoint_guest_forbidden(
     client: TestClient, session: Session
 ):
     space = make_space(session)
-    make_user(session, UserRole.GUEST, "ep_guest@test.com", "35931197070")
+    _local_user(session, "GUEST", "ep_guest@test.com", "35931197070")
     token = get_token(client, "ep_guest", "pass")
 
     response = client.post(
@@ -860,7 +863,7 @@ def test_create_reservation_endpoint_conflict_returns_409(
     client: TestClient, session: Session
 ):
     space = make_space(session)
-    make_user(session, UserRole.RESIDENT, "ep2@test.com", "45963084060")
+    _local_user(session, "RESIDENT", "ep2@test.com", "45963084060")
     token = get_token(client, "ep2", "pass")
 
     payload = {
@@ -887,7 +890,7 @@ def test_approve_endpoint_forbidden_for_non_staff(
     client: TestClient, session: Session
 ):
     space = make_space(session, requires_approval=True)
-    make_user(session, UserRole.RESIDENT, "ep3@test.com", "58551598000")
+    _local_user(session, "RESIDENT", "ep3@test.com", "58551598000")
     token = get_token(client, "ep3", "pass")
 
     create_resp = client.post(
@@ -912,7 +915,7 @@ def test_approve_endpoint_success_for_admin(
     client: TestClient, session: Session, admin_user
 ):
     space = make_space(session, requires_approval=True)
-    make_user(session, UserRole.RESIDENT, "ep4@test.com", "20889166070")
+    _local_user(session, "RESIDENT", "ep4@test.com", "20889166070")
     resident_token = get_token(client, "ep4", "pass")
 
     create_resp = client.post(
@@ -939,7 +942,7 @@ def test_reject_endpoint_success_for_admin(
     client: TestClient, session: Session, admin_user
 ):
     space = make_space(session, requires_approval=True)
-    make_user(session, UserRole.RESIDENT, "ep5@test.com", "13502366000")
+    _local_user(session, "RESIDENT", "ep5@test.com", "13502366000")
     resident_token = get_token(client, "ep5", "pass")
 
     create_resp = client.post(
@@ -964,7 +967,7 @@ def test_reject_endpoint_success_for_admin(
 
 def test_cancel_endpoint_success_for_owner(client: TestClient, session: Session):
     space = make_space(session)
-    make_user(session, UserRole.RESIDENT, "ep6@test.com", "91190721030")
+    _local_user(session, "RESIDENT", "ep6@test.com", "91190721030")
     token = get_token(client, "ep6", "pass")
 
     future_start = (datetime.utcnow() + timedelta(days=1)).isoformat()
@@ -992,9 +995,9 @@ def test_cancel_endpoint_forbidden_for_non_owner(
     client: TestClient, session: Session
 ):
     space = make_space(session)
-    make_user(session, UserRole.RESIDENT, "ep7@test.com", "64118918000")
+    _local_user(session, "RESIDENT", "ep7@test.com", "64118918000")
     owner_token = get_token(client, "ep7", "pass")
-    make_user(session, UserRole.RESIDENT, "ep8@test.com", "77565175090")
+    _local_user(session, "RESIDENT", "ep8@test.com", "77565175090")
     other_token = get_token(client, "ep8", "pass")
 
     future_start = (datetime.utcnow() + timedelta(days=1)).isoformat()
@@ -1021,9 +1024,9 @@ def test_list_endpoint_masks_other_users_reservations(
     client: TestClient, session: Session
 ):
     space = make_space(session)
-    make_user(session, UserRole.RESIDENT, "epl1@test.com", "68854938000")
+    _local_user(session, "RESIDENT", "epl1@test.com", "68854938000")
     owner_token = get_token(client, "epl1", "pass")
-    make_user(session, UserRole.RESIDENT, "epl2@test.com", "78929099000")
+    _local_user(session, "RESIDENT", "epl2@test.com", "78929099000")
     other_token = get_token(client, "epl2", "pass")
 
     client.post(
@@ -1051,7 +1054,7 @@ def test_list_endpoint_staff_sees_full_detail(
     client: TestClient, session: Session, admin_user
 ):
     space = make_space(session)
-    make_user(session, UserRole.RESIDENT, "epl3@test.com", "07683213050")
+    _local_user(session, "RESIDENT", "epl3@test.com", "07683213050")
     resident_token = get_token(client, "epl3", "pass")
 
     client.post(
@@ -1079,9 +1082,9 @@ def test_get_reservation_endpoint_not_found_for_stranger(
     client: TestClient, session: Session
 ):
     space = make_space(session)
-    make_user(session, UserRole.RESIDENT, "epg1@test.com", "01678362000")
+    _local_user(session, "RESIDENT", "epg1@test.com", "01678362000")
     owner_token = get_token(client, "epg1", "pass")
-    make_user(session, UserRole.RESIDENT, "epg2@test.com", "62719839090")
+    _local_user(session, "RESIDENT", "epg2@test.com", "62719839090")
     other_token = get_token(client, "epg2", "pass")
 
     create_resp = client.post(
@@ -1108,7 +1111,7 @@ def test_list_reservations_unauthenticated(client: TestClient):
 
 
 def test_list_reservations_guest_forbidden(client: TestClient, session: Session):
-    make_user(session, UserRole.GUEST, "epl_guest@test.com", "62612626080")
+    _local_user(session, "GUEST", "epl_guest@test.com", "62612626080")
     token = get_token(client, "epl_guest", "pass")
     response = client.get(
         "/api/v1/space-reservations/", headers={"Authorization": f"Bearer {token}"}

@@ -23,8 +23,8 @@ const createWrapper = () => {
 describe("useUsers", () => {
   it("fetches users successfully", async () => {
     const mockUsers = [
-      { id: "1", username: "user1", role: "DIRECTOR", is_active: true },
-      { id: "2", username: "user2", role: "ADMINISTRATOR", is_active: true },
+      { id: "1", username: "user1", is_active: true },
+      { id: "2", username: "user2", is_superuser: true, is_active: true },
     ];
     vi.mocked(apiClient.get).mockResolvedValueOnce({ data: mockUsers });
 
@@ -42,21 +42,24 @@ describe("useUsers", () => {
 describe("useAssignableUsers", () => {
   const mockType = { id: "type-1", name: "Analista" };
 
-  it("filters out ADMINISTRATOR users", async () => {
+  it("includes a superuser with roles in the assignable list (§10.5 c)", async () => {
+    // The exclusion is **dropped**: after IAM F5 the frontend cannot know who
+    // is an administrator without leaking `is_superuser` on `UserRead`
+    // (§8.3), and being assignable a task is not a privilege. The
+    // `roles?.length > 0` clause is kept, which is what the next case pins.
     const mockUsers = [
       {
         id: "1",
         username: "user1",
-        role: "DIRECTOR",
         is_active: true,
-        user_types: [mockType],
+        roles: [mockType],
       },
       {
         id: "2",
         username: "admin",
-        role: "ADMINISTRATOR",
+        is_superuser: true,
         is_active: true,
-        user_types: [mockType],
+        roles: [mockType],
       },
     ];
     vi.mocked(apiClient.get).mockResolvedValueOnce({ data: mockUsers });
@@ -67,34 +70,24 @@ describe("useAssignableUsers", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(result.current.data).toEqual([
-      {
-        id: "1",
-        username: "user1",
-        role: "DIRECTOR",
-        is_active: true,
-        user_types: [mockType],
-      },
-    ]);
+    expect(result.current.data).toEqual(mockUsers);
   });
 
-  it("filters out users without a type", async () => {
+  it("filters out users without a role", async () => {
     const mockUsers = [
       {
         id: "1",
         username: "with-type",
-        role: "DIRECTOR",
         is_active: true,
-        user_types: [mockType],
+        roles: [mockType],
       },
       {
         id: "2",
         username: "no-type",
-        role: "DIRECTOR",
         is_active: true,
-        user_types: [],
+        roles: [],
       },
-      { id: "3", username: "no-type-undef", role: "MANAGER", is_active: true, user_types: [] },
+      { id: "3", username: "no-type-undef", is_active: true, roles: [] },
     ];
     vi.mocked(apiClient.get).mockResolvedValueOnce({ data: mockUsers });
 
@@ -108,9 +101,8 @@ describe("useAssignableUsers", () => {
       {
         id: "1",
         username: "with-type",
-        role: "DIRECTOR",
         is_active: true,
-        user_types: [mockType],
+        roles: [mockType],
       },
     ]);
   });

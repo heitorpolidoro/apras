@@ -9,6 +9,8 @@ import json
 from datetime import datetime, timedelta
 
 import pytest
+from sqlmodel import Session, select
+
 from app.core.exceptions import (
     DelinquentLotError,
     NotLotOwnerError,
@@ -18,14 +20,12 @@ from app.models.enums import (
     AssemblyStatus,
     BallotRejectionReason,
     LotAssociationType,
-    UserRole,
     VoteKind,
     VoteStatus,
     VoteType,
 )
 from app.models.voting import Ballot, BallotRejection
 from app.services import voting_service
-from sqlmodel import Session, select
 from tests.voting_helpers import (
     add_extra_eligibility,
     link_user_to_lot,
@@ -53,8 +53,8 @@ def _cast(session, user, vote, label, lot=None):
 
 
 def test_owner_of_two_lots_votes_on_both_and_tally_counts_two(session: Session):
-    board = make_user(session, UserRole.ADMINISTRATOR)
-    owner = make_user(session, UserRole.RESIDENT)
+    board = make_user(session, "ADMINISTRATOR")
+    owner = make_user(session, "RESIDENT")
     lot_a = make_lot(session, "A", "1")
     lot_b = make_lot(session, "A", "2")
     link_user_to_lot(session, owner, lot_a)
@@ -73,8 +73,8 @@ def test_owner_of_two_lots_votes_on_both_and_tally_counts_two(session: Session):
 
 
 def test_eligible_by_extra_registration_on_second_lot_votes_on_both(session: Session):
-    board = make_user(session, UserRole.ADMINISTRATOR)
-    voter = make_user(session, UserRole.RESIDENT)
+    board = make_user(session, "ADMINISTRATOR")
+    voter = make_user(session, "RESIDENT")
     lot_a = make_lot(session, "A", "1")
     lot_b = make_lot(session, "B", "9")
     link_user_to_lot(session, voter, lot_a)
@@ -97,8 +97,8 @@ def test_eligible_by_extra_registration_on_second_lot_votes_on_both(session: Ses
 
 
 def test_holder_changes_choice_appends_row_and_tally_uses_latest(session: Session):
-    board = make_user(session, UserRole.ADMINISTRATOR)
-    owner = make_user(session, UserRole.RESIDENT)
+    board = make_user(session, "ADMINISTRATOR")
+    owner = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, owner, lot)
     assembly = make_assembly(session, board)
@@ -121,8 +121,8 @@ def test_holder_changes_choice_appends_row_and_tally_uses_latest(session: Sessio
 
 
 def test_tenant_refused_in_assembly_and_accepted_in_poll(session: Session):
-    board = make_user(session, UserRole.ADMINISTRATOR)
-    tenant = make_user(session, UserRole.RESIDENT)
+    board = make_user(session, "ADMINISTRATOR")
+    tenant = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, tenant, lot, LotAssociationType.INQUILINO)
 
@@ -149,8 +149,8 @@ def test_tenant_refused_in_assembly_and_accepted_in_poll(session: Session):
 
 
 def test_delinquent_lot_is_refused_and_logs_rejection(session: Session):
-    board = make_user(session, UserRole.ADMINISTRATOR)
-    owner = make_user(session, UserRole.RESIDENT)
+    board = make_user(session, "ADMINISTRATOR")
+    owner = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1", is_delinquent=True)
     link_user_to_lot(session, owner, lot)
     assembly = make_assembly(session, board)
@@ -167,8 +167,8 @@ def test_delinquent_lot_is_refused_and_logs_rejection(session: Session):
 def test_becoming_delinquent_blocks_change_but_keeps_original_ballot(
     session: Session,
 ):
-    board = make_user(session, UserRole.ADMINISTRATOR)
-    owner = make_user(session, UserRole.RESIDENT)
+    board = make_user(session, "ADMINISTRATOR")
+    owner = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, owner, lot)
     assembly = make_assembly(session, board)
@@ -189,8 +189,8 @@ def test_becoming_delinquent_blocks_change_but_keeps_original_ballot(
 
 
 def test_lot_that_settles_debt_during_window_can_vote(session: Session):
-    board = make_user(session, UserRole.ADMINISTRATOR)
-    owner = make_user(session, UserRole.RESIDENT)
+    board = make_user(session, "ADMINISTRATOR")
+    owner = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1", is_delinquent=True)
     link_user_to_lot(session, owner, lot)
     assembly = make_assembly(session, board)
@@ -214,8 +214,8 @@ def test_lot_that_settles_debt_during_window_can_vote(session: Session):
 
 
 def test_closing_materialises_snapshot_and_reads_come_from_it(session: Session):
-    board = make_user(session, UserRole.ADMINISTRATOR)
-    owner = make_user(session, UserRole.RESIDENT)
+    board = make_user(session, "ADMINISTRATOR")
+    owner = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, owner, lot)
     assembly = make_assembly(session, board)
@@ -244,8 +244,8 @@ def test_closing_materialises_snapshot_and_reads_come_from_it(session: Session):
 
 
 def test_fraction_ideal_is_frozen_at_cast_time(session: Session):
-    board = make_user(session, UserRole.ADMINISTRATOR)
-    owner = make_user(session, UserRole.RESIDENT)
+    board = make_user(session, "ADMINISTRATOR")
+    owner = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1", fraction_ideal=0.25)
     link_user_to_lot(session, owner, lot)
     assembly = make_assembly(session, board)
@@ -263,8 +263,8 @@ def test_fraction_ideal_is_frozen_at_cast_time(session: Session):
 
 
 def test_lazy_materialisation_closes_vote_after_closes_at(session: Session):
-    board = make_user(session, UserRole.ADMINISTRATOR)
-    owner = make_user(session, UserRole.RESIDENT)
+    board = make_user(session, "ADMINISTRATOR")
+    owner = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, owner, lot)
     assembly = make_assembly(session, board)
@@ -287,8 +287,8 @@ def test_lazy_materialisation_closes_vote_after_closes_at(session: Session):
 
 
 def test_open_vote_tally_hides_results_even_for_administrator(session: Session):
-    board = make_user(session, UserRole.ADMINISTRATOR)
-    owner = make_user(session, UserRole.RESIDENT)
+    board = make_user(session, "ADMINISTRATOR")
+    owner = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     make_lot(session, "A", "2")
     link_user_to_lot(session, owner, lot)
@@ -304,8 +304,8 @@ def test_open_vote_tally_hides_results_even_for_administrator(session: Session):
 
 
 def test_open_poll_tally_has_no_denominator(session: Session):
-    board = make_user(session, UserRole.ADMINISTRATOR)
-    resident = make_user(session, UserRole.RESIDENT)
+    board = make_user(session, "ADMINISTRATOR")
+    resident = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, resident, lot, LotAssociationType.INQUILINO)
     poll = make_vote(session, board, kind=VoteKind.ENQUETE)
@@ -318,8 +318,8 @@ def test_open_poll_tally_has_no_denominator(session: Session):
 
 
 def test_closed_poll_tally_has_results_but_still_no_denominator(session: Session):
-    board = make_user(session, UserRole.ADMINISTRATOR)
-    resident = make_user(session, UserRole.RESIDENT)
+    board = make_user(session, "ADMINISTRATOR")
+    resident = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, resident, lot)
     poll = make_vote(session, board, kind=VoteKind.ENQUETE)
@@ -333,8 +333,8 @@ def test_closed_poll_tally_has_results_but_still_no_denominator(session: Session
 
 
 def test_closed_anonymous_poll_never_exposes_voter_identity(session: Session):
-    board = make_user(session, UserRole.ADMINISTRATOR)
-    resident = make_user(session, UserRole.RESIDENT)
+    board = make_user(session, "ADMINISTRATOR")
+    resident = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, resident, lot)
     poll = make_vote(session, board, kind=VoteKind.ENQUETE, is_anonymous=True)
@@ -350,8 +350,8 @@ def test_closed_anonymous_poll_never_exposes_voter_identity(session: Session):
 
 
 def test_closed_assembly_tally_attributes_by_block_and_lot(session: Session):
-    board = make_user(session, UserRole.ADMINISTRATOR)
-    owner = make_user(session, UserRole.RESIDENT, full_name="Fulano de Tal")
+    board = make_user(session, "ADMINISTRATOR")
+    owner = make_user(session, "RESIDENT", full_name="Fulano de Tal")
     lot = make_lot(session, "B", "12")
     link_user_to_lot(session, owner, lot)
     assembly = make_assembly(session, board)
@@ -374,8 +374,8 @@ def test_closed_assembly_tally_attributes_by_block_and_lot(session: Session):
 
 
 def test_retracting_one_lot_leaves_the_other_ballot_active(session: Session):
-    board = make_user(session, UserRole.ADMINISTRATOR)
-    owner = make_user(session, UserRole.RESIDENT)
+    board = make_user(session, "ADMINISTRATOR")
+    owner = make_user(session, "RESIDENT")
     lot_a = make_lot(session, "A", "1")
     lot_b = make_lot(session, "A", "2")
     link_user_to_lot(session, owner, lot_a)
@@ -402,8 +402,8 @@ def test_retracting_one_lot_leaves_the_other_ballot_active(session: Session):
 
 
 def test_vote_in_draft_assembly_refuses_ballots(session: Session):
-    board = make_user(session, UserRole.ADMINISTRATOR)
-    owner = make_user(session, UserRole.RESIDENT)
+    board = make_user(session, "ADMINISTRATOR")
+    owner = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, owner, lot)
     assembly = make_assembly(session, board, status=AssemblyStatus.DRAFT)
@@ -417,8 +417,8 @@ def test_vote_in_draft_assembly_refuses_ballots(session: Session):
 
 
 def test_closing_assembly_cascades_and_materialises_each_vote(session: Session):
-    board = make_user(session, UserRole.ADMINISTRATOR)
-    owner = make_user(session, UserRole.RESIDENT)
+    board = make_user(session, "ADMINISTRATOR")
+    owner = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, owner, lot)
     assembly = make_assembly(session, board)
@@ -439,8 +439,8 @@ def test_closing_assembly_cascades_and_materialises_each_vote(session: Session):
 
 
 def test_multiple_choice_counts_every_selected_option(session: Session):
-    board = make_user(session, UserRole.ADMINISTRATOR)
-    owner = make_user(session, UserRole.RESIDENT)
+    board = make_user(session, "ADMINISTRATOR")
+    owner = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     link_user_to_lot(session, owner, lot)
     assembly = make_assembly(session, board)

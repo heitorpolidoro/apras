@@ -2,11 +2,7 @@ import { describe, it, expect } from "vitest";
 // Vite's `?raw` import, so the assertion is about the file the bundler ships
 // and needs no Node builtins under the app's `tsconfig` (types: vite/client).
 import APP_SOURCE from "../../../App.tsx?raw";
-import {
-  AUTHENTICATED_ONLY_PATHS,
-  NAV_ITEMS,
-  ROUTE_ACCESS,
-} from "../access/routeAccess";
+import { AUTHENTICATED_ONLY_PATHS, NAV_ITEMS, ROUTE_ACCESS,  } from "../access/routeAccess";
 
 /**
  * The `<Route path="…">` entries of `App.tsx` whose element mounts a
@@ -42,9 +38,9 @@ describe("ROUTE_ACCESS / NAV_ITEMS", () => {
     expect(unruled).toEqual([]);
   });
 
-  it("only /dashboard and /categories carry legacyMenu and landingRedirect", () => {
+  it("only /dashboard and /categories carry landingRedirect, and nothing carries legacyMenu", () => {
     const withLegacyMenu = Object.entries(ROUTE_ACCESS)
-      .filter(([, rule]) => "legacyMenu" in rule && rule.legacyMenu)
+      .filter(([, rule]) => "legacyMenu" in rule)
       .map(([path]) => path)
       .sort();
     const withLanding = Object.entries(ROUTE_ACCESS)
@@ -52,13 +48,16 @@ describe("ROUTE_ACCESS / NAV_ITEMS", () => {
       .map(([path]) => path)
       .sort();
 
-    expect(withLegacyMenu).toEqual(["/categories", "/dashboard"]);
+    // `legacyMenu` died with the `allowed_menus` gate (IAM F5, §4.1); its
+    // sibling `landingRedirect` survives on exactly the same two routes,
+    // because landing is a preference rather than authorization (§10.4).
+    expect(withLegacyMenu).toEqual([]);
     expect(withLanding).toEqual(["/categories", "/dashboard"]);
   });
 
-  it("the two group routes share one rule shape", () => {
-    expect(ROUTE_ACCESS["/admin/groups"]).toEqual(
-      ROUTE_ACCESS["/admin/groups/:groupId"],
+  it("the two role routes share one rule shape", () => {
+    expect(ROUTE_ACCESS["/admin/roles"]).toEqual(
+      ROUTE_ACCESS["/admin/roles/:roleId"],
     );
   });
 });

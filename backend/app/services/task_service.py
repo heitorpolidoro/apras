@@ -3,9 +3,10 @@
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
+from sqlmodel import Session, select
+
 from app.models.task import Task, TaskComment, TaskHistory, get_utc_now
 from app.schemas.task import TaskCommentRead, TaskCreate, TaskUpdate
-from sqlmodel import Session, select
 
 if TYPE_CHECKING:
     from app.models.user import User
@@ -22,25 +23,30 @@ class TaskService:
         current_user: "User",
     ) -> Task:
         """Create a new task in the database."""
-        from app.api.deps import get_effective_user_type_ids
-        from app.models.enums import UserRole
-        from app.models.user_type import UserType
+        from app.api.deps import get_effective_role_ids, has_permission
+        from app.models.role import Role
 
         visible_to_ids = list(task_in.visible_to_ids)
-        # If MANAGER is creating a task and hasn't specified any targets,
-        # default to their *explicit* UserType ids (current_user.user_types)
-        # only — not the full APRAS-9 effective set, which always includes
-        # the shared role-type id and would make every auto-defaulted task
-        # visible to every Manager org-wide. Fall back to the role-type id
-        # alone only when the Manager has zero explicit UserTypes.
-        if current_user.role == UserRole.MANAGER and not visible_to_ids:
-            explicit_ids = {ut.id for ut in current_user.user_types}
-            if explicit_ids:
-                visible_to_ids = list(explicit_ids)
-            else:
-                visible_to_ids = list(
-                    get_effective_user_type_ids(current_user, session)
-                )
+        # An author **without** `tasks:read_all` is scoped by `visible_to`,
+        # so a task they create with no targets at all would be invisible to
+        # them. Default it to the roles they belong to (IAM F5, APRAS-49
+        # §3.1 site 5: identical defaulting, keyed on the permission instead
+        # of the enum).
+        #
+        # APRAS-9's two-tier version -- *explicit* roles first, the effective
+        # set as a fallback -- **collapsed** with the enum, and the fallback
+        # is now unreachable rather than merely unused: the effective set is
+        # the explicit set (migration `0033` turned the role-implicit
+        # membership into a real link), and a caller with zero roles cannot
+        # hold `tasks:create` without also holding `tasks:read_all`, because
+        # the only sources of a permission without a membership are the
+        # superuser and tenant_admin short-circuits, which grant the whole
+        # catalogue. Keeping the branch would be keeping a line no test can
+        # reach, which is how dead code survives a refactor.
+        if not visible_to_ids and not has_permission(
+            current_user, session, "tasks:read_all"
+        ):
+            visible_to_ids = list(get_effective_role_ids(current_user, session))
 
         db_task = Task.model_validate(
             task_in,
@@ -48,7 +54,7 @@ class TaskService:
         )
         if visible_to_ids:
             db_task.visible_to = session.exec(
-                select(UserType).where(UserType.id.in_(visible_to_ids))
+                select(Role).where(Role.id.in_(visible_to_ids))
             ).all()
 
         session.add(db_task)
@@ -61,19 +67,21 @@ class TaskService:
         session: Session, db_task: Task, task_in: TaskUpdate, current_user: "User"
     ) -> Task:
         """Update a task with audit logging."""
-        from app.api.deps import get_effective_user_type_ids
+        from app.api.deps import get_effective_role_ids, has_permission
         from app.core.exceptions import ForbiddenError
-        from app.models.enums import UserRole
-        from app.models.user_type import UserType
+        from app.models.role import Role
 
         update_data = task_in.model_dump(exclude_unset=True)
         visible_to_ids = update_data.pop("visible_to_ids", None)
 
-        # MANAGER may only set targets that are a subset of their own
-        # effective UserType ids (explicitly-assigned or role-implicit, see
-        # APRAS-9) — cannot grant visibility to a type they don't belong to.
-        if visible_to_ids is not None and current_user.role == UserRole.MANAGER:
-            effective_ids = get_effective_user_type_ids(current_user, session)
+        # An author scoped by `visible_to` (no `tasks:read_all`) may only set
+        # targets that are a subset of their own roles — they cannot grant
+        # visibility to a role they do not belong to. IAM F5 (§3.1 site 6):
+        # identical subset rule and message.
+        if visible_to_ids is not None and not has_permission(
+            current_user, session, "tasks:read_all"
+        ):
+            effective_ids = get_effective_role_ids(current_user, session)
             if not set(visible_to_ids) <= effective_ids:
                 raise ForbiddenError(
                     "Managers can only set visibility targets they belong to"
@@ -108,7 +116,7 @@ class TaskService:
                 session.add(history)
             db_task.visible_to = (
                 session.exec(
-                    select(UserType).where(UserType.id.in_(visible_to_ids))
+                    select(Role).where(Role.id.in_(visible_to_ids))
                 ).all()
                 if visible_to_ids
                 else []
@@ -125,7 +133,7 @@ class TaskService:
         """Retrieve the audit history for a task.
 
         For entries where field_name == 'assigned_to_id', the old_value and
-        new_value (UUID strings) are resolved to {name, role} dicts in
+        new_value (UUID strings) are resolved to {name, roles} dicts in
         resolved_old_value and resolved_new_value respectively.
         """
         from app.models.user import User
@@ -153,7 +161,12 @@ class TaskService:
 
     @staticmethod
     def _resolve_user(session: Session, user_id_str: str | None) -> dict | None:
-        """Look up a user by UUID string and return {name, role}, or None."""
+        """Look up a user by UUID string and return {name, roles}, or None.
+
+        `roles` is the sorted list of role names (IAM F5, APRAS-49 §8.2),
+        the same shape the three summary schemas now carry. It replaces the
+        single enum value the audit timeline used to show.
+        """
         if user_id_str is None or user_id_str == "null":
             return None
         import uuid as _uuid
@@ -167,7 +180,10 @@ class TaskService:
         u = session.get(User, uid)
         if u is None:
             return None
-        return {"name": u.full_name or u.username, "role": str(u.role)}
+        return {
+            "name": u.full_name or u.username,
+            "roles": sorted(role.name for role in u.roles),
+        }
 
     @staticmethod
     def delete_task(session: Session, db_task: Task, changed_by_id: UUID) -> None:
@@ -192,8 +208,8 @@ class TaskService:
         """Enrich a task with creator, assignee and category details for response."""
         from app.models.category import Category
         from app.models.user import User
+        from app.schemas.role import RoleRead
         from app.schemas.task import TaskRead
-        from app.schemas.user_type import UserTypeRead
 
         # `create_task`/`update_task` commit the `visible_to` link rows via
         # the session, but `db_task.visible_to` may still reflect a stale
@@ -215,7 +231,7 @@ class TaskService:
         task_data["category_name"] = category.name if category else None
         task_data["category_color"] = category.color if category else None
         task_data["visible_to"] = [
-            UserTypeRead.model_validate(ut) for ut in db_task.visible_to
+            RoleRead.model_validate(ut) for ut in db_task.visible_to
         ]
 
         return TaskRead.model_validate(task_data)

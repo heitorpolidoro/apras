@@ -4,18 +4,46 @@ import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { LotsPage } from "../components/LotsPage";
 import * as AuthHook from "../../user-administration/context/AuthContext";
-import { UserRole } from "../../../types/auth";
 import * as lotsApi from "../../../api/lots";
 import * as usersHook from "../../../hooks/useUsers";
 import { LotStatus, LotAssociationType } from "../../../types/lot";
+import { PERMISSIONS_BY_ROLE } from "../../../test/permissionFixtures";
+
+/** The profile each case's fixture stands for; `renderComponent` sets it. */
+let mockProfileName = "ADMINISTRATOR";
+const mockProfile = () => mockProfileName;
+
+// IAM F5 (APRAS-49 §10.2): the component reads its *permissions* now, not a
+// role. Mocking the access module keeps each case's signal exactly where it
+// was — the `useAuth()` fixture this file already varies per test — while
+// removing the `/permissions/me` query from the render path, which is what
+// made a `QueryClientProvider` necessary.
+vi.mock("../../../features/user-administration/access/useCanAccess", () => {
+  const build = (profile: string) => ({
+    has: (permission: string) =>
+      (PERMISSIONS_BY_ROLE[profile] ?? []).includes(permission),
+    hasModule: (moduleName: string) =>
+      (PERMISSIONS_BY_ROLE[profile] ?? []).some((permission) =>
+        permission.startsWith(`${moduleName}:`),
+      ),
+    isLoading: false,
+    all: new Set(PERMISSIONS_BY_ROLE[profile] ?? []),
+  });
+  return {
+    useEffectivePermissionSet: () => build(mockProfile()),
+    usePermissionSet: () => build(mockProfile()),
+    useCanAccess: () => ({ allowed: true, isLoading: false }),
+    useCanShowMenu: () => ({ allowed: true, isLoading: false }),
+  };
+});
+
 
 vi.mock("../../../api/lots");
 vi.mock("../../../hooks/useUsers");
 
 vi.mock("../../user-administration/context/SimulationContext", () => ({
   useSimulation: vi.fn(() => ({
-    simulatedRole: null,
-    simulatedUserTypeIds: [],
+    simulatedRoleIds: [],
     isSimulating: false,
   })),
 }));
@@ -72,7 +100,7 @@ const mockLotDetailData = {
         id: "user-1",
         full_name: "Carlos Silva",
         email: "carlos@test.com",
-        role: UserRole.DIRECTOR,
+        roles: ["Morador (papel)"],
       },
     },
   ],
@@ -85,7 +113,8 @@ const createTestQueryClient = () =>
     },
   });
 
-const renderComponent = (role: UserRole = UserRole.ADMINISTRATOR) => {
+const renderComponent = (profile = "ADMINISTRATOR") => {
+  mockProfileName = profile;
   vi.spyOn(AuthHook, "useAuth").mockReturnValue({
     isAuthenticated: true,
     isLoading: false,
@@ -93,7 +122,7 @@ const renderComponent = (role: UserRole = UserRole.ADMINISTRATOR) => {
       id: "admin-1",
       email: "admin@test.com",
       full_name: "Admin User",
-      role,
+      is_superuser: true,
       is_active: true,
     },
     login: vi.fn() as any,
@@ -121,7 +150,6 @@ describe("LotsPage", () => {
           id: "user-1",
           email: "carlos@test.com",
           full_name: "Carlos Silva",
-          role: UserRole.DIRECTOR,
           is_active: true,
         },
       ],
@@ -131,7 +159,7 @@ describe("LotsPage", () => {
   });
 
   it("renders page header, filters, and lot table for ADMINISTRATOR", async () => {
-    renderComponent(UserRole.ADMINISTRATOR);
+    renderComponent();
 
     expect(screen.getByText("Cadastro de Lotes")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Novo Lote" })).toBeInTheDocument();
@@ -142,14 +170,14 @@ describe("LotsPage", () => {
   });
 
   it("hides 'Novo Lote' and edit/delete actions for MANAGER role", async () => {
-    renderComponent(UserRole.MANAGER);
+    renderComponent("MANAGER");
 
     expect(await screen.findByText("101")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Novo Lote" })).not.toBeInTheDocument();
   });
 
   it("filters lots by search term", async () => {
-    renderComponent(UserRole.ADMINISTRATOR);
+    renderComponent();
 
     expect(await screen.findByText("101")).toBeInTheDocument();
     expect(screen.getByText("202")).toBeInTheDocument();
@@ -164,7 +192,7 @@ describe("LotsPage", () => {
   it("opens create lot modal and submits form", async () => {
     vi.mocked(lotsApi.createLot).mockResolvedValue(mockLotsData.items[0]);
 
-    renderComponent(UserRole.ADMINISTRATOR);
+    renderComponent();
 
     expect(await screen.findByText("101")).toBeInTheDocument();
 
@@ -191,7 +219,7 @@ describe("LotsPage", () => {
   it("opens link user modal and binds user to lot", async () => {
     vi.mocked(lotsApi.linkUserLot).mockResolvedValue(mockLotDetailData.users[0]);
 
-    renderComponent(UserRole.ADMINISTRATOR);
+    renderComponent();
 
     await waitFor(() => {
       expect(screen.getByText("101")).toBeInTheDocument();
@@ -222,7 +250,7 @@ describe("LotsPage", () => {
   it("views lot details and handles unlinking user", async () => {
     vi.mocked(lotsApi.unlinkUserLot).mockResolvedValue();
 
-    renderComponent(UserRole.ADMINISTRATOR);
+    renderComponent();
 
     await waitFor(() => {
       expect(screen.getByText("101")).toBeInTheDocument();
@@ -252,7 +280,7 @@ describe("LotsPage", () => {
   it("deletes lot with confirmation modal", async () => {
     vi.mocked(lotsApi.deleteLot).mockResolvedValue();
 
-    renderComponent(UserRole.ADMINISTRATOR);
+    renderComponent();
 
     await waitFor(() => {
       expect(screen.getByText("101")).toBeInTheDocument();

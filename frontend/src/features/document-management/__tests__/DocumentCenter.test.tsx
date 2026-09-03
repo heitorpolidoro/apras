@@ -10,11 +10,41 @@ import type {
   PaginatedDocumentResponse,
 } from "../../../types/document";
 
+import { PERMISSIONS_BY_ROLE } from "../../../test/permissionFixtures";
+
+/**
+ * The permission predicate a retired role value carried (IAM F5, §10.2).
+ *
+ * `PERMISSIONS_BY_ROLE` is the recorded legacy bundle, so a case that mocked
+ * `role: "MANAGER"` and now mocks `hasOf("MANAGER")` asserts the **same**
+ * outcome it always did — which is what makes this a re-expression rather
+ * than a new claim.
+ */
+const hasOf = (profile: string) => (permission: string) =>
+    (PERMISSIONS_BY_ROLE[profile] ?? []).includes(permission);
+
+
 vi.mock("../../../api/documents");
 
-const mockEffectiveIdentity = vi.fn();
-vi.mock("../../user-administration/context/useEffectiveIdentity", () => ({
-  useEffectiveIdentity: () => mockEffectiveIdentity(),
+const mockPermissionSet = vi.fn();
+vi.mock("../../user-administration/access/useCanAccess", () => ({
+  useEffectivePermissionSet: () => mockPermissionSet(),
+}));
+
+// `FolderFormModal` renders its ACL checkboxes from `useRoles()` since IAM F5
+// (APRAS-49 §6) — a folder can now be scoped to **any** role, not only the
+// six legacy names the old `ALL_ROLES` constant hard-coded. That query needs
+// an acting tenant, which needs an AuthProvider; mocking it keeps this suite
+// a component test rather than a bootstrap test.
+vi.mock("../../../hooks/useRoles", () => ({
+  useRoles: vi.fn(() => ({
+    data: [
+      { id: "role-administrator", name: "Administrador (papel)" },
+      { id: "role-director", name: "Diretor (papel)" },
+      { id: "role-manager", name: "Gerente (papel)" },
+      { id: "role-resident", name: "Morador (papel)" },
+    ],
+  })),
 }));
 
 const mockFoldersList: DocumentFolderTree[] = [
@@ -23,7 +53,12 @@ const mockFoldersList: DocumentFolderTree[] = [
     name: "Financeiro",
     description: "Pastas financeiras",
     parent_id: null,
-    allowed_roles: ["ADMINISTRATOR", "DIRECTOR", "MANAGER", "RESIDENT"],
+    allowed_role_ids: [
+      "role-administrator",
+      "role-director",
+      "role-manager",
+      "role-resident",
+    ],
     document_count: 2,
     created_at: "2026-08-25T10:00:00Z",
     updated_at: "2026-08-25T10:00:00Z",
@@ -33,7 +68,7 @@ const mockFoldersList: DocumentFolderTree[] = [
         name: "Balancetes 2026",
         description: "Balancetes",
         parent_id: "folder-1",
-        allowed_roles: ["ADMINISTRATOR", "DIRECTOR", "MANAGER"],
+        allowed_role_ids: ["ADMINISTRATOR", "DIRECTOR", "MANAGER"],
         document_count: 1,
         created_at: "2026-08-25T10:05:00Z",
         updated_at: "2026-08-25T10:05:00Z",
@@ -85,11 +120,7 @@ const renderWithQuery = (ui: React.ReactNode) => {
 describe("Document Management Feature Suite", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockEffectiveIdentity.mockReturnValue({
-      role: "ADMINISTRATOR",
-      userTypeIds: [],
-      isSimulating: false,
-    });
+    mockPermissionSet.mockReturnValue({ has: hasOf("ADMINISTRATOR") });
     vi.mocked(documentsApi.getDocumentFolders).mockResolvedValue(mockFoldersList);
     vi.mocked(documentsApi.getDocuments).mockResolvedValue(mockDocumentsList);
   });
@@ -119,11 +150,7 @@ describe("Document Management Feature Suite", () => {
   });
 
   it("hides action buttons for non-admin/director roles", async () => {
-    mockEffectiveIdentity.mockReturnValue({
-      role: "RESIDENT",
-      userTypeIds: [],
-      isSimulating: false,
-    });
+    mockPermissionSet.mockReturnValue({ has: hasOf("RESIDENT") });
 
     renderWithQuery(<DocumentCenterPage />);
 
@@ -167,7 +194,7 @@ describe("Document Management Feature Suite", () => {
       name: "Jurídico",
       description: "Documentos jurídicos",
       parent_id: null,
-      allowed_roles: ["ADMINISTRATOR", "DIRECTOR"],
+      allowed_role_ids: ["ADMINISTRATOR", "DIRECTOR"],
       document_count: 0,
       created_at: "2026-08-25T12:00:00Z",
       updated_at: "2026-08-25T12:00:00Z",

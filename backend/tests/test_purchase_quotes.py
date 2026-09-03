@@ -7,17 +7,18 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from app.core.security import create_access_token
-from app.models.enums import UserRole
 from app.models.user import User
+from tests.conftest import make_user
 
 
-def _make_user(session: Session, role: UserRole, email: str, cpf: str) -> User:
-    user = User(
+def _make_user(session: Session, role: str, email: str, cpf: str) -> User:
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email=email,
         full_name=f"User {email}",
         hashed_password="hash",
-        role=role,
+        profile=role,
         cpf=cpf,
     )
     session.add(user)
@@ -32,12 +33,12 @@ def _headers(user: User) -> dict[str, str]:
 
 @pytest.fixture
 def admin(session: Session) -> User:
-    return _make_user(session, UserRole.ADMINISTRATOR, "admin_q@test.com", "11111111111")
+    return _make_user(session, "ADMINISTRATOR", "admin_q@test.com", "11111111111")
 
 
 @pytest.fixture
 def manager(session: Session) -> User:
-    return _make_user(session, UserRole.MANAGER, "manager_q@test.com", "33333333333")
+    return _make_user(session, "MANAGER", "manager_q@test.com", "33333333333")
 
 
 @pytest.fixture

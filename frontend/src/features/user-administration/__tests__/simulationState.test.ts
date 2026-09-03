@@ -1,10 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  setSimulationState,
-  getSimulationState,
-  registerSimulationReset,
-  triggerSimulationReset,
-} from "../context/simulationState";
+import { setSimulationState, getSimulationState, registerSimulationReset, triggerSimulationReset,  } from "../context/simulationState";
 
 describe("simulationState", () => {
   beforeEach(() => {

@@ -4,11 +4,12 @@ import uuid
 from uuid import UUID
 
 import pytest
+from fastapi.testclient import TestClient
+from sqlmodel import Session
+
 from app.models.category import Category
 from app.models.task import TaskComment
 from app.models.user import User
-from fastapi.testclient import TestClient
-from sqlmodel import Session
 
 
 def _login(client: TestClient, username: str, password: str) -> str:
@@ -331,7 +332,7 @@ def test_history_resolves_assigned_to_id(
     # resolved_new_value has name and role
     assert entry["resolved_new_value"] is not None
     assert entry["resolved_new_value"]["name"] == normal_user.full_name
-    assert entry["resolved_new_value"]["role"] == "DIRECTOR"
+    assert "Diretor (papel)" in entry["resolved_new_value"]["roles"]
     # old_value was None (unassigned before)
     assert entry["resolved_old_value"] is None
 

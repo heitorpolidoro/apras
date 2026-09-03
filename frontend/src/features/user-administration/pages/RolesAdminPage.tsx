@@ -1,45 +1,40 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
-import { useUserTypes } from "../../../hooks/useUserTypes";
+import { useRoles } from "../../../hooks/useRoles";
 import { useUsers } from "../../../hooks/useUsers";
-import {
-  deriveAllowedMenus,
-  useCreateUserType,
-  useDeleteUserType,
-} from "../hooks/useUserTypeMutations";
+import { useCreateRole, useDeleteRole } from "../hooks/useRoleMutations";
 import { friendlyPermissionError } from "../utils/permissionErrors";
-import type { UserType } from "../../../types/auth";
+import type { Role } from "../../../types/auth";
 
 /**
- * `/admin/groups` — the group list (APRAS-48 §6.1, ER-1).
+ * `/admin/roles` — the role list (APRAS-48 §6.1, ER-1).
  *
- * Role-linked groups ("grupos de sistema") are shown, badged and **not**
+ * Role-linked roles ("papéis de sistema") are shown, badged and **not**
  * deletable, mirroring the backend's 403; their permissions stay editable,
  * which is how an operator restores baseline-by-role access under the new
  * model, and is the main reason the rows are listed at all (§6.2).
  *
- * Clone is `POST /user-types/` with the source's bundle and an editable
+ * Clone is `POST /roles/` with the source's bundle and an editable
  * pre-filled name — no new endpoint, and `assert_can_grant` applies to it
- * exactly as to a hand-built group.
+ * exactly as to a hand-built role.
  */
-const GroupsAdminPage: React.FC = () => {
+const RolesAdminPage: React.FC = () => {
   const { t } = useTranslation();
-  const { data: groups, isPending } = useUserTypes();
+  const { data: roles, isPending } = useRoles();
   const { data: users } = useUsers();
-  const createGroup = useCreateUserType();
-  const deleteGroup = useDeleteUserType();
+  const createRole = useCreateRole();
+  const deleteRole = useDeleteRole();
 
   const [name, setName] = useState("");
   const [draftPermissions, setDraftPermissions] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const memberCount = (groupId: string) =>
+  const memberCount = (roleId: string) =>
     (users ?? []).filter((user) =>
-      user.user_types?.some((userType) => userType.id === groupId),
+      user.roles?.some((role) => role.id === roleId),
     ).length;
 
   const submit = (event: React.FormEvent) => {
@@ -47,11 +42,10 @@ const GroupsAdminPage: React.FC = () => {
     const trimmed = name.trim();
     if (!trimmed) return;
     setError(null);
-    createGroup.mutate(
+    createRole.mutate(
       {
         name: trimmed,
         permissions: draftPermissions,
-        allowed_menus: deriveAllowedMenus(draftPermissions),
       },
       {
         onSuccess: () => {
@@ -63,21 +57,21 @@ const GroupsAdminPage: React.FC = () => {
     );
   };
 
-  const startClone = (group: UserType) => {
-    setName(`${group.name}${t("groups.cloneSuffix")}`);
+  const startClone = (role: Role) => {
+    setName(`${role.name}${t("roles.cloneSuffix")}`);
     // The clone carries no `role` (the field is read-only in every write
-    // schema), so it is an ordinary group.
-    setDraftPermissions(group.permissions ?? []);
+    // schema), so it is an ordinary role.
+    setDraftPermissions(role.permissions ?? []);
     setError(null);
   };
 
-  const remove = (group: UserType) => {
-    // Deleting a group revokes, from every member at once, every permission it
+  const remove = (role: Role) => {
+    // Deleting a role revokes, from every member at once, every permission it
     // grants — so it is confirmed, exactly as the inline user-type card this
     // screen replaces confirmed `admin.confirmDeleteType`.
-    if (!window.confirm(t("groups.confirmDelete"))) return;
+    if (!window.confirm(t("roles.confirmDelete"))) return;
     setError(null);
-    deleteGroup.mutate(group.id, {
+    deleteRole.mutate(role.id, {
       onError: (err) => setError(friendlyPermissionError(err, t)),
     });
   };
@@ -86,14 +80,14 @@ const GroupsAdminPage: React.FC = () => {
     <div className="max-w-5xl mx-auto px-4 py-6">
       <div className="flex items-center justify-between mb-2">
         <h1 className="text-2xl font-bold text-foreground">
-          {t("groups.title")}
+          {t("roles.title")}
         </h1>
         <Button variant="outline" asChild>
           <Link to="/admin/users">{t("admin.title")}</Link>
         </Button>
       </div>
       <p className="text-sm text-muted-foreground mb-6">
-        {t("groups.subtitle")}
+        {t("roles.subtitle")}
       </p>
 
       {error && (
@@ -107,8 +101,8 @@ const GroupsAdminPage: React.FC = () => {
         className="flex flex-wrap gap-2 items-center rounded-xl border bg-card p-4 mb-6"
       >
         <Input
-          aria-label={t("groups.namePlaceholder")}
-          placeholder={t("groups.namePlaceholder")}
+          aria-label={t("roles.namePlaceholder")}
+          placeholder={t("roles.namePlaceholder")}
           value={name}
           onChange={(event) => setName(event.target.value)}
           className="h-9 text-sm w-64"
@@ -118,90 +112,81 @@ const GroupsAdminPage: React.FC = () => {
             {t("permissions.selectedCount", { count: draftPermissions.length })}
           </span>
         )}
-        <Button type="submit" disabled={!name.trim() || createGroup.isPending}>
-          {t("groups.create")}
+        <Button type="submit" disabled={!name.trim() || createRole.isPending}>
+          {t("roles.create")}
         </Button>
       </form>
 
       {isPending && (
-        <p className="text-sm text-muted-foreground">{t("groups.loading")}</p>
+        <p className="text-sm text-muted-foreground">{t("roles.loading")}</p>
       )}
-      {!isPending && groups?.length === 0 && (
-        <p className="text-sm text-muted-foreground">{t("groups.empty")}</p>
+      {!isPending && roles?.length === 0 && (
+        <p className="text-sm text-muted-foreground">{t("roles.empty")}</p>
       )}
 
-      {!!groups?.length && (
+      {!!roles?.length && (
         <div className="rounded-xl border bg-card overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/40">
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">
-                  {t("groups.colName")}
+                  {t("roles.colName")}
                 </th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">
-                  {t("groups.colPermissions")}
+                  {t("roles.colPermissions")}
                 </th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">
-                  {t("groups.colMembers")}
+                  {t("roles.colMembers")}
                 </th>
                 <th className="text-right px-4 py-3 font-semibold text-muted-foreground">
-                  {t("groups.colActions")}
+                  {t("roles.colActions")}
                 </th>
               </tr>
             </thead>
             <tbody>
-              {groups.map((group) => (
-                <tr key={group.id} className="border-b last:border-0">
+              {roles.map((role) => (
+                <tr key={role.id} className="border-b last:border-0">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium text-foreground">
-                        {group.name}
+                        {role.name}
                       </span>
-                      {group.role && (
-                        <Badge
-                          variant="outline"
-                          title={t("groups.roleLinkedHint")}
-                        >
-                          {t("groups.roleLinkedBadge")}
-                        </Badge>
-                      )}
                     </div>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
-                    {group.permissions?.length ?? 0}
+                    {role.permissions?.length ?? 0}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
-                    {memberCount(group.id)}
+                    {memberCount(role.id)}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2 justify-end flex-wrap">
                       <Button size="sm" variant="outline" asChild>
-                        <Link to={`/admin/groups/${group.id}`}>
-                          {t("groups.edit")}
+                        <Link to={`/admin/roles/${role.id}`}>
+                          {t("roles.edit")}
                         </Link>
                       </Button>
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => startClone(group)}
-                        aria-label={`${t("groups.clone")} ${group.name}`}
+                        onClick={() => startClone(role)}
+                        aria-label={`${t("roles.clone")} ${role.name}`}
                       >
-                        {t("groups.clone")}
+                        {t("roles.clone")}
                       </Button>
-                      {/* No delete control for role-linked groups: the
-                          backend answers 403 for them, and offering a button
-                          that cannot work is not a gate, it is a trap. */}
-                      {!group.role && (
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => remove(group)}
-                          disabled={deleteGroup.isPending}
-                          aria-label={`${t("groups.delete")} ${group.name}`}
-                        >
-                          {t("groups.delete")}
-                        </Button>
-                      )}
+                      {/* IAM F5 (APRAS-49 §13): every row is deletable now.
+                          There are no system roles, and deleting
+                          `Diretor (papel)` strips every director — the
+                          operator's prerogative. */}
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => remove(role)}
+                        disabled={deleteRole.isPending}
+                        aria-label={`${t("roles.delete")} ${role.name}`}
+                      >
+                        {t("roles.delete")}
+                      </Button>
                     </div>
                   </td>
                 </tr>
@@ -214,4 +199,4 @@ const GroupsAdminPage: React.FC = () => {
   );
 };
 
-export default GroupsAdminPage;
+export default RolesAdminPage;

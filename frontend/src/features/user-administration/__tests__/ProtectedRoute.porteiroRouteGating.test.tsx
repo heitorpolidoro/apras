@@ -2,14 +2,10 @@ import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import ProtectedRoute from "../components/ProtectedRoute";
-import { UserRole } from "../context/AuthContext";
 import * as AuthHook from "../context/AuthContext";
 import { useMyPermissions } from "../../../hooks/usePermissionQueries";
 import { ROUTE_ACCESS } from "../access/routeAccess";
-import {
-  PERMISSIONS_BY_ROLE,
-  settledPermissions,
-} from "../../../test/permissionFixtures";
+import { PERMISSIONS_BY_ROLE, settledPermissions,  } from "../../../test/permissionFixtures";
 
 /**
  * The routes APRAS-12 gated, re-expressed over `ROUTE_ACCESS` (APRAS-48 §5.2).
@@ -24,23 +20,22 @@ import {
  *    backend answered 403 to anyway, and PORTEIRO gains one it always held;
  *  * `/projects` — `projects:read` is A/D/M/R, so GUEST loses a 403.
  *
- * ProtectedRoute always calls `useMenuAccess` (rules of hooks) even on routes
- * with no `legacyMenu`, so its dependencies are mocked the same way
+ * ProtectedRoute used to call the menu gate on every route, `legacyMenu` or
+ * not, because the rules of hooks required it. IAM F5 (APRAS-49 §4.1) deleted
+ * the gate; the dependencies are still mocked the same way
  * `ProtectedRoute.test.tsx` mocks them.
  */
 vi.mock("../context/SimulationContext", () => ({
   useSimulation: vi.fn(() => ({
-    simulatedRole: null,
-    simulatedUserTypeIds: [],
+    simulatedRoleIds: [],
     isSimulating: false,
-    setSimulatedRole: vi.fn(),
-    setSimulatedUserTypeIds: vi.fn(),
+    setSimulatedRoleIds: vi.fn(),
     stopSimulation: vi.fn(),
   })),
 }));
 
-vi.mock("../../../hooks/useUserTypes", () => ({
-  useUserTypes: vi.fn(() => ({ data: [] })),
+vi.mock("../../../hooks/useRoles", () => ({
+  useRoles: vi.fn(() => ({ data: [] })),
 }));
 
 vi.mock("../../../hooks/usePermissionQueries", () => ({
@@ -49,23 +44,23 @@ vi.mock("../../../hooks/usePermissionQueries", () => ({
 }));
 
 const ALL_ROLES = [
-  UserRole.ADMINISTRATOR,
-  UserRole.DIRECTOR,
-  UserRole.MANAGER,
-  UserRole.RESIDENT,
-  UserRole.GUEST,
-  UserRole.PORTEIRO,
+  "ADMINISTRATOR",
+  "DIRECTOR",
+  "MANAGER",
+  "RESIDENT",
+  "GUEST",
+  "PORTEIRO",
 ];
 
-const A = UserRole.ADMINISTRATOR;
-const D = UserRole.DIRECTOR;
-const M = UserRole.MANAGER;
-const R = UserRole.RESIDENT;
-const G = UserRole.GUEST;
-const P = UserRole.PORTEIRO;
+const A = "ADMINISTRATOR";
+const D = "DIRECTOR";
+const M = "MANAGER";
+const R = "RESIDENT";
+const G = "GUEST";
+const P = "PORTEIRO";
 
 /** §5.2's "Rule ⇒ roles" column, transcribed. */
-const ALLOWED_ROLES: Record<string, UserRole[]> = {
+const ALLOWED_ROLES: Record<string, string[]> = {
   "/gate": [A, D, M, P],
   "/lots": [A, D, M, P],
   "/authorizations": [A, D, M, R, G],
@@ -76,7 +71,7 @@ const ALLOWED_ROLES: Record<string, UserRole[]> = {
   "/finance": [A, D, M, R],
 };
 
-const mockUser = (role: UserRole) => {
+const mockUser = (role: string) => {
   vi.spyOn(AuthHook, "useAuth").mockReturnValue({
     isAuthenticated: true,
     isLoading: false,

@@ -17,13 +17,14 @@ from sqlmodel import Session, select
 
 from app.api import deps
 from app.core import tenant_context
-from app.core.permissions import LEGACY_ROLE_PERMISSIONS, PERMISSIONS
+from app.core.permissions import PERMISSIONS
 from app.core.security import create_access_token
-from app.models.enums import UserRole
+from app.models.role import Role
 from app.models.tenant import DEFAULT_TENANT_ID, Tenant, UserTenantLink
 from app.models.user import User
-from app.models.user_type import UserType
 from app.services.tenant_service import TenantService
+from tests.conftest import PROFILE_ROLE_NAMES, bundle, make_user
+from tests.matrix_world import PARITY_PROFILES
 
 _cpf_counter = itertools.count(1)
 
@@ -33,13 +34,14 @@ def _next_cpf() -> str:
     return str(next(_cpf_counter)).zfill(11)
 
 
-def _make_user(session: Session, role: UserRole, **kwargs) -> User:
-    user = User(
+def _make_user(session: Session, role: str, **kwargs) -> User:
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email=f"{uuid.uuid4().hex[:12]}@perm.test",
-        full_name=f"{role.value} user",
+        full_name=f"{role} user",
         hashed_password="hash",
-        role=role,
+        profile=role,
         cpf=_next_cpf(),
         **kwargs,
     )
@@ -58,48 +60,54 @@ def _headers(user: User) -> dict[str, str]:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("role", list(UserRole))
-def test_a_user_with_no_roles_gets_exactly_the_legacy_set(session: Session, role):
-    """The transitional fallback is the whole answer while nothing is seeded.
+@pytest.mark.parametrize("role", PARITY_PROFILES)
+def test_a_user_whose_only_role_is_a_profile_gets_exactly_that_bundle(
+    session: Session, role
+):
+    """The profile row is the whole answer -- there is no fallback left.
 
-    `is_superuser=False` is explicit because APRAS-47 §3.3 defaults the flag
-    to True for role ADMINISTRATOR, and a superuser short-circuits straight to
-    `PERMISSIONS` (§4) — the subject of `test_superuser.py`, not of the legacy
-    fallback this case is about.
+    IAM F5 (APRAS-49 §3.2) deleted the `LEGACY_ROLE_PERMISSIONS` seed, so a
+    user's set now comes from their role rows and nothing else. That the
+    answer is still *exactly* the legacy set is the point: the recorded
+    bundle went onto the row, so the number did not move.
+
+    `is_superuser=False` is explicit because `conftest.make_user` defaults it
+    to True for the ADMINISTRATOR profile (mirroring the `User.__init__`
+    default F3 shipped), and a superuser short-circuits straight to
+    `PERMISSIONS` (§4) -- the subject of `test_superuser.py`, not of the
+    bundle path this case is about.
     """
     user = _make_user(session, role, is_superuser=False)
 
-    assert deps.get_effective_permissions(user, session) == LEGACY_ROLE_PERMISSIONS[
-        role
-    ]
+    assert deps.get_effective_permissions(user, session) == bundle(role)
 
 
 def test_role_bundle_permissions_are_added_to_the_legacy_set(session: Session):
-    user = _make_user(session, UserRole.RESIDENT)
-    user_type = UserType(
+    user = _make_user(session, "RESIDENT")
+    role = Role(
         name="Comissão de Obras", permissions=["assets:create", "votes:close"]
     )
-    session.add(user_type)
+    session.add(role)
     session.commit()
-    user.user_types.append(user_type)
+    user.roles.append(role)
     session.add(user)
     session.commit()
 
     result = deps.get_effective_permissions(user, session)
 
     assert {"assets:create", "votes:close"} <= result
-    assert LEGACY_ROLE_PERMISSIONS[UserRole.RESIDENT] <= result
+    assert bundle("RESIDENT") <= result
 
 
 def test_a_permission_already_in_the_legacy_set_appears_once(session: Session):
     """It is a set union, not a list concatenation."""
-    user = _make_user(session, UserRole.RESIDENT)
-    legacy = LEGACY_ROLE_PERMISSIONS[UserRole.RESIDENT]
+    user = _make_user(session, "RESIDENT")
+    legacy = bundle("RESIDENT")
     duplicated = min(legacy)
-    user_type = UserType(name="Duplicada", permissions=[duplicated])
-    session.add(user_type)
+    role = Role(name="Duplicada", permissions=[duplicated])
+    session.add(role)
     session.commit()
-    user.user_types.append(user_type)
+    user.roles.append(role)
     session.add(user)
     session.commit()
 
@@ -113,15 +121,15 @@ def test_a_role_of_another_tenant_contributes_nothing(
     session: Session, tenant_b: Tenant
 ):
     """The APRAS-43 §5.2 relationship-load trap, for permissions."""
-    user = _make_user(session, UserRole.GUEST)
-    foreign_type = UserType(
+    user = _make_user(session, "GUEST")
+    foreign_type = Role(
         name="Financeiro B",
         tenant_id=tenant_b.id,
         permissions=["finance:transaction_delete"],
     )
     session.add(foreign_type)
     session.commit()
-    user.user_types.append(foreign_type)
+    user.roles.append(foreign_type)
     session.add(user)
     session.commit()
 
@@ -129,27 +137,39 @@ def test_a_role_of_another_tenant_contributes_nothing(
     result = deps.get_effective_permissions(user, session)
 
     assert "finance:transaction_delete" not in result
-    assert result == LEGACY_ROLE_PERMISSIONS[UserRole.GUEST]
+    assert result == bundle("GUEST")
 
 
 def test_unknown_stored_strings_survive(session: Session):
     """A hand-edited row must stay visible: F2's UI has to be able to show it."""
-    user = _make_user(session, UserRole.PORTEIRO)
-    user_type = UserType(name="Estranha", permissions=["not_a:permission"])
-    session.add(user_type)
+    user = _make_user(session, "PORTEIRO")
+    role = Role(name="Estranha", permissions=["not_a:permission"])
+    session.add(role)
     session.commit()
-    user.user_types.append(user_type)
+    user.roles.append(role)
     session.add(user)
     session.commit()
 
     assert "not_a:permission" in deps.get_effective_permissions(user, session)
 
 
-def test_the_role_linked_user_type_contributes_its_permissions(session: Session):
-    """The implicit APRAS-9 role-linked row counts, with no explicit link."""
-    user = _make_user(session, UserRole.MANAGER)
-    role_type = UserType(name="Gerente", role=UserRole.MANAGER, permissions=["lots:delete"])
+def test_only_a_real_membership_contributes(session: Session):
+    """The APRAS-9 implicit membership is gone; a row alone grants nothing.
+
+    Before migration `0033` a `Role` row whose `role` column matched the
+    user's enum contributed its bundle with **no** link. It is now an
+    ordinary role like any other: the same row grants nothing until the user
+    is actually a member of it.
+    """
+    user = _make_user(session, "MANAGER")
+    role_type = Role(name="Gerente", permissions=["lots:delete"])
     session.add(role_type)
+    session.commit()
+
+    assert "lots:delete" not in deps.get_effective_permissions(user, session)
+
+    user.roles.append(role_type)
+    session.add(user)
     session.commit()
 
     assert "lots:delete" in deps.get_effective_permissions(user, session)
@@ -158,18 +178,18 @@ def test_the_role_linked_user_type_contributes_its_permissions(session: Session)
 def test_a_session_with_no_acting_tenant_resolves_to_the_default_tenant(
     session: Session, tenant_b: Tenant
 ):
-    """Same fallback ladder as `get_effective_user_type_ids` (unit/seed path)."""
-    user = _make_user(session, UserRole.DIRECTOR)
+    """Same fallback ladder as `get_effective_role_ids` (unit/seed path)."""
+    user = _make_user(session, "DIRECTOR")
     # Two permissions DIRECTOR does not hold legacy-wise, so the assertions
     # read the tenant resolution and nothing else.
-    default_type = UserType(name="Padrão", permissions=["lots:delete"])
-    foreign_type = UserType(
+    default_type = Role(name="Padrão", permissions=["lots:delete"])
+    foreign_type = Role(
         name="Outra", tenant_id=tenant_b.id, permissions=["packages:my_lots_read"]
     )
     session.add(default_type)
     session.add(foreign_type)
     session.commit()
-    user.user_types.extend([default_type, foreign_type])
+    user.roles.extend([default_type, foreign_type])
     session.add(user)
     session.commit()
 
@@ -189,7 +209,7 @@ def test_a_fresh_tenant_has_no_role_with_permissions(
     client: TestClient, session: Session
 ):
     """"A fresh tenant's role list comes back empty" == empty of permissions."""
-    admin = _make_user(session, UserRole.ADMINISTRATOR)
+    admin = _make_user(session, "ADMINISTRATOR")
 
     response = client.post(
         "/api/v1/tenants",
@@ -200,19 +220,19 @@ def test_a_fresh_tenant_has_no_role_with_permissions(
     tenant_id = uuid.UUID(response.json()["id"])
 
     rows = session.exec(
-        select(UserType).where(UserType.tenant_id == tenant_id)
+        select(Role).where(Role.tenant_id == tenant_id)
     ).all()
 
     # APRAS-42 §7.2 still requires the six role-linked rows for the menu gate.
-    assert {row.role for row in rows} == set(UserRole)
+    assert {row.name for row in rows} == set(PROFILE_ROLE_NAMES.values())
     assert all(row.permissions == [] for row in rows)
 
 
 def test_seed_creates_no_permissions(session: Session, tenant_b: Tenant):
-    TenantService.ensure_role_types(session, tenant_b.id)
+    TenantService.ensure_legacy_roles(session, tenant_b.id)
 
     rows = session.exec(
-        select(UserType).where(UserType.tenant_id == tenant_b.id)
+        select(Role).where(Role.tenant_id == tenant_b.id)
     ).all()
 
     assert rows
@@ -220,12 +240,12 @@ def test_seed_creates_no_permissions(session: Session, tenant_b: Tenant):
 
 
 def test_the_column_defaults_to_an_empty_list(session: Session):
-    user_type = UserType(name="Sem bundle")
-    session.add(user_type)
+    role = Role(name="Sem bundle")
+    session.add(role)
     session.commit()
-    session.refresh(user_type)
+    session.refresh(role)
 
-    assert user_type.permissions == []
+    assert role.permissions == []
 
 
 # ---------------------------------------------------------------------------
@@ -237,7 +257,7 @@ def test_the_capability_resolves_to_the_whole_catalogue_in_the_granting_tenant(
     session: Session,
 ):
     """The capability means what its name says: every permission, here."""
-    user = _make_user(session, UserRole.RESIDENT)
+    user = _make_user(session, "RESIDENT")
     session.add(
         UserTenantLink(
             user_id=user.id, tenant_id=DEFAULT_TENANT_ID, is_tenant_admin=True
@@ -249,12 +269,12 @@ def test_the_capability_resolves_to_the_whole_catalogue_in_the_granting_tenant(
     result = deps.get_effective_permissions(user, session)
 
     assert result == PERMISSIONS
-    assert LEGACY_ROLE_PERMISSIONS[UserRole.RESIDENT] <= result
+    assert bundle("RESIDENT") <= result
 
 
 def test_the_bridge_grants_nothing_without_an_acting_tenant(session: Session):
     """`is_acting_tenant_admin` has no DEFAULT_TENANT_ID fallback, on purpose."""
-    user = _make_user(session, UserRole.RESIDENT)
+    user = _make_user(session, "RESIDENT")
     session.add(
         UserTenantLink(
             user_id=user.id, tenant_id=DEFAULT_TENANT_ID, is_tenant_admin=True
@@ -264,13 +284,13 @@ def test_the_bridge_grants_nothing_without_an_acting_tenant(session: Session):
 
     result = deps.get_effective_permissions(user, session)
 
-    assert result == LEGACY_ROLE_PERMISSIONS[UserRole.RESIDENT]
+    assert result == bundle("RESIDENT")
 
 
 def test_the_bridge_grants_nothing_in_a_tenant_that_did_not_grant_it(
     session: Session, tenant_b: Tenant
 ):
-    user = _make_user(session, UserRole.RESIDENT)
+    user = _make_user(session, "RESIDENT")
     session.add(
         UserTenantLink(
             user_id=user.id, tenant_id=tenant_b.id, is_tenant_admin=True
@@ -286,4 +306,4 @@ def test_the_bridge_grants_nothing_in_a_tenant_that_did_not_grant_it(
 
     result = deps.get_effective_permissions(user, session)
 
-    assert result == LEGACY_ROLE_PERMISSIONS[UserRole.RESIDENT]
+    assert result == bundle("RESIDENT")

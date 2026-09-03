@@ -5,12 +5,49 @@ import { TaskPriority, TaskStatus } from "../../types";
 import { useCreateTask, useUpdateTask } from "../../hooks/useTasks";
 import { useAssignableUsers } from "../../../../hooks/useUsers";
 import { useCategories } from "../../hooks/useCategories";
-import { useUserTypes } from "../../../../hooks/useUserTypes";
-import {
-  useAuth,
-  UserRole,
-} from "../../../user-administration/context/AuthContext";
+import { useRoles } from "../../../../hooks/useRoles";
+import { useAuth,  } from "../../../user-administration/context/AuthContext";
 import { useSimulation } from "../../../user-administration/context/SimulationContext";
+import { PERMISSIONS_BY_ROLE } from "../../../../test/permissionFixtures";
+
+/** The profile a *simulation* stands for; set per case where it varies. */
+let mockSimulatedProfile = "MANAGER";
+
+/** The profile each case's fixture stands for. */
+const mockProfile = () => {
+  const user = useAuth().user;
+  if (user?.is_superuser) return "ADMINISTRATOR";
+  return String(user?.id ?? "").startsWith("director") ? "DIRECTOR" : "MANAGER";
+};
+
+// IAM F5 (APRAS-49 §10.2): the component reads its *permissions* now, not a
+// role. Mocking the access module keeps each case's signal exactly where it
+// was — the `useAuth()` fixture this file already varies per test — while
+// removing the `/permissions/me` query from the render path, which is what
+// made a `QueryClientProvider` necessary.
+vi.mock("../../../../features/user-administration/access/useCanAccess", () => {
+  const build = (profile: string) => ({
+    has: (permission: string) =>
+      (PERMISSIONS_BY_ROLE[profile] ?? []).includes(permission),
+    hasModule: (moduleName: string) =>
+      (PERMISSIONS_BY_ROLE[profile] ?? []).some((permission) =>
+        permission.startsWith(`${moduleName}:`),
+      ),
+    isLoading: false,
+    all: new Set(PERMISSIONS_BY_ROLE[profile] ?? []),
+  });
+  return {
+    // Display reads the **effective** set: while simulating it is the
+    // simulated roles' union, not the real user's (APRAS-35's split, which
+    // IAM F5 preserves — see `useCanAccess`'s two-set table).
+    useEffectivePermissionSet: () =>
+      build(useSimulation().isSimulating ? mockSimulatedProfile : mockProfile()),
+    usePermissionSet: () => build(mockProfile()),
+    useCanAccess: () => ({ allowed: true, isLoading: false }),
+    useCanShowMenu: () => ({ allowed: true, isLoading: false }),
+  };
+});
+
 
 // Mock the hooks
 vi.mock("../../hooks/useTasks", () => ({
@@ -27,8 +64,8 @@ vi.mock("../../hooks/useCategories", () => ({
   useCategories: vi.fn(),
 }));
 
-vi.mock("../../../../hooks/useUserTypes", () => ({
-  useUserTypes: vi.fn(),
+vi.mock("../../../../hooks/useRoles", () => ({
+  useRoles: vi.fn(),
 }));
 
 vi.mock(
@@ -41,24 +78,22 @@ vi.mock(
     return {
       ...actual,
       useAuth: vi.fn(() => ({
-        user: { id: "admin-1", role: UserRole.ADMINISTRATOR },
+        user: { id: "admin-1", is_superuser: true },
       })),
     };
   },
 );
 
-// TaskForm now reads its effective role via useEffectiveIdentity, which
+// TaskForm now reads its effective role via useEffectivePermissionSet, which
 // combines useAuth (mocked above, varies per test) with useSimulation. Keep
 // simulation permanently inactive by default so existing role-based
 // assertions keep reflecting the real user's role; individual tests below
 // override this to exercise the simulation-specific behavior.
 vi.mock("../../../user-administration/context/SimulationContext", () => ({
   useSimulation: vi.fn(() => ({
-    simulatedRole: null,
-    simulatedUserTypeIds: [],
+    simulatedRoleIds: [],
     isSimulating: false,
-    setSimulatedRole: vi.fn(),
-    setSimulatedUserTypeIds: vi.fn(),
+    setSimulatedRoleIds: vi.fn(),
     stopSimulation: vi.fn(),
   })),
 }));
@@ -70,6 +105,8 @@ describe("TaskForm", () => {
   const mockUpdateMutate = vi.fn();
 
   beforeEach(() => {
+
+    mockSimulatedProfile = "MANAGER";
     vi.clearAllMocks();
 
     vi.mocked(useCreateTask).mockReturnValue({
@@ -97,8 +134,8 @@ describe("TaskForm", () => {
       isLoading: false,
     } as any); // skipcq: JS-0323
 
-    vi.mocked(useUserTypes).mockReturnValue({
-      data: [{ id: "type-1", name: "Gerente", allowed_menus: [] }],
+    vi.mocked(useRoles).mockReturnValue({
+      data: [{ id: "type-1", name: "Gerente" }],
       isLoading: false,
     } as any);
   });
@@ -467,7 +504,7 @@ describe("TaskForm", () => {
 
   it("shows title field for DIRECTOR when editing a task", () => {
     vi.mocked(useAuth).mockReturnValue({
-      user: { id: "director-1", role: UserRole.DIRECTOR },
+      user: { id: "director-1" },
     } as any); // skipcq: JS-0323
 
     const mockTask = {
@@ -498,7 +535,7 @@ describe("TaskForm", () => {
 
   it("submits update payload for director editing", () => {
     vi.mocked(useAuth).mockReturnValue({
-      user: { id: "director-1", role: UserRole.DIRECTOR },
+      user: { id: "director-1" },
     } as any); // skipcq: JS-0323
 
     const mockTask = {
@@ -553,7 +590,7 @@ describe("TaskForm", () => {
 
   it("submits update payload for administrator editing", () => {
     vi.mocked(useAuth).mockReturnValue({
-      user: { id: "admin-1", role: UserRole.ADMINISTRATOR },
+      user: { id: "admin-1", is_superuser: true },
     } as any); // skipcq: JS-0323
 
     const mockTask = {
@@ -617,7 +654,7 @@ describe("TaskForm", () => {
 
     it("shows the visibility multi-select for ADMINISTRATOR in edit mode", () => {
       vi.mocked(useAuth).mockReturnValue({
-        user: { id: "admin-1", role: UserRole.ADMINISTRATOR },
+        user: { id: "admin-1", is_superuser: true },
       } as any); // skipcq: JS-0323
 
       render(
@@ -630,13 +667,13 @@ describe("TaskForm", () => {
 
       expect(screen.getByText("Visibilidade")).toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: /Selecionar tipos/i }),
+        screen.getByRole("button", { name: /Selecionar papéis/i }),
       ).toBeInTheDocument();
     });
 
     it("shows the visibility multi-select for DIRECTOR in edit mode", () => {
       vi.mocked(useAuth).mockReturnValue({
-        user: { id: "director-1", role: UserRole.DIRECTOR },
+        user: { id: "director-1" },
       } as any); // skipcq: JS-0323
 
       render(
@@ -648,13 +685,13 @@ describe("TaskForm", () => {
       );
 
       expect(
-        screen.getByRole("button", { name: /Selecionar tipos/i }),
+        screen.getByRole("button", { name: /Selecionar papéis/i }),
       ).toBeInTheDocument();
     });
 
     it("does NOT show the visibility multi-select for MANAGER", () => {
       vi.mocked(useAuth).mockReturnValue({
-        user: { id: "manager-1", role: UserRole.MANAGER },
+        user: { id: "manager-1" },
       } as any); // skipcq: JS-0323
 
       render(
@@ -666,25 +703,25 @@ describe("TaskForm", () => {
       );
 
       expect(
-        screen.queryByRole("button", { name: /Selecionar tipos/i }),
+        screen.queryByRole("button", { name: /Selecionar papéis/i }),
       ).not.toBeInTheDocument();
     });
 
     it("shows the visibility multi-select in create mode for ADMIN", () => {
       vi.mocked(useAuth).mockReturnValue({
-        user: { id: "admin-1", role: UserRole.ADMINISTRATOR },
+        user: { id: "admin-1", is_superuser: true },
       } as any); // skipcq: JS-0323
 
       render(<TaskForm onSuccess={mockOnSuccess} onCancel={mockOnCancel} />);
 
       expect(
-        screen.getByRole("button", { name: /Selecionar tipos/i }),
+        screen.getByRole("button", { name: /Selecionar papéis/i }),
       ).toBeInTheDocument();
     });
 
-    it("selecting a user type updates visible_to_ids and submits it", () => {
+    it("selecting a role updates visible_to_ids and submits it", () => {
       vi.mocked(useAuth).mockReturnValue({
-        user: { id: "admin-1", role: UserRole.ADMINISTRATOR },
+        user: { id: "admin-1", is_superuser: true },
       } as any); // skipcq: JS-0323
 
       render(
@@ -695,7 +732,7 @@ describe("TaskForm", () => {
         />,
       );
 
-      fireEvent.click(screen.getByRole("button", { name: /Selecionar tipos/i }));
+      fireEvent.click(screen.getByRole("button", { name: /Selecionar papéis/i }));
       fireEvent.click(screen.getByRole("checkbox"));
 
       fireEvent.click(screen.getByRole("button", { name: /Atualizar tarefa/i }));
@@ -710,7 +747,7 @@ describe("TaskForm", () => {
 
     it("pre-fills selected ids from an existing task's visible_to list", () => {
       vi.mocked(useAuth).mockReturnValue({
-        user: { id: "admin-1", role: UserRole.ADMINISTRATOR },
+        user: { id: "admin-1", is_superuser: true },
       } as any); // skipcq: JS-0323
 
       render(
@@ -718,7 +755,7 @@ describe("TaskForm", () => {
           task={
             {
               ...existingTask,
-              visible_to: [{ id: "type-1", name: "Gerente", allowed_menus: [] }],
+              visible_to: [{ id: "type-1", name: "Gerente" }],
             } as any // skipcq: JS-0323
           }
           onSuccess={mockOnSuccess}
@@ -732,7 +769,7 @@ describe("TaskForm", () => {
 
   it("submits update payload for director editing with empty fields", () => {
     vi.mocked(useAuth).mockReturnValue({
-      user: { id: "director-1", role: UserRole.DIRECTOR },
+      user: { id: "director-1" },
     } as any); // skipcq: JS-0323
 
     const mockTask = {
@@ -777,34 +814,30 @@ describe("TaskForm", () => {
   describe("admin role simulation", () => {
     it("hides the visibility multi-select when simulating MANAGER, even for a real ADMINISTRATOR", () => {
       vi.mocked(useAuth).mockReturnValue({
-        user: { id: "admin-1", role: UserRole.ADMINISTRATOR },
+        user: { id: "admin-1", is_superuser: true },
       } as any); // skipcq: JS-0323
       vi.mocked(useSimulation).mockReturnValue({
-        simulatedRole: UserRole.MANAGER,
-        simulatedUserTypeIds: [],
+        simulatedRoleIds: [],
         isSimulating: true,
-        setSimulatedRole: vi.fn(),
-        setSimulatedUserTypeIds: vi.fn(),
+        setSimulatedRoleIds: vi.fn(),
         stopSimulation: vi.fn(),
       });
 
       render(<TaskForm onSuccess={mockOnSuccess} onCancel={mockOnCancel} />);
 
       expect(
-        screen.queryByRole("button", { name: /Selecionar tipos/i }),
+        screen.queryByRole("button", { name: /Selecionar papéis/i }),
       ).not.toBeInTheDocument();
     });
 
     it("disables the submit button while simulating, even though the form is not otherwise loading", () => {
       vi.mocked(useAuth).mockReturnValue({
-        user: { id: "admin-1", role: UserRole.ADMINISTRATOR },
+        user: { id: "admin-1", is_superuser: true },
       } as any); // skipcq: JS-0323
       vi.mocked(useSimulation).mockReturnValue({
-        simulatedRole: UserRole.GUEST,
-        simulatedUserTypeIds: [],
+        simulatedRoleIds: [],
         isSimulating: true,
-        setSimulatedRole: vi.fn(),
-        setSimulatedUserTypeIds: vi.fn(),
+        setSimulatedRoleIds: vi.fn(),
         stopSimulation: vi.fn(),
       });
 
@@ -817,14 +850,12 @@ describe("TaskForm", () => {
 
     it("keeps the submit button enabled when not simulating", () => {
       vi.mocked(useAuth).mockReturnValue({
-        user: { id: "admin-1", role: UserRole.ADMINISTRATOR },
+        user: { id: "admin-1", is_superuser: true },
       } as any); // skipcq: JS-0323
       vi.mocked(useSimulation).mockReturnValue({
-        simulatedRole: null,
-        simulatedUserTypeIds: [],
+        simulatedRoleIds: [],
         isSimulating: false,
-        setSimulatedRole: vi.fn(),
-        setSimulatedUserTypeIds: vi.fn(),
+        setSimulatedRoleIds: vi.fn(),
         stopSimulation: vi.fn(),
       });
 

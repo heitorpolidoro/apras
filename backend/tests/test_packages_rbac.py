@@ -6,25 +6,28 @@ UserLotLink/Resident must still be rejected on every package route.
 import uuid
 
 import pytest
-from app.core.security import create_access_token
-from app.models.enums import LotAssociationType, UserRole
-from app.models.resident import Resident
-from app.models.user import User
-from app.schemas.lot import LotCreate, UserLotLinkCreate
-from app.services.lot_service import LotService
-from app.services.package_service import PackageService
-from app.schemas.package import PackageCreate
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
+from app.core.security import create_access_token
+from app.models.enums import LotAssociationType
+from app.models.resident import Resident
+from app.models.user import User
+from app.schemas.lot import LotCreate, UserLotLinkCreate
+from app.schemas.package import PackageCreate
+from app.services.lot_service import LotService
+from app.services.package_service import PackageService
+from tests.conftest import make_user
 
-def _make_user(session: Session, role: UserRole, cpf: str, email: str) -> User:
-    user = User(
+
+def _make_user(session: Session, role: str, cpf: str, email: str) -> User:
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email=email,
         full_name=f"User {email}",
         hashed_password="hash",
-        role=role,
+        profile=role,
         cpf=cpf,
     )
     session.add(user)
@@ -35,12 +38,12 @@ def _make_user(session: Session, role: UserRole, cpf: str, email: str) -> User:
 
 @pytest.fixture
 def guest_user(session: Session) -> User:
-    return _make_user(session, UserRole.GUEST, "55566677789", "guest_rbac_pkg@test.com")
+    return _make_user(session, "GUEST", "55566677789", "guest_rbac_pkg@test.com")
 
 
 @pytest.fixture
 def resident_user(session: Session) -> User:
-    return _make_user(session, UserRole.RESIDENT, "66677788890", "resident_rbac_pkg@test.com")
+    return _make_user(session, "RESIDENT", "66677788890", "resident_rbac_pkg@test.com")
 
 
 def _headers(user: User) -> dict[str, str]:

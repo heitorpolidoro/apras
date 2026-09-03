@@ -6,12 +6,8 @@ import * as AuthHook from "../context/AuthContext";
 import * as TenantHook from "../context/useTenant";
 import { useMyPermissions } from "../../../hooks/usePermissionQueries";
 import { ROUTE_ACCESS } from "../access/routeAccess";
-import {
-  ALL_PERMISSIONS,
-  PERMISSIONS_BY_ROLE,
-  settledPermissions,
-} from "../../../test/permissionFixtures";
-import { UserRole, type User } from "../../../types/auth";
+import { ALL_PERMISSIONS, PERMISSIONS_BY_ROLE, settledPermissions,  } from "../../../test/permissionFixtures";
+import { type User } from "../../../types/auth";
 
 /**
  * The APRAS-43 admin *capability*, restated over permissions (APRAS-48 §2.4).
@@ -25,17 +21,15 @@ import { UserRole, type User } from "../../../types/auth";
  */
 vi.mock("../context/SimulationContext", () => ({
   useSimulation: vi.fn(() => ({
-    simulatedRole: null,
-    simulatedUserTypeIds: [],
+    simulatedRoleIds: [],
     isSimulating: false,
-    setSimulatedRole: vi.fn(),
-    setSimulatedUserTypeIds: vi.fn(),
+    setSimulatedRoleIds: vi.fn(),
     stopSimulation: vi.fn(),
   })),
 }));
 
-vi.mock("../../../hooks/useUserTypes", () => ({
-  useUserTypes: vi.fn(() => ({ data: [] })),
+vi.mock("../../../hooks/useRoles", () => ({
+  useRoles: vi.fn(() => ({ data: [] })),
 }));
 
 vi.mock("../../../hooks/usePermissionQueries", () => ({
@@ -81,7 +75,6 @@ const holding = (permissions: readonly string[]) => {
  */
 const TENANT_ADMIN_OF_A: Partial<User> = {
   id: "u-syndic",
-  role: UserRole.RESIDENT,
   tenants: [
     {
       tenant_id: TENANT_A,
@@ -154,7 +147,7 @@ describe("ProtectedRoute admin capability, as permissions", () => {
     mockAuth(TENANT_ADMIN_OF_A);
     mockTenant(TENANT_B, false);
     // Outside the granting tenant they hold only their own role's bundle.
-    holding(PERMISSIONS_BY_ROLE[UserRole.RESIDENT]);
+    holding(PERMISSIONS_BY_ROLE["RESIDENT"]);
 
     renderAdminUsers();
 
@@ -163,10 +156,10 @@ describe("ProtectedRoute admin capability, as permissions", () => {
   });
 
   it("still renders /admin/users for a global ADMINISTRATOR", () => {
-    mockAuth({ id: "u-admin", role: UserRole.ADMINISTRATOR, tenants: [] });
+    mockAuth({ id: "u-admin", is_superuser: true, tenants: [] });
     // Not a tenant_admin anywhere: the legacy bundle alone must carry it.
     mockTenant(TENANT_B, false);
-    holding(PERMISSIONS_BY_ROLE[UserRole.ADMINISTRATOR]);
+    holding(PERMISSIONS_BY_ROLE["ADMINISTRATOR"]);
 
     renderAdminUsers();
 
@@ -174,9 +167,9 @@ describe("ProtectedRoute admin capability, as permissions", () => {
   });
 
   it("a MANAGER passes contact-info on users:update_contact alone", () => {
-    mockAuth({ id: "u-manager", role: UserRole.MANAGER, tenants: [] });
+    mockAuth({ id: "u-manager", tenants: [] });
     mockTenant(TENANT_A, false);
-    holding(PERMISSIONS_BY_ROLE[UserRole.MANAGER]);
+    holding(PERMISSIONS_BY_ROLE["MANAGER"]);
 
     renderContactInfo();
 
@@ -194,9 +187,9 @@ describe("ProtectedRoute admin capability, as permissions", () => {
   });
 
   it("denies a user with neither the role's bundle nor the capability", () => {
-    mockAuth({ id: "u-resident", role: UserRole.RESIDENT, tenants: [] });
+    mockAuth({ id: "u-resident", tenants: [] });
     mockTenant(TENANT_A, false);
-    holding(PERMISSIONS_BY_ROLE[UserRole.RESIDENT]);
+    holding(PERMISSIONS_BY_ROLE["RESIDENT"]);
 
     renderContactInfo();
 

@@ -3,7 +3,7 @@
 Covers the grant/revoke API, the capability matrix over the seven swapped
 tenant-scoped admin routes, the composition with the `allowed_menus` menu
 gate, the `/api/v1/tenants` 403s, the route-level structural assertion, the
-`ensure_role_types` re-seed path and the inactive-tenant message oracle.
+`ensure_legacy_roles` re-seed path and the inactive-tenant message oracle.
 
 Every request goes through `tenant_client`, whose override gives each request
 its own `Session` — exactly what `app.db.get_session` does in production. That
@@ -21,16 +21,17 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
 from app.api import deps
+from app.core.permissions import PERMISSIONS
 from app.core.security import create_access_token, get_password_hash
 from app.core.tenant_context import acting_tenant_scope
 from app.main import app
-from app.models.enums import MenuKey, UserRole
 from app.models.lot import Lot
+from app.models.role import Role
 from app.models.task import Task
 from app.models.tenant import DEFAULT_TENANT_ID, Tenant, UserTenantLink
 from app.models.user import User
-from app.models.user_type import UserType
-from app.services.tenant_service import ROLE_TYPE_NAMES, TenantService
+from app.services.tenant_service import LEGACY_ROLE_NAMES, TenantService
+from tests.conftest import make_user
 
 TENANT_A = DEFAULT_TENANT_ID
 
@@ -45,13 +46,14 @@ def _auth(user: User, tenant_id=None) -> dict[str, str]:
 _CPF_COUNTER = iter(range(10_000, 99_999))
 
 
-def _make_user(session: Session, email: str, role: UserRole) -> User:
-    user = User(
+def _make_user(session: Session, email: str, role: str) -> User:
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email=email,
         full_name=email.split("@", maxsplit=1)[0],
         hashed_password=get_password_hash("password"),
-        role=role,
+        profile=role,
         cpf=f"9{next(_CPF_COUNTER):010d}"[:11],
     )
     session.add(user)
@@ -68,7 +70,7 @@ def _make_user(session: Session, email: str, role: UserRole) -> User:
 @pytest.fixture(name="global_admin")
 def global_admin_fixture(session: Session):
     """An ADMINISTRATOR whose only membership is tenant A."""
-    user = _make_user(session, "ta-global-admin@test.com", UserRole.ADMINISTRATOR)
+    user = _make_user(session, "ta-global-admin@test.com", "ADMINISTRATOR")
     session.add(UserTenantLink(user_id=user.id, tenant_id=TENANT_A))
     session.commit()
     return user
@@ -77,7 +79,7 @@ def global_admin_fixture(session: Session):
 @pytest.fixture(name="tenant_admin")
 def tenant_admin_fixture(session: Session, tenant_b: Tenant):
     """A RESIDENT holding the capability on A and a plain membership on B."""
-    user = _make_user(session, "ta-syndic@test.com", UserRole.RESIDENT)
+    user = _make_user(session, "ta-syndic@test.com", "RESIDENT")
     session.add(
         UserTenantLink(user_id=user.id, tenant_id=TENANT_A, is_tenant_admin=True)
     )
@@ -89,7 +91,7 @@ def tenant_admin_fixture(session: Session, tenant_b: Tenant):
 @pytest.fixture(name="plain_member")
 def plain_member_fixture(session: Session):
     """A RESIDENT member of A holding no capability anywhere."""
-    user = _make_user(session, "ta-plain@test.com", UserRole.RESIDENT)
+    user = _make_user(session, "ta-plain@test.com", "RESIDENT")
     session.add(UserTenantLink(user_id=user.id, tenant_id=TENANT_A))
     session.commit()
     return user
@@ -97,16 +99,16 @@ def plain_member_fixture(session: Session):
 
 @pytest.fixture(name="a_rows")
 def a_rows_fixture(session: Session, global_admin: User):
-    """One task, one lot and one non-role UserType in tenant A."""
+    """One task, one lot and one non-role Role in tenant A."""
     task = Task(title="Tenant A task", created_by_id=global_admin.id)
     lot = Lot(block="A", lot_number="101")
-    user_type = UserType(name="Zeladoria A", allowed_menus=[])
-    session.add_all([task, lot, user_type])
+    role = Role(name="Zeladoria A")
+    session.add_all([task, lot, role])
     session.commit()
     session.refresh(task)
     session.refresh(lot)
-    session.refresh(user_type)
-    return {"task": task.id, "lot": lot.id, "user_type": user_type.id}
+    session.refresh(role)
+    return {"task": task.id, "lot": lot.id, "role": role.id}
 
 
 @pytest.fixture(name="b_rows")
@@ -116,19 +118,19 @@ def b_rows_fixture(session: Session, tenant_b: Tenant, global_admin: User):
         title="Tenant B task", created_by_id=global_admin.id, tenant_id=tenant_b.id
     )
     lot = Lot(block="B", lot_number="202", tenant_id=tenant_b.id)
-    user_type = UserType(name="Zeladoria B", allowed_menus=[], tenant_id=tenant_b.id)
-    b_user = _make_user(session, "ta-b-only@test.com", UserRole.RESIDENT)
-    session.add_all([task, lot, user_type])
+    role = Role(name="Zeladoria B", tenant_id=tenant_b.id)
+    b_user = _make_user(session, "ta-b-only@test.com", "RESIDENT")
+    session.add_all([task, lot, role])
     session.commit()
     session.add(UserTenantLink(user_id=b_user.id, tenant_id=tenant_b.id))
     session.commit()
     session.refresh(task)
     session.refresh(lot)
-    session.refresh(user_type)
+    session.refresh(role)
     return {
         "task": task.id,
         "lot": lot.id,
-        "user_type": user_type.id,
+        "role": role.id,
         "user": b_user.id,
     }
 
@@ -205,7 +207,7 @@ def test_grant_for_an_unknown_user_is_404(
 def test_grant_for_a_non_member_is_404(
     tenant_client: TestClient, global_admin: User, tenant_b: Tenant, session: Session
 ):
-    outsider = _make_user(session, "ta-outsider@test.com", UserRole.RESIDENT)
+    outsider = _make_user(session, "ta-outsider@test.com", "RESIDENT")
     response = tenant_client.patch(
         _members_url(tenant_b.id, outsider.id),
         headers=_auth(global_admin),
@@ -217,7 +219,7 @@ def test_grant_for_a_non_member_is_404(
 def test_membership_can_be_created_already_granted(
     tenant_client: TestClient, global_admin: User, tenant_b: Tenant, session: Session
 ):
-    newcomer = _make_user(session, "ta-newcomer@test.com", UserRole.RESIDENT)
+    newcomer = _make_user(session, "ta-newcomer@test.com", "RESIDENT")
     response = tenant_client.post(
         f"/api/v1/tenants/{tenant_b.id}/members",
         headers=_auth(global_admin),
@@ -230,7 +232,7 @@ def test_membership_can_be_created_already_granted(
 def test_membership_create_defaults_to_plain_member(
     tenant_client: TestClient, global_admin: User, tenant_b: Tenant, session: Session
 ):
-    newcomer = _make_user(session, "ta-newcomer2@test.com", UserRole.RESIDENT)
+    newcomer = _make_user(session, "ta-newcomer2@test.com", "RESIDENT")
     response = tenant_client.post(
         f"/api/v1/tenants/{tenant_b.id}/members",
         headers=_auth(global_admin),
@@ -327,23 +329,23 @@ def test_tenant_admin_passes_every_admin_gated_route_in_their_tenant(
     )
     assert (
         tenant_client.post(
-            "/api/v1/user-types/",
+            "/api/v1/roles/",
             headers=headers,
-            json={"name": "Criado pelo síndico", "allowed_menus": []},
+            json={"name": "Criado pelo síndico" },
         ).status_code
         == 201
     )
     assert (
         tenant_client.patch(
-            f"/api/v1/user-types/{a_rows['user_type']}",
+            f"/api/v1/roles/{a_rows['role']}",
             headers=headers,
-            json={"name": "Zeladoria A2", "allowed_menus": []},
+            json={"name": "Zeladoria A2" },
         ).status_code
         == 200
     )
     assert (
         tenant_client.delete(
-            f"/api/v1/user-types/{a_rows['user_type']}", headers=headers
+            f"/api/v1/roles/{a_rows['role']}", headers=headers
         ).status_code
         == 204
     )
@@ -380,17 +382,17 @@ def test_tenant_admin_is_403_acting_where_they_hold_no_grant(
             json={"phone": "11888888888"},
         ),
         tenant_client.post(
-            "/api/v1/user-types/",
+            "/api/v1/roles/",
             headers=headers,
-            json={"name": "Nope", "allowed_menus": []},
+            json={"name": "Nope" },
         ),
         tenant_client.patch(
-            f"/api/v1/user-types/{b_rows['user_type']}",
+            f"/api/v1/roles/{b_rows['role']}",
             headers=headers,
-            json={"name": "Nope", "allowed_menus": []},
+            json={"name": "Nope" },
         ),
         tenant_client.delete(
-            f"/api/v1/user-types/{b_rows['user_type']}", headers=headers
+            f"/api/v1/roles/{b_rows['role']}", headers=headers
         ),
         tenant_client.delete(f"/api/v1/tasks/{b_rows['task']}", headers=headers),
         tenant_client.delete(f"/api/v1/lots/{b_rows['lot']}", headers=headers),
@@ -414,17 +416,17 @@ def test_plain_member_of_a_is_403_on_the_same_routes(
             json={"phone": "11888888888"},
         ),
         tenant_client.post(
-            "/api/v1/user-types/",
+            "/api/v1/roles/",
             headers=headers,
-            json={"name": "Nope", "allowed_menus": []},
+            json={"name": "Nope" },
         ),
         tenant_client.patch(
-            f"/api/v1/user-types/{a_rows['user_type']}",
+            f"/api/v1/roles/{a_rows['role']}",
             headers=headers,
-            json={"name": "Nope", "allowed_menus": []},
+            json={"name": "Nope" },
         ),
         tenant_client.delete(
-            f"/api/v1/user-types/{a_rows['user_type']}", headers=headers
+            f"/api/v1/roles/{a_rows['role']}", headers=headers
         ),
         tenant_client.delete(f"/api/v1/tasks/{a_rows['task']}", headers=headers),
         tenant_client.delete(f"/api/v1/lots/{a_rows['lot']}", headers=headers),
@@ -447,9 +449,9 @@ def test_tenant_admin_never_reaches_tenant_b_data_while_acting_in_a(
     )
     assert (
         tenant_client.patch(
-            f"/api/v1/user-types/{b_rows['user_type']}",
+            f"/api/v1/roles/{b_rows['role']}",
             headers=headers,
-            json={"name": "Nope", "allowed_menus": []},
+            json={"name": "Nope" },
         ).status_code
         == 404
     )
@@ -460,35 +462,48 @@ def test_tenant_admin_never_reaches_tenant_b_data_while_acting_in_a(
 
 
 # ---------------------------------------------------------------------------
-# §5.1 — composition with the allowed_menus gate
+# §5.1 — the capability composes with the permission layer
 # ---------------------------------------------------------------------------
+#
+# IAM F5 (APRAS-49 §4.1) deleted the `allowed_menus` gate these three cases
+# were written against. What they measured — "the capability short-circuits
+# in its own tenant and grants nothing anywhere else" — survives verbatim on
+# `tasks:read`, which is what gates `/api/v1/tasks/` now. The *shape* of the
+# refusal moves: it is `require_permission`'s 403 rather than the gate's, so
+# the detail string changes with the guard that emits it.
 
 
-def test_tenant_admin_is_exempt_from_the_menu_gate_in_their_tenant(
+def test_tenant_admin_is_exempt_from_the_permission_check_in_their_tenant(
     tenant_client: TestClient, tenant_admin: User
 ):
     response = tenant_client.get("/api/v1/tasks/", headers=_auth(tenant_admin, TENANT_A))
     assert response.status_code == 200
 
 
-def test_tenant_admin_is_subject_to_the_menu_gate_elsewhere(
+def test_tenant_admin_holds_nothing_elsewhere(
     tenant_client: TestClient, tenant_admin: User, tenant_b: Tenant
 ):
+    """In tenant B the capability is not readable, so the bundle is all.
+
+    The list is *empty*, not refused: `tasks:read` is not a route-level
+    guard, and an empty answer is what `parity_matrix_baseline.json` records
+    for a caller with no `tasks:read` (§4.2).
+    """
     response = tenant_client.get(
         "/api/v1/tasks/", headers=_auth(tenant_admin, tenant_b.id)
     )
-    assert response.status_code == 403
-    assert response.json()["detail"] == "Not enough privileges to access tasks"
+    assert response.status_code == 200
+    assert response.json() == []
 
 
-def test_menu_gate_still_admits_a_matching_user_type_without_the_capability(
+def test_an_ordinary_role_still_admits_a_member_without_the_capability(
     tenant_client: TestClient, session: Session, plain_member: User
 ):
-    """The ordinary UserType path is untouched by the short-circuit."""
-    user_type = UserType(name="Tarefas A", allowed_menus=[MenuKey.TASKS.value])
-    session.add(user_type)
+    """The ordinary Role path is untouched by the short-circuit."""
+    role = Role(name="Tarefas A", permissions=["tasks:read"])
+    session.add(role)
     session.commit()
-    plain_member.user_types.append(user_type)
+    plain_member.roles.append(role)
     session.add(plain_member)
     session.commit()
 
@@ -506,7 +521,6 @@ def test_is_acting_tenant_admin_is_false_without_an_acting_tenant(
 ):
     """A `Session` with no acting tenant grants nothing — fail closed."""
     assert deps.is_acting_tenant_admin(tenant_admin, session) is False
-    assert deps.has_admin_capability(tenant_admin, session) is False
 
 
 def test_is_acting_tenant_admin_reads_the_acting_tenant(
@@ -514,10 +528,8 @@ def test_is_acting_tenant_admin_reads_the_acting_tenant(
 ):
     with acting_tenant_scope(session, TENANT_A):
         assert deps.is_acting_tenant_admin(tenant_admin, session) is True
-        assert deps.has_admin_capability(tenant_admin, session) is True
     with acting_tenant_scope(session, tenant_b.id):
         assert deps.is_acting_tenant_admin(tenant_admin, session) is False
-        assert deps.has_admin_capability(tenant_admin, session) is False
 
 
 def test_the_superuser_guard_stays_available_and_unchanged(
@@ -541,43 +553,44 @@ def test_the_superuser_guard_stays_available_and_unchanged(
     assert excinfo.value.detail == "The user doesn't have enough privileges"
 
 
-def test_has_admin_capability_is_true_for_an_administrator_anywhere(
+def test_a_superuser_needs_no_capability_anywhere(
     session: Session, global_admin: User
 ):
-    assert deps.has_admin_capability(global_admin, session) is True
+    """`has_admin_capability` died with its only caller (§4.1).
+
+    It existed to let `assert_menu_access` short-circuit for "administrator
+    here", and F3 §5.1 already recorded that the gate was its sole consumer.
+    The property it expressed survives on the flag itself, which
+    `get_effective_permissions` short-circuits on before any tenant is
+    resolved.
+    """
+    assert not hasattr(deps, "has_admin_capability")
+    assert global_admin.is_superuser is True
+    assert deps.get_effective_permissions(global_admin, session) == PERMISSIONS
 
 
-def test_effective_user_type_ids_are_scoped_to_the_acting_tenant(
+def test_effective_role_ids_are_scoped_to_the_acting_tenant(
     session: Session, tenant_b: Tenant
 ):
     """Explicit types of another tenant no longer compose into a decision."""
-    a_type = UserType(name="Explícito A", allowed_menus=[])
-    b_type = UserType(name="Explícito B", allowed_menus=[], tenant_id=tenant_b.id)
-    a_role_type = UserType(name="Morador A", allowed_menus=[], role=UserRole.RESIDENT)
-    b_role_type = UserType(
-        name="Morador B",
-        allowed_menus=[],
-        role=UserRole.RESIDENT,
-        tenant_id=tenant_b.id,
-    )
-    session.add_all([a_type, b_type, a_role_type, b_role_type])
+    a_type = Role(name="Explícito A")
+    b_type = Role(name="Explícito B", tenant_id=tenant_b.id)
+    session.add_all([a_type, b_type])
     session.commit()
 
-    user = _make_user(session, "ta-dual-types@test.com", UserRole.RESIDENT)
-    user.user_types = [a_type, b_type]
+    user = _make_user(session, "ta-dual-types@test.com", "RESIDENT")
+    profile_row = user.roles[0]
+    user.roles = [profile_row, a_type, b_type]
     session.add(user)
     session.commit()
 
     with acting_tenant_scope(session, TENANT_A):
-        assert deps.get_effective_user_type_ids(user, session) == {
+        assert deps.get_effective_role_ids(user, session) == {
             a_type.id,
-            a_role_type.id,
+            profile_row.id,
         }
     with acting_tenant_scope(session, tenant_b.id):
-        assert deps.get_effective_user_type_ids(user, session) == {
-            b_type.id,
-            b_role_type.id,
-        }
+        assert deps.get_effective_role_ids(user, session) == {b_type.id}
 
 
 # ---------------------------------------------------------------------------
@@ -624,55 +637,60 @@ def test_member_of_an_inactive_tenant_still_gets_the_inactive_message(
 
 
 # ---------------------------------------------------------------------------
-# §7 — TenantService.ensure_role_types
+# §7 — TenantService.ensure_legacy_roles
 # ---------------------------------------------------------------------------
 
 
-def _role_types(session: Session, tenant_id) -> list[UserType]:
+def _role_types(session: Session, tenant_id) -> list[Role]:
+    """The historically-named rows of `tenant_id`.
+
+    Keyed on **name** since IAM F5 (APRAS-49 §9.2): the `role` column that
+    identified them was dropped by migration `0033`.
+    """
     return list(
         session.exec(
-            select(UserType).where(
-                UserType.tenant_id == tenant_id, UserType.role.is_not(None)
+            select(Role).where(
+                Role.tenant_id == tenant_id, Role.name.in_(LEGACY_ROLE_NAMES)
             )
         ).all()
     )
 
 
-def test_ensure_role_types_fills_a_tenant_that_has_none(
+def test_ensure_legacy_roles_fills_a_tenant_that_has_none(
     session: Session, tenant_b: Tenant
 ):
     assert _role_types(session, tenant_b.id) == []
-    TenantService.ensure_role_types(session, tenant_b.id)
-    assert {ut.role for ut in _role_types(session, tenant_b.id)} == set(
-        ROLE_TYPE_NAMES
+    TenantService.ensure_legacy_roles(session, tenant_b.id)
+    assert {ut.name for ut in _role_types(session, tenant_b.id)} == set(
+        LEGACY_ROLE_NAMES
     )
 
 
-def test_ensure_role_types_is_idempotent(session: Session, tenant_b: Tenant):
-    TenantService.ensure_role_types(session, tenant_b.id)
+def test_ensure_legacy_roles_is_idempotent(session: Session, tenant_b: Tenant):
+    TenantService.ensure_legacy_roles(session, tenant_b.id)
     before = {ut.id for ut in _role_types(session, tenant_b.id)}
-    TenantService.ensure_role_types(session, tenant_b.id)
+    TenantService.ensure_legacy_roles(session, tenant_b.id)
     after = {ut.id for ut in _role_types(session, tenant_b.id)}
     assert before == after
-    assert len(after) == len(ROLE_TYPE_NAMES)
+    assert len(after) == len(LEGACY_ROLE_NAMES)
 
 
-def test_ensure_role_types_inserts_only_the_missing_rows(
+def test_ensure_legacy_roles_inserts_only_the_missing_rows(
     session: Session, tenant_b: Tenant
 ):
     with acting_tenant_scope(session, tenant_b.id):
         session.add(
-            UserType(name="Morador (papel)", allowed_menus=[], role=UserRole.RESIDENT)
+            Role(name="Morador (papel)")
         )
         session.commit()
 
-    TenantService.ensure_role_types(session, tenant_b.id)
+    TenantService.ensure_legacy_roles(session, tenant_b.id)
     rows = _role_types(session, tenant_b.id)
-    assert len(rows) == len(ROLE_TYPE_NAMES)
-    assert len([ut for ut in rows if ut.role == UserRole.RESIDENT]) == 1
+    assert len(rows) == len(LEGACY_ROLE_NAMES)
+    assert len([ut for ut in rows if ut.name == "Morador (papel)"]) == 1
 
 
-def test_create_tenant_still_seeds_one_role_type_per_role(
+def test_create_tenant_still_seeds_the_six_historically_named_roles(
     tenant_client: TestClient, global_admin: User, session: Session
 ):
     response = tenant_client.post(
@@ -681,7 +699,7 @@ def test_create_tenant_still_seeds_one_role_type_per_role(
     assert response.status_code == 201
     created = uuid.UUID(response.json()["id"])
     session.expire_all()
-    assert {ut.role for ut in _role_types(session, created)} == set(ROLE_TYPE_NAMES)
+    assert {ut.name for ut in _role_types(session, created)} == set(LEGACY_ROLE_NAMES)
 
 
 # ---------------------------------------------------------------------------
@@ -697,6 +715,10 @@ ADMIN_ONLY_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("POST", "/api/v1/tenants/{tenant_id}/members"),
         ("DELETE", "/api/v1/tenants/{tenant_id}/members/{user_id}"),
         ("PATCH", "/api/v1/tenants/{tenant_id}/members/{user_id}"),
+        # IAM F5 (APRAS-49 §8.4): the one route outside `/api/v1/tenants`
+        # that `get_current_superuser` guards -- the grant and the revoke of
+        # the global flag itself.
+        ("PATCH", "/api/v1/users/{user_id}/superuser"),
     }
 )
 
@@ -715,18 +737,34 @@ def _api_routes() -> list[APIRoute]:
     return [route for route in app.routes if isinstance(route, APIRoute)]
 
 
-def test_no_tenant_scoped_route_keeps_a_global_admin_guard():
-    """`get_current_superuser` survives only on the global tenant router."""
+#: The one tenant-scoped route that is nevertheless superuser-guarded (IAM
+#: F5, APRAS-49 §8.4). The classification is deliberate and is the *opposite*
+#: call from APRAS-43's `PATCH /tenants/{id}/members/{user_id}`: that one is
+#: global because `is_tenant_admin` is a per-tenant capability and hiding the
+#: acting tenant is what stops a tenant admin granting it to themselves. Here
+#: the capability is `is_superuser`, a **global** flag only a superuser can
+#: write, so there is no self-grant to prevent by hiding the acting tenant --
+#: and moving the route out of the `users` router purely to reach
+#: `GLOBAL_SCOPED` would cost a new router and a new mount for one handler.
+#: The practical consequence: the caller must send the tenant header, and the
+#: acting tenant plays no part in the decision or in what is written.
+SUPERUSER_GUARDED_SCOPED_ROUTES: frozenset[tuple[str, str]] = frozenset(
+    {("PATCH", "/api/v1/users/{user_id}/superuser")}
+)
+
+
+def test_only_the_superuser_grant_is_both_scoped_and_superuser_guarded():
+    """`get_current_superuser` survives on the global tenant router and §8.4."""
     offenders = []
     for route in _api_routes():
         if not _depends_on(route.dependant, deps.get_current_tenant):
             continue
         if _depends_on(route.dependant, deps.get_current_superuser):
             offenders.extend(_route_keys(route))
-    assert not offenders, sorted(offenders)
+    assert set(offenders) == SUPERUSER_GUARDED_SCOPED_ROUTES, sorted(offenders)
 
 
-def test_get_current_superuser_is_exactly_the_five_tenant_writes():
+def test_get_current_superuser_is_exactly_the_five_tenant_writes_plus_the_grant():
     found = {
         key
         for route in _api_routes()

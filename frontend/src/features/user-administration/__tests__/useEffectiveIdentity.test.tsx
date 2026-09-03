@@ -3,236 +3,113 @@ import { describe, it, expect, vi } from "vitest";
 import { useEffectiveIdentity } from "../context/useEffectiveIdentity";
 import { useAuth } from "../context/AuthContext";
 import { useSimulation } from "../context/SimulationContext";
-import { useUserTypes } from "../../../hooks/useUserTypes";
-import { UserRole } from "../../../types/auth";
+import type { Role, User } from "../../../types/auth";
 
-vi.mock("../context/AuthContext", () => ({
-  useAuth: vi.fn(),
-}));
+/**
+ * **Rewritten by IAM F5 (APRAS-49 §10.3), and this is the last slice where a
+ * "byte-identical" claim is made about this file.**
+ *
+ * F4 preserved APRAS-35's real-vs-simulated split verbatim and kept this
+ * module untouched as proof. It cannot stay untouched here: the hook lost
+ * both its `role` field and its `useRoles()` query, because the enum is gone
+ * and the role-implicit membership it used to fold in became a real
+ * `user_role_link` row at migration time (`0033`, §7.2 step 2). What
+ * survives is the **invariant**, and it is re-pinned rather than restated:
+ *
+ * * this hook is display-only and returns the *effective* ids;
+ * * authorization reads the *real* set through `useCanAccess`, which imports
+ *   neither this hook nor `useSimulation` —
+ *   `ProtectedRoute.permissions.test.tsx::keeps route access on the real
+ *   permission set while simulating` is the mechanical statement of that,
+ *   and it keeps passing unchanged.
+ */
 
-vi.mock("../context/SimulationContext", () => ({
-  useSimulation: vi.fn(),
-}));
-
-vi.mock("../../../hooks/useUserTypes", () => ({
-  useUserTypes: vi.fn(),
-}));
+vi.mock("../context/AuthContext", () => ({ useAuth: vi.fn() }));
+vi.mock("../context/SimulationContext", () => ({ useSimulation: vi.fn() }));
 
 const notSimulating = {
-  simulatedRole: null,
-  simulatedUserTypeIds: [],
+  simulatedRoleIds: [],
   isSimulating: false,
-  setSimulatedRole: vi.fn(),
-  setSimulatedUserTypeIds: vi.fn(),
+  setSimulatedRoleIds: vi.fn(),
   stopSimulation: vi.fn(),
 };
 
+const authAs = (roles?: Role[], extra: Partial<User> = {}) => {
+  vi.mocked(useAuth).mockReturnValue({
+    user: {
+      id: "u1",
+      email: "a@b.com",
+      full_name: "A B",
+      is_active: true,
+      roles,
+      ...extra,
+    },
+    isAuthenticated: true,
+    isLoading: false,
+    login: vi.fn(),
+    logout: vi.fn(),
+  } as never);
+};
+
 describe("useEffectiveIdentity", () => {
-  it("returns the real user's role and UserType ids when not simulating", () => {
-    vi.mocked(useAuth).mockReturnValue({
-      user: {
-        id: "u1",
-        email: "a@b.com",
-        full_name: "A B",
-        role: UserRole.DIRECTOR,
-        is_active: true,
-        user_types: [{ id: "type-1", name: "Board" }],
-      },
-      isAuthenticated: true,
-      isLoading: false,
-      login: vi.fn(),
-      logout: vi.fn(),
-    } as any); // skipcq: JS-0323
+  it("returns the real user's role ids when not simulating", () => {
+    authAs([{ id: "type-1", name: "Board" }]);
     vi.mocked(useSimulation).mockReturnValue(notSimulating);
-    vi.mocked(useUserTypes).mockReturnValue({ data: [] } as any); // skipcq: JS-0323
 
     const { result } = renderHook(() => useEffectiveIdentity());
 
-    expect(result.current).toEqual({
-      role: UserRole.DIRECTOR,
-      userTypeIds: ["type-1"],
-      isSimulating: false,
-    });
+    expect(result.current).toEqual({ roleIds: ["type-1"], isSimulating: false });
   });
 
-  it("returns an empty userTypeIds array when the real user has no user_types and no role-type exists", () => {
-    vi.mocked(useAuth).mockReturnValue({
-      user: {
-        id: "u1",
-        email: "a@b.com",
-        full_name: "A B",
-        role: UserRole.ADMINISTRATOR,
-        is_active: true,
-      },
-      isAuthenticated: true,
-      isLoading: false,
-      login: vi.fn(),
-      logout: vi.fn(),
-    } as any); // skipcq: JS-0323
+  it("returns every membership, including the historically-named row", () => {
+    // The APRAS-9 "fold-in" this module used to test is gone: `Diretor
+    // (papel)` is an ordinary membership now, indistinguishable from any
+    // other, so there is nothing left to fold and nothing to deduplicate.
+    authAs([
+      { id: "role-director", name: "Diretor (papel)" },
+      { id: "type-1", name: "Board" },
+    ]);
     vi.mocked(useSimulation).mockReturnValue(notSimulating);
-    vi.mocked(useUserTypes).mockReturnValue({ data: [] } as any); // skipcq: JS-0323
 
     const { result } = renderHook(() => useEffectiveIdentity());
-    expect(result.current.userTypeIds).toEqual([]);
-    expect(result.current.role).toBe(UserRole.ADMINISTRATOR);
+
+    expect(result.current.roleIds).toEqual(["role-director", "type-1"]);
   });
 
-  it("returns the simulated role and UserType ids when simulating, ignoring the real user", () => {
-    vi.mocked(useAuth).mockReturnValue({
-      user: {
-        id: "admin-1",
-        email: "admin@b.com",
-        full_name: "Admin",
-        role: UserRole.ADMINISTRATOR,
-        is_active: true,
-      },
-      isAuthenticated: true,
-      isLoading: false,
-      login: vi.fn(),
-      logout: vi.fn(),
-    } as any); // skipcq: JS-0323
+  it("returns an empty list for a user with no memberships", () => {
+    authAs(undefined, { is_superuser: true });
+    vi.mocked(useSimulation).mockReturnValue(notSimulating);
+
+    const { result } = renderHook(() => useEffectiveIdentity());
+
+    expect(result.current).toEqual({ roleIds: [], isSimulating: false });
+  });
+
+  it("returns the simulated ids when simulating, ignoring the real user", () => {
+    authAs([{ id: "real-1", name: "Real" }], { is_superuser: true });
     vi.mocked(useSimulation).mockReturnValue({
-      simulatedRole: UserRole.MANAGER,
-      simulatedUserTypeIds: ["type-9"],
+      simulatedRoleIds: ["type-9"],
       isSimulating: true,
-      setSimulatedRole: vi.fn(),
-      setSimulatedUserTypeIds: vi.fn(),
+      setSimulatedRoleIds: vi.fn(),
       stopSimulation: vi.fn(),
     });
-    vi.mocked(useUserTypes).mockReturnValue({ data: [] } as any); // skipcq: JS-0323
 
     const { result } = renderHook(() => useEffectiveIdentity());
 
-    expect(result.current).toEqual({
-      role: UserRole.MANAGER,
-      userTypeIds: ["type-9"],
-      isSimulating: true,
-    });
+    expect(result.current).toEqual({ roleIds: ["type-9"], isSimulating: true });
   });
 
-  it("falls back to the real user when isSimulating is true but simulatedRole is somehow null", () => {
-    vi.mocked(useAuth).mockReturnValue({
-      user: {
-        id: "admin-1",
-        email: "admin@b.com",
-        full_name: "Admin",
-        role: UserRole.ADMINISTRATOR,
-        is_active: true,
-      },
-      isAuthenticated: true,
-      isLoading: false,
-      login: vi.fn(),
-      logout: vi.fn(),
-    } as any); // skipcq: JS-0323
-    vi.mocked(useSimulation).mockReturnValue({
-      simulatedRole: null,
-      simulatedUserTypeIds: [],
-      isSimulating: true,
-      setSimulatedRole: vi.fn(),
-      setSimulatedUserTypeIds: vi.fn(),
-      stopSimulation: vi.fn(),
-    });
-    vi.mocked(useUserTypes).mockReturnValue({ data: [] } as any); // skipcq: JS-0323
-
-    const { result } = renderHook(() => useEffectiveIdentity());
-    expect(result.current.role).toBe(UserRole.ADMINISTRATOR);
-    expect(result.current.isSimulating).toBe(false);
-  });
-
-  // ── APRAS-9: role-type fold-in ────────────────────────────────────────
-
-  it("folds in the role-matching UserType id for the real user, with zero explicit UserTypes", () => {
-    vi.mocked(useAuth).mockReturnValue({
-      user: {
-        id: "u1",
-        email: "director@b.com",
-        full_name: "Director",
-        role: UserRole.DIRECTOR,
-        is_active: true,
-      },
-      isAuthenticated: true,
-      isLoading: false,
-      login: vi.fn(),
-      logout: vi.fn(),
-    } as any); // skipcq: JS-0323
+  it("has no query of its own: the memberships come from `useAuth`", () => {
+    // The hook used to call `useRoles()` to resolve the role-implicit
+    // membership. Deleting that query is what makes this hook a pure
+    // function of two contexts, and it is why nothing here mocks it.
+    authAs([{ id: "type-1", name: "Board" }]);
     vi.mocked(useSimulation).mockReturnValue(notSimulating);
-    vi.mocked(useUserTypes).mockReturnValue({
-      data: [
-        { id: "role-type-director", name: "Diretor (papel)", allowed_menus: [], role: "DIRECTOR" },
-        { id: "role-type-manager", name: "Gerente (papel)", allowed_menus: [], role: "MANAGER" },
-      ],
-    } as any); // skipcq: JS-0323
 
-    const { result } = renderHook(() => useEffectiveIdentity());
+    const { result, rerender } = renderHook(() => useEffectiveIdentity());
+    const first = result.current.roleIds;
+    rerender();
 
-    expect(result.current.userTypeIds).toEqual(["role-type-director"]);
-  });
-
-  it("unions the role-type id with explicit UserType ids for the real user, without duplicates", () => {
-    vi.mocked(useAuth).mockReturnValue({
-      user: {
-        id: "u1",
-        email: "director@b.com",
-        full_name: "Director",
-        role: UserRole.DIRECTOR,
-        is_active: true,
-        user_types: [{ id: "type-1", name: "Board" }],
-      },
-      isAuthenticated: true,
-      isLoading: false,
-      login: vi.fn(),
-      logout: vi.fn(),
-    } as any); // skipcq: JS-0323
-    vi.mocked(useSimulation).mockReturnValue(notSimulating);
-    vi.mocked(useUserTypes).mockReturnValue({
-      data: [
-        { id: "type-1", name: "Board", allowed_menus: [] },
-        { id: "role-type-director", name: "Diretor (papel)", allowed_menus: [], role: "DIRECTOR" },
-      ],
-    } as any); // skipcq: JS-0323
-
-    const { result } = renderHook(() => useEffectiveIdentity());
-
-    expect(new Set(result.current.userTypeIds)).toEqual(
-      new Set(["type-1", "role-type-director"]),
-    );
-    expect(result.current.userTypeIds.length).toBe(2);
-  });
-
-  it("folds in the role-matching UserType id for a simulated role, with zero simulated UserTypes", () => {
-    vi.mocked(useAuth).mockReturnValue({
-      user: {
-        id: "admin-1",
-        email: "admin@b.com",
-        full_name: "Admin",
-        role: UserRole.ADMINISTRATOR,
-        is_active: true,
-      },
-      isAuthenticated: true,
-      isLoading: false,
-      login: vi.fn(),
-      logout: vi.fn(),
-    } as any); // skipcq: JS-0323
-    vi.mocked(useSimulation).mockReturnValue({
-      simulatedRole: UserRole.MANAGER,
-      simulatedUserTypeIds: [],
-      isSimulating: true,
-      setSimulatedRole: vi.fn(),
-      setSimulatedUserTypeIds: vi.fn(),
-      stopSimulation: vi.fn(),
-    });
-    vi.mocked(useUserTypes).mockReturnValue({
-      data: [
-        { id: "role-type-manager", name: "Gerente (papel)", allowed_menus: [], role: "MANAGER" },
-      ],
-    } as any); // skipcq: JS-0323
-
-    const { result } = renderHook(() => useEffectiveIdentity());
-
-    expect(result.current).toEqual({
-      role: UserRole.MANAGER,
-      userTypeIds: ["role-type-manager"],
-      isSimulating: true,
-    });
+    expect(result.current.roleIds).toEqual(first);
   });
 });

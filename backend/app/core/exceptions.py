@@ -1,5 +1,6 @@
 """Domain exceptions."""
 
+from collections.abc import Iterable
 from uuid import UUID
 
 
@@ -198,6 +199,23 @@ class FolderAccessDeniedError(DomainError):
 
 
 FolderAccessForbiddenError = FolderAccessDeniedError
+
+
+class UnknownRoleIdsError(DomainError):
+    """Raised when a payload names role ids that do not resolve.
+
+    "Do not resolve" means either of the two ways an id can be wrong, and
+    they are deliberately not distinguished in the message: an id that
+    belongs to no role at all, and one that belongs to a role of *another*
+    tenant. Telling the two apart would answer "does role X exist somewhere
+    on this install?" for a caller who is not entitled to know.
+    """
+
+    def __init__(
+        self, role_ids: Iterable[object], field: str = "allowed_role_ids"
+    ) -> None:
+        listed = ", ".join(sorted(str(item) for item in role_ids))
+        super().__init__(f"Unknown {field}: {listed}")
 
 
 class InvalidFolderHierarchyError(DomainError):

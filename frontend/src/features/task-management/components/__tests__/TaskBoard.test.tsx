@@ -2,11 +2,47 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import TaskBoard from "../TaskBoard";
 import { TaskStatus, TaskPriority } from "../../types";
-import { UserRole } from "../../../../types/auth";
 import { useSimulation } from "../../../user-administration/context/SimulationContext";
-import { useUserTypes } from "../../../../hooks/useUserTypes";
+import { useRoles } from "../../../../hooks/useRoles";
+import { PERMISSIONS_BY_ROLE } from "../../../../test/permissionFixtures";
+import { useAuth } from "../../../user-administration/context/AuthContext";
 
-// TaskBoard reads its effective identity via useEffectiveIdentity, which
+/** The profile a *simulation* stands for; set per case where it varies. */
+let mockSimulatedProfile = "MANAGER";
+
+/** The profile each case's fixture stands for. */
+const mockProfile = () => useAuth().user?.is_superuser ? "ADMINISTRATOR" : "MANAGER";
+
+// IAM F5 (APRAS-49 §10.2): the component reads its *permissions* now, not a
+// role. Mocking the access module keeps each case's signal exactly where it
+// was — the `useAuth()` fixture this file already varies per test — while
+// removing the `/permissions/me` query from the render path, which is what
+// made a `QueryClientProvider` necessary.
+vi.mock("../../../../features/user-administration/access/useCanAccess", () => {
+  const build = (profile: string) => ({
+    has: (permission: string) =>
+      (PERMISSIONS_BY_ROLE[profile] ?? []).includes(permission),
+    hasModule: (moduleName: string) =>
+      (PERMISSIONS_BY_ROLE[profile] ?? []).some((permission) =>
+        permission.startsWith(`${moduleName}:`),
+      ),
+    isLoading: false,
+    all: new Set(PERMISSIONS_BY_ROLE[profile] ?? []),
+  });
+  return {
+    // Display reads the **effective** set: while simulating it is the
+    // simulated roles' union, not the real user's (APRAS-35's split, which
+    // IAM F5 preserves — see `useCanAccess`'s two-set table).
+    useEffectivePermissionSet: () =>
+      build(useSimulation().isSimulating ? mockSimulatedProfile : mockProfile()),
+    usePermissionSet: () => build(mockProfile()),
+    useCanAccess: () => ({ allowed: true, isLoading: false }),
+    useCanShowMenu: () => ({ allowed: true, isLoading: false }),
+  };
+});
+
+
+// TaskBoard reads its effective identity via useEffectivePermissionSet, which
 // combines useAuth with useSimulation. Default both to a non-simulating,
 // roleless state so existing assertions are unaffected; simulation-specific
 // tests below override these mocks.
@@ -22,20 +58,18 @@ vi.mock("../../../user-administration/context/AuthContext", () => ({
 
 vi.mock("../../../user-administration/context/SimulationContext", () => ({
   useSimulation: vi.fn(() => ({
-    simulatedRole: null,
-    simulatedUserTypeIds: [],
+    simulatedRoleIds: [],
     isSimulating: false,
-    setSimulatedRole: vi.fn(),
-    setSimulatedUserTypeIds: vi.fn(),
+    setSimulatedRoleIds: vi.fn(),
     stopSimulation: vi.fn(),
   })),
 }));
 
-// useEffectiveIdentity also calls useUserTypes (APRAS-9 role-type fold-in);
-// default to no UserTypes so behavior matches pre-APRAS-9 expectations.
+// useEffectivePermissionSet also calls useRoles (APRAS-9 role-type fold-in);
+// default to no Roles so behavior matches pre-APRAS-9 expectations.
 // Overridden per-test below for the role-type fallback assertions.
-vi.mock("../../../../hooks/useUserTypes", () => ({
-  useUserTypes: vi.fn(() => ({ data: [] })),
+vi.mock("../../../../hooks/useRoles", () => ({
+  useRoles: vi.fn(() => ({ data: [] })),
 }));
 
 const mockTasks = [
@@ -193,23 +227,21 @@ describe("TaskBoard", () => {
   });
 
   describe("admin role simulation", () => {
-    it("hides tasks not visible to the simulated MANAGER + UserType combination", () => {
+    it("hides tasks not visible to the simulated MANAGER + Role combination", () => {
       vi.mocked(useSimulation).mockReturnValue({
-        simulatedRole: UserRole.MANAGER,
-        simulatedUserTypeIds: ["type-1"],
+        simulatedRoleIds: ["type-1"],
         isSimulating: true,
-        setSimulatedRole: vi.fn(),
-        setSimulatedUserTypeIds: vi.fn(),
+        setSimulatedRoleIds: vi.fn(),
         stopSimulation: vi.fn(),
       });
       const tasksWithVisibility = [
         {
           ...mockTasks[0],
-          visible_to: [{ id: "type-1", name: "type-1", allowed_menus: [] }],
+          visible_to: [{ id: "type-1", name: "type-1" }],
         },
         {
           ...mockTasks[1],
-          visible_to: [{ id: "type-2", name: "type-2", allowed_menus: [] }],
+          visible_to: [{ id: "type-2", name: "type-2" }],
         },
       ];
       render(
@@ -225,22 +257,18 @@ describe("TaskBoard", () => {
       expect(screen.queryByText("Task 2")).not.toBeInTheDocument();
     });
 
-    it("resolves visibility via the role-type fallback when simulating MANAGER with zero simulated UserTypes (APRAS-9)", () => {
+    it("hides every targeted task when simulating with no roles selected", () => {
       vi.mocked(useSimulation).mockReturnValue({
-        simulatedRole: UserRole.MANAGER,
-        simulatedUserTypeIds: [],
+        simulatedRoleIds: [],
         isSimulating: true,
-        setSimulatedRole: vi.fn(),
-        setSimulatedUserTypeIds: vi.fn(),
+        setSimulatedRoleIds: vi.fn(),
         stopSimulation: vi.fn(),
       });
-      vi.mocked(useUserTypes).mockReturnValue({
+      vi.mocked(useRoles).mockReturnValue({
         data: [
           {
             id: "role-type-manager",
             name: "Gerente (papel)",
-            allowed_menus: [],
-            role: "MANAGER",
           },
         ],
       } as any); // skipcq: JS-0323
@@ -248,12 +276,12 @@ describe("TaskBoard", () => {
         {
           ...mockTasks[0],
           visible_to: [
-            { id: "role-type-manager", name: "Gerente (papel)", allowed_menus: [] },
+            { id: "role-type-manager", name: "Gerente (papel)" },
           ],
         },
         {
           ...mockTasks[1],
-          visible_to: [{ id: "type-2", name: "type-2", allowed_menus: [] }],
+          visible_to: [{ id: "type-2", name: "type-2" }],
         },
       ];
       render(
@@ -265,17 +293,19 @@ describe("TaskBoard", () => {
           filters={{}}
         />,
       );
-      expect(screen.getByText("Task 1")).toBeInTheDocument();
+      // The APRAS-9 fold-in this case was written for is **gone** (IAM F5,
+      // APRAS-49 §10.3): the implicit membership became a real
+      // `user_role_link` row at migration time, so a simulation with zero
+      // roles selected now grants zero targets.
+      expect(screen.queryByText("Task 1")).not.toBeInTheDocument();
       expect(screen.queryByText("Task 2")).not.toBeInTheDocument();
     });
 
     it("marks assigned task cards read-only when simulating MANAGER", () => {
       vi.mocked(useSimulation).mockReturnValue({
-        simulatedRole: UserRole.MANAGER,
-        simulatedUserTypeIds: [],
+        simulatedRoleIds: [],
         isSimulating: true,
-        setSimulatedRole: vi.fn(),
-        setSimulatedUserTypeIds: vi.fn(),
+        setSimulatedRoleIds: vi.fn(),
         stopSimulation: vi.fn(),
       });
       render(
@@ -293,11 +323,9 @@ describe("TaskBoard", () => {
 
     it("does not mark cards read-only when not simulating", () => {
       vi.mocked(useSimulation).mockReturnValue({
-        simulatedRole: null,
-        simulatedUserTypeIds: [],
+        simulatedRoleIds: [],
         isSimulating: false,
-        setSimulatedRole: vi.fn(),
-        setSimulatedUserTypeIds: vi.fn(),
+        setSimulatedRoleIds: vi.fn(),
         stopSimulation: vi.fn(),
       });
       render(

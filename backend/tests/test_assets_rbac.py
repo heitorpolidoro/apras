@@ -7,17 +7,18 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from app.core.security import create_access_token
-from app.models.enums import UserRole
 from app.models.user import User
+from tests.conftest import make_user
 
 
-def _make_user(session: Session, role: UserRole, email: str, cpf: str) -> User:
-    user = User(
+def _make_user(session: Session, role: str, email: str, cpf: str) -> User:
+    user = make_user(
+        session,
         id=uuid.uuid4(),
         email=email,
         full_name=f"User {email}",
         hashed_password="hash",
-        role=role,
+        profile=role,
         cpf=cpf,
     )
     session.add(user)
@@ -33,32 +34,32 @@ def _headers(user: User) -> dict[str, str]:
 
 @pytest.fixture
 def admin(session: Session) -> User:
-    return _make_user(session, UserRole.ADMINISTRATOR, "admin_rbac@test.com", "11111111111")
+    return _make_user(session, "ADMINISTRATOR", "admin_rbac@test.com", "11111111111")
 
 
 @pytest.fixture
 def director(session: Session) -> User:
-    return _make_user(session, UserRole.DIRECTOR, "director_rbac@test.com", "22222222222")
+    return _make_user(session, "DIRECTOR", "director_rbac@test.com", "22222222222")
 
 
 @pytest.fixture
 def manager(session: Session) -> User:
-    return _make_user(session, UserRole.MANAGER, "manager_rbac@test.com", "33333333333")
+    return _make_user(session, "MANAGER", "manager_rbac@test.com", "33333333333")
 
 
 @pytest.fixture
 def resident(session: Session) -> User:
-    return _make_user(session, UserRole.RESIDENT, "resident_rbac@test.com", "44444444444")
+    return _make_user(session, "RESIDENT", "resident_rbac@test.com", "44444444444")
 
 
 @pytest.fixture
 def porteiro(session: Session) -> User:
-    return _make_user(session, UserRole.PORTEIRO, "porteiro_rbac@test.com", "55555555555")
+    return _make_user(session, "PORTEIRO", "porteiro_rbac@test.com", "55555555555")
 
 
 @pytest.fixture
 def guest(session: Session) -> User:
-    return _make_user(session, UserRole.GUEST, "guest_rbac@test.com", "66666666666")
+    return _make_user(session, "GUEST", "guest_rbac@test.com", "66666666666")
 
 
 def test_director_full_crud_and_movements(session: Session, client: TestClient, director: User):

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Megaphone, Plus } from "lucide-react";
-import { useAuth, UserRole } from "../../user-administration/context/AuthContext";
+import { useEffectivePermissionSet } from "../../user-administration/access/useCanAccess";
 import { useAnnouncements } from "../hooks/useAnnouncements";
 import { AnnouncementCard } from "./AnnouncementCard";
 import { AnnouncementFormModal } from "./AnnouncementFormModal";
@@ -9,13 +9,15 @@ import type { Announcement } from "../../../types/announcement";
 
 export const AnnouncementFeedPage: React.FC = () => {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { has } = useEffectivePermissionSet();
   const { data, isLoading } = useAnnouncements();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
 
-  const isPublisher = user?.role === UserRole.ADMINISTRATOR || user?.role === UserRole.DIRECTOR;
+  // IAM F5 (APRAS-49 §10.2): `announcements:create` is the legacy
+  // {A, D} set exactly, so this is the same predicate as data.
+  const isPublisher = has("announcements:create");
 
   const openCreateModal = () => {
     setEditingAnnouncement(null);

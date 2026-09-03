@@ -37,7 +37,7 @@ vi.mock(
     return {
       ...actual,
       useAuth: vi.fn(() => ({
-        user: { id: "admin-1", role: actual.UserRole.ADMINISTRATOR },
+        user: { id: "admin-1", is_superuser: true },
       })),
     };
   },
@@ -72,7 +72,6 @@ describe("TaskDetailsView", () => {
       id: "user1",
       full_name: "Alice Smith",
       username: "alice",
-      role: "DIRECTOR",
       is_active: true,
       type: { id: "t1", name: "Analista" },
     },
@@ -80,7 +79,6 @@ describe("TaskDetailsView", () => {
       id: "user2",
       full_name: "Bob Jones",
       username: "bob",
-      role: "DIRECTOR",
       is_active: true,
       type: { id: "t1", name: "Analista" },
     },
@@ -495,7 +493,6 @@ describe("TaskDetailsView", () => {
           id: "user3",
           full_name: "",
           email: "charlie",
-          role: "DIRECTOR",
           is_active: true,
           type: { id: "t1", name: "Analista" },
         },

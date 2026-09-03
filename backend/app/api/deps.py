@@ -16,13 +16,12 @@ from sqlmodel import Session, select
 from app.core import tenant_context
 from app.core.config import settings
 from app.core.exceptions import ForbiddenError
-from app.core.permissions import LEGACY_ROLE_PERMISSIONS, PERMISSIONS
+from app.core.permissions import PERMISSIONS
 from app.db import get_session
-from app.models.enums import MenuKey, UserRole
+from app.models.role import Role
 from app.models.task import Task
 from app.models.tenant import DEFAULT_TENANT_ID, Tenant, UserTenantLink
 from app.models.user import User
-from app.models.user_type import UserType
 
 reusable_oauth2 = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
@@ -126,7 +125,7 @@ def is_acting_tenant_admin(user: User, session: Session) -> bool:
     """Return whether the session's acting tenant grants `user` the capability.
 
     Deliberately **without** the `DEFAULT_TENANT_ID` fallback that
-    `get_effective_user_type_ids` uses: that function falls back so a unit
+    `get_effective_role_ids` uses: that function falls back so a unit
     test session resolves deterministically, this one *grants power*, so an
     unresolved session must grant nothing. A `Session(engine)` in
     `app/seed.py`, in Alembic or in a unit test therefore never carries the
@@ -158,48 +157,32 @@ def is_acting_tenant_admin(user: User, session: Session) -> bool:
     return bool(link and link.is_tenant_admin)
 
 
-def has_admin_capability(user: User, session: Session) -> bool:
-    """Return whether `user` has administrator-level power *here*.
+def get_effective_role_ids(user: User, session: Session) -> set[UUID]:
+    """Return the user's role ids in the session's acting tenant.
 
-    "Here" is the acting tenant: a global superuser everywhere, a
-    tenant_admin only in the tenant that granted it.
-    """
-    return user.is_superuser or is_acting_tenant_admin(user, session)
+    Since IAM F5 (APRAS-49 §3.1 #3) this is **only** the explicit
+    memberships: the role-implicit membership the enum used to compute on
+    every call became a real `user_role_link` row at migration time
+    (`0033`, §7.2 step 2), so the resolved set is unchanged for every user
+    that existed before it and is now reproducible from data alone.
 
-
-def get_effective_user_type_ids(user: User, session: Session) -> set[UUID]:
-    """Return the user's effective UserType ids for permission evaluation.
-
-    This is the explicitly-assigned UserType ids (`user.user_types`) plus
-    the id of the UserType matching the user's own role, if one exists
-    (APRAS-9). The role-matching membership is computed on every call, not
-    stored in the `UserUserTypeLink` join table, so a role change takes
-    effect immediately with no sync step.
+    `session` stays in the signature -- it is what resolves the acting
+    tenant -- even though no query is issued any more.
 
     Args:
-        user: The user whose effective UserType ids are being computed.
-        session: Database session used to look up the role-matching UserType.
+        user: The user whose role ids are being computed.
+        session: Database session carrying (or not) an acting tenant.
 
     Returns:
-        set[UUID]: The union of explicit and role-implicit UserType ids.
+        set[UUID]: The ids of the user's roles in the acting tenant.
     """
     # The acting tenant of the request session, or the default tenant when
-    # the caller is not a request (unit tests, `app/seed.py`). The fallback
-    # is what keeps `.first()` deterministic now that a role can have one
-    # UserType row *per tenant* (APRAS-42 §7.1).
+    # the caller is not a request (unit tests, `app/seed.py`).
     tenant_id = tenant_context.acting_tenant_id(session) or DEFAULT_TENANT_ID
-    # Relationship loads are exempt from the ambient filter, so the explicit
-    # types are narrowed here too (APRAS-43 §5.2): without this, a dual-tenant
-    # user's tenant-B UserType rows compose into a tenant-A decision.
-    explicit_ids = {ut.id for ut in user.user_types if ut.tenant_id == tenant_id}
-    role_type = session.exec(
-        select(UserType).where(
-            UserType.role == user.role, UserType.tenant_id == tenant_id
-        )
-    ).first()
-    if role_type:
-        explicit_ids.add(role_type.id)
-    return explicit_ids
+    # Relationship loads are exempt from the ambient filter, so the roles are
+    # narrowed here (APRAS-43 §5.2): without this, a dual-tenant user's
+    # tenant-B rows compose into a tenant-A decision.
+    return {role.id for role in user.roles if role.tenant_id == tenant_id}
 
 
 def get_effective_permissions(user: User, session: Session) -> frozenset[str]:
@@ -210,13 +193,16 @@ def get_effective_permissions(user: User, session: Session) -> frozenset[str]:
       0. `user.is_superuser` -> the **whole catalogue**, in every tenant and
          with no acting tenant at all. The flag is global, so it is answered
          before any tenant is resolved;
-      1. the `permissions` of the user's effective roles in the acting tenant
-         (`get_effective_user_type_ids`, so a role change is immediate and a
+      1. the `permissions` of the user's roles in the acting tenant
+         (`get_effective_role_ids`, so a membership change is immediate and a
          role of another tenant never composes into this answer);
-      2. LEGACY_ROLE_PERMISSIONS[user.role] - the TRANSITIONAL fallback that
-         keeps F1..F4 meaningful while no role carries any permission;
-      3. `is_acting_tenant_admin` -> the whole catalogue as well, but only
+      2. `is_acting_tenant_admin` -> the whole catalogue as well, but only
          while acting **in the tenant that granted the capability**.
+
+    IAM F5 (APRAS-49 §3.2) deleted the third contributor, F1's
+    `LEGACY_ROLE_PERMISSIONS[user.role]` seed. `granted` now starts empty:
+    every permission a non-superuser, non-tenant-admin holds comes from a
+    role row, which is the whole point of the chain.
 
     Both short-circuits return rather than union, because
     `PERMISSIONS | anything == PERMISSIONS` and an early return says "this is
@@ -242,21 +228,20 @@ def get_effective_permissions(user: User, session: Session) -> frozenset[str]:
 
     Returns:
         frozenset[str]: The catalogue for a superuser or an acting
-        tenant_admin; otherwise the union of role bundles and the legacy
-        fallback.
+        tenant_admin; otherwise the union of the user's role bundles.
     """
     # A superuser holds every permission there is, in every tenant, and with
     # no acting tenant at all.
     if user.is_superuser:
         return PERMISSIONS
-    effective_ids = get_effective_user_type_ids(user, session)
-    granted: set[str] = set(LEGACY_ROLE_PERMISSIONS.get(user.role, frozenset()))
+    effective_ids = get_effective_role_ids(user, session)
+    granted: set[str] = set()
     if effective_ids:
-        user_types = session.exec(
-            select(UserType).where(UserType.id.in_(effective_ids))
+        roles = session.exec(
+            select(Role).where(Role.id.in_(effective_ids))
         ).all()
-        for user_type in user_types:
-            granted.update(user_type.permissions)
+        for role in roles:
+            granted.update(role.permissions)
     # Administrator-level power inside one tenant (APRAS-43): every
     # permission, but only while acting in the tenant that granted it. It
     # reads the *capability*, never a role.
@@ -282,59 +267,39 @@ def has_permission(user: User, session: Session, permission: str) -> bool:
         bool: Whether the permission is held.
     """
     return permission in get_effective_permissions(user, session)
-def assert_menu_access(current_user: User, menu_key: MenuKey, session: Session) -> None:
-    """Raise ForbiddenError unless the user can access the given menu/feature.
-
-    A caller holding the admin capability in the acting tenant always
-    passes: a global ADMINISTRATOR anywhere, and a tenant_admin *within the
-    tenant that granted it* (APRAS-43 §5.1). Every other role needs at least
-    one effective UserType (explicitly-assigned or role-implicit, see
-    `get_effective_user_type_ids`) with `menu_key` in its `allowed_menus`.
-
-    Args:
-        current_user: The authenticated user making the request.
-        menu_key: The menu/feature being accessed (e.g. tasks, categories).
-        session: Database session used to resolve effective UserType ids.
-
-    Raises:
-        ForbiddenError: If the user does not have access to the menu.
-    """
-    if has_admin_capability(current_user, session):
-        return
-    effective_ids = get_effective_user_type_ids(current_user, session)
-    if effective_ids:
-        effective_types = session.exec(
-            select(UserType).where(UserType.id.in_(effective_ids))
-        ).all()
-        if any(menu_key.value in ut.allowed_menus for ut in effective_types):
-            return
-    raise ForbiddenError(f"Not enough privileges to access {menu_key.value}")
 
 
 def assert_manager_can_see_task(current_user: User, task: Task, session: Session) -> None:
     """Raise TaskNotFoundError for tasks the user is not allowed to see.
 
-    MANAGER may only access tasks with an empty `visible_to` list (visible
-    to every Manager) OR at least one target in their effective UserType ids
-    (explicitly-assigned or role-implicit, see `get_effective_user_type_ids`).
-    GUEST may not access any task.
+    A caller **without** `tasks:read_all` is scoped by `Task.visible_to`:
+    they may only access tasks with an empty target list (visible to
+    everyone so scoped) or with at least one target among their own roles.
+    A caller without `tasks:read` may not access any task.
+
+    IAM F5 (APRAS-49 §3.1 site 1) replaced the retired `MANAGER` comparison with
+    `not has_permission(..., "tasks:read_all")`. The conversion is exact:
+    `tasks:read_all` is the legacy `{A, D, R, P}` set, i.e. everyone but
+    MANAGER, and the one actor for which the two predicates differ -- GUEST,
+    who is neither a MANAGER nor a holder -- holds no `tasks:read` either and
+    is refused by the line above before this one runs.
 
     Args:
         current_user: The authenticated user making the request.
         task: The task being accessed.
-        session: Database session used to resolve effective UserType ids.
+        session: Database session used to resolve permissions and role ids.
 
     Raises:
-        TaskNotFoundError: If the task is not visible to the user's role.
+        TaskNotFoundError: If the task is not visible to the user.
     """
     from app.core.exceptions import TaskNotFoundError
 
     if not has_permission(current_user, session, "tasks:read"):
         raise TaskNotFoundError(task.id)
-    if current_user.role == UserRole.MANAGER:
+    if not has_permission(current_user, session, "tasks:read_all"):
         if task.visible_to and not (
             {vt.id for vt in task.visible_to}
-            & get_effective_user_type_ids(current_user, session)
+            & get_effective_role_ids(current_user, session)
         ):
             raise TaskNotFoundError(task.id)
 
@@ -344,9 +309,16 @@ def assert_can_edit_task(
 ) -> None:
     """Raise ForbiddenError if the user is not allowed to edit the task.
 
-    ADMINISTRATOR and DIRECTOR may edit any task.
-    MANAGER may only edit tasks that are unassigned or assigned to themselves.
-    A caller without `tasks:update` may not edit any task.
+    A caller holding `tasks:update_any` may edit any task. A caller without
+    it may only edit tasks that are unassigned or assigned to themselves. A
+    caller without `tasks:update` may not edit any task.
+
+    IAM F5 (APRAS-49 §3.1 site 2) replaced the retired `MANAGER` comparison with
+    `not has_permission(..., "tasks:update_any")`, by the §3.1 argument: the
+    permission is the legacy `{A, D, R, P}` set and the one divergent actor
+    (GUEST) is already refused by `tasks:update`. The `ForbiddenError`
+    message is kept verbatim and is recorded in `AGENTS.md` as legacy
+    wording.
 
     `session` is optional and falls back to the ORM session `task` is already
     attached to. Production always passes it explicitly
@@ -368,7 +340,7 @@ def assert_can_edit_task(
     session = session if session is not None else object_session(task)
     if not has_permission(current_user, session, "tasks:update"):
         raise ForbiddenError("Guests cannot edit tasks")
-    if current_user.role == UserRole.MANAGER:
+    if not has_permission(current_user, session, "tasks:update_any"):
         if task.assigned_to_id is not None and task.assigned_to_id != current_user.id:
             raise ForbiddenError(
                 "Managers can only edit unassigned or self-assigned tasks"

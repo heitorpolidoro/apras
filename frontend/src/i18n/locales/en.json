@@ -5,7 +5,7 @@
     "logout": "Sign out",
     "close": "Close",
     "restrictedAccess": "Restricted access",
-    "restrictedAccessMessage": "You don't have access to this feature. Ask an Administrator to grant it to your UserType."
+    "restrictedAccessMessage": "You don't have access to this feature. Ask an Administrator to grant it to your role."
   },
   "nav": {
     "tasks": "Tasks",
@@ -29,7 +29,7 @@
     "voting": "Assemblies",
     "assets": "Assets & Inventory",
     "purchases": "Purchase Quotations",
-    "groups": "Groups"
+    "roles": "Roles"
   },
   "accessControl": {
     "title": "Access Control",
@@ -136,13 +136,6 @@
     "validationError": "Validation error: {{messages}}",
     "genericError": "An error occurred during sign up. Please try again later."
   },
-  "roles": {
-    "ADMINISTRATOR": "Administrator",
-    "DIRECTOR": "Director",
-    "MANAGER": "Manager",
-    "GUEST": "Guest",
-    "PORTEIRO": "Gatekeeper"
-  },
   "admin": {
     "title": "User Management",
     "backToDashboard": "Back to Dashboard",
@@ -175,8 +168,8 @@
     "errorLoadingTypes": "Error loading types.",
     "noTypesYet": "No types defined yet.",
     "colRoleLegacy": "Role (legacy)",
-    "editGroups": "Groups",
-    "manageGroups": "Manage groups"
+    "editRoles": "Roles",
+    "manageRoles": "Manage roles"
   },
   "contactInfo": {
     "title": "Contact Information",
@@ -258,7 +251,7 @@
       "managerVisible": "Visible to managers",
       "visibleToLabel": "Visibility",
       "visibleToAll": "Public (All)",
-      "visibleToHelper": "Restrict visibility of this task to a specific user type."
+      "visibleToHelper": "Restrict visibility of this task to a specific role."
     },
     "details": {
       "description": "Description",
@@ -304,17 +297,15 @@
   },
   "simulation": {
     "toggleButton": "Simulate",
-    "roleLabel": "Role",
-    "roleSelectPlaceholder": "Select a role",
-    "userTypesLabel": "User Types",
-    "userTypesPlaceholder": "Select user types",
-    "noUserTypesAvailable": "No user types available.",
+    "rolesLabel": "Roles",
+    "rolesPlaceholder": "Select roles",
+    "noRolesAvailable": "No roles available.",
     "stopButton": "End simulation",
-    "bannerLabel": "Viewing as: {{role}} ({{userTypes}})",
-    "noUserTypes": "no user type",
+    "bannerLabel": "Viewing as: {{roles}}",
+    "noRoles": "no role",
     "readOnlyTask": "Read-only in this simulated view",
     "mutationBlocked": "Action blocked: you are in simulation mode.",
-    "permissionsPreviewNote": "The preview shows the simulated groups' menus; your own page access is unchanged."
+    "permissionsPreviewNote": "The preview shows the simulated roles' menus; your own page access is unchanged."
   },
   "lots": {
     "title": "Lot Registry",
@@ -1302,7 +1293,7 @@
       "tasks": "Tasks",
       "tenants": "Tenants",
       "uploads": "Uploads",
-      "user_types": "Groups",
+      "roles": "Roles",
       "users": "Users",
       "visitors": "Visitors",
       "votes": "Votes"
@@ -1407,13 +1398,16 @@
       "validation": "Invalid data: {{messages}}"
     }
   },
-  "groups": {
-    "title": "Groups",
-    "subtitle": "Groups bundle permissions and are assigned to users.",
-    "loading": "Loading groups…",
-    "empty": "No groups yet.",
-    "notFound": "Group not found.",
-    "namePlaceholder": "Group name",
+  "roles": {
+    "title": "Roles",
+    "subtitle": "Roles bundle permissions and are assigned to users.",
+    "loading": "Loading roles…",
+    "empty": "No roles yet.",
+    "notFound": "Role not found.",
+    "namePlaceholder": "Role name",
+        "landingPath": "Role landing page",
+    "landingPathNone": "(None — goes to the Dashboard)",
+    "landingPathHint": "Where members of this role are taken on sign-in. A preference, not a permission.",
     "name": "Name",
     "create": "Create",
     "edit": "Edit",
@@ -1421,14 +1415,14 @@
     "delete": "Delete",
     "save": "Save",
     "cancel": "Cancel",
-    "back": "Back to groups",
-    "colName": "Group",
+    "back": "Back to roles",
+    "colName": "Role",
     "colPermissions": "Permissions",
     "colMembers": "Members",
     "colActions": "Actions",
-    "confirmDelete": "Delete this group? Its members lose the permissions it grants.",
+    "confirmDelete": "Delete this role? Its members lose the permissions it grants.",
     "cloneSuffix": " (copy)",
-    "roleLinkedBadge": "Role group (legacy)",
+    "roleLinkedBadge": "Legacy role",
     "roleLinkedHint": "Created by the role migration: it cannot be deleted or renamed, but its permissions are editable.",
     "members": "Members",
     "membersEmpty": "No members yet.",
@@ -1437,7 +1431,7 @@
     "membersSelect": "Choose a user",
     "membersLoading": "Loading members…",
     "errors": {
-      "nameTaken": "A group with this name already exists."
+      "nameTaken": "A role with this name already exists."
     }
   }
 }

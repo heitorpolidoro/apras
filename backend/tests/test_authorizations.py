@@ -13,16 +13,13 @@ from sqlmodel import Session
 from app.core.exceptions import (
     AuthorizationNotFoundError,
     DomainError,
-    LotNotFoundError,
 )
 from app.models.enums import (
     AuthorizationStatus,
     AuthorizationType,
     DayOfWeek,
-    LotStatus,
     ShiftType,
 )
-from app.models.lot import Lot
 from app.models.user import User
 from app.schemas.lot import LotCreate
 from app.schemas.visitor import VisitorAuthorizationCreate, VisitorCreate

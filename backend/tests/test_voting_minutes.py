@@ -5,17 +5,17 @@ Covers backend test 12 of `docs/tasks/APRAS-33-spec.md` §Testing and the
 """
 
 import pytest
+from fastapi.testclient import TestClient
+from sqlmodel import Session, select
+
 from app.core.exceptions import (
     AssemblyNotClosedError,
     DelinquentLotError,
     ForbiddenError,
 )
 from app.models.document import AssociationDocument, DocumentFolder
-from app.models.enums import UserRole
 from app.services import voting_service
 from app.services.storage_service import BaseStorageProvider
-from fastapi.testclient import TestClient
-from sqlmodel import Session, select
 from tests.voting_helpers import (
     auth_headers,
     link_user_to_lot,
@@ -52,9 +52,9 @@ def _cast(session, user, vote, label, lot=None):
 
 
 def _closed_assembly_with_delinquent_lot(session: Session):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
-    owner = make_user(session, UserRole.RESIDENT)
-    debtor = make_user(session, UserRole.RESIDENT)
+    admin = make_user(session, "ADMINISTRATOR")
+    owner = make_user(session, "RESIDENT")
+    debtor = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     delinquent_lot = make_lot(session, "B", "12", is_delinquent=True)
     link_user_to_lot(session, owner, lot)
@@ -72,7 +72,7 @@ def _closed_assembly_with_delinquent_lot(session: Session):
 
 
 def test_minutes_before_closing_are_refused(session: Session):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
+    admin = make_user(session, "ADMINISTRATOR")
     assembly = make_assembly(session, admin)
 
     with pytest.raises(AssemblyNotClosedError):
@@ -82,7 +82,7 @@ def test_minutes_before_closing_are_refused(session: Session):
 def test_minutes_endpoint_before_closing_returns_400(
     client: TestClient, session: Session
 ):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
+    admin = make_user(session, "ADMINISTRATOR")
     assembly = make_assembly(session, admin)
 
     response = client.get(
@@ -116,7 +116,7 @@ def test_minutes_contain_results_attribution_denominator_and_barred_lots(
 
 
 def test_minutes_report_no_barred_lots_when_there_were_none(session: Session):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
+    admin = make_user(session, "ADMINISTRATOR")
     assembly = make_assembly(session, admin)
     make_vote(session, admin, assembly=assembly)
     voting_service.close_assembly(session, admin, assembly)
@@ -126,7 +126,7 @@ def test_minutes_report_no_barred_lots_when_there_were_none(session: Session):
 
 
 def test_minutes_escape_user_supplied_text(session: Session):
-    admin = make_user(session, UserRole.ADMINISTRATOR)
+    admin = make_user(session, "ADMINISTRATOR")
     assembly = make_assembly(session, admin, title="<script>alert(1)</script>")
     make_vote(session, admin, assembly=assembly, title="<b>Pauta</b>")
     voting_service.close_assembly(session, admin, assembly)
@@ -164,7 +164,7 @@ def test_saving_minutes_creates_the_folder_once_and_files_the_document(
 
 def test_saving_minutes_is_board_only(session: Session):
     assembly = _closed_assembly_with_delinquent_lot(session)[1]
-    manager = make_user(session, UserRole.MANAGER)
+    manager = make_user(session, "MANAGER")
 
     with pytest.raises(ForbiddenError):
         voting_service.save_minutes(session, manager, assembly, FakeStorageProvider())

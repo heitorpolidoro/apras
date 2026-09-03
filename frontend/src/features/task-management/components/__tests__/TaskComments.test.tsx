@@ -2,11 +2,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import { useTranslation } from "react-i18next";
 import TaskComments from "../TaskComments";
-import {
-  useComments,
-  useCreateComment,
-  useUpdateComment,
-} from "../../hooks/useTasks";
+import { useComments, useCreateComment, useUpdateComment,  } from "../../hooks/useTasks";
 import { useAuth } from "../../../user-administration/context/AuthContext";
 
 vi.mock("../../hooks/useTasks", () => ({

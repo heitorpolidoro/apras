@@ -1,24 +1,8 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  FileText,
-  FolderPlus,
-  Plus,
-  Search,
-  RefreshCw,
-} from "lucide-react";
-import { useEffectiveIdentity } from "../../user-administration/context/useEffectiveIdentity";
-import {
-  useCreateDocumentVersion,
-  useCreateFolder,
-  useDeleteDocument,
-  useDeleteFolder,
-  useDocumentFolders,
-  useDocuments,
-  useDownloadDocument,
-  useUpdateFolder,
-  useUploadDocument,
-} from "../hooks/useDocuments";
+import { FileText, FolderPlus, Plus, Search, RefreshCw,  } from "lucide-react";
+import { useEffectivePermissionSet } from "../../user-administration/access/useCanAccess";
+import { useCreateDocumentVersion, useCreateFolder, useDeleteDocument, useDeleteFolder, useDocumentFolders, useDocuments, useDownloadDocument, useUpdateFolder, useUploadDocument,  } from "../hooks/useDocuments";
 import type { AssociationDocument, DocumentFolderTree } from "../../../types/document";
 import { FolderTreeSidebar } from "./FolderTreeSidebar";
 import { DocumentGridTable } from "./DocumentGridTable";
@@ -30,8 +14,8 @@ import { Button } from "../../../components/ui/button";
 
 export const DocumentCenterPage: React.FC = () => {
   const { t } = useTranslation();
-  const { role } = useEffectiveIdentity();
-  const canManage = role === "ADMINISTRATOR" || role === "DIRECTOR";
+  const { has } = useEffectivePermissionSet();
+  const canManage = has("documents:folder_create");
 
   // State
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);

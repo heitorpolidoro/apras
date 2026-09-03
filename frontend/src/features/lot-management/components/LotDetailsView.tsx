@@ -245,7 +245,7 @@ export const LotDetailsView: React.FC<LotDetailsViewProps> = ({
                     </td>
                     <td className="px-4 py-3">{getAssocBadge(link.association_type)}</td>
                     <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">
-                      {link.user.role}
+                      {link.user.roles.join(", ")}
                     </td>
                     {canManage && (
                       <td className="px-4 py-3 text-right">

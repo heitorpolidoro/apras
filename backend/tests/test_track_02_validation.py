@@ -1,4 +1,3 @@
-from app.models.enums import UserRole
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
@@ -34,4 +33,8 @@ def test_signup_creates_inactive_guest(client: TestClient, session: Session):
     assert response.status_code == 200
     data = response.json()
     assert data["is_active"] is False
-    assert data["role"] == UserRole.GUEST
+    # IAM F5 (APRAS-49 §8.3): signup creates the user with **zero roles**
+    # and `is_active = False` -- the same practical result the forced
+    # `GUEST` enum expressed, now said once instead of twice.
+    assert "role" not in data
+    assert data["roles"] == []

@@ -1,17 +1,41 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import TaskDashboard from "../TaskDashboard";
-import {
-  useTasks,
-  useCreateTask,
-  useUpdateTask,
-  useTaskHistory,
-  useDeleteTask,
-} from "../../hooks/useTasks";
+import { useTasks, useCreateTask, useUpdateTask, useTaskHistory, useDeleteTask,  } from "../../hooks/useTasks";
 import { useCategories } from "../../hooks/useCategories";
-import { useUserTypes } from "../../../../hooks/useUserTypes";
+import { useRoles } from "../../../../hooks/useRoles";
 import { TaskStatus, TaskPriority } from "../../types";
 import * as useUsersHook from "../../../../hooks/useUsers";
+import { PERMISSIONS_BY_ROLE } from "../../../../test/permissionFixtures";
+import { useAuth } from "../../../user-administration/context/AuthContext";
+
+/** The profile each case's fixture stands for. */
+const mockProfile = () => useAuth().user?.is_superuser ? "ADMINISTRATOR" : "MANAGER";
+
+// IAM F5 (APRAS-49 §10.2): the component reads its *permissions* now, not a
+// role. Mocking the access module keeps each case's signal exactly where it
+// was — the `useAuth()` fixture this file already varies per test — while
+// removing the `/permissions/me` query from the render path, which is what
+// made a `QueryClientProvider` necessary.
+vi.mock("../../../../features/user-administration/access/useCanAccess", () => {
+  const build = (profile: string) => ({
+    has: (permission: string) =>
+      (PERMISSIONS_BY_ROLE[profile] ?? []).includes(permission),
+    hasModule: (moduleName: string) =>
+      (PERMISSIONS_BY_ROLE[profile] ?? []).some((permission) =>
+        permission.startsWith(`${moduleName}:`),
+      ),
+    isLoading: false,
+    all: new Set(PERMISSIONS_BY_ROLE[profile] ?? []),
+  });
+  return {
+    useEffectivePermissionSet: () => build(mockProfile()),
+    usePermissionSet: () => build(mockProfile()),
+    useCanAccess: () => ({ allowed: true, isLoading: false }),
+    useCanShowMenu: () => ({ allowed: true, isLoading: false }),
+  };
+});
+
 
 // Mock dos hooks
 vi.mock("../../hooks/useTasks", () => ({
@@ -34,12 +58,12 @@ vi.mock("../../hooks/useCategories", () => ({
   useCategories: vi.fn(),
 }));
 
-vi.mock("../../../../hooks/useUserTypes", () => ({
-  useUserTypes: vi.fn(),
+vi.mock("../../../../hooks/useRoles", () => ({
+  useRoles: vi.fn(),
 }));
 
 // TaskDashboard renders TaskList/TaskBoard/TaskForm, which read their
-// effective identity via useEffectiveIdentity (useAuth + useSimulation).
+// effective identity via useEffectivePermissionSet (useAuth + useSimulation).
 // Default both to a non-simulating, roleless state so this suite's
 // assertions (about filters/modal behavior, not permissions) are unaffected.
 vi.mock("../../../user-administration/context/AuthContext", () => ({
@@ -54,11 +78,9 @@ vi.mock("../../../user-administration/context/AuthContext", () => ({
 
 vi.mock("../../../user-administration/context/SimulationContext", () => ({
   useSimulation: vi.fn(() => ({
-    simulatedRole: null,
-    simulatedUserTypeIds: [],
+    simulatedRoleIds: [],
     isSimulating: false,
-    setSimulatedRole: vi.fn(),
-    setSimulatedUserTypeIds: vi.fn(),
+    setSimulatedRoleIds: vi.fn(),
     stopSimulation: vi.fn(),
   })),
 }));
@@ -73,7 +95,7 @@ vi.mock(
     return {
       ...actual,
       useAuth: vi.fn(() => ({
-        user: { id: "admin-1", role: actual.UserRole.ADMINISTRATOR },
+        user: { id: "admin-1", is_superuser: true },
       })),
     };
   },
@@ -139,7 +161,7 @@ describe("TaskDashboard", () => {
       isLoading: false,
     } as any); // skipcq: JS-0323
 
-    vi.mocked(useUserTypes).mockReturnValue({
+    vi.mocked(useRoles).mockReturnValue({
       data: [{ id: "type-1", name: "Gerente" }],
       isLoading: false,
     } as any);
@@ -575,7 +597,6 @@ describe("TaskDashboard", () => {
           username: "alice",
           email: "",
           is_active: true,
-          role: "DIRECTOR",
         },
       ],
       isLoading: false,

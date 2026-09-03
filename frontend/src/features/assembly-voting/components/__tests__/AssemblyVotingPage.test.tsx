@@ -1,18 +1,8 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import AssemblyVotingPage from "../AssemblyVotingPage";
-import {
-  useAssemblies,
-  useCloseAssembly,
-  useCloseVote,
-  useCreateAssembly,
-  useCreateVote,
-  useEligibleLots,
-  useUpdateAssembly,
-  useVotes,
-} from "../../hooks/useVoting";
-import { useEffectiveIdentity } from "../../../user-administration/context/useEffectiveIdentity";
-import { UserRole } from "../../../../types/auth";
+import { useEffectivePermissionSet } from "../../../user-administration/access/useCanAccess";
+import { useAssemblies, useCloseAssembly, useCloseVote, useCreateAssembly, useCreateVote, useEligibleLots, useUpdateAssembly, useVotes,  } from "../../hooks/useVoting";
 
 vi.mock("../../hooks/useVoting", () => ({
   useAssemblies: vi.fn(),
@@ -44,8 +34,8 @@ vi.mock("../../../lot-management/hooks/useLots", () => ({
   })),
 }));
 
-vi.mock("../../../user-administration/context/useEffectiveIdentity", () => ({
-  useEffectiveIdentity: vi.fn(),
+vi.mock("../../../user-administration/access/useCanAccess", () => ({
+  useEffectivePermissionSet: vi.fn(),
 }));
 
 const assembly = {
@@ -81,14 +71,23 @@ const vote = {
   options: [{ id: "opt-1", vote_id: "vote-1", label: "Sim", order_index: 0 }],
 };
 
-const setRole = (role: UserRole) => {
-  vi.mocked(useEffectiveIdentity).mockReturnValue({ role } as never);
+/** The permissions the retired role carried, for the two rules this page has. */
+const setRole = (role: string) => {
+  const held =
+    role === "ADMINISTRATOR" || role === "DIRECTOR"
+      ? ["assemblies:create", "votes:create"]
+      : role === "MANAGER"
+        ? ["votes:create"]
+        : [];
+  vi.mocked(useEffectivePermissionSet).mockReturnValue({
+    has: (permission: string) => held.includes(permission),
+  } as never);
 };
 
 describe("AssemblyVotingPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    setRole(UserRole.ADMINISTRATOR);
+    setRole("ADMINISTRATOR");
     vi.mocked(useAssemblies).mockReturnValue({
       data: [assembly],
       isLoading: false,
@@ -135,7 +134,7 @@ describe("AssemblyVotingPage", () => {
   });
 
   it("does not offer assembly creation to a MANAGER, only polls", () => {
-    setRole(UserRole.MANAGER);
+    setRole("MANAGER");
     render(<AssemblyVotingPage />);
     expect(
       screen.queryByRole("button", { name: "Nova Assembleia" }),
@@ -148,7 +147,7 @@ describe("AssemblyVotingPage", () => {
   });
 
   it("does not offer any creation to a RESIDENT", () => {
-    setRole(UserRole.RESIDENT);
+    setRole("RESIDENT");
     render(<AssemblyVotingPage />);
     expect(
       screen.queryByRole("button", { name: "Nova Assembleia" }),
@@ -477,7 +476,7 @@ describe("AssemblyVotingPage", () => {
   });
 
   it("does not offer the release action to a non-board role", () => {
-    setRole(UserRole.MANAGER);
+    setRole("MANAGER");
     vi.mocked(useAssemblies).mockReturnValue({
       data: [draftAssembly],
       isLoading: false,

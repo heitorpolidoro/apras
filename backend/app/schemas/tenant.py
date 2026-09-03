@@ -5,8 +5,6 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.enums import UserRole
-
 
 class TenantBase(BaseModel):
     """Base tenant schema with common fields."""
@@ -70,7 +68,10 @@ class TenantMemberRead(BaseModel):
     user_id: UUID
     email: str
     full_name: str
-    role: UserRole
+    # The user's role **names** in the acting tenant, sorted (IAM F5,
+    # APRAS-49 §8.2). One shape for all three summary schemas, one i18n
+    # treatment (join with ", "), no new nested model.
+    roles: list[str] = []
     linked_at: datetime
     is_tenant_admin: bool
 
@@ -81,7 +82,7 @@ class TenantMembershipSummary(BaseModel):
     """One membership of the *calling* user, for ``GET /api/v1/auth/me``.
 
     Distinct from :class:`TenantMemberRead`, which describes *another* user's
-    membership of a named tenant and carries their email/role, and from
+    membership of a named tenant and carries their email/roles, and from
     :class:`TenantRead`, which describes the tenant entity and must stay
     caller-independent (it is also the response of ``POST``/``PATCH``/
     ``GET {id}``, where a caller-relative field would be a category error).
