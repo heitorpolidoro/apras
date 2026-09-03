@@ -178,6 +178,26 @@ def test_me_keeps_existing_fields(session: Session, client: TestClient):
     assert body["cpf"] == user.cpf
 
 
+@pytest.mark.parametrize("flag", [True, False])
+def test_me_reports_the_callers_own_is_superuser(
+    session: Session, client: TestClient, flag: bool
+):
+    """`is_superuser` on `/auth/me` is the caller's real flag (APRAS-49 §8.3).
+
+    `UserMeRead` is built from `UserRead`, which deliberately omits the flag;
+    a build that forgets to pass it explicitly reports `False` for everyone,
+    which is exactly what `tenantState.ts` must not see for a superuser.
+    """
+    user = _make_user(session, f"me-super-{flag}@test.com", "DIRECTOR")
+    user.is_superuser = flag
+    session.add(user)
+    session.commit()
+
+    body = client.get("/api/v1/auth/me", headers=_auth(user)).json()
+
+    assert body["is_superuser"] is flag
+
+
 def test_me_ignores_tenant_header(
     session: Session, client: TestClient, tenant_alpha: Tenant
 ):

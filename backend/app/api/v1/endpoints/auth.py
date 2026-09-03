@@ -98,8 +98,11 @@ def read_user_me(
     Adding a session dependency does not add `get_current_tenant`, so the
     route's scope classification is unchanged.
     """
+    # `UserRead` deliberately omits `is_superuser` (a directory-wide leak), so
+    # the caller's own flag has to be passed explicitly here (APRAS-49 §8.3).
     return UserMeRead(
         **UserRead.model_validate(current_user).model_dump(),
+        is_superuser=current_user.is_superuser,
         tenants=TenantService.list_memberships(session, current_user),
     )
 
