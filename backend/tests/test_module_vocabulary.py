@@ -20,24 +20,27 @@ from app.core.permissions import (
 def test_modules_are_derived_from_the_catalogue():
     """`MODULES` is the catalogue's own module set, nothing added or dropped."""
     assert {module_of(permission) for permission in PERMISSIONS} == MODULES
-    assert len(MODULES) == 26
+    assert len(MODULES) == 27
 
 
-def test_core_modules_are_three_and_real():
-    """Identity, membership and the authorization vocabulary itself.
+def test_core_modules_are_four_and_real():
+    """Identity, membership, the authorization vocabulary and the subscription.
 
     Disabling any of them would make the tenant unadministrable from inside —
     no user list, no role editor, no tenant switcher — and would strip the
     very permissions an operator needs to turn it back on from the tenant
     side. Post-F5 the identity module is `roles`, not `user_types`; the
-    subset assertion is what catches a stale name.
+    subset assertion is what catches a stale name. APRAS-40 adds `billing`
+    for exactly the same reason: it is the only surface from which a
+    condominium can contract a module back on, so a plan (or an operator)
+    that could turn it off would lock the tenant out of its own subscription.
     """
-    assert {"tenants", "users", "roles"} == CORE_MODULES
+    assert {"tenants", "users", "roles", "billing"} == CORE_MODULES
     assert CORE_MODULES <= MODULES
 
 
 def test_toggleable_modules_partition_the_catalogue():
-    """The 23 billable features and the 3 core ones tile `MODULES` exactly."""
+    """The 23 billable features and the 4 core ones tile `MODULES` exactly."""
     assert TOGGLEABLE_MODULES | CORE_MODULES == MODULES
     assert not (TOGGLEABLE_MODULES & CORE_MODULES)
     assert len(TOGGLEABLE_MODULES) == 23
@@ -73,13 +76,13 @@ def test_filter_by_modules_on_an_empty_disabled_set_is_the_identity():
 def test_every_permission_belongs_to_a_declared_module():
     """No catalogue string can name a module the vocabulary does not know."""
     assert {module_of(p) for p in PERMISSIONS} <= MODULES
-    assert len(PERMISSIONS) == 159
+    assert len(PERMISSIONS) == 161
 
 
-#: The 26 module names, spelled out. Deliberately a literal and not a
+#: The 27 module names, spelled out. Deliberately a literal and not a
 #: derivation: it is the **other half** of the i18n pin
 #: (`frontend/src/i18n/__tests__/index.test.ts`), which compares the label
-#: files against the same 26 names from its own local constant. Neither side
+#: files against the same 27 names from its own local constant. Neither side
 #: can derive from the other across the language boundary, so a catalogue
 #: module added without a label has to fail *here* — with a message naming the
 #: file to edit — rather than ship an unlabelled checkbox.
@@ -90,6 +93,7 @@ EXPECTED_MODULE_NAMES = frozenset(
         "assemblies",
         "assets",
         "authorizations",
+        "billing",
         "categories",
         "documents",
         "feedback",
@@ -118,7 +122,7 @@ EXPECTED_MODULE_NAMES = frozenset(
 def test_the_catalogue_modules_are_the_ones_the_ui_labels():
     """A new catalogue module must be labelled in pt **and** en before it ships.
 
-    The frontend asserts `modules.names` carries exactly these 26 keys in both
+    The frontend asserts `modules.names` carries exactly these 27 keys in both
     languages. This is the backend end of the same pin: adding a permission in
     a 27th module turns this red first, and the failure says where to go.
     """

@@ -104,7 +104,7 @@ def test_a_superuser_can_grant_is_superuser(
     # And the flag really means the whole catalogue, in this tenant.
     me = client.get("/api/v1/permissions/me", headers=_auth(target))
     assert me.status_code == 200
-    assert len(me.json()["permissions"]) == 159
+    assert len(me.json()["permissions"]) == 161
 
 
 def test_a_superuser_can_revoke_is_superuser(
@@ -272,24 +272,27 @@ def test_setting_the_flag_to_its_current_value_is_a_no_op(
 
 
 def test_the_route_is_unguarded_by_permission_and_superuser_guarded():
-    """It maps to no catalogue permission, so the parity baseline cannot move.
+    """It maps to no catalogue permission, so **this route** costs no cell.
 
     `is_superuser` is a column, not a bundle. Minting a catalogue string whose
     only purpose is to be refused by `assert_can_grant` — and paying six
     baseline cells for it — would be the wrong trade, so the route goes on the
-    unguarded allowlist instead. That is what keeps `ROUTE_PERMISSIONS` at
-    **180** and `tests/data/parity_matrix_baseline.json` byte-identical.
+    unguarded allowlist instead. That property is what this case is about, and
+    it has not moved.
     """
     assert SUPERUSER_ROUTE in UNGUARDED_ROUTES
     assert SUPERUSER_ROUTE not in ROUTE_PERMISSIONS
     # The F4 merge base is 192 routes / 180 mapped / 12 unguarded; this slice
-    # adds exactly one route and exactly one allowlist entry. APRAS-39 then
-    # added two more allowlist entries by the same convention and for the same
-    # reason (the per-tenant module switch), which is why the count reads 15
-    # while `ROUTE_PERMISSIONS` — the number that governs the parity baseline
-    # — has not moved.
-    assert len(UNGUARDED_ROUTES) == 15
-    assert len(ROUTE_PERMISSIONS) == 180
+    # added exactly one route and exactly one allowlist entry. APRAS-39 then
+    # added two more by the same convention (the per-tenant module switch) and
+    # APRAS-40 seven more (four `/api/v1/plans` and three
+    # `/api/v1/tenants/{id}/subscription*`), which is why the count reads 22.
+    # `ROUTE_PERMISSIONS` moved 180 -> 183 in APRAS-40, from its three
+    # *permission-guarded* billing routes and nothing else; the F2 golden file
+    # stays byte-identical because those 18 cells live in the additive
+    # `tests/data/parity_matrix_baseline_40.json`.
+    assert len(UNGUARDED_ROUTES) == 22
+    assert len(ROUTE_PERMISSIONS) == 183
 
     route = next(
         r
@@ -320,7 +323,7 @@ def test_the_superuser_route_is_tenant_scoped_like_the_rest_of_the_users_router(
     assert SUPERUSER_ROUTE not in GLOBAL_ROUTES
     # 18 at the IAM F5 merge base; APRAS-39's two module-switch routes are
     # mounted on the global tenants router and therefore join this set.
-    assert len(GLOBAL_ROUTES) == 20
+    assert len(GLOBAL_ROUTES) == 27
 
     route = next(
         r

@@ -1,0 +1,65 @@
+{
+  "_meta": {
+    "cell_count": 18,
+    "generator": "tests/tools/record_parity_baseline.py",
+    "harness": "tests/matrix_world.py",
+    "merge_base_sha": "68cfd1d1ca49e8bcec05708de6ff02fa22eba875",
+    "regenerate": "cd backend && POSTGRES_URL=sqlite:// SECRET_KEY=parity-matrix uv run python -m tests.tools.record_parity_baseline --out tests/data/parity_matrix_baseline_40.json --merge-base 68cfd1d1ca49e8bcec05708de6ff02fa22eba875 --routes 'GET /api/v1/subscription' --routes 'GET /api/v1/subscription/history' --routes 'PUT /api/v1/subscription/modules'"
+  },
+  "cells": {
+    "ADMINISTRATOR": {
+      "GET": {
+        "/api/v1/subscription": 200,
+        "/api/v1/subscription/history": 200
+      },
+      "PUT": {
+        "/api/v1/subscription/modules": 404
+      }
+    },
+    "DIRECTOR": {
+      "GET": {
+        "/api/v1/subscription": 403,
+        "/api/v1/subscription/history": 403
+      },
+      "PUT": {
+        "/api/v1/subscription/modules": 403
+      }
+    },
+    "GUEST": {
+      "GET": {
+        "/api/v1/subscription": 403,
+        "/api/v1/subscription/history": 403
+      },
+      "PUT": {
+        "/api/v1/subscription/modules": 403
+      }
+    },
+    "MANAGER": {
+      "GET": {
+        "/api/v1/subscription": 403,
+        "/api/v1/subscription/history": 403
+      },
+      "PUT": {
+        "/api/v1/subscription/modules": 403
+      }
+    },
+    "PORTEIRO": {
+      "GET": {
+        "/api/v1/subscription": 403,
+        "/api/v1/subscription/history": 403
+      },
+      "PUT": {
+        "/api/v1/subscription/modules": 403
+      }
+    },
+    "RESIDENT": {
+      "GET": {
+        "/api/v1/subscription": 403,
+        "/api/v1/subscription/history": 403
+      },
+      "PUT": {
+        "/api/v1/subscription/modules": 403
+      }
+    }
+  }
+}

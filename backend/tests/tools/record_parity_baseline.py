@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -40,6 +41,7 @@ from typing import TYPE_CHECKING
 
 # The recorder is executed as `python -m tests.tools.record_parity_baseline`
 # from `backend/`, so `tests` is importable as a package.
+from app.core.permissions import ROUTE_PERMISSIONS
 from tests.matrix_world import (
     CELLS,
     cell_client,
@@ -70,6 +72,24 @@ REGENERATE = (
     "SECRET_KEY=parity-matrix uv run python -m "
     "tests.tools.record_parity_baseline --out /tmp/regen.json) && "
     "diff /tmp/regen.json backend/tests/data/parity_matrix_baseline.json"
+)
+
+#: The frozen IAM F2 artefact. The recorder refuses to write it, full stop
+#: (APRAS-40 §9.2.1): new routes get their own additive file. F2's own
+#: `_meta.regenerate` writes to /tmp/regen.json, so it is unaffected.
+FROZEN = "tests/data/parity_matrix_baseline.json"
+
+#: The scoped invocation, emitted verbatim as `_meta.regenerate` when
+#: `--routes` is given, so `meta["merge_base_sha"] in meta["regenerate"]` holds
+#: and the string is executable exactly as written. There is **no**
+#: `git worktree add` here, and that is honest: the named routes do not exist
+#: at the merge base, so no worktree at that sha can reproduce these cells.
+#: The sha names the branch point the route delta is measured from -- the
+#: provenance of the accounting, not of the statuses.
+SCOPED_REGENERATE = (
+    "cd backend && POSTGRES_URL=sqlite:// SECRET_KEY=parity-matrix "
+    "uv run python -m tests.tools.record_parity_baseline "
+    "--out {out} --merge-base {sha}{routes}"
 )
 
 
@@ -105,26 +125,63 @@ def head_sha(run_git: Callable[..., str] = _git) -> str:
     return run_git("rev-parse", "HEAD").strip()
 
 
-def record(sha: str) -> dict:
-    """Run all 1080 cells and return the serialisable payload."""
-    cells: dict[str, dict[str, dict[str, int]]] = {}
+def select_cells(routes: list[str] | None) -> list[tuple[str, str, str]]:
+    """`CELLS` filtered to the named `"METHOD /path"` routes.
+
+    `None` or an empty list means all of them, i.e. today's behaviour. An
+    unknown route is `SystemExit(2)` naming it, never a silently empty
+    recording.
+    """
+    if not routes:
+        return list(CELLS)
+    wanted = {tuple(spec.split(" ", 1)) for spec in routes}
+    unknown = sorted(wanted - set(ROUTE_PERMISSIONS))
+    if unknown:
+        print(f"unknown routes: {unknown}", file=sys.stderr)
+        raise SystemExit(2)
+    return [cell for cell in CELLS if (cell[1], cell[2]) in wanted]
+
+
+def resolve_merge_base(sha: str | None, run_git: Callable[..., str] = _git) -> str:
+    """`sha` if the repository knows it, else `SystemExit(2)`; default HEAD."""
+    if sha is None:
+        return head_sha(run_git)
+    if not re.fullmatch(r"[0-9a-f]{40}", sha):
+        print(f"--merge-base must be a 40-hex sha, got {sha!r}", file=sys.stderr)
+        raise SystemExit(2)
+    try:
+        run_git("rev-parse", "--verify", f"{sha}^{{commit}}")
+    except subprocess.CalledProcessError:
+        print(f"--merge-base names no commit: {sha}", file=sys.stderr)
+        raise SystemExit(2) from None
+    return sha
+
+
+def record(
+    sha: str,
+    cells: list[tuple[str, str, str]] | None = None,
+    regenerate: str | None = None,
+) -> dict:
+    """Run `cells` (all 1080 by default) and return the serialisable payload."""
+    cells = list(CELLS) if cells is None else cells
+    recorded: dict[str, dict[str, dict[str, int]]] = {}
     with tempfile.TemporaryDirectory() as tmp:
         database_path = str(Path(tmp) / "matrix.sqlite3")
         with matrix_engine(database_path) as engine, neutralised_storage():
             world = seed_once(engine)
-            for role, method, path in CELLS:
+            for role, method, path in cells:
                 with cell_client(engine) as client:
                     status = run_cell(client, world, role, method, path)
-                cells.setdefault(role, {}).setdefault(method, {})[path] = status
+                recorded.setdefault(role, {}).setdefault(method, {})[path] = status
     return {
         "_meta": {
             "merge_base_sha": sha,
             "generator": GENERATOR,
             "harness": HARNESS,
-            "cell_count": len(CELLS),
-            "regenerate": REGENERATE.format(sha=sha),
+            "cell_count": len(cells),
+            "regenerate": regenerate or REGENERATE.format(sha=sha),
         },
-        "cells": cells,
+        "cells": recorded,
     }
 
 
@@ -133,20 +190,52 @@ def serialise(payload: dict) -> str:
     return json.dumps(payload, indent=2, sort_keys=True) + "\n"
 
 
+def refuse_the_frozen_baseline(out: Path) -> None:
+    """Exit `2` when `--out` resolves to the frozen F2 artefact.
+
+    Before anything is built, `--overwrite` or not: the F2 baseline records
+    what production answered at `02c2025…` and re-recording it would turn the
+    star test of IAM F2 into a tautology, silently. New routes get their own
+    additive file (APRAS-40 §9.2.1).
+    """
+    backend_root = Path(__file__).resolve().parent.parent.parent
+    if out.resolve() == (backend_root / FROZEN).resolve():
+        print(
+            f"refusing to write the frozen IAM F2 baseline {FROZEN}.\n"
+            "It is byte-identical by contract (APRAS-40 §9.2.1). Record new "
+            "routes into their own file with --out and --routes.",
+            file=sys.stderr,
+        )
+        raise SystemExit(2)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", default=DEFAULT_OUT)
     parser.add_argument("--overwrite", action="store_true")
+    parser.add_argument("--routes", action="append", default=None)
+    parser.add_argument("--merge-base", default=None)
     args = parser.parse_args(argv)
 
+    out = Path(args.out)
+    refuse_the_frozen_baseline(out)
     assert_clean_production_tree()
 
-    out = Path(args.out)
     if out.exists() and not args.overwrite:
         print(f"refusing to overwrite {out} (pass --overwrite)", file=sys.stderr)
         return 1
 
-    payload = record(head_sha())
+    sha = resolve_merge_base(args.merge_base)
+    cells = select_cells(args.routes)
+    regenerate = None
+    if args.routes:
+        regenerate = SCOPED_REGENERATE.format(
+            out=args.out,
+            sha=sha,
+            routes="".join(f" --routes '{spec}'" for spec in args.routes),
+        )
+
+    payload = record(sha, cells=cells, regenerate=regenerate)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(serialise(payload), encoding="utf-8")
     print(f"recorded {payload['_meta']['cell_count']} cells to {out}")

@@ -34,7 +34,15 @@ from app.schemas.role import RoleCreate, RoleRead, RoleUpdate
 PERMISSION_RE = re.compile(r"^[a-z][a-z0-9_]*:[a-z][a-z0-9_]*$")
 
 #: The tag groups that are entirely unguarded (§4.24).
-FULLY_UNGUARDED_TAGS = frozenset({"auth", "health", "permissions", "<root>"})
+#:
+#: `plans` joins them in APRAS-40: it is the first router whose **whole**
+#: surface is superuser-only, so by §6.4's convention (repeated from APRAS-49
+#: §8.4) none of its four routes mints a catalogue string. The three
+#: superuser-only subscription routes do not add a tag group of their own --
+#: they live on the existing, partly-mapped `tenants` router.
+FULLY_UNGUARDED_TAGS = frozenset(
+    {"auth", "health", "permissions", "plans", "<root>"}
+)
 
 
 def _api_routes() -> list[APIRoute]:
@@ -154,29 +162,34 @@ def test_permission_strings_follow_the_convention():
     assert not bad, f"permissions violating <module>:<action>: {bad}"
 
 
-def test_unguarded_allowlist_is_fifteen_routes():
-    assert len(UNGUARDED_ROUTES) == 15
+def test_unguarded_allowlist_is_twenty_two_routes():
+    assert len(UNGUARDED_ROUTES) == 22
 
 
 def test_route_count_is_fully_accounted_for():
     """The registry accounts for the whole route table, with no overlap.
 
     The total is recomputed from `app.main.app` rather than hard-coded, so
-    the invariant survives a baseline shift; 195/180/15 is what to expect on
-    the APRAS-39 tree, which added the two superuser-only module-switch
-    routes `GET`/`PUT /api/v1/tenants/{tenant_id}/modules` to the allowlist
-    -- the only routes and the only allowlist entries that task adds -- on
-    top of the 193/180/13 IAM F5 (APRAS-49) left, itself on top of IAM F4's
-    192/180/12. `len(ROUTE_PERMISSIONS)` staying at **180** is the part that
-    must hold unconditionally: it is what keeps the parity matrix at
-    6 x 180 = 1080 cells and the golden file byte-identical.
+    the invariant survives a baseline shift; 205/183/22 is what to expect on
+    the APRAS-40 tree, which adds ten routes: the three permission-guarded
+    tenant-side `/api/v1/subscription` routes (`+3` to `ROUTE_PERMISSIONS`)
+    and seven superuser-only ones -- the four `/api/v1/plans` routes and the
+    three `/api/v1/tenants/{tenant_id}/subscription*` routes -- which map to
+    no catalogue permission and go on the allowlist (`+7`). That is on top of
+    the 195/180/15 APRAS-39 left, itself on top of the 193/180/13 IAM F5
+    (APRAS-49) left and IAM F4's 192/180/12.
+
+    `len(ROUTE_PERMISSIONS)` moving 180 -> **183** is what takes the parity
+    matrix from 6 x 180 = 1080 cells to 6 x 183 = 1098. The F2 golden file
+    stays byte-identical all the same: the 18 new cells live in the additive
+    `tests/data/parity_matrix_baseline_40.json` (APRAS-40 §9.2).
     """
     total = len(_all_route_keys())
     assert set(ROUTE_PERMISSIONS) & UNGUARDED_ROUTES == set()
     assert len(ROUTE_PERMISSIONS) + len(UNGUARDED_ROUTES) == total
-    assert len(UNGUARDED_ROUTES) == 15
-    assert len(ROUTE_PERMISSIONS) == total - 15
-    assert len(ROUTE_PERMISSIONS) == 180
+    assert len(UNGUARDED_ROUTES) == 22
+    assert len(ROUTE_PERMISSIONS) == total - 22
+    assert len(ROUTE_PERMISSIONS) == 183
 
 
 def test_every_router_module_has_at_least_one_permission():

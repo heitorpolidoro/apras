@@ -62,6 +62,20 @@ export const ROUTE_ACCESS: Record<string, AccessRule> = {
   // only rule that can express it. `{ anyOf: ["tenants:update"] }` would
   // offer the menu to an acting tenant_admin, whom the API answers 403.
   "/admin/modules": { superuser: true },
+  // APRAS-40 §8.3: the tenant-side subscription area. An ordinary `{ module }`
+  // rule, and it works because `billing` is a **core** module: APRAS-39's
+  // strip never removes `billing:*`, so the rule holds for any `billing:*` a
+  // role carries. A manage-only holder therefore reaches the page and the read
+  // endpoint is what refuses them — the documented degenerate configuration
+  // (§2.2), stated rather than special-cased.
+  "/subscription": { module: "billing" },
+  // The two commercial operator screens. `{ superuser: true }` for
+  // `/admin/modules`' reason: these routes are superuser-guarded and carry no
+  // catalogue permission, so no `{ anyOf }` rule can express them, and
+  // `{ anyOf: ["tenants:update"] }` is specifically wrong — a tenant_admin
+  // holds it through the whole-catalogue short-circuit and the API answers 403.
+  "/admin/plans": { superuser: true },
+  "/admin/subscriptions": { superuser: true },
 };
 
 /**
@@ -107,4 +121,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { path: "/admin/access-control", labelKey: "nav.accessControl" },
   { path: "/gate-monitor", labelKey: "nav.gateMonitor" },
   { path: "/admin/modules", labelKey: "nav.modules" },
+  { path: "/subscription", labelKey: "nav.subscription" },
+  { path: "/admin/plans", labelKey: "nav.plans" },
+  { path: "/admin/subscriptions", labelKey: "nav.tenantSubscriptions" },
 ].map((item) => ({ ...item, access: ROUTE_ACCESS[item.path] }));

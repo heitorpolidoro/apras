@@ -532,7 +532,15 @@ def test_task_visible_to_downgrade_backfills_one_arbitrary_target(migrated_pg_en
 
 DEFAULT_TENANT_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 
-# The 27 directly tenant-scoped tables (spec §2.1).
+# The 28 directly tenant-scoped tables (spec §2.1, plus APRAS-40's).
+#
+# **Not frozen history.** Unlike migration `0028`'s own
+# `_TENANT_SCOPED_TABLES` literal -- which records what *that* migration
+# scoped and must never be edited -- this tuple is an **exact-set** assertion
+# against the live schema at head (`test_inherited_tables_have_no_tenant_id`
+# asserts `scoped == set(TENANT_SCOPED_TABLES) | {"user_tenant_link"}`), so it
+# has to grow with the schema. A new directly-scoped table registers here and
+# thereby also opts into `test_every_scoped_table_has_the_four_properties`.
 TENANT_SCOPED_TABLES = (
     "task",
     "category",
@@ -561,9 +569,14 @@ TENANT_SCOPED_TABLES = (
     "vote",
     "feedback",
     "media_asset",
+    # APRAS-40: the 28th, and the first directly-scoped table added after
+    # `0028`. Its tenant FK is named `fk_tenant_subscription_tenant_id` in
+    # migration `0035` precisely so it satisfies the four-properties case
+    # below like every other member.
+    "tenant_subscription",
 )
 
-# The 20 tables that inherit their tenant through a NOT NULL parent FK and
+# The 21 tables that inherit their tenant through a NOT NULL parent FK and
 # must therefore *not* carry a tenant_id (spec §2.2). Asserting the absence
 # is what stops a later drive-by from denormalising `ballot`.
 TENANT_INHERITED_TABLES = (
@@ -587,6 +600,10 @@ TENANT_INHERITED_TABLES = (
     "lot_voter_eligibility",
     "facial_template",
     "facial_access_event",
+    # APRAS-40: append-only, reaching its tenant through the NOT NULL FK to
+    # `tenant_subscription`. A second `tenant_id` copy would be a forgeable
+    # source of truth that can disagree with the parent.
+    "subscription_change",
 )
 
 
@@ -694,7 +711,13 @@ def test_every_scoped_table_has_not_null_tenant_id(isolated_pg_engine):
 
 
 def test_inherited_tables_have_no_tenant_id(isolated_pg_engine):
-    """The 20 inherited tables must stay free of a denormalised tenant_id."""
+    """The 21 inherited tables must stay free of a denormalised tenant_id.
+
+    The final assertion is an **exact set** over the live schema, so it is also
+    the guard that catches a new directly-scoped table nobody registered in
+    `TENANT_SCOPED_TABLES` -- which is exactly how APRAS-40's
+    `tenant_subscription` was caught.
+    """
     with isolated_pg_engine.connect() as conn:
         scoped = set(
             conn.execute(
@@ -899,7 +922,7 @@ def test_downgrade_removes_tenant_schema(isolated_pg_engine):
     # Re-applying must succeed, so the downgrade left a schema 0028 can
     # migrate again (the fixture's teardown reset assumes nothing about it).
     _run_alembic("upgrade", "head")
-    assert _current_revision(isolated_pg_engine) == "0034_add_tenant_modules"
+    assert _current_revision(isolated_pg_engine) == "0035_add_subscription_tables"
 
 
 # ---------------------------------------------------------------------------
@@ -928,7 +951,7 @@ def test_is_tenant_admin_column_shape_and_backfill(pg_engine_at_0027):
         )
 
     _run_alembic("upgrade", "head")
-    assert _current_revision(pg_engine_at_0027) == "0034_add_tenant_modules"
+    assert _current_revision(pg_engine_at_0027) == "0035_add_subscription_tables"
 
     with pg_engine_at_0027.connect() as conn:
         column = conn.execute(
@@ -996,7 +1019,7 @@ def test_permissions_column_shape_and_backfill(pg_engine_at_0027):
         )
 
     _run_alembic("upgrade", "head")
-    assert _current_revision(pg_engine_at_0027) == "0034_add_tenant_modules"
+    assert _current_revision(pg_engine_at_0027) == "0035_add_subscription_tables"
 
     with pg_engine_at_0027.connect() as conn:
         column = conn.execute(
@@ -1095,7 +1118,7 @@ def test_is_superuser_column_shape_and_conversion(pg_engine_at_0027):
             )
 
     _run_alembic("upgrade", "head")
-    assert _current_revision(pg_engine_at_0027) == "0034_add_tenant_modules"
+    assert _current_revision(pg_engine_at_0027) == "0035_add_subscription_tables"
 
     with pg_engine_at_0027.connect() as conn:
         column = conn.execute(
@@ -1729,7 +1752,7 @@ def test_0033_does_not_refuse_an_inactive_or_flagged_user(pg_engine_at_0031):
         _link_tenant(conn, syndic, DEFAULT_TENANT_ID, is_tenant_admin=True)
 
     _run_alembic("upgrade", "head")
-    assert _current_revision(pg_engine_at_0031) == "0034_add_tenant_modules"
+    assert _current_revision(pg_engine_at_0031) == "0035_add_subscription_tables"
 
 
 def test_effective_permissions_are_unchanged_by_0033(pg_engine_at_0031):  # noqa: PLR0915
@@ -1854,11 +1877,22 @@ def test_effective_permissions_are_unchanged_by_0033(pg_engine_at_0031):  # noqa
                 # carries `packages:my_lots_read`, absent from the legacy
                 # ADMINISTRATOR bundle, and `occurrences:read_assigned`.
                 assert post == PERMISSIONS, key
-                assert len(post) == 159
+                # Derived, not a literal: the line above already asserts set
+                # equality, so a second hard-coded size states nothing new and
+                # only rots. It read `== 159` and went red on APRAS-40's two
+                # `billing:*` strings -- caught only against real Postgres,
+                # because this module skips itself without `TEST_POSTGRES_URL`.
+                # The **informative** number is the one below: the superuser
+                # gains strictly more than the legacy bundle carries.
+                assert len(post) == len(PERMISSIONS)
+                assert post > pre[key], key
             else:
                 assert post == pre[key] | NEW_TIER_BY_VALUE[value], key
 
-    # Persona 1's number, spelled out: 155 + 2, deliberately not 159.
+    # Persona 1's number, spelled out: 155 + 2, and deliberately **not**
+    # `len(PERMISSIONS)` -- the legacy ADMINISTRATOR bundle is untouched by
+    # APRAS-40, which is the useful signal that only the "superuser sees
+    # everything" set moved.
     with Session(pg_engine_at_0031) as session, acting_tenant_scope(
         session, DEFAULT_TENANT_ID
     ):
@@ -2161,7 +2195,7 @@ def test_0033_downgrade_refuses_when_the_journal_has_been_dropped(
     # APRAS-39 the walk down from head crosses `0034` first, and the whole
     # walk runs in one transaction, so `0034`'s `DROP COLUMN` is rolled back
     # with the rest and head is still `0034`.
-    assert _current_revision(pg_engine_at_0031) == "0034_add_tenant_modules"
+    assert _current_revision(pg_engine_at_0031) == "0035_add_subscription_tables"
     assert "role" not in _columns(pg_engine_at_0031, "user")
     assert "allowed_menus" not in _columns(pg_engine_at_0031, "role")
 
@@ -2228,27 +2262,168 @@ def test_0034_backfills_every_pre_existing_tenant_to_all_modules_on(
 
 
 def test_0034_round_trips(isolated_pg_engine):
-    """No data statement in either direction, so it is exactly reversible."""
-    assert _current_revision(isolated_pg_engine) == "0034_add_tenant_modules"
+    """No data statement in either direction, so it is exactly reversible.
 
-    _run_alembic("downgrade", "-1")
+    Named explicitly rather than stepped with `-1` since APRAS-40 put `0035`
+    on top: a relative step is a claim about *whatever is currently last*,
+    which is never what this case means.
+    """
+    assert _current_revision(isolated_pg_engine) == "0035_add_subscription_tables"
+
+    _run_alembic("downgrade", "0033_drop_user_role_and_menus")
 
     assert _current_revision(isolated_pg_engine) == "0033_drop_user_role_and_menus"
     assert "disabled_modules" not in _columns(isolated_pg_engine, "tenant")
 
     _run_alembic("upgrade", "head")
 
-    assert _current_revision(isolated_pg_engine) == "0034_add_tenant_modules"
+    assert _current_revision(isolated_pg_engine) == "0035_add_subscription_tables"
     assert "disabled_modules" in _columns(isolated_pg_engine, "tenant")
 
 
-def test_0034_is_the_single_head(isolated_pg_engine):
+# ---------------------------------------------------------------------------
+# 0035_add_subscription_tables (APRAS-40 §7) - plans and subscriptions
+# ---------------------------------------------------------------------------
+
+
+def _constraints(engine, table: str) -> dict[str, tuple[str, str]]:
+    """`{conname: (contype, confdeltype)}` for one table.
+
+    `confdeltype` is Postgres's own FK delete action code: `r` = RESTRICT,
+    `c` = CASCADE, `a` = NO ACTION. SQLite (the rest of the suite) records
+    neither, which is why this shape assertion has to live here.
+    """
+    with engine.connect() as conn:
+        rows = conn.execute(
+            text(
+                "SELECT conname, contype, confdeltype FROM pg_constraint "
+                "WHERE conrelid = CAST(:table AS regclass)"
+            ),
+            {"table": table},
+        ).all()
+    return {row.conname: (row.contype, row.confdeltype) for row in rows}
+
+
+def test_0035_creates_the_three_tables(isolated_pg_engine):
+    """`plan`, `tenant_subscription` and `subscription_change` exist at head."""
+    with isolated_pg_engine.connect() as conn:
+        present = {
+            row.tablename
+            for row in conn.execute(
+                text(
+                    "SELECT tablename FROM pg_tables WHERE tablename IN "
+                    "('plan', 'tenant_subscription', 'subscription_change')"
+                )
+            ).all()
+        }
+    assert present == {"plan", "tenant_subscription", "subscription_change"}
+
+
+def test_0035_plan_is_global_and_json_columns_default(isolated_pg_engine):
+    """`plan` carries no `tenant_id`; both JSON columns default and are NOT NULL."""
+    columns = _columns(isolated_pg_engine, "plan")
+    assert "tenant_id" not in columns
+
+    with isolated_pg_engine.connect() as conn:
+        rows = conn.execute(
+            text(
+                "SELECT column_name, data_type, is_nullable, column_default "
+                "FROM information_schema.columns WHERE table_name = 'plan' "
+                "AND column_name IN ('included_modules', 'module_prices')"
+            )
+        ).all()
+
+    by_name = {row.column_name: row for row in rows}
+    assert by_name["included_modules"].data_type == "json"
+    assert by_name["included_modules"].is_nullable == "NO"
+    assert "[]" in by_name["included_modules"].column_default
+    assert by_name["module_prices"].data_type == "json"
+    assert by_name["module_prices"].is_nullable == "NO"
+    assert "{}" in by_name["module_prices"].column_default
+
+
+def test_0035_declares_the_constraints_the_model_declares(isolated_pg_engine):
+    """One subscription per tenant, RESTRICT on both parents, CASCADE on the
+    child -- the shapes SQLite cannot verify.
+
+    The tenant FK is named to `0028`'s convention, `fk_<table>_tenant_id`, and
+    **not** left to Postgres's generated `tenant_subscription_tenant_id_fkey`:
+    `test_every_scoped_table_has_the_four_properties` looks that exact name up
+    for every member of `TENANT_SCOPED_TABLES`, and this table is the 28th
+    member. The plan FK keeps its generated name because `plan` is unscoped and
+    no convention covers it.
+    """
+    subscription = _constraints(isolated_pg_engine, "tenant_subscription")
+    assert subscription["uq_tenant_subscription_tenant"][0] == "u"
+    assert subscription["tenant_subscription_plan_id_fkey"] == ("f", "r")
+    assert subscription["fk_tenant_subscription_tenant_id"] == ("f", "r")
+    assert "tenant_subscription_tenant_id_fkey" not in subscription
+
+    change = _constraints(isolated_pg_engine, "subscription_change")
+    assert change["subscription_change_subscription_id_fkey"] == ("f", "c")
+    # `subscription_change` inherits its tenant through the parent FK, so it
+    # must NOT be denormalised with a `tenant_id` of its own.
+    assert "tenant_id" not in _columns(isolated_pg_engine, "subscription_change")
+
+
+def test_0035_seeds_nothing(isolated_pg_engine):
+    """No data statement in either direction, and **no seeded plan**.
+
+    A fresh install has no plans, therefore no subscriptions, therefore every
+    tenant keeps APRAS-39's all-on default -- which is the whole of "adopting
+    billing is opt-in" (APRAS-40 §4.6).
+    """
+    with isolated_pg_engine.connect() as conn:
+        assert conn.execute(text("SELECT count(*) FROM plan")).scalar() == 0
+        assert (
+            conn.execute(text("SELECT count(*) FROM tenant_subscription")).scalar()
+            == 0
+        )
+        assert (
+            conn.execute(text("SELECT count(*) FROM subscription_change")).scalar()
+            == 0
+        )
+
+
+def test_0035_round_trips(isolated_pg_engine):
+    """`downgrade -1` drops all three and a re-`upgrade` succeeds."""
+    assert _current_revision(isolated_pg_engine) == "0035_add_subscription_tables"
+
+    _run_alembic("downgrade", "-1")
+
+    assert _current_revision(isolated_pg_engine) == "0034_add_tenant_modules"
+    with isolated_pg_engine.connect() as conn:
+        survivors = conn.execute(
+            text(
+                "SELECT tablename FROM pg_tables WHERE tablename IN "
+                "('plan', 'tenant_subscription', 'subscription_change')"
+            )
+        ).all()
+    assert survivors == []
+
+    _run_alembic("upgrade", "head")
+
+    assert _current_revision(isolated_pg_engine) == "0035_add_subscription_tables"
+    with isolated_pg_engine.connect() as conn:
+        restored = {
+            row.tablename
+            for row in conn.execute(
+                text(
+                    "SELECT tablename FROM pg_tables WHERE tablename IN "
+                    "('plan', 'tenant_subscription', 'subscription_change')"
+                )
+            ).all()
+        }
+    assert restored == {"plan", "tenant_subscription", "subscription_change"}
+
+
+def test_0035_is_the_single_head(isolated_pg_engine):
     """`alembic heads` reports exactly one revision, and it is this one."""
     result = _alembic("heads")
 
     assert result.returncode == 0
     heads = [line for line in result.stdout.splitlines() if "(head)" in line]
     assert len(heads) == 1
-    assert "0034_add_tenant_modules" in heads[0]
+    assert "0035_add_subscription_tables" in heads[0]
     # `alembic_version.version_num` is VARCHAR(32).
-    assert len("0034_add_tenant_modules") <= 32
+    assert len("0035_add_subscription_tables") <= 32

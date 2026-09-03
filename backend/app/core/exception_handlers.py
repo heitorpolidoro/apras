@@ -57,6 +57,8 @@ from app.core.exceptions import (
     PhotoApprovalPermissionError,
     PhotoFileTooLargeError,
     PhotoRejectionReasonRequiredError,
+    PlanAlreadyExistsError,
+    PlanNotFoundError,
     ProjectAccessForbiddenError,
     ProjectInvalidProgressError,
     ProjectNotFoundError,
@@ -71,6 +73,7 @@ from app.core.exceptions import (
     ResidentNotFoundError,
     SpaceReservationConflictError,
     SpaceReservationNotFoundError,
+    SubscriptionNotFoundError,
     TallyNotAvailableError,
     TaskNotFoundError,
     TenantAlreadyExistsError,
@@ -137,6 +140,9 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             PurchaseQuoteNotFoundError,
             TenantNotFoundError,
             TenantMembershipNotFoundError,
+            # APRAS-40 §6.1
+            PlanNotFoundError,
+            SubscriptionNotFoundError,
         ),
     ):
         status_code = status.HTTP_404_NOT_FOUND
@@ -175,6 +181,8 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             PurchaseQuoteFrozenError,
             TenantAlreadyExistsError,
             TenantMembershipAlreadyExistsError,
+            # APRAS-40 §6.1
+            PlanAlreadyExistsError,
         ),
     ):
         status_code = status.HTTP_409_CONFLICT

@@ -61,11 +61,11 @@ def test_route_permissions_uses_the_roles_module():
     assert not [p for p in ROUTE_PERMISSIONS.values() if p.startswith("user_types:")]
 
 
-def test_the_catalogue_has_159_permissions_in_26_modules():
+def test_the_catalogue_has_161_permissions_in_27_modules():
     """156 -> 159 (§3.0); the module count is unchanged, `user_types` -> `roles`."""
-    assert len(PERMISSIONS) == 159
+    assert len(PERMISSIONS) == 161
     modules = {module_of(permission) for permission in PERMISSIONS}
-    assert len(modules) == 26
+    assert len(modules) == 27
     assert "roles" in modules
     assert "user_types" not in modules
 

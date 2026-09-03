@@ -12,6 +12,18 @@ itself (via ``ast``, following the precedent set by
 migration is the artefact that has to be right, and parsing it instead of
 importing it avoids the ``backend/alembic/`` package shadowing the real
 third-party ``alembic`` library.
+
+Migration ``0028``'s ``_TENANT_SCOPED_TABLES`` literal is **frozen history**:
+it records which tables that migration itself scoped, and amending it would
+turn a record of what happened into a running total. A directly-scoped table
+created *after* ``0028`` therefore has no entry there and registers in
+:data:`POST_0028_SCOPED_TABLES` below instead. APRAS-40's
+``tenant_subscription`` is the first. Both
+``test_partition_of_metadata_is_exhaustive`` and
+``test_scoped_tables_have_a_not_null_tenant_id_fk`` union the constant in --
+the second one matters just as much as the first, or a post-``0028`` scoped
+table would be the only one in the codebase whose ``tenant_id`` column shape
+is never checked by anything.
 """
 
 import ast
@@ -24,7 +36,12 @@ from sqlmodel import Session, SQLModel
 
 from app.models.category import Category
 from app.models.lot import Lot
+from app.models.plan import Plan  # noqa: F401  -- registers `plan` in metadata
 from app.models.role import Role
+from app.models.subscription import (  # noqa: F401  -- registers both tables
+    SubscriptionChange,
+    TenantSubscription,
+)
 from app.models.tenant import (
     DEFAULT_TENANT_ID,
     DEFAULT_TENANT_NAME,
@@ -60,11 +77,23 @@ INHERITED_TABLES = {
     "lot_voter_eligibility": "lot",
     "facial_template": "resident",
     "facial_access_event": "access_device",
+    # APRAS-40: append-only, and it reaches its tenant through the NOT NULL FK
+    # to `tenant_subscription`. A second `tenant_id` copy would be a forgeable
+    # source of truth that can disagree with the parent.
+    "subscription_change": "tenant_subscription",
 }
 
+# Directly-scoped tables created after migration 0028, whose `tenant_id` is
+# therefore absent from that migration's frozen `_TENANT_SCOPED_TABLES`
+# literal. 0028 records history and must not be edited; new scoped tables
+# register here. APRAS-40 is the first.
+POST_0028_SCOPED_TABLES = {"tenant_subscription"}
+
 # `user` is a global identity (§1.2); `tenant` and `user_tenant_link` are the
-# tenancy tables themselves.
-UNSCOPED_TABLES = {"user", "tenant", "user_tenant_link"}
+# tenancy tables themselves; `plan` is the install-wide commercial catalogue
+# (APRAS-40 §3.1) -- global on purpose, so that "which plan is this
+# condominium on" is a comparable answer across the install.
+UNSCOPED_TABLES = {"user", "tenant", "user_tenant_link", "plan"}
 
 
 def _migration_constant(name: str) -> tuple[str, ...]:
@@ -183,8 +212,14 @@ def test_scoped_tables_list_has_27_real_tables(scoped_tables):
 
 def test_scoped_tables_have_a_not_null_tenant_id_fk(scoped_tables):
     """Every directly-scoped table carries a NOT NULL `tenant_id` FK to
-    `tenant.id` with a server_default and an `ix_<table>_tenant_id` index."""
-    for name in scoped_tables:
+    `tenant.id` with a server_default and an `ix_<table>_tenant_id` index.
+
+    `POST_0028_SCOPED_TABLES` is unioned in, or `tenant_subscription` would be
+    the first directly-scoped table in the codebase whose column shape nothing
+    checks. `tenant_id_field()` supplies all four properties, so the case
+    passes as written once it sees the table -- but it has to see it.
+    """
+    for name in set(scoped_tables) | POST_0028_SCOPED_TABLES:
         table = SQLModel.metadata.tables[name]
         column = table.columns.get("tenant_id")
         assert column is not None, f"{name} has no tenant_id column"
@@ -215,11 +250,16 @@ def test_inherited_tables_have_no_tenant_id_but_a_not_null_parent_fk():
 
 
 def test_partition_of_metadata_is_exhaustive(scoped_tables):
-    """direct + inherited + {user, tenant, user_tenant_link} == every table."""
-    partition = set(scoped_tables) | set(INHERITED_TABLES) | UNSCOPED_TABLES
+    """direct + inherited + unscoped == every table: 28 + 21 + 4 == 53."""
+    direct = set(scoped_tables) | POST_0028_SCOPED_TABLES
+    partition = direct | set(INHERITED_TABLES) | UNSCOPED_TABLES
     assert partition == set(SQLModel.metadata.tables)
-    assert not set(scoped_tables) & set(INHERITED_TABLES)
-    assert len(scoped_tables) + len(INHERITED_TABLES) + len(UNSCOPED_TABLES) == 50
+    assert not direct & set(INHERITED_TABLES)
+    assert not direct & UNSCOPED_TABLES
+    assert len(direct) == 28
+    assert len(INHERITED_TABLES) == 21
+    assert len(UNSCOPED_TABLES) == 4
+    assert len(direct) + len(INHERITED_TABLES) + len(UNSCOPED_TABLES) == 53
 
 
 def test_user_stays_global():

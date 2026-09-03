@@ -313,3 +313,31 @@ class PurchaseRequestStatus(StrEnum):
     OPEN = "OPEN"
     DECIDED = "DECIDED"
     CANCELLED = "CANCELLED"
+
+
+class SubscriptionStatus(StrEnum):
+    """Commercial state of a tenant subscription (APRAS-40 §3.4).
+
+    **INERT: it gates nothing** (§4.3). ``SUSPENDED`` and ``CANCELED`` are
+    recorded, displayed and returned by the API, and change no entitlement and
+    no access. Enforcing suspension is a consequence of a failed charge, and
+    there is no charging: no payment provider exists for this project (§1.2).
+    """
+
+    ACTIVE = "ACTIVE"
+    SUSPENDED = "SUSPENDED"
+    CANCELED = "CANCELED"
+
+
+class SubscriptionChangeKind(StrEnum):
+    """What produced one append-only subscription history row (APRAS-40 §3.4).
+
+    This is what makes "the override is distinguishable from a contracted
+    activation" mechanical rather than a matter of reading timestamps.
+    """
+
+    CONTRACTED = "CONTRACTED"
+    PLAN_CHANGE = "PLAN_CHANGE"
+    COURTESY_GRANT = "COURTESY_GRANT"
+    COURTESY_REVOKE = "COURTESY_REVOKE"
+    OVERRIDE = "OVERRIDE"

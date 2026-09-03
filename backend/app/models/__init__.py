@@ -40,6 +40,8 @@ from .enums import (
     ResidentRelationship,
     ShiftType,
     StorageProvider,
+    SubscriptionChangeKind,
+    SubscriptionStatus,
     TaskPriority,
     TaskStatus,
     TransactionType,
@@ -53,12 +55,14 @@ from .lot import Lot, UserLotLink
 from .media_asset import MediaAsset
 from .occurrence import Occurrence, OccurrenceTimeline
 from .package import Package
+from .plan import Plan
 from .project import ConstructionProject, ProjectMilestone, ProjectUpdate
 from .purchase import PurchaseQuote, PurchaseQuoteDecision, PurchaseRequest
 from .reservation import ReservableSpace, SpaceReservation
 from .resident import Resident
 from .role import Role
 from .role_link import UserRoleLink
+from .subscription import SubscriptionChange, TenantSubscription
 from .task import Task, TaskHistory
 from .tenant import (
     DEFAULT_TENANT_ID,
@@ -130,6 +134,7 @@ __all__ = [
     "Package",
     "PackageStatus",
     "PhotoApprovalStatus",
+    "Plan",
     "ProjectMilestone",
     "ProjectStatus",
     "ProjectUpdate",
@@ -145,11 +150,15 @@ __all__ = [
     "ShiftType",
     "SpaceReservation",
     "StorageProvider",
+    "SubscriptionChange",
+    "SubscriptionChangeKind",
+    "SubscriptionStatus",
     "Task",
     "TaskHistory",
     "TaskPriority",
     "TaskStatus",
     "Tenant",
+    "TenantSubscription",
     "TransactionType",
     "User",
     "UserLotLink",

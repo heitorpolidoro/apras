@@ -32,7 +32,10 @@
     "assets": "Patrimônio & Estoque",
     "purchases": "Cotações de Compra",
     "roles": "Papéis",
-    "modules": "Módulos"
+    "modules": "Módulos",
+    "subscription": "Assinatura",
+    "plans": "Planos",
+    "tenantSubscriptions": "Assinaturas dos condomínios"
   },
   "accessControl": {
     "title": "Controle de Acesso",
@@ -1488,7 +1491,100 @@
       "uploads": "Envio de fotos",
       "users": "Usuários",
       "visitors": "Visitantes",
-      "votes": "Votações"
+      "votes": "Votações",
+      "billing": "Assinatura"
     }
+  },
+  "subscription": {
+    "title": "Assinatura",
+    "currentPlan": "Plano atual",
+    "noPlan": "Este condomínio não possui assinatura. Todos os módulos estão ativos e o controle de módulos continua com o operador.",
+    "status": {
+      "ACTIVE": "Ativa",
+      "SUSPENDED": "Suspensa",
+      "CANCELED": "Cancelada"
+    },
+    "startedAt": "Início",
+    "estimatedTotal": "Total mensal estimado",
+    "inertPriceNotice": "Valores informativos — nenhuma cobrança é feita.",
+    "contract": "Contratar",
+    "cancel": "Cancelar",
+    "save": "Salvar",
+    "saving": "Salvando...",
+    "saved": "Salvo",
+    "saveError": "Não foi possível salvar a assinatura",
+    "notEntitled": "Um dos módulos não está coberto pela assinatura.",
+    "loading": "Carregando a assinatura...",
+    "loadError": "Não foi possível carregar a assinatura",
+    "modulesTitle": "Módulos",
+    "outOfPlan": "fora do plano",
+    "free": "gratuito",
+    "operatorBadge": "ativo por decisão do operador",
+    "courtesyBadge": "cortesia",
+    "historyTitle": "Histórico de alterações",
+    "empty": "Nenhuma alteração ainda.",
+    "added": "Ativados",
+    "removed": "Desativados",
+    "reason": "Motivo",
+    "author": "Por",
+    "when": "Quando",
+    "source": {
+      "CORE": "Essencial",
+      "UNMANAGED": "Sem assinatura",
+      "PLAN": "No plano",
+      "COURTESY": "Cortesia",
+      "OVERRIDE": "Operador"
+    },
+    "kind": {
+      "CONTRACTED": "Contratação",
+      "PLAN_CHANGE": "Troca de plano",
+      "COURTESY_GRANT": "Cortesia concedida",
+      "COURTESY_REVOKE": "Cortesia removida",
+      "OVERRIDE": "Ajuste do operador"
+    }
+  },
+  "plans": {
+    "title": "Planos",
+    "new": "Novo plano",
+    "edit": "Editar plano",
+    "name": "Nome",
+    "description": "Descrição",
+    "includedModules": "Módulos incluídos",
+    "basePrice": "Preço base",
+    "modulePrices": "Preços por módulo",
+    "currency": "Moeda",
+    "isActive": "Ativo",
+    "save": "Salvar",
+    "saving": "Salvando...",
+    "saved": "Salvo",
+    "saveError": "Não foi possível salvar o plano",
+    "inactiveBadge": "Inativo",
+    "empty": "Nenhum plano cadastrado.",
+    "loading": "Carregando os planos...",
+    "loadError": "Não foi possível carregar os planos",
+    "inertPriceNotice": "Valores informativos — nenhuma cobrança é feita.",
+    "cancel": "Cancelar"
+  },
+  "tenantSubscriptions": {
+    "title": "Assinaturas dos condomínios",
+    "tenantLabel": "Condomínio",
+    "tenantPlaceholder": "Escolha um condomínio",
+    "plan": "Plano",
+    "planPlaceholder": "Escolha um plano",
+    "status": "Situação",
+    "notes": "Observações",
+    "save": "Salvar",
+    "saving": "Salvando...",
+    "saved": "Salvo",
+    "saveError": "Não foi possível salvar a assinatura",
+    "courtesyTitle": "Módulos em cortesia",
+    "courtesyHint": "Concedidos fora do plano, gratuitos e ativados imediatamente.",
+    "reason": "Motivo",
+    "reasonRequired": "O motivo é obrigatório.",
+    "grantCourtesy": "Salvar cortesia",
+    "loading": "Carregando...",
+    "loadError": "Não foi possível carregar a assinatura",
+    "noSubscription": "Este condomínio ainda não tem assinatura. Atribua um plano para criar uma.",
+    "inertPriceNotice": "Valores informativos — nenhuma cobrança é feita."
   }
 }

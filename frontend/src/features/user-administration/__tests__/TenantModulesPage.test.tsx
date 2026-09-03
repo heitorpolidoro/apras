@@ -20,8 +20,8 @@ const t = (key: string): string =>
 
 /**
  * The superuser screen (APRAS-39 §10.3): a condominium `<select>` plus a
- * checkbox list of the 26 modules grouped by the companion clusters, with
- * the three core ones rendered checked-and-disabled. Optimistic updates are
+ * checkbox list of the 27 modules grouped by the companion clusters, with
+ * the four core ones rendered checked-and-disabled. Optimistic updates are
  * deliberately not used — the `PUT` response body *is* the new state.
  */
 
@@ -38,6 +38,7 @@ const MODULES = [
   "assemblies",
   "assets",
   "authorizations",
+  "billing",
   "categories",
   "documents",
   "feedback",
@@ -61,7 +62,7 @@ const MODULES = [
   "votes",
 ];
 
-const CORE = ["tenants", "users", "roles"];
+const CORE = ["tenants", "users", "roles", "billing"];
 
 const TENANTS = [
   { id: "t-1", name: "Condomínio A", is_active: true },
@@ -104,7 +105,7 @@ beforeEach(() => {
 });
 
 describe("TenantModulesPage", () => {
-  it("renders all 26 modules, with the core ones checked and disabled", async () => {
+  it("renders all 27 modules, with the core ones checked and disabled", async () => {
     renderPage();
 
     await waitFor(() =>

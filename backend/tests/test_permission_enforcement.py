@@ -81,7 +81,8 @@ CONVERTED_NON_COMPARE = 7
 
 #: The seven routes APRAS-43 gated with `get_current_tenant_admin` /
 #: `get_current_tenant_admin_or_manager`, which IAM F2 swaps to
-#: `require_permission` — the only route-level use of the dependency form.
+#: `require_permission` — the only route-level use of the dependency form —
+#: plus the three APRAS-40 mints on the tenant-side subscription router.
 PERMISSION_GUARDED_ROUTES: frozenset[tuple[str, str]] = frozenset(
     {
         ("DELETE", "/api/v1/tasks/{task_id}"),
@@ -91,6 +92,13 @@ PERMISSION_GUARDED_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("POST", "/api/v1/roles/"),
         ("PATCH", "/api/v1/roles/{role_id}"),
         ("DELETE", "/api/v1/roles/{role_id}"),
+        # APRAS-40 §5.1. `billing:read` / `billing:manage` are the first
+        # permission-guarded catalogue strings minted since the legacy
+        # bundles were recorded, which is why they are also the first to
+        # need the parity oracle's superuser branch (§9.2.4.1).
+        ("GET", "/api/v1/subscription"),
+        ("GET", "/api/v1/subscription/history"),
+        ("PUT", "/api/v1/subscription/modules"),
     }
 )
 
@@ -117,6 +125,22 @@ ADMIN_ONLY_ROUTES: frozenset[tuple[str, str]] = frozenset(
         # structural walkers in this repository.
         ("GET", "/api/v1/tenants/{tenant_id}/modules"),
         ("PUT", "/api/v1/tenants/{tenant_id}/modules"),
+        # APRAS-40 §5.3: the commercial surfaces. Three per-tenant
+        # subscription routes on this same global tenants router, and the
+        # four routes of the wholly superuser-only `plans` router. Like the
+        # lines above they declare a real
+        # `Depends(api_deps.get_current_superuser)` and never an in-handler
+        # `if not user.is_superuser`: this assertion is an exact set over
+        # `_depends_on(route.dependant, deps.get_current_superuser)`, so an
+        # inlined check would be invisible to it and to the two other
+        # structural walkers in this repository.
+        ("GET", "/api/v1/tenants/{tenant_id}/subscription"),
+        ("PUT", "/api/v1/tenants/{tenant_id}/subscription"),
+        ("PUT", "/api/v1/tenants/{tenant_id}/subscription/courtesy"),
+        ("GET", "/api/v1/plans/"),
+        ("POST", "/api/v1/plans/"),
+        ("GET", "/api/v1/plans/{plan_id}"),
+        ("PATCH", "/api/v1/plans/{plan_id}"),
     }
 )
 
@@ -270,7 +294,16 @@ def test_no_route_depends_on_a_tenant_admin_role_guard():
     assert not hasattr(deps, "get_current_admin_or_manager")
 
 
-def test_get_current_superuser_is_exactly_the_seven_tenant_routes_plus_the_grant():
+def test_get_current_superuser_is_exactly_the_fifteen_operator_routes():
+    """The name states the count, so the count is asserted beside it.
+
+    8 at the APRAS-39 merge base; APRAS-40 adds **7** (four `/api/v1/plans`
+    and three `/api/v1/tenants/{tenant_id}/subscription*`), all seven
+    declaring a real `Depends(api_deps.get_current_superuser)`. The `len`
+    assertion is what keeps this module's whole premise true -- that its case
+    names state its counts -- after round 1 shipped a name saying fourteen
+    over a set of fifteen.
+    """
     found = {
         key
         for route in _api_routes()
@@ -278,6 +311,7 @@ def test_get_current_superuser_is_exactly_the_seven_tenant_routes_plus_the_grant
         for key in _route_keys(route)
     }
     assert found == ADMIN_ONLY_ROUTES
+    assert len(ADMIN_ONLY_ROUTES) == 15
 
 
 def test_every_route_level_permission_matches_the_registry():
@@ -322,8 +356,15 @@ def test_every_route_is_still_tenant_classified():
     assert not unclassified, sorted(unclassified)
 
 
-def test_the_permission_guarded_routes_are_exactly_the_apras43_seven():
-    """The seven routes APRAS-43 gated are the only route-level permissions."""
+def test_the_permission_guarded_routes_are_the_apras43_seven_plus_billing():
+    """The route-level permission form is used on exactly ten routes.
+
+    The seven APRAS-43 gated (IAM F2 swapped them from
+    `get_current_tenant_admin`) plus the three APRAS-40 mints. The two lists
+    are kept apart on purpose: the seven are a *conversion* and must never
+    grow, while a genuinely new permission-guarded route is a deliberate,
+    reviewable addition -- so a future task adds a line below, not above.
+    """
     apras43_admin_routes = [
         ("DELETE", "/api/v1/tasks/{task_id}"),
         ("DELETE", "/api/v1/lots/{lot_id}"),
@@ -333,7 +374,15 @@ def test_the_permission_guarded_routes_are_exactly_the_apras43_seven():
         ("PATCH", "/api/v1/roles/{role_id}"),
         ("DELETE", "/api/v1/roles/{role_id}"),
     ]
-    assert set(apras43_admin_routes) == PERMISSION_GUARDED_ROUTES
+    apras40_billing_routes = [
+        ("GET", "/api/v1/subscription"),
+        ("GET", "/api/v1/subscription/history"),
+        ("PUT", "/api/v1/subscription/modules"),
+    ]
+    assert len(apras43_admin_routes) == 7
+    assert set(apras43_admin_routes) | set(apras40_billing_routes) == (
+        PERMISSION_GUARDED_ROUTES
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -126,6 +126,10 @@ deleted.
 | `/api/v1/tenants` | Tenants & membership | `backend/app/api/v1/endpoints/tenants.py` |
 | `/api/v1/permissions` | Permission catalogue & effective set | `backend/app/api/v1/endpoints/permissions.py` |
 | `/api/v1/tenants/{id}/modules` | Per-tenant module switch (`GET`/`PUT`, superuser only) | `backend/app/api/v1/endpoints/tenants.py` |
+| `/api/v1/subscription` | Tenant-side subscription area (`GET`, `PUT /modules`, `GET /history`) | `backend/app/api/v1/endpoints/subscription.py` |
+| `/api/v1/plans` | Install-wide plan catalogue (`GET`/`POST`/`GET {id}`/`PATCH {id}`, superuser only) | `backend/app/api/v1/endpoints/plans.py` |
+| `/api/v1/tenants/{id}/subscription` | Per-tenant subscription read and plan assignment (`GET`/`PUT`, superuser only) | `backend/app/api/v1/endpoints/tenants.py` |
+| `/api/v1/tenants/{id}/subscription/courtesy` | Courtesy grants outside the plan (`PUT`, superuser only) | `backend/app/api/v1/endpoints/tenants.py` |
 | `/api/v1/health` | Health check    | `backend/app/api/v1/api.py`              |
 
 ## Data Layer
@@ -323,13 +327,25 @@ only the same `(user, tenant)` pair twice is a conflict.
 **Direct vs inherited scope.** A table carries its own `tenant_id` when a
 tenant filter has to constrain it directly — i.e. it is reachable by a route
 that lists it or fetches it by its own id without a scoped parent's id in the
-path, or it has no NOT NULL FK to a scoped table. 27 tables are in that
-group. The other 20 (`taskcomment`, `ballot`, `announcement_comment`, …)
-**inherit** their tenant through a NOT NULL FK to a scoped parent and
-deliberately carry no `tenant_id`: duplicating it would create a second,
-forgeable source of truth that can disagree with the parent. The partition is
-asserted mechanically in `backend/tests/test_tenant_models.py`, so a table
-added by a future task cannot escape classification.
+path, or it has no NOT NULL FK to a scoped table. **28** tables are in that
+group — APRAS-41's 27 plus `tenant_subscription` (APRAS-40), the first one
+added after migration `0028`. The other **21** (`taskcomment`, `ballot`,
+`announcement_comment`, `subscription_change`, …) **inherit** their tenant
+through a NOT NULL FK to a scoped parent and deliberately carry no
+`tenant_id`: duplicating it would create a second, forgeable source of truth
+that can disagree with the parent. Four tables are **unscoped** — `user`,
+`tenant`, `user_tenant_link` and `plan` (the install-wide commercial
+catalogue) — for 53 in all. The partition is asserted mechanically in
+`backend/tests/test_tenant_models.py`, so a table added by a future task
+cannot escape classification.
+
+Migration `0028`'s own `_TENANT_SCOPED_TABLES` literal is **frozen history**
+and records only what that migration scoped; a directly-scoped table added
+later registers in `POST_0028_SCOPED_TABLES`
+(`backend/tests/test_tenant_models.py`) and in `TENANT_SCOPED_TABLES`
+(`backend/tests/test_migrations_postgres.py`, an exact-set assertion against
+the live schema), and must name its tenant FK `fk_<table>_tenant_id` to satisfy
+`test_every_scoped_table_has_the_four_properties`.
 
 **Per-tenant uniqueness.** Constraints that would otherwise collide across
 condominiums are keyed on `tenant_id`: `category.name`, `role.name`,
@@ -383,22 +399,32 @@ tenant.
 ### Módulos por tenant
 
 A per-tenant **feature switch** (APRAS-39) that composes with the permission
-model by *stripping*, never by replacing. The 26 modules are exactly the
+model by *stripping*, never by replacing. The 27 modules are exactly the
 `<module>` segments of the catalogue (`permissions.MODULES`, derived and never
 hand-listed, so a module a future task adds is toggleable the day its first
-permission exists). Three of them are `CORE_MODULES` and can never be turned
-off — `tenants`, `users`, `roles` — because a condominium without identity,
-membership and the authorization vocabulary could not administer itself back
-into existence. The other **23** are the billable features.
+permission exists). **Four** of them are `CORE_MODULES` and can never be
+turned off — `tenants`, `users`, `roles`, `billing` — because a condominium
+without identity, membership, the authorization vocabulary or the surface it
+contracts modules from could not administer itself back into existence. The
+other **23** are the billable features.
 
 **Storage is negative.** `tenant.disabled_modules` (portable `JSON`,
 `NOT NULL DEFAULT '[]'`, migration `0034`) lists what is *off*, so `[]` means
 "everything on": the column's `server_default` is the all-on backfill for
 every existing tenant, a new tenant is all-on with no seeding, and a module a
 future task adds is active everywhere with no data step. What it gives up,
-stated so it is not rediscovered: no per-toggle audit row and no efficient
-"which tenants have `finance` on" query. Both belong to `APRAS-40`'s plan
-model, which will write this column from a subscription.
+stated so it is not rediscovered: no efficient "which tenants have `finance`
+on" query. (The missing audit row is no longer missing: `APRAS-40` records
+every write to this column, including the raw superuser one, as a
+`subscription_change` — see *Assinatura e planos*.)
+
+**Three writers, one column, one reader.** The superuser `PUT` below is now
+one of **three** routes that write `disabled_modules`: it is the *raw lever*,
+deliberately unbounded by the subscription so it stays the operator's repair
+tool, beside `APRAS-40`'s ceiling-constrained tenant-side contracting `PUT`
+and its entitlement-expanding courtesy `PUT`. The **reader** is still exactly
+`deps.get_effective_permissions`, and `APRAS-40` adds no line to it. See
+*Assinatura e planos*.
 
 **One enforcement point.** `deps.get_effective_permissions` returns the user's
 authority **minus** every string whose module the acting tenant turned off.
@@ -435,7 +461,7 @@ modules that a new endpoint could forget to join, and no second mechanism.
   static catalogue, identical for every caller, and the role editor needs it
   to render a permission the author does not hold as a disabled checkbox.
 
-**Companion modules** (operator documentation, not code — the 26 toggle
+**Companion modules** (operator documentation, not code — the 27 toggle
 independently and the incoherent configurations they allow are safe and
 reversible in one click): `assets` ↔ `inventory`; `reservations` ↔ `spaces`;
 `visitors` ↔ `authorizations` ↔ `gate` ↔ `access_control`; `tasks` →
@@ -446,9 +472,12 @@ presentation, not machinery.
 **The two routes**, both superuser-only (`deps.get_current_superuser`) on the
 global tenants router, so a tenant_admin acting in their own tenant gets 403.
 They map to no catalogue permission, by the convention
-`PATCH /users/{id}/superuser` established — `UNGUARDED_ROUTES` grows by two
-and `ROUTE_PERMISSIONS` stays at **180**, which is what keeps
+`PATCH /users/{id}/superuser` established — `UNGUARDED_ROUTES` grew by two and
+`ROUTE_PERMISSIONS` did not move, which is what kept
 `tests/data/parity_matrix_baseline.json` byte-identical at 1080 cells.
+(`APRAS-40` then took the registry to **183/22**; the F2 file is still
+byte-identical, because its 18 new cells live in the additive
+`tests/data/parity_matrix_baseline_40.json`.)
 
 ```bash
 # read every module's state in one tenant
@@ -468,6 +497,137 @@ curl -X PUT "$API/api/v1/tenants/$TENANT/modules" \
 An unknown tenant is **404** (resolved first, so it outranks a bad payload);
 an unknown module string or any core module is **400**, raised before the
 column assignment so a rejected `PUT` leaves the row untouched.
+
+### Assinatura e planos
+
+The commercial layer over the module switch (`APRAS-40`). **Prices are inert
+and nothing is charged — no payment provider exists for this project.** Every
+amount below is stored, returned and summed for display only; a follow-up task
+wires a provider once an account exists (same blocker class as `APRAS-13`).
+No SDK, no API key, no webhook receiver, no outbound HTTP call, and no
+dependency was added to `backend/pyproject.toml` or `frontend/package.json`.
+
+**Three tables** (migration `0035`, exactly reversible, seeding nothing):
+
+* `plan` — the install-wide, superuser-managed catalogue. **Global**: it
+  carries no `tenant_id`, because a per-tenant catalogue would make "which
+  plan is this condominium on" incomparable across the install. `name` is
+  globally unique for the same reason `tenant.name` is. There is deliberately
+  **no `DELETE`**: `tenant_subscription.plan_id` is `ON DELETE RESTRICT` and a
+  plan a tenant is on must not vanish, so `PATCH {"is_active": false}` is the
+  removal operation, exactly as for `Tenant`.
+* `tenant_subscription` — at most one per tenant
+  (`uq_tenant_subscription_tenant`), directly scoped, carrying the plan, the
+  status, the courtesy set, a start date and notes.
+* `subscription_change` — append-only history, inheriting its tenant through
+  the NOT NULL FK to its parent. No `PATCH`, no `DELETE`, no update route:
+  `SubscriptionService.record` only ever `session.add()`s one.
+
+**THE RULE, quoted verbatim, because everything else follows from it:**
+
+> `tenant.disabled_modules` remains the only input to permission resolution.
+> `APRAS-40` changes no line of `deps.get_effective_permissions`,
+> `deps.disabled_modules` or `permissions.filter_by_modules`. What `APRAS-40`
+> adds is a constraint on *who may write that column and to what value*.
+
+The ceiling is `SubscriptionService.entitlement(session, tenant)`, which has
+**exactly one definition** and is the only place that loads a subscription and
+its plan — one query, one join, no `Relationship`. It returns a frozen
+`Entitlement(subscription, plan, included, courtesy)` whose `.all` is
+`included | courtesy` for a managed tenant and the whole of
+`TOGGLEABLE_MODULES` for an unmanaged one. `build_read` derives every field it
+returns from that result and touches the session not at all.
+
+**The four levers on one column:**
+
+| Lever | Actor | Bounded by the ceiling? | History row |
+|---|---|---|---|
+| `PUT /api/v1/subscription/modules` | `billing:manage` (⊇ tenant_admin, superuser), acting in own tenant | **yes** — 400 outside the entitlement | `CONTRACTED` |
+| `PUT /api/v1/tenants/{id}/subscription` | superuser | **applies** it, shrink-only | `PLAN_CHANGE` |
+| `PUT /api/v1/tenants/{id}/subscription/courtesy` | superuser | **expands** it, and activates | `COURTESY_GRANT` / `COURTESY_REVOKE` |
+| `PUT /api/v1/tenants/{id}/modules` (`APRAS-39`, unchanged) | superuser | **no** — the raw lever | `OVERRIDE` |
+
+The raw lever stays unconstrained on purpose: it is the operator's repair
+tool, and a tenant whose subscription data is wrong must still be fixable.
+When it puts a module outside the entitlement, the subscription area reports
+that module as `source: "OVERRIDE"` — visible, named and distinguishable from
+both a contracted and a courtesy activation.
+
+*Why courtesy activates while a plan change does not:* courtesy names one or
+more specific modules as a deliberate per-module operator act — "turn this on
+for them" — whereas a plan names a bundle and says nothing about what the
+condominium wants switched on. Contracting a newly covered module is the
+tenant's explicit act, and that is what makes the contracting screen mean
+something.
+
+**`source`, six values in priority order** (per module, top to bottom, first
+match wins, so a module in both the plan and the courtesy set reads `"PLAN"`):
+
+1. `"CORE"` — in `CORE_MODULES`;
+2. `null` — not active;
+3. `"UNMANAGED"` — active, and the tenant has no subscription row;
+4. `"PLAN"` — active, and in the plan;
+5. `"COURTESY"` — active, and in the courtesy set;
+6. `"OVERRIDE"` — active, subscription exists, in neither.
+
+**No subscription — the semantics.** A fresh install has **no plans and no
+subscriptions** (`0035` inserts no rows), so adopting billing is opt-in. For a
+tenant with no subscription row: `GET /api/v1/subscription` is **200** with
+`plan: null`, every toggleable module `source: "UNMANAGED"` when active and
+**`can_contract: false`** for every module — because the contracting `PUT` is
+a **404** there, and a `true` would promise a button that cannot work.
+`GET /api/v1/subscription/history` is **200** `[]`. Module availability is
+unchanged from `APRAS-39`: `disabled_modules` is `[]` and everything is on.
+
+**`subscription.status` gates nothing.** `ACTIVE` / `SUSPENDED` / `CANCELED`
+are recorded, displayed and returned, and change no entitlement and no access:
+enforcing suspension is a consequence of a failed charge, and there is no
+charging.
+
+**Who holds the two permissions.** `billing:read` is the area, `billing:manage`
+is the act of contracting; neither implies the other. An `is_tenant_admin`
+holder reaches both for free (`APRAS-47`'s whole-catalogue short-circuit, plus
+`billing` being core so the strip never removes it) with **no special case
+anywhere in the code** — that is the whole reason the gate is a permission and
+not a flag check. A superuser reaches them for free too. **No role row
+anywhere holds either string on a fresh install**, deliberately: a "Diretor"
+gets the area when a tenant_admin ticks the two boxes in the role editor, the
+same way they get every other capability. Seeding them would hand commercial
+authority to every director of every existing condominium without the síndico
+asking.
+
+`billing` **must be core**, and it is load-bearing: if it were toggleable, a
+plan (or an operator) could turn it off and the condominium would lose the
+only surface from which it can contract anything back on. Consequently
+`PUT /api/v1/tenants/{id}/modules {"disabled_modules": ["billing"]}` answers
+**400**, through `APRAS-39`'s existing guard and with no new code.
+
+```bash
+# a tenant contracts finance (the body is the CONTRACTED set only: a courtesy
+# or an operator-override activation is never sent and is never dropped)
+curl -X PUT "$API/api/v1/subscription/modules" \
+  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-Id: $TENANT" \
+  -H 'Content-Type: application/json' \
+  -d '{"active_modules": ["documents", "finance"]}'
+
+# a superuser assigns a plan (creates the subscription, then applies the
+# ceiling shrink-only)
+curl -X PUT "$API/api/v1/tenants/$TENANT/subscription" \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"plan_id": "'"$PLAN"'", "status": "ACTIVE", "notes": "renegociado"}'
+
+# a superuser grants finance as a courtesy: activated in one call, and free
+curl -X PUT "$API/api/v1/tenants/$TENANT/subscription/courtesy" \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"courtesy_modules": ["finance"], "reason": "negociação"}'
+```
+
+**Out of scope, named so it is not rediscovered in review:** charging of any
+kind and every provider-shaped artefact (SDK, API key, webhook receiver,
+invoices, receipts, proration, dunning, trials, coupons, tax); tenant-initiated
+plan changes (a plan change is a commercial negotiation and without a provider
+it cannot be paid for, so plan assignment stays superuser-only); per-tenant or
+custom plans; deleting a plan; and a module dependency graph.
 
 **Install superuser.** `user.is_superuser` (APRAS-47, migration `0031`) is the
 global counterpart of `is_tenant_admin`: every permission in **every** tenant

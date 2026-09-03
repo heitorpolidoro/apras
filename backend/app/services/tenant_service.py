@@ -15,6 +15,7 @@ from app.core.exceptions import (
 )
 from app.core.permissions import CORE_MODULES, MODULES
 from app.core.tenant_context import acting_tenant_scope
+from app.models.enums import SubscriptionChangeKind
 from app.models.role import Role
 from app.models.tenant import Tenant, UserTenantLink
 from app.models.user import User
@@ -28,6 +29,11 @@ from app.schemas.tenant import (
     TenantUpdate,
 )
 from app.services.role_service import role_names_in
+
+# APRAS-40 §4.5: the raw module lever is historied as an OVERRIDE. The import
+# goes this way and never the other -- `subscription_service.py` must not
+# import `TenantService`, and does not need to: it loads `Tenant` directly.
+from app.services.subscription_service import SubscriptionService
 
 
 def _now() -> datetime:
@@ -254,7 +260,12 @@ class TenantService:
 
     @classmethod
     def set_modules(
-        cls, session: Session, tenant_id: UUID, modules_in: TenantModulesUpdate
+        cls,
+        session: Session,
+        tenant_id: UUID,
+        modules_in: TenantModulesUpdate,
+        *,
+        actor: User,
     ) -> TenantModulesRead:
         """Replace the tenant's disabled-module set, declaratively.
 
@@ -267,6 +278,21 @@ class TenantService:
         commit, so a rejected ``PUT`` leaves the row untouched. Duplicates
         are collapsed silently and an empty list is the legal "everything on"
         state.
+
+        ``actor`` is APRAS-40 §4.5's only edit to this method. This route is
+        the **raw lever**: the fourth writer of ``disabled_modules`` and the
+        one deliberately *not* bounded by the subscription ceiling, because it
+        is the operator's repair tool. It is historied all the same, so an
+        activation outside the plan is visible, named and distinguishable from
+        both a contracted and a courtesy one.
+
+        **The column write and its history row are one transaction.** The
+        history row is ``session.add``ed *before* the single ``commit()``, so
+        a failure writing it rolls the module change back too: the alternative
+        -- two commits -- can leave the column changed and the history silent,
+        which is precisely the state an append-only audit exists to make
+        impossible. Pinned by
+        ``tests/test_subscription_ceiling.py::test_the_raw_switch_and_its_override_row_are_one_transaction``.
         """
         tenant = cls.get_tenant(session, tenant_id)
         requested = set(modules_in.disabled_modules)
@@ -278,9 +304,28 @@ class TenantService:
         if core:
             raise CoreModuleCannotBeDisabledError(sorted(core))
 
+        before = set(tenant.disabled_modules)  # APRAS-40, before the assignment
         tenant.disabled_modules = sorted(requested)
         tenant.updated_at = _now()
         session.add(tenant)
+        after = set(tenant.disabled_modules)
+        # APRAS-40 §4.5: the column is NEGATIVE, so a module that LEFT
+        # `disabled_modules` was activated -- `added` is `before - after`, not
+        # the other way round.
+        added = sorted(before - after)
+        removed = sorted(after - before)
+        subscription = SubscriptionService.get_subscription(
+            session=session, tenant_id=tenant_id
+        )
+        if subscription is not None and (added or removed):
+            SubscriptionService.record(
+                session=session,
+                subscription=subscription,
+                kind=SubscriptionChangeKind.OVERRIDE,
+                added=added,
+                removed=removed,
+                actor=actor,
+            )
         session.commit()
         session.refresh(tenant)
         return cls._to_modules_read(tenant)

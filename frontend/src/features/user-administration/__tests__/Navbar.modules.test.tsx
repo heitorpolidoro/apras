@@ -153,4 +153,46 @@ describe("Navbar and a disabled module", () => {
 
     expect(await screen.findByText(t("nav.modules"))).toBeInTheDocument();
   });
+
+  it("shows the /subscription link to a billing:read holder and hides it otherwise", async () => {
+    // `{ module: "billing" }` holds for *any* `billing:*`, and `billing` is
+    // core so the strip never removes it (APRAS-40 §2.1, §8.3).
+    answer(["tasks:read"]);
+    renderNavbar();
+
+    await waitFor(() =>
+      expect(screen.getByText(t("nav.tasks"))).toBeInTheDocument(),
+    );
+    expect(screen.queryByText(t("nav.subscription"))).toBeNull();
+
+    answer(["tasks:read", "billing:read"]);
+    renderNavbar();
+
+    expect(
+      (await screen.findAllByText(t("nav.subscription"))).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("shows the two commercial operator items only to a superuser", async () => {
+    answer(["tenants:update", "billing:read", "billing:manage"]);
+    renderNavbar();
+
+    await waitFor(() => expect(mockedGet).toHaveBeenCalled());
+    // Holding the whole catalogue is not the flag: the API answers 403 on
+    // both screens, so `{ superuser: true }` is the only honest rule.
+    expect(screen.queryByText(t("nav.plans"))).toBeNull();
+    expect(screen.queryByText(t("nav.tenantSubscriptions"))).toBeNull();
+
+    auth(true);
+    renderNavbar();
+
+    // Both navbars are mounted, and the first re-reads the (now superuser)
+    // auth mock on its next render, so the links appear twice.
+    expect((await screen.findAllByText(t("nav.plans"))).length).toBeGreaterThan(
+      0,
+    );
+    expect(
+      screen.getAllByText(t("nav.tenantSubscriptions")).length,
+    ).toBeGreaterThan(0);
+  });
 });

@@ -24,14 +24,15 @@ describe("i18n configuration", () => {
 });
 
 /**
- * The 26 catalogue modules (APRAS-39 §2.2), listed here from a local constant
+ * The 27 catalogue modules (APRAS-39 §2.2, APRAS-40 §2.1), listed here from a
+ * local constant
  * rather than derived: a derivation from the label files would compare them
  * with themselves and assert nothing.
  *
  * A local constant on its own only catches a *removed* label, so this list is
  * one half of a pair. The other half is
  * `backend/tests/test_module_vocabulary.py::test_the_catalogue_modules_are_the_ones_the_ui_labels`,
- * which asserts `permissions.MODULES` equals these same 26 names and whose
+ * which asserts `permissions.MODULES` equals these same 27 names and whose
  * failure message names this file. Neither side can import the other across
  * the language boundary, so an *added* catalogue module turns the backend
  * case red and a *removed or unlabelled* one turns this case red.
@@ -42,6 +43,7 @@ const MODULES = [
   "assemblies",
   "assets",
   "authorizations",
+  "billing",
   "categories",
   "documents",
   "feedback",

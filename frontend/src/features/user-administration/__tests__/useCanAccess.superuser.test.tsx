@@ -12,6 +12,7 @@ import {
   useEffectivePermissionSet,
 } from "../access/useCanAccess";
 import { type User } from "../../../types/auth";
+import { ROUTE_ACCESS } from "../access/routeAccess";
 
 /**
  * The third `AccessRule` shape and the simulation arm's module intersection
@@ -85,6 +86,56 @@ beforeEach(() => {
   mockedGet.mockReset();
   vi.mocked(useSimulation).mockReturnValue(NOT_SIMULATING);
   vi.mocked(useRoles).mockReturnValue({ data: [] } as never);
+});
+
+describe.each([
+  ["/admin/modules"],
+  ["/admin/plans"],
+  ["/admin/subscriptions"],
+])("the %s rule resolves through the flag alone", (path) => {
+  it("allows a superuser and refuses a whole-catalogue tenant_admin", async () => {
+    // One case per `{ superuser: true }` route, read out of `ROUTE_ACCESS`
+    // rather than restated: a route that silently changed shape would stop
+    // being covered here rather than quietly passing.
+    const rule = ROUTE_ACCESS[path];
+    expect(rule).toEqual({ superuser: true });
+
+    mockAuth({ id: "root", is_superuser: true, roles: [] });
+    answerPermissions([]);
+    const asSuperuser = renderHook(() => useCanAccess(rule), {
+      wrapper: wrapper(),
+    });
+    await waitFor(() => expect(asSuperuser.result.current.isLoading).toBe(false));
+    expect(asSuperuser.result.current.allowed).toBe(true);
+
+    mockAuth({ id: "sindico", is_superuser: false, roles: [] });
+    answerPermissions(["tenants:update", "billing:read", "billing:manage"]);
+    const asTenantAdmin = renderHook(() => useCanAccess(rule), {
+      wrapper: wrapper(),
+    });
+    await waitFor(() =>
+      expect(asTenantAdmin.result.current.isLoading).toBe(false),
+    );
+    expect(asTenantAdmin.result.current.allowed).toBe(false);
+  });
+});
+
+describe("the /subscription rule holds for any billing:*", () => {
+  it("admits a billing:read holder and refuses a user with neither string", async () => {
+    const rule = ROUTE_ACCESS["/subscription"];
+    expect(rule).toEqual({ module: "billing" });
+
+    mockAuth({ id: "diretor", is_superuser: false, roles: [] });
+    answerPermissions(["billing:read"]);
+    const granted = renderHook(() => useCanAccess(rule), { wrapper: wrapper() });
+    await waitFor(() => expect(granted.result.current.isLoading).toBe(false));
+    expect(granted.result.current.allowed).toBe(true);
+
+    answerPermissions(["tasks:read"]);
+    const refused = renderHook(() => useCanAccess(rule), { wrapper: wrapper() });
+    await waitFor(() => expect(refused.result.current.isLoading).toBe(false));
+    expect(refused.result.current.allowed).toBe(false);
+  });
 });
 
 describe("the { superuser: true } access rule", () => {

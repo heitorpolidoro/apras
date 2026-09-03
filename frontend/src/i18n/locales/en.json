@@ -32,7 +32,10 @@
     "assets": "Assets & Inventory",
     "purchases": "Purchase Quotations",
     "roles": "Roles",
-    "modules": "Modules"
+    "modules": "Modules",
+    "subscription": "Subscription",
+    "plans": "Plans",
+    "tenantSubscriptions": "Tenant subscriptions"
   },
   "accessControl": {
     "title": "Access Control",
@@ -1488,7 +1491,100 @@
       "uploads": "Photo uploads",
       "users": "Users",
       "visitors": "Visitors",
-      "votes": "Polls"
+      "votes": "Polls",
+      "billing": "Billing"
     }
+  },
+  "subscription": {
+    "title": "Subscription",
+    "currentPlan": "Current plan",
+    "noPlan": "This condominium has no subscription. Every module is active and module control stays with the operator.",
+    "status": {
+      "ACTIVE": "Active",
+      "SUSPENDED": "Suspended",
+      "CANCELED": "Canceled"
+    },
+    "startedAt": "Started at",
+    "estimatedTotal": "Estimated monthly total",
+    "inertPriceNotice": "Indicative amounts — nothing is charged.",
+    "contract": "Contract",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving...",
+    "saved": "Saved",
+    "saveError": "Could not save the subscription",
+    "notEntitled": "One of the modules is not covered by the subscription.",
+    "loading": "Loading the subscription...",
+    "loadError": "Could not load the subscription",
+    "modulesTitle": "Modules",
+    "outOfPlan": "Not in the plan",
+    "free": "Free",
+    "operatorBadge": "Active by operator decision",
+    "courtesyBadge": "Courtesy",
+    "historyTitle": "Change history",
+    "empty": "No changes yet.",
+    "added": "Added",
+    "removed": "Removed",
+    "reason": "Reason",
+    "author": "By",
+    "when": "When",
+    "source": {
+      "CORE": "Essential",
+      "UNMANAGED": "Unmanaged",
+      "PLAN": "In the plan",
+      "COURTESY": "Courtesy",
+      "OVERRIDE": "Operator"
+    },
+    "kind": {
+      "CONTRACTED": "Contracted",
+      "PLAN_CHANGE": "Plan change",
+      "COURTESY_GRANT": "Courtesy granted",
+      "COURTESY_REVOKE": "Courtesy revoked",
+      "OVERRIDE": "Operator override"
+    }
+  },
+  "plans": {
+    "title": "Plans",
+    "new": "New plan",
+    "edit": "Edit plan",
+    "name": "Name",
+    "description": "Description",
+    "includedModules": "Included modules",
+    "basePrice": "Base price",
+    "modulePrices": "Module prices",
+    "currency": "Currency",
+    "isActive": "Active",
+    "save": "Save",
+    "saving": "Saving...",
+    "saved": "Saved",
+    "saveError": "Could not save the plan",
+    "inactiveBadge": "Inactive",
+    "empty": "No plans yet.",
+    "loading": "Loading plans...",
+    "loadError": "Could not load the plans",
+    "inertPriceNotice": "Indicative amounts — nothing is charged.",
+    "cancel": "Cancel"
+  },
+  "tenantSubscriptions": {
+    "title": "Tenant subscriptions",
+    "tenantLabel": "Condominium",
+    "tenantPlaceholder": "Choose a condominium",
+    "plan": "Plan",
+    "planPlaceholder": "Choose a plan",
+    "status": "Status",
+    "notes": "Notes",
+    "save": "Save",
+    "saving": "Saving...",
+    "saved": "Saved",
+    "saveError": "Could not save the subscription",
+    "courtesyTitle": "Courtesy modules",
+    "courtesyHint": "Granted outside the plan, free, and activated immediately.",
+    "reason": "Reason",
+    "reasonRequired": "A reason is required.",
+    "grantCourtesy": "Save courtesy",
+    "loading": "Loading...",
+    "loadError": "Could not load the subscription",
+    "noSubscription": "This condominium has no subscription yet. Assign a plan to create one.",
+    "inertPriceNotice": "Indicative amounts — nothing is charged."
   }
 }

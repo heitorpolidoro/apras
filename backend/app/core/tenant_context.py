@@ -67,10 +67,13 @@ def _discover_scoped_models() -> tuple[type[SQLModel], ...]:
     )
 
 
-#: The 27 directly tenant-scoped models (APRAS-41's `_TENANT_SCOPED_TABLES`).
+#: The 28 directly tenant-scoped models: APRAS-41's 27
+#: (`_TENANT_SCOPED_TABLES`) plus APRAS-40's `tenant_subscription`, the first
+#: added after migration `0028`. Derived by discovery, never listed, so the
+#: count moves with the schema and no constant has to be remembered.
 TENANT_SCOPED_MODELS: tuple[type[SQLModel], ...] = _discover_scoped_models()
 
-# Memoised `with_loader_criteria` options per tenant id. Rebuilding the 27
+# Memoised `with_loader_criteria` options per tenant id. Rebuilding the 28
 # options on every statement measured ~2x the cost of reusing them, and a
 # tenant id set is bounded by the number of condominiums in the install.
 _OPTIONS_CACHE: dict[UUID, tuple] = {}

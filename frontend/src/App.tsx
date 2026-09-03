@@ -36,6 +36,9 @@ import PurchaseRequestsPage from "./features/purchase-management/components/Purc
 import RolesAdminPage from "./features/user-administration/pages/RolesAdminPage";
 import RoleDetailPage from "./features/user-administration/pages/RoleDetailPage";
 import TenantModulesPage from "./features/user-administration/pages/TenantModulesPage";
+import SubscriptionPage from "./features/user-administration/pages/SubscriptionPage";
+import PlansAdminPage from "./features/user-administration/pages/PlansAdminPage";
+import TenantSubscriptionsPage from "./features/user-administration/pages/TenantSubscriptionsPage";
 import {
   NAV_ITEMS,
   ROUTE_ACCESS,
@@ -363,6 +366,39 @@ function App() {
                       requiredAccess={ROUTE_ACCESS["/admin/modules"]}
                     >
                       <TenantModulesPage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/subscription"
+                  element={
+                    <ProtectedRoute
+                      requiredAccess={ROUTE_ACCESS["/subscription"]}
+                    >
+                      <SubscriptionPage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/admin/plans"
+                  element={
+                    <ProtectedRoute
+                      requiredAccess={ROUTE_ACCESS["/admin/plans"]}
+                    >
+                      <PlansAdminPage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/admin/subscriptions"
+                  element={
+                    <ProtectedRoute
+                      requiredAccess={ROUTE_ACCESS["/admin/subscriptions"]}
+                    >
+                      <TenantSubscriptionsPage />
                     </ProtectedRoute>
                   }
                 />

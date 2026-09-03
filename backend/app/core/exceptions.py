@@ -880,3 +880,98 @@ class TenantScopeNotResolvedError(RuntimeError):
         super().__init__(
             f"Tenant scope was not resolved before querying {model_name}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Subscriptions and plans (APRAS-40 §6.1)
+# ---------------------------------------------------------------------------
+
+
+class PlanNotFoundError(DomainError):
+    """Raised when a plan id names no row (404)."""
+
+    def __init__(self, plan_id: UUID) -> None:
+        super().__init__(f"Plan not found: {plan_id}")
+
+
+class SubscriptionNotFoundError(DomainError):
+    """Raised when a tenant has no subscription row (404).
+
+    Contracting is meaningless without one, and a history row would have
+    nowhere to live (APRAS-40 §4.6). The detail deliberately names no id: the
+    subject of the tenant-side routes is the acting tenant, not a path
+    parameter.
+    """
+
+    def __init__(self) -> None:
+        super().__init__("This tenant has no subscription")
+
+
+class PlanAlreadyExistsError(DomainError):
+    """Raised when a plan name collides (409). `plan.name` is globally unique
+    for the same reason `tenant.name` is."""
+
+    def __init__(self, name: str) -> None:
+        super().__init__(f"A plan named '{name}' already exists")
+
+
+class ModuleNotEntitledError(DomainError):
+    """Raised when a tenant-side write names a module outside the ceiling.
+
+    A plain :class:`DomainError`, so it falls through to
+    ``domain_exception_handler``'s ``status_code = 400``. The detail names the
+    offending modules, sorted, so the operator can see which ones.
+    """
+
+    def __init__(self, modules: list[str]) -> None:
+        super().__init__(
+            "Modules not covered by the subscription: " + ", ".join(sorted(modules))
+        )
+
+
+class InactivePlanError(DomainError):
+    """Raised when an inactive plan is assigned to a tenant that is not
+    already on it (400). Re-assigning the plan a tenant already carries is
+    allowed, so deactivating a plan never strands its subscribers."""
+
+    def __init__(self, name: str) -> None:
+        super().__init__(f"Plan '{name}' is not active")
+
+
+class CoreModuleNotContractableError(DomainError):
+    """Raised when a core module enters a commercial grant of any kind (400).
+
+    One class serves two call sites -- a core module in a plan's
+    ``included_modules`` and a core module in a courtesy grant -- because both
+    are the same refusal: *a core module is never off, so it cannot be part of
+    a commercial grant.* It is a distinct class from
+    :class:`CoreModuleCannotBeDisabledError`, which is about the *disabled*
+    list; nothing here disables anything.
+    """
+
+    def __init__(self, modules: list[str]) -> None:
+        super().__init__(
+            "Core modules are always active: " + ", ".join(sorted(modules))
+        )
+
+
+class InvalidModulePriceError(DomainError):
+    """Raised when a plan prices a module it does not include (400)."""
+
+    def __init__(self, modules: list[str]) -> None:
+        super().__init__(
+            "Priced modules must be included in the plan: "
+            + ", ".join(sorted(modules))
+        )
+
+
+class InvalidPlanPriceError(DomainError):
+    """Raised when a price is negative or a currency is malformed (400).
+
+    INERT values still have a shape: a negative monthly price is not a
+    discount, it is a typo, and a three-letter uppercase currency is what the
+    display layer formats against.
+    """
+
+    def __init__(self, detail: str) -> None:
+        super().__init__(detail)

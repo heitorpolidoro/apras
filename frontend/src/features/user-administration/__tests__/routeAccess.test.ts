@@ -60,4 +60,23 @@ describe("ROUTE_ACCESS / NAV_ITEMS", () => {
       ROUTE_ACCESS["/admin/roles/:roleId"],
     );
   });
+
+  it("the three APRAS-40 routes carry the rules §8.3 declares", () => {
+    // `/subscription` is an ordinary `{ module }` rule, and it works only
+    // because `billing` is a **core** module: APRAS-39's strip never removes
+    // `billing:*`, so a role that carries either string reaches the page.
+    expect(ROUTE_ACCESS["/subscription"]).toEqual({ module: "billing" });
+    // The two operator screens are superuser-guarded and carry no catalogue
+    // permission, so no `{ anyOf }` rule can express them.
+    // `{ anyOf: ["tenants:update"] }` is specifically wrong: a tenant_admin
+    // holds it through the whole-catalogue short-circuit and the API answers
+    // 403.
+    expect(ROUTE_ACCESS["/admin/plans"]).toEqual({ superuser: true });
+    expect(ROUTE_ACCESS["/admin/subscriptions"]).toEqual({ superuser: true });
+
+    const paths = NAV_ITEMS.map((item) => item.path);
+    expect(paths).toContain("/subscription");
+    expect(paths).toContain("/admin/plans");
+    expect(paths).toContain("/admin/subscriptions");
+  });
 });

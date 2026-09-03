@@ -18,6 +18,11 @@ from sqlmodel import Session
 from app.api import deps as api_deps
 from app.db import get_session
 from app.models.user import User
+from app.schemas.subscription import (
+    CourtesyUpdate,
+    SubscriptionAdminUpdate,
+    SubscriptionRead,
+)
 from app.schemas.tenant import (
     TenantCreate,
     TenantMemberCreate,
@@ -28,6 +33,7 @@ from app.schemas.tenant import (
     TenantRead,
     TenantUpdate,
 )
+from app.services.subscription_service import SubscriptionService
 from app.services.tenant_service import TenantService
 
 router = APIRouter()
@@ -103,16 +109,89 @@ def set_tenant_modules(
     tenant_id: UUID,
     modules_in: TenantModulesUpdate,
     session: Annotated[Session, Depends(get_session)],
-    _: Annotated[User, Depends(api_deps.get_current_superuser)],
+    current_user: Annotated[User, Depends(api_deps.get_current_superuser)],
 ) -> TenantModulesRead:
     """Replace the tenant's disabled-module set. Superuser only (APRAS-39).
 
     `PUT`, not `PATCH`: the body is the *complete* desired state, so the
     operation is idempotent and has no partial-update ambiguity. The response
     is the same body `GET` returns.
+
+    This is the **raw lever** (APRAS-40 §4.2), deliberately *not* constrained
+    by the subscription ceiling: it is the operator's repair tool, and a
+    tenant whose subscription data is wrong must still be fixable. APRAS-40's
+    only edit here is the guard binding's name -- `current_user` instead of
+    `_` -- so the actor can be forwarded and the write recorded as an
+    `OVERRIDE` history row. The path, the guard, the status code and the
+    response model are byte-identical.
     """
     return TenantService.set_modules(
-        session=session, tenant_id=tenant_id, modules_in=modules_in
+        session=session,
+        tenant_id=tenant_id,
+        modules_in=modules_in,
+        actor=current_user,
+    )
+
+
+# ---------------------------------------------------------------------------
+# The per-tenant subscription, from the operator's side (APRAS-40 §5.3)
+# ---------------------------------------------------------------------------
+#
+# On the **existing global** tenants router, beside APRAS-39's `/modules`
+# pair and for its reasons: the subject is a tenant named in the path, written
+# from outside it, by an actor whose authority is global. All three declare a
+# real `Depends(api_deps.get_current_superuser)` -- never an in-handler
+# `if not user.is_superuser` -- because the three structural walkers
+# (`test_permission_enforcement.py`, `test_tenant_admin.py`,
+# `test_tenant_route_scope.py`) discover guards by traversing
+# `route.dependant`, and an inlined check is invisible to all three.
+
+
+@router.get("/{tenant_id}/subscription")
+def get_tenant_subscription(
+    tenant_id: UUID,
+    session: Annotated[Session, Depends(get_session)],
+    _: Annotated[User, Depends(api_deps.get_current_superuser)],
+) -> SubscriptionRead:
+    """One tenant's commercial state. Superuser only (APRAS-40)."""
+    return SubscriptionService.read_for_tenant(session=session, tenant_id=tenant_id)
+
+
+@router.put("/{tenant_id}/subscription")
+def set_tenant_subscription(
+    tenant_id: UUID,
+    payload: SubscriptionAdminUpdate,
+    session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[User, Depends(api_deps.get_current_superuser)],
+) -> SubscriptionRead:
+    """Assign or change the tenant's plan, status and notes. Superuser only.
+
+    Creates the subscription when absent, then applies the ceiling
+    **shrink-only**: modules that leave the entitlement are deactivated,
+    modules that newly enter it are not auto-activated. Plan assignment stays
+    superuser-only because a plan change is a commercial negotiation, and
+    without a payment provider it cannot be paid for (§1.2).
+    """
+    return SubscriptionService.set_plan(
+        session=session, tenant_id=tenant_id, payload=payload, actor=current_user
+    )
+
+
+@router.put("/{tenant_id}/subscription/courtesy")
+def set_tenant_courtesy(
+    tenant_id: UUID,
+    payload: CourtesyUpdate,
+    session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[User, Depends(api_deps.get_current_superuser)],
+) -> SubscriptionRead:
+    """Grant or revoke modules outside the plan, and activate them in one call.
+
+    Courtesy is **free**: it never enters `estimated_monthly_total`, which is
+    the second, independent way a courtesy activation is distinguishable from
+    a contracted one.
+    """
+    return SubscriptionService.set_courtesy(
+        session=session, tenant_id=tenant_id, payload=payload, actor=current_user
     )
 
 

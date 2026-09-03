@@ -727,6 +727,22 @@ ADMIN_ONLY_ROUTES: frozenset[tuple[str, str]] = frozenset(
         # assertion is an exact set over the dependency tree.
         ("GET", "/api/v1/tenants/{tenant_id}/modules"),
         ("PUT", "/api/v1/tenants/{tenant_id}/modules"),
+        # APRAS-40 §5.3: the commercial surfaces. Three per-tenant
+        # subscription routes on this same global tenants router, and the
+        # four routes of the wholly superuser-only `plans` router. Like the
+        # lines above they declare a real
+        # `Depends(api_deps.get_current_superuser)` and never an in-handler
+        # `if not user.is_superuser`: this assertion is an exact set over
+        # `_depends_on(route.dependant, deps.get_current_superuser)`, so an
+        # inlined check would be invisible to it and to the two other
+        # structural walkers in this repository.
+        ("GET", "/api/v1/tenants/{tenant_id}/subscription"),
+        ("PUT", "/api/v1/tenants/{tenant_id}/subscription"),
+        ("PUT", "/api/v1/tenants/{tenant_id}/subscription/courtesy"),
+        ("GET", "/api/v1/plans/"),
+        ("POST", "/api/v1/plans/"),
+        ("GET", "/api/v1/plans/{plan_id}"),
+        ("PATCH", "/api/v1/plans/{plan_id}"),
     }
 )
 
@@ -772,7 +788,16 @@ def test_only_the_superuser_grant_is_both_scoped_and_superuser_guarded():
     assert set(offenders) == SUPERUSER_GUARDED_SCOPED_ROUTES, sorted(offenders)
 
 
-def test_get_current_superuser_is_exactly_the_seven_tenant_routes_plus_the_grant():
+def test_get_current_superuser_is_exactly_the_fifteen_operator_routes():
+    """The name states the count, so the count is asserted beside it.
+
+    8 at the APRAS-39 merge base; APRAS-40 adds **7** (four `/api/v1/plans`
+    and three `/api/v1/tenants/{tenant_id}/subscription*`), all seven
+    declaring a real `Depends(api_deps.get_current_superuser)`. The `len`
+    assertion is what keeps this module's whole premise true -- that its case
+    names state its counts -- after round 1 shipped a name saying fourteen
+    over a set of fifteen.
+    """
     found = {
         key
         for route in _api_routes()
@@ -780,3 +805,4 @@ def test_get_current_superuser_is_exactly_the_seven_tenant_routes_plus_the_grant
         for key in _route_keys(route)
     }
     assert found == ADMIN_ONLY_ROUTES
+    assert len(ADMIN_ONLY_ROUTES) == 15

@@ -1103,6 +1103,10 @@ REVIEWED_CHILD_QUERIES: dict[str, str] = {
     "app/services/voting_service.py:get_delinquency_barred_lots": "keyed on the vote ids of an already-filtered Assembly",
     "app/services/resident_service.py:_check_lot_access": "joined to Lot (APRAS-42 §6.2)",
     "app/services/visitor_service.py:_check_lot_access": "joined to Lot (APRAS-42 §6.2)",
+    "app/services/subscription_service.py:list_history": (
+        "keyed on the id of the acting tenant's own already-filtered "
+        "TenantSubscription, which is directly scoped (APRAS-40 §3.3)"
+    ),
 }
 
 
@@ -1114,8 +1118,8 @@ def _model_name_by_table() -> dict[str, str]:
     }
 
 
-#: The inherited (child) model names, **derived** from APRAS-41's authoritative
-#: 20-table partition (``tests/test_tenant_models.INHERITED_TABLES``) rather
+#: The inherited (child) model names, **derived** from the authoritative
+#: inherited partition (``tests/test_tenant_models.INHERITED_TABLES``) rather
 #: than hand-written, as spec §6.3 requires. A hand-written copy drifts: it
 #: dropped ``TaskVisibleToLink`` once, which would have let an unreviewed
 #: ``select(TaskVisibleToLink)`` slip past the regression below.
@@ -1163,15 +1167,18 @@ def _child_query_sites() -> dict[str, set[str]]:
 
 
 def test_inherited_models_cover_apras41_partition():
-    """`INHERITED_MODELS` is exactly APRAS-41's 20-table inherited partition.
+    """`INHERITED_MODELS` is exactly the inherited partition.
 
     Spec §6.3 requires the names to come from that partition rather than from
     a fresh hand-written list. A hand-written copy is precisely how
     ``TaskVisibleToLink`` went missing: the regression below would then
     silently pass an unreviewed ``select(TaskVisibleToLink)``.
+
+    20 in APRAS-41; **21** since APRAS-40 added ``subscription_change``, which
+    inherits its tenant through the NOT NULL FK to ``tenant_subscription``.
     """
     by_table = _model_name_by_table()
-    assert len(INHERITED_TABLES) == 20
+    assert len(INHERITED_TABLES) == 21
     assert {by_table[table] for table in INHERITED_TABLES} == set(INHERITED_MODELS)
 
 
@@ -1192,8 +1199,13 @@ def test_inherited_table_queries_are_reviewed():
 
 
 def test_registry_covers_every_scoped_table():
-    """Sanity: the isolation matrix seeds every model the filter protects."""
-    assert len(TENANT_SCOPED_MODELS) == 27
+    """Sanity: the isolation matrix seeds every model the filter protects.
+
+    27 in APRAS-41 (migration ``0028``'s frozen literal); **28** since
+    APRAS-40 added the directly-scoped ``tenant_subscription``, which the
+    registry picks up by discovery with no code change of its own.
+    """
+    assert len(TENANT_SCOPED_MODELS) == 28
 
 
 # ---------------------------------------------------------------------------

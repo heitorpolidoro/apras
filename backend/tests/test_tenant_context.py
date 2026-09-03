@@ -87,12 +87,24 @@ def fresh_session_fixture(session: Session):
 # ---------------------------------------------------------------------------
 
 
+#: Directly-scoped tables created after migration `0028`, whose frozen
+#: `_TENANT_SCOPED_TABLES` literal therefore cannot name them. The same
+#: constant, and the same reason, as `tests/test_tenant_models.py`'s:
+#: `0028` records history and is not amended. APRAS-40's is the first.
+POST_0028_SCOPED_TABLES = {"tenant_subscription"}
+
+
 def test_registry_matches_the_migrations_scoped_table_list():
-    """The derived registry cannot drift from APRAS-41's scoped table list."""
-    assert {m.__tablename__ for m in TENANT_SCOPED_MODELS} == set(
-        _migration_scoped_tables()
+    """The derived registry cannot drift from the scoped table list.
+
+    APRAS-41's 27, from migration `0028`'s literal, plus every directly-scoped
+    table added since -- which the registry picks up by *discovery* (any
+    mapped class with a `tenant_id` column), with no code change of its own.
+    """
+    assert {m.__tablename__ for m in TENANT_SCOPED_MODELS} == (
+        set(_migration_scoped_tables()) | POST_0028_SCOPED_TABLES
     )
-    assert len(TENANT_SCOPED_MODELS) == 27
+    assert len(TENANT_SCOPED_MODELS) == 28
 
 
 def test_registry_excludes_the_membership_table():

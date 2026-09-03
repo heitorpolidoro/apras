@@ -190,6 +190,18 @@
 - 9.1/10.2/12: a string '89 POST/PUT/PATCH routes' vive no comentario `#:` acima de REQUEST_BODIES e no docstring de _NoBody (dois lugares), nao no docstring do modulo.
 - can_contract com conjunto ent.managed agora em quatro sites; test_baseline_covers_exactly_the_matrix duplica a assercao de particao - candidato a colapsar na implementacao.
 
+- (code review, lacuna de spec) 8.4/10.3 pedem tabela de historico de assinatura na pagina do superuser, mas 5.3 pina exatamente tres rotas e nenhuma devolve o historico - a pagina foi entregue sem a tabela (D10 aceito); tarefa de follow-up: GET /api/v1/subscriptions/{tenant_id}/history + tabela.
+
+- (code review r2, backlog) .github/workflows/ci.yml nao tem services: - os 45 casos de tests/test_migrations_postgres.py nunca rodam no CI (self-skip sem TEST_POSTGRES_URL); foi assim que B1/B2 da 40 teriam passado verdes. Tarefa: servico Postgres no workflow + TEST_POSTGRES_URL.
+- (code review r2) plan_service PATCH so de nome: os ramos else caem no valor armazenado sem validar - S-6 nao tem comportamento observavel; docstrings corrigidas, candidato a simplificar.
+
+- (code review r3) plan_service.py:174-178: os dois guards `if "..." in data` sao inertes (a escopagem nao tem efeito observavel) - simplificar quando o arquivo for tocado; cobertura do backend deve ser citada como faixa (98.52-98.55 %, depende da ordem), nao como ponto.
+
+- (QA) linhas de modulo core em /subscription mostram a dica 'fora do plano' embora a API reporte is_active true / source CORE - ligar ao rotulo subscription.source.CORE (as 5 chaves subscription.source.* estao sem consumidor) resolve os dois.
+- (QA) GET /api/v1/subscription/ com barra final e 307 que perde X-Tenant-Id; frontend emite sem barra, mas redirect_slashes=False tornaria estrutural.
+- (QA, pre-existente, backlog) GET /api/v1/tasks/ guardado so por get_current_user apesar de ROUTE_PERMISSIONS mapear tasks:read - usuario com zero permissoes efetivas recebeu 200 com o modulo tasks desligado pelo teto. Mesmo padrao do GET /roles/ (APRAS-49 QA): tarefa 'alinhar guard e mapeamento em todas as rotas de ROUTE_PERMISSIONS' com teste que percorra o mapa.
+- (QA) ER-10 diz nove call sites de load_union(); a arvore tem dez (a metade contratual - seis callers de holds() - esta exata).
+
 ## [APRAS-44] Gestão de infrações com regras e escalonamento por condomínio — 2026-09-02
 
 - 7 diz 'as sete tabelas carregam created_at/updated_at' mas 12.2 afirma que infraction_stage nao tem updated_at (as listas de colunas do 7.2 concordam com 12.2) - alinhar a frase.

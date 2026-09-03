@@ -12,9 +12,12 @@ What it provides
 
 * :data:`CELLS` -- ``(profile, method, path)`` for every
   ``ROUTE_PERMISSIONS`` key and every :data:`PARITY_PROFILES` entry:
-  ``6 x 180 == 1080``.
-  The thirteen ``UNGUARDED_ROUTES`` are excluded because none of them makes a
-  **role-dimension, catalogue-permission** authorization decision: eight are
+  ``6 x 183 == 1098``. 1080 of them are recorded in the frozen IAM F2
+  baseline; the 18 APRAS-40 adds live in the additive
+  ``tests/data/parity_matrix_baseline_40.json`` (APRAS-40 §9.2), which is
+  what keeps the F2 file byte-identical.
+  The twenty-two ``UNGUARDED_ROUTES`` are excluded because none of them makes
+  a **role-dimension, catalogue-permission** authorization decision: eight are
   unauthenticated (``/``, ``/api/v1/health``, login, signup,
   forgot/reset-password and the two dev helpers), ``GET /api/v1/auth/me`` and
   ``GET /api/v1/permissions/me`` are strictly self-scoped, ``GET
@@ -852,7 +855,7 @@ class _NoBody:
     """The route declares no body model. Sending one would be meaningless.
 
     An *explicit* entry rather than a missing one: `REQUEST_BODIES` must
-    cover exactly the 89 POST/PUT/PATCH routes, and "this route takes no
+    cover exactly the 90 POST/PUT/PATCH routes, and "this route takes no
     body" is a decision that has to be visible in the map.
     """
 
@@ -890,7 +893,7 @@ def _today() -> str:
     return _now().date().isoformat()
 
 
-#: `(METHOD, path) -> body spec`, for exactly the 89 POST/PUT/PATCH routes
+#: `(METHOD, path) -> body spec`, for exactly the 90 POST/PUT/PATCH routes
 #: of `ROUTE_PERMISSIONS`. The 24 DELETE routes declare no body model and are
 #: deliberately absent. A missing entry is never allowed to default to `{}`.
 REQUEST_BODIES: dict[tuple[str, str], BodySpec] = {
@@ -911,10 +914,10 @@ REQUEST_BODIES: dict[tuple[str, str], BodySpec] = {
     ("PATCH", "/api/v1/users/{user_id}/contact-info"): _static({"phone": "11999990000"}),
     # --- roles --------------------------------------------------------
     ("POST", "/api/v1/roles/"): _static(
-        {"name": "Matrix new type",}
+        {"name": "Matrix new type"}
     ),
     ("PATCH", "/api/v1/roles/{role_id}"): _static(
-        {"name": "Matrix renamed type",}
+        {"name": "Matrix renamed type"}
     ),
     # --- tenants -----------------------------------------------------------
     ("POST", "/api/v1/tenants"): _static({"name": "Matrix new tenant"}),
@@ -1155,6 +1158,14 @@ REQUEST_BODIES: dict[tuple[str, str], BodySpec] = {
         "POST",
         "/api/v1/access-control/residents/{resident_id}/facial-template/sync",
     ): NO_BODY,
+    # --- billing (APRAS-40 §5.1) -------------------------------------------
+    # The complete desired CONTRACTED set. An empty list is shape-valid and
+    # semantically the "cancel everything the plan covers" request, so the
+    # cell measures authorization and nothing else. Without this entry the
+    # ADMINISTRATOR cell would answer 422 rather than the 404 the §4.6
+    # unmanaged world owes it, and the semantic oracle forbids a permitted
+    # 422.
+    ("PUT", "/api/v1/subscription/modules"): _static({"active_modules": []}),
 }
 
 

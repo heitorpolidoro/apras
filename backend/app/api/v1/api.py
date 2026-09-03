@@ -16,10 +16,12 @@ from app.api.v1.endpoints import (
     occurrences,
     packages,
     permissions,
+    plans,
     projects,
     purchases,
     reservations,
     residents,
+    subscription,
     tasks,
     tenants,
     uploads,
@@ -121,6 +123,22 @@ api_router.include_router(
     prefix="/purchase-requests",
     tags=["purchase-requests"],
     dependencies=TENANT_SCOPED,
+)
+# APRAS-40 §5.1: tenant-scoped, and it must be. The three routes are
+# permission-guarded, and post-F5 `get_effective_role_ids` returns the empty
+# set with no acting tenant -- so a `billing:read` holder on a global router
+# would be 403'd. The subject is the acting tenant, never a path parameter.
+api_router.include_router(
+    subscription.router,
+    prefix="/subscription",
+    tags=["subscription"],
+    dependencies=TENANT_SCOPED,
+)
+# APRAS-40 §5.2: the install-wide plan catalogue. Every route is
+# superuser-only, so no acting tenant is needed and the router joins
+# `tenants` in the global set. `plan` carries no `tenant_id`.
+api_router.include_router(
+    plans.router, prefix="/plans", tags=["plans"], dependencies=GLOBAL_SCOPED
 )
 
 

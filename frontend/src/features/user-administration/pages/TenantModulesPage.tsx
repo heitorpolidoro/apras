@@ -5,11 +5,12 @@ import {
   useSetTenantModules,
   useTenantModules,
 } from "../../../hooks/useTenantModules";
+import { groupsCovering } from "../access/moduleGroups";
 
 /**
  * The superuser screen behind `/admin/modules` (APRAS-39 §10.3).
  *
- * One condominium `<select>` and one checkbox list of the 26 modules,
+ * One condominium `<select>` and one checkbox list of the 27 modules,
  * grouped by the companion clusters of §2.3. The grouping is **presentation,
  * not machinery**: the modules toggle independently, and turning one
  * companion off without the other is legal and safe — every endpoint of a
@@ -23,32 +24,6 @@ import {
  *
  * No optimistic update — the `PUT` response body is the new state.
  */
-
-/** The §2.3 clusters, in display order. Presentation only. */
-const MODULE_GROUPS: ReadonlyArray<{ key: string; modules: readonly string[] }> =
-  [
-    { key: "core", modules: ["tenants", "users", "roles"] },
-    { key: "tasks", modules: ["tasks", "categories"] },
-    { key: "property", modules: ["lots", "residents", "packages"] },
-    {
-      key: "communication",
-      modules: ["announcements", "documents", "feedback"],
-    },
-    { key: "operations", modules: ["occurrences", "projects"] },
-    { key: "finance", modules: ["finance", "purchases", "assets", "inventory"] },
-    { key: "spaces", modules: ["reservations", "spaces"] },
-    {
-      key: "access",
-      modules: [
-        "visitors",
-        "authorizations",
-        "gate",
-        "access_control",
-        "uploads",
-      ],
-    },
-    { key: "governance", modules: ["assemblies", "votes"] },
-  ];
 
 const TenantModulesPage: React.FC = () => {
   const { t } = useTranslation();
@@ -79,29 +54,14 @@ const TenantModulesPage: React.FC = () => {
     [data],
   );
 
-  /**
-   * Every module the API returned that no cluster names.
-   *
-   * The backend derives `MODULES` from the catalogue precisely so a module a
-   * future task adds is toggleable the day its first permission exists; the
-   * clusters above are hand-written presentation, so without this a 27th
-   * module would be invisible to the operator with nothing turning red.
-   * (`test_the_catalogue_modules_are_the_ones_the_ui_labels` is the other
-   * half of that guard: it fails at the catalogue end, naming this file.)
-   */
-  const ungrouped = useMemo(() => {
-    const grouped = new Set(MODULE_GROUPS.flatMap((group) => group.modules));
-    return (data?.modules ?? [])
-      .map((row) => row.module)
-      .filter((module) => !grouped.has(module));
-  }, [data]);
-
+  // `groupsCovering` appends an `"other"` group for any module the clusters do
+  // not name, so a module a future task adds is visible to the operator rather
+  // than silently dropped. (`test_the_catalogue_modules_are_the_ones_the_ui_labels`
+  // is the other half of that guard: it fails at the catalogue end, naming the
+  // shared constant.)
   const groups = useMemo(
-    () =>
-      ungrouped.length > 0
-        ? [...MODULE_GROUPS, { key: "other", modules: ungrouped }]
-        : MODULE_GROUPS,
-    [ungrouped],
+    () => groupsCovering((data?.modules ?? []).map((row) => row.module)),
+    [data],
   );
 
   /** The server's answer, with the operator's unsaved edits on top. */

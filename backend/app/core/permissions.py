@@ -266,6 +266,13 @@ PERMISSIONS: frozenset[str] = SCOPE_PERMISSIONS | TIER_PERMISSIONS | frozenset(
         "uploads:approve",
         "uploads:reject",
         "uploads:delete",
+        # §4.24 billing (APRAS-40) -- the subscription area
+        # `billing:read` is the *area*; `billing:manage` is the *act of
+        # contracting*. Two strings, not one, because a condominium that wants
+        # its treasurer to see the plan without being able to contract modules
+        # needs exactly this split. Neither implies the other.
+        "billing:read",
+        "billing:manage",
         # §4.23 access_control
         "access_control:devices_read",
         "access_control:device_create",
@@ -561,6 +568,16 @@ ROUTE_PERMISSIONS: dict[tuple[str, str], str] = {
         "/api/v1/access-control/residents/{resident_id}/facial-template/sync",
     ): "access_control:facial_template_sync",
     ("GET", "/api/v1/access-control/events"): "access_control:events_read",
+    # §4.24 billing -- /api/v1/subscription (APRAS-40 §5.1)
+    #
+    # No `{tenant_id}` in these paths, on purpose: the subject is the acting
+    # tenant, resolved from `X-Tenant-Id` by `get_current_tenant`. A path
+    # parameter would be a second, forgeable source of truth. The router is
+    # TENANT_SCOPED because a permission-guarded route must resolve an acting
+    # tenant -- `get_effective_role_ids` returns the empty set without one.
+    ("GET", "/api/v1/subscription"): "billing:read",
+    ("GET", "/api/v1/subscription/history"): "billing:read",
+    ("PUT", "/api/v1/subscription/modules"): "billing:manage",
 }
 
 
@@ -603,6 +620,25 @@ UNGUARDED_ROUTES: frozenset[tuple[str, str]] = frozenset(
         # the baseline sha, and would move the golden file.
         ("GET", "/api/v1/tenants/{tenant_id}/modules"),
         ("PUT", "/api/v1/tenants/{tenant_id}/modules"),
+        # The commercial surfaces of APRAS-40: the install-wide plan
+        # catalogue and the three per-tenant subscription routes. Same
+        # convention and same reason as the two lines above -- minting seven
+        # catalogue strings whose only purpose is to be refused by
+        # `assert_can_grant` would cost 42 parity cells for nothing.
+        # superuser-only, guarded by deps.get_current_superuser (APRAS-40)
+        ("GET", "/api/v1/plans/"),
+        # superuser-only, guarded by deps.get_current_superuser (APRAS-40)
+        ("POST", "/api/v1/plans/"),
+        # superuser-only, guarded by deps.get_current_superuser (APRAS-40)
+        ("GET", "/api/v1/plans/{plan_id}"),
+        # superuser-only, guarded by deps.get_current_superuser (APRAS-40)
+        ("PATCH", "/api/v1/plans/{plan_id}"),
+        # superuser-only, guarded by deps.get_current_superuser (APRAS-40)
+        ("GET", "/api/v1/tenants/{tenant_id}/subscription"),
+        # superuser-only, guarded by deps.get_current_superuser (APRAS-40)
+        ("PUT", "/api/v1/tenants/{tenant_id}/subscription"),
+        # superuser-only, guarded by deps.get_current_superuser (APRAS-40)
+        ("PUT", "/api/v1/tenants/{tenant_id}/subscription/courtesy"),
     }
 )
 
@@ -681,12 +717,21 @@ def module_of(permission: str) -> str:
 #: permission exists, with nobody having to remember a second list.
 MODULES: frozenset[str] = frozenset(module_of(permission) for permission in PERMISSIONS)
 
-#: The modules a tenant can never turn off: identity, membership and the
-#: authorization vocabulary itself. Disabling any of them would make the
-#: tenant unadministrable from inside -- no user list, no role editor, no
-#: tenant switcher -- and would strip the very permissions the operator needs
-#: to turn it back on from the tenant side.
-CORE_MODULES: frozenset[str] = frozenset({"tenants", "users", "roles"})
+#: The modules a tenant can never turn off: identity, membership, the
+#: authorization vocabulary itself and the subscription area. Disabling any of
+#: them would make the tenant unadministrable from inside -- no user list, no
+#: role editor, no tenant switcher -- and would strip the very permissions the
+#: operator needs to turn it back on from the tenant side.
+#:
+#: `billing` is core and it is load-bearing (APRAS-40 §2.1): `MODULES` is
+#: derived from `PERMISSIONS`, so `billing` became a module the day
+#: `billing:read` existed. If it were toggleable, a plan (or an operator)
+#: could turn it off and the condominium would lose the only surface from
+#: which it can contract anything back on -- the exact lock-out this constant
+#: exists to prevent.
+CORE_MODULES: frozenset[str] = frozenset(
+    {"tenants", "users", "roles", "billing"}
+)
 
 #: The 23 billable features.
 TOGGLEABLE_MODULES: frozenset[str] = MODULES - CORE_MODULES

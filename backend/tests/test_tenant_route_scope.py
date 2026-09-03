@@ -56,6 +56,21 @@ GLOBAL_ROUTES: frozenset[tuple[str, str]] = frozenset(
         # must not be able to reach it by acting in their own tenant.
         ("GET", "/api/v1/tenants/{tenant_id}/modules"),
         ("PUT", "/api/v1/tenants/{tenant_id}/modules"),
+        # APRAS-40: the per-tenant subscription, from the operator's side.
+        # Global for the same reason as the two lines above -- the plan a
+        # condominium is on is written from outside it, by an actor whose
+        # authority is global, so a tenant_admin must not reach it by acting
+        # in their own tenant.
+        ("GET", "/api/v1/tenants/{tenant_id}/subscription"),
+        ("PUT", "/api/v1/tenants/{tenant_id}/subscription"),
+        ("PUT", "/api/v1/tenants/{tenant_id}/subscription/courtesy"),
+        # APRAS-40: the install-wide plan catalogue. `plan` carries no
+        # `tenant_id` at all -- it is a global table like `tenant` itself --
+        # and every route is superuser-only, so the whole router is global.
+        ("GET", "/api/v1/plans/"),
+        ("POST", "/api/v1/plans/"),
+        ("GET", "/api/v1/plans/{plan_id}"),
+        ("PATCH", "/api/v1/plans/{plan_id}"),
         # Authenticated by X-Device-Key, not a JWT: resolves its tenant from
         # the device it authenticates.
         ("POST", "/api/v1/access-control/webhook/verification"),
@@ -106,13 +121,18 @@ def test_allowlist_has_no_stale_entries():
     assert existing >= GLOBAL_ROUTES, sorted(GLOBAL_ROUTES - existing)
 
 
-def test_allowlist_is_twenty_routes():
+def test_allowlist_is_twenty_seven_routes():
     """The global surface is small and reviewed; growing it is a decision.
 
-    18 at the APRAS-49 merge base; APRAS-39 adds the two module-switch
-    routes, which inherit `GLOBAL_SCOPED` from the tenants router mount.
+    18 at the APRAS-49 merge base; APRAS-39 added the two module-switch
+    routes, which inherit `GLOBAL_SCOPED` from the tenants router mount;
+    APRAS-40 adds seven more -- the three per-tenant subscription routes on
+    that same mount and the four routes of the new, wholly superuser-only
+    `plans` router. The three *tenant-side* `/api/v1/subscription` routes are
+    deliberately **not** here: they are `TENANT_SCOPED`, because a
+    permission-guarded route must resolve an acting tenant.
     """
-    assert len(GLOBAL_ROUTES) == 20
+    assert len(GLOBAL_ROUTES) == 27
 
 
 def test_route_count_is_fully_accounted_for():
