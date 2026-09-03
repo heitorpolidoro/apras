@@ -719,6 +719,14 @@ ADMIN_ONLY_ROUTES: frozenset[tuple[str, str]] = frozenset(
         # that `get_current_superuser` guards -- the grant and the revoke of
         # the global flag itself.
         ("PATCH", "/api/v1/users/{user_id}/superuser"),
+        # APRAS-39 §6.4: the per-tenant module switch, read and write. The
+        # module switch is a property of the tenant, written from *outside*
+        # it -- a tenant_admin must not be able to reach it by acting in
+        # their own tenant, which is exactly what the global mount plus this
+        # guard produce. Declared as a real `Depends`, never inlined: this
+        # assertion is an exact set over the dependency tree.
+        ("GET", "/api/v1/tenants/{tenant_id}/modules"),
+        ("PUT", "/api/v1/tenants/{tenant_id}/modules"),
     }
 )
 
@@ -764,7 +772,7 @@ def test_only_the_superuser_grant_is_both_scoped_and_superuser_guarded():
     assert set(offenders) == SUPERUSER_GUARDED_SCOPED_ROUTES, sorted(offenders)
 
 
-def test_get_current_superuser_is_exactly_the_five_tenant_writes_plus_the_grant():
+def test_get_current_superuser_is_exactly_the_seven_tenant_routes_plus_the_grant():
     found = {
         key
         for route in _api_routes()

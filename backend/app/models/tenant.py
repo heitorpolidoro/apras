@@ -46,7 +46,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import UniqueConstraint, text
+from sqlalchemy import JSON, Column, UniqueConstraint, text
 from sqlmodel import Field, SQLModel
 
 # The well-known, fixed id of the tenant every pre-existing row is migrated
@@ -99,6 +99,19 @@ class Tenant(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     name: str = Field(index=True, unique=True, nullable=False)
     is_active: bool = Field(default=True, nullable=False)
+    # Modules explicitly turned off for this tenant (APRAS-39). Negative
+    # storage on purpose: ``[]`` is "every module active", so the column's
+    # ``server_default`` backfills every existing tenant, a new tenant is
+    # all-on without seeding, and a module a future task adds is active
+    # everywhere with no data step. Portable ``JSON``, not a Postgres
+    # ``ARRAY``, for the reason ``role.permissions`` (migration ``0030``)
+    # records: ``ARRAY`` does not compile against SQLite and the test harness
+    # builds this schema on ``sqlite://`` with
+    # ``SQLModel.metadata.create_all()``.
+    disabled_modules: list[str] = Field(
+        default_factory=list,
+        sa_column=Column(JSON, nullable=False, server_default="[]"),
+    )
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
 

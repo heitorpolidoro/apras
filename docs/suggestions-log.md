@@ -174,6 +174,14 @@
 - S6: snippet do 5.1 reescreve o branch que o spec manda mover verbatim.
 - S7: pinar precedencia 404-vs-400 para PUT com tenant e modulo ambos desconhecidos.
 
+- (code review) ProtectedRoute.tsx:122-124: excecao deliberada de optional chaining sem teste - um caso respondendo /permissions/me sem disabled_modules pina e resolve a tensao com o docstring de types/permissions.ts:33.
+- (code review) types/permissions.ts:19 landing_path? segue opcional enquanto disabled_modules virou obrigatorio; ambos sempre enviados.
+- (code review) useCanAccess.ts:179 ROUTE_ACCESS[path] tipa como AccessRule nunca undefined, mas o terminal /welcome depende do undefined em runtime - explicitar a opcionalidade.
+- (code review) RootRedirect.landing.test.tsx: propriedade sem-loop so argumentada em comentario - caso tabelado por persona sobre Object.keys(ROUTE_ACCESS) pina.
+- (code review, round 1) developer reportou 0 falhas com 1 falhando (tabela medida antes da ultima edicao) - exigir medicao apos a ultima alteracao no briefing padrao.
+
+- (QA) response_model= omitido nos dois handlers novos (annotation-only, ruff FAST001) deixa o arquivo misto; moduleOfRule le so a primeira entrada de anyOf (seguro hoje, todas single-module); <select> de tenant em /admin/modules sem busca/paginacao; rate limit de login 5/min complica E2E multi-persona.
+
 ## [APRAS-40] Área de assinatura com contratação de módulos pelo tenant — 2026-09-01
 
 - 9.2.2 (~l.1360): 'os tres da F2 nao sao editados' contradiz a tabela do 9.2.5 (test_baseline_file_exists muda para F2_CELL_COUNT); dizer 'o par' e nomear os dois.

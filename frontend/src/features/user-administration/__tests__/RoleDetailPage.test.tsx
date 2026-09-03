@@ -164,6 +164,52 @@ describe("RoleDetailPage", () => {
     expect(body.permissions).toContain("finance:read");
   });
 
+  it("keeps a disabled module's permission checked, inert, and in the payload", async () => {
+    // APRAS-39 §5.5's UI half. The author's `/permissions/me` is stripped, so
+    // `finance:read` arrives as a permission they do not hold and the editor
+    // renders it checked-and-disabled with zero new code. Saving must still
+    // succeed: the API validates the bundle against the author's
+    // **unstripped** set, so the string is never dropped from the payload —
+    // which is what stops a disabled module freezing role administration and
+    // what keeps the toggle non-destructive.
+    mockedGet.mockImplementation(((url: string) => {
+      if (url === "/roles/") return Promise.resolve({ data: roles });
+      if (url === "/permissions/") return Promise.resolve({ data: CATALOGUE });
+      if (url === "/permissions/me") {
+        return Promise.resolve({
+          data: {
+            tenant_id: "t-1",
+            permissions: MY_PERMISSIONS.filter(
+              (permission) => !permission.startsWith("finance:"),
+            ),
+            landing_path: null,
+            disabled_modules: ["finance"],
+          },
+        });
+      }
+      if (url === "/users/") return Promise.resolve({ data: [] });
+      return Promise.resolve({ data: [] });
+    }) as never);
+    mockedPatch.mockResolvedValue({ data: CUSTOM_ROLE } as never);
+    roles = [{ ...CUSTOM_ROLE, permissions: ["finance:read"] }];
+    renderDetail();
+
+    await waitFor(() => expect(box("finance:read")).not.toBeNull());
+    expect(box("finance:read")!.checked).toBe(true);
+    expect(box("finance:read")!.disabled).toBe(true);
+
+    await userEvent.clear(screen.getByLabelText("Nome"));
+    await userEvent.type(screen.getByLabelText("Nome"), "Conselho renomeado");
+    await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+    await waitFor(() => expect(mockedPatch).toHaveBeenCalled());
+    const [, body] = mockedPatch.mock.calls[0] as [
+      string,
+      { permissions: string[] },
+    ];
+    expect(body.permissions).toContain("finance:read");
+  });
+
   it("opens a role whose bundle field is absent with nothing selected", async () => {
     // `permissions` is optional on `Role` so every pre-F2 fixture keeps
     // type-checking; the editor must treat its absence as an empty bundle

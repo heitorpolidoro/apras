@@ -5,7 +5,9 @@
     "logout": "Sign out",
     "close": "Close",
     "restrictedAccess": "Restricted access",
-    "restrictedAccessMessage": "You don't have access to this feature. Ask an Administrator to grant it to your role."
+    "restrictedAccessMessage": "You don't have access to this feature. Ask an Administrator to grant it to your role.",
+    "moduleUnavailable": "Module not enabled",
+    "moduleUnavailableMessage": "This module is not part of your condominium's plan. Ask the administrator to enable it."
   },
   "nav": {
     "tasks": "Tasks",
@@ -29,7 +31,8 @@
     "voting": "Assemblies",
     "assets": "Assets & Inventory",
     "purchases": "Purchase Quotations",
-    "roles": "Roles"
+    "roles": "Roles",
+    "modules": "Modules"
   },
   "accessControl": {
     "title": "Access Control",
@@ -1405,7 +1408,7 @@
     "empty": "No roles yet.",
     "notFound": "Role not found.",
     "namePlaceholder": "Role name",
-        "landingPath": "Role landing page",
+    "landingPath": "Role landing page",
     "landingPathNone": "(None — goes to the Dashboard)",
     "landingPathHint": "Where members of this role are taken on sign-in. A preference, not a permission.",
     "name": "Name",
@@ -1432,6 +1435,60 @@
     "membersLoading": "Loading members…",
     "errors": {
       "nameTaken": "A role with this name already exists."
+    }
+  },
+  "modules": {
+    "title": "Modules per condominium",
+    "tenantLabel": "Condominium",
+    "tenantPlaceholder": "Select a condominium",
+    "save": "Save modules",
+    "saving": "Saving...",
+    "saved": "Modules updated.",
+    "saveError": "Could not save the modules.",
+    "loadError": "Could not load the modules.",
+    "loading": "Loading modules...",
+    "coreBadge": "core",
+    "coreHint": "Core modules are always active: without them a condominium could not manage its own users or roles.",
+    "empty": "No condominium available.",
+    "groups": {
+      "core": "Core",
+      "tasks": "Tasks and categories",
+      "property": "Lots and residents",
+      "communication": "Communication",
+      "operations": "Operations",
+      "finance": "Finance and assets",
+      "spaces": "Spaces and reservations",
+      "access": "Visitors and access",
+      "governance": "Governance",
+      "other": "Other"
+    },
+    "names": {
+      "access_control": "Access control",
+      "announcements": "Announcements",
+      "assemblies": "Assemblies",
+      "assets": "Assets",
+      "authorizations": "Visitor authorizations",
+      "categories": "Categories",
+      "documents": "Documents",
+      "feedback": "Feedback",
+      "finance": "Finance",
+      "gate": "Gatehouse",
+      "inventory": "Inventory",
+      "lots": "Lots",
+      "occurrences": "Occurrences",
+      "packages": "Packages",
+      "projects": "Construction projects",
+      "purchases": "Purchases",
+      "reservations": "Reservations",
+      "residents": "Residents",
+      "roles": "Roles",
+      "spaces": "Reservable spaces",
+      "tasks": "Tasks",
+      "tenants": "Condominiums",
+      "uploads": "Photo uploads",
+      "users": "Users",
+      "visitors": "Visitors",
+      "votes": "Polls"
     }
   }
 }

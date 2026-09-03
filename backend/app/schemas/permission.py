@@ -40,8 +40,19 @@ class MyPermissionsRead(BaseModel):
     identity: landing is a preference, not authorization, so simulating a
     porteiro should show you the porteiro's landing -- and that is safe
     precisely because route *access* stays on the real set.
+
+    `disabled_modules` (APRAS-39 §7) is the acting tenant's turned-off
+    modules, sorted. `permissions` is **already** stripped by
+    `deps.get_effective_permissions`, so gating never reads this field —
+    which is what keeps a superuser (unstripped, §5.3) fully functional in a
+    tenant that has modules off while still being *told* which ones are. It
+    exists because two consumers cannot derive it: the simulation arm of
+    `useEffectivePermissionSet`, which builds its set from the role rows
+    rather than from this payload, and the "module not enabled" variant of
+    the restricted-access message.
     """
 
     tenant_id: UUID
     permissions: list[str]  # sorted
     landing_path: str | None = None
+    disabled_modules: list[str] = []  # sorted; APRAS-39

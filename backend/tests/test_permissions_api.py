@@ -196,6 +196,43 @@ def test_me_matches_get_effective_permissions(client: TestClient, session: Sessi
     assert body["permissions"] == sorted(deps.get_effective_permissions(user, session))
 
 
+def test_me_reports_no_disabled_modules_for_an_all_on_tenant(
+    client: TestClient, session: Session
+):
+    """`[]` is the default and the all-on state (APRAS-39 §7)."""
+    user = _user(session)
+
+    body = client.get(ME_URL, headers=_auth(user)).json()
+
+    assert body["disabled_modules"] == []
+
+
+def test_me_reports_the_disabled_modules_after_a_put(
+    client: TestClient, session: Session
+):
+    """The field is additive: one field, one line in the handler, no new route.
+
+    It exists because two frontend consumers cannot derive it — the
+    simulation arm builds its set from the role rows rather than from this
+    payload, and the "module not enabled" restricted-access variant needs the
+    tenant's configuration even when the caller holds nothing.
+    """
+    superuser = _user(session, "DIRECTOR", is_superuser=True)
+    user = _user(session)
+
+    written = client.put(
+        f"/api/v1/tenants/{DEFAULT_TENANT_ID}/modules",
+        headers=_auth(superuser),
+        json={"disabled_modules": ["finance"]},
+    )
+    assert written.status_code == 200
+
+    body = client.get(ME_URL, headers=_auth(user)).json()
+
+    assert body["disabled_modules"] == ["finance"]
+    assert not [p for p in body["permissions"] if module_of(p) == "finance"]
+
+
 # ---------------------------------------------------------------------------
 # 8 -- authentication
 # ---------------------------------------------------------------------------

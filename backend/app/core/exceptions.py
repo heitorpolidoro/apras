@@ -821,6 +821,35 @@ class TenantMembershipNotFoundError(DomainError):
         super().__init__(f"User {user_id} is not a member of tenant {tenant_id}")
 
 
+class UnknownModuleError(DomainError):
+    """Raised when a module string is not in the permission catalogue.
+
+    A plain :class:`DomainError`, so it falls through to
+    ``domain_exception_handler``'s ``status_code = 400`` initialisation with
+    no edit of that module (APRAS-39 §6.3). It is deliberately *not* a
+    Pydantic ``field_validator`` on ``TenantModulesUpdate``: FastAPI answers
+    a schema-level rejection ``422``, and ER-2 pins ``400``.
+    """
+
+    def __init__(self, module: str) -> None:
+        super().__init__(f"Unknown module: '{module}'")
+
+
+class CoreModuleCannotBeDisabledError(DomainError):
+    """Raised when a core module is listed as disabled (APRAS-39 §6.3).
+
+    ``tenants``, ``users`` and ``roles`` are identity, membership and the
+    authorization vocabulary itself: disabling any of them would make the
+    tenant unadministrable from inside and would strip the very permissions
+    an operator needs to turn it back on.
+    """
+
+    def __init__(self, modules: list[str]) -> None:
+        super().__init__(
+            "Core modules cannot be disabled: " + ", ".join(sorted(modules))
+        )
+
+
 class CrossTenantWriteError(DomainError):
     """Raised when a flush would persist a row belonging to another tenant.
 

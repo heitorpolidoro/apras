@@ -16,7 +16,7 @@ from sqlmodel import Session, select
 from app.core import tenant_context
 from app.core.config import settings
 from app.core.exceptions import ForbiddenError
-from app.core.permissions import PERMISSIONS
+from app.core.permissions import CORE_MODULES, PERMISSIONS, filter_by_modules
 from app.db import get_session
 from app.models.role import Role
 from app.models.task import Task
@@ -185,8 +185,45 @@ def get_effective_role_ids(user: User, session: Session) -> set[UUID]:
     return {role.id for role in user.roles if role.tenant_id == tenant_id}
 
 
-def get_effective_permissions(user: User, session: Session) -> frozenset[str]:
-    """Every permission `user` holds in the session's acting tenant.
+def disabled_modules(session: Session) -> frozenset[str]:
+    """The modules the session's acting tenant has turned off (APRAS-39 §5.1).
+
+    Empty when no acting tenant is resolved (a global route, `app/seed.py`,
+    Alembic, a bare unit-test `Session`) and empty when the acting tenant row
+    is absent, because a module switch must never be the reason a session
+    that resolves no tenant grants *less*: the permissions that matter on
+    those paths are the caller's own, and `get_current_tenant` guarantees the
+    row exists on every request that has an acting tenant.
+
+    `CORE_MODULES` is subtracted here rather than trusted from the row: the
+    API refuses to write them (§6.3), and a hand-edited row must not be able
+    to lock a condominium out of its own user and role administration.
+
+    Args:
+        session: Database session carrying (or not) an acting tenant.
+
+    Returns:
+        frozenset[str]: The disabled, non-core modules of the acting tenant.
+    """
+    tenant_id = tenant_context.acting_tenant_id(session)
+    if tenant_id is None:
+        return frozenset()
+    # An identity-map hit on every scoped request: `get_current_tenant`
+    # already did `session.get(Tenant, tenant_id)`, so this costs no SQL.
+    tenant = session.get(Tenant, tenant_id)
+    if tenant is None:
+        return frozenset()
+    return frozenset(tenant.disabled_modules) - CORE_MODULES
+
+
+def _resolve_permissions(user: User, session: Session) -> frozenset[str]:
+    """The user's authority in the acting tenant, **before** the module strip.
+
+    Exactly what `get_effective_permissions` was before APRAS-39, moved
+    verbatim: the superuser short-circuit, the roles' bundles, the
+    acting-tenant_admin whole-catalogue branch. Nothing here knows that
+    modules exist, which is what lets the two public readers above differ by
+    the strip and by nothing else.
 
     Two short-circuits and a union (APRAS-47 §4):
 
@@ -248,6 +285,80 @@ def get_effective_permissions(user: User, session: Session) -> frozenset[str]:
     if is_acting_tenant_admin(user, session):
         return PERMISSIONS
     return frozenset(granted)
+
+
+def get_effective_permissions(user: User, session: Session) -> frozenset[str]:
+    """What `user` may **do** here: authority ∩ the tenant's active modules.
+
+    Every caller that existed before APRAS-39 keeps this signature and this
+    meaning, which is what makes the module switch a single enforcement
+    point: route-level `require_permission`, the in-handler `has_permission`
+    checks, the object-level `SCOPE_PERMISSIONS` predicates, every
+    service-level check and `GET /api/v1/permissions/me` — hence the frontend
+    menu and the frontend routes — all read this one function. There is no
+    registry mapping routes to modules that a future endpoint could forget to
+    join.
+
+    The composition is an intersection, never a replacement: *access*
+    requires `permission ∈ role bundles` **and**
+    `module_of(permission) ∉ disabled`, so the switch can only ever narrow.
+    Nothing is deleted either — `role.permissions` rows are untouched, so
+    re-enabling a module restores exactly the previous access.
+
+    A superuser is deliberately **not** filtered (§5.3): the global operator
+    is the one who *sets* the switch and must be able to inspect and repair a
+    tenant whose module they just turned off. `_resolve_permissions` returns
+    `PERMISSIONS` for them, and the exemption is re-stated here explicitly
+    because the short-circuit inside `_resolve_permissions` cannot express it
+    on its own.
+
+    A disabled module produces exactly the 403 a missing permission produces
+    (§5.4) — no error-path code is touched at all.
+
+    Args:
+        user: The user whose permissions are being resolved.
+        session: Database session carrying (or not) an acting tenant.
+
+    Returns:
+        frozenset[str]: The authority of `_resolve_permissions`, minus every
+        string whose module the acting tenant has turned off.
+    """
+    resolved = _resolve_permissions(user, session)
+    if user.is_superuser:
+        return resolved
+    return filter_by_modules(resolved, disabled_modules(session))
+
+
+def get_grantable_permissions(user: User, session: Session) -> frozenset[str]:
+    """What `user` may **hand to somebody else**: authority, unstripped.
+
+    The module switch is commercial packaging, not an authority boundary
+    (APRAS-39 §5.5). It must not freeze a tenant's role and membership
+    administration, so the two anti-escalation guards in
+    `app/services/role_service.py` — and nothing else in the codebase — read
+    this function instead of `get_effective_permissions`.
+
+    Why it has to exist: `assert_can_grant` validates the **whole resulting
+    bundle**, not the delta, and it is called with the editor's full resend
+    (APRAS-48 ER-4) and with the union of the assigned roles' bundles. Four
+    of the six seeded roles carry `finance:read`, so a stripped comparison
+    would 403 a pure *rename* of any of them in a tenant with `finance` off.
+
+    Why it escalates nothing: a grant can never exceed what the author holds
+    with every module on, which is exactly what the author will hold if the
+    operator re-enables the module — and the grantee's copy is inert
+    meanwhile, because the strip applies to the *grantee's* reads exactly as
+    to everybody's. `SUPERUSER_ONLY_PERMISSIONS` is refused by a branch that
+    runs first and is untouched.
+
+    Args:
+        user: The user performing a grant.
+        session: Database session carrying (or not) an acting tenant.
+
+    Returns:
+        frozenset[str]: `_resolve_permissions`, with no module filter.
+    """
+    return _resolve_permissions(user, session)
 
 
 def has_permission(user: User, session: Session, permission: str) -> bool:

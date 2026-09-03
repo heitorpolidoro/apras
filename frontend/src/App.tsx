@@ -35,7 +35,16 @@ import AssetsInventoryPage from "./features/asset-management/components/AssetsIn
 import PurchaseRequestsPage from "./features/purchase-management/components/PurchaseRequestsPage";
 import RolesAdminPage from "./features/user-administration/pages/RolesAdminPage";
 import RoleDetailPage from "./features/user-administration/pages/RoleDetailPage";
-import { ROUTE_ACCESS } from "./features/user-administration/access/routeAccess";
+import TenantModulesPage from "./features/user-administration/pages/TenantModulesPage";
+import {
+  NAV_ITEMS,
+  ROUTE_ACCESS,
+} from "./features/user-administration/access/routeAccess";
+import {
+  useCanOpenPath,
+  usePermissionSet,
+} from "./features/user-administration/access/useCanAccess";
+import { Spinner } from "./components/ui/spinner";
 import "./App.css";
 
 /**
@@ -59,7 +68,48 @@ import "./App.css";
  */
 export const RootRedirect: React.FC = () => {
   const { data } = useMyPermissions();
-  return <Navigate to={data?.landing_path ?? "/dashboard"} replace />;
+  const set = usePermissionSet();
+  const canOpen = useCanOpenPath();
+
+  // APRAS-39 §10.4: `landing_path ?? "/dashboard"` can now point at a route
+  // the caller cannot open — a tenant with `tasks` off strands everyone on a
+  // restricted `/dashboard`. The chain therefore falls back, in order:
+  // `landing_path` if accessible → `/dashboard` if accessible → the first
+  // `NAV_ITEMS` entry the caller may see → `/welcome`.
+  //
+  // Accessibility is measured with `useCanOpenPath`, i.e. the **real**
+  // permission set, and it is the *same* predicate `ProtectedRoute` consults
+  // before firing its `landingRedirect` bounce. Sharing it is what makes the
+  // chain's answer stick: with two evaluations, the chain rejects a landing
+  // whose module is off, picks `/dashboard`, and `/dashboard`'s own
+  // `landingRedirect` sends the caller straight back to the rejected landing.
+  //
+  // "The first entry" means the first in `NAV_ITEMS` *declaration order* — a
+  // module-level array literal, therefore stable across renders, reloads and
+  // machines. `.find()` over that array, never over a `Set` or
+  // `Object.keys`, so two users with the same permission set always land on
+  // the same path.
+
+  // Hold the render until the set arrives; do **not** navigate on a guess.
+  // `useMyPermissions` is `enabled: useActingTenantReady()`, so on a cold load
+  // of `/` it is disabled-and-pending on the very first render — and a
+  // `<Navigate>` there unmounts this component before the chain ever runs,
+  // which would make the whole fallback inert on the one path most users
+  // take. One spinner frame is the price; it is the same call
+  // `ProtectedRoute` makes three lines from here, for the same reason.
+  if (set.isLoading) return <Spinner />;
+
+  const landing = data?.landing_path ?? null;
+
+  const target =
+    (canOpen(landing) && landing) ||
+    (canOpen("/dashboard") && "/dashboard") ||
+    NAV_ITEMS.find((item) => canOpen(item.path))?.path ||
+    // `/welcome` (`GuestWelcomePage`) carries no rule at all, so the chain
+    // terminates at something renderable rather than looping.
+    "/welcome";
+
+  return <Navigate to={target} replace />;
 };
 
 import { useMyPermissions } from "./hooks/usePermissionQueries";
@@ -302,6 +352,17 @@ function App() {
                   element={
                     <ProtectedRoute requiredAccess={ROUTE_ACCESS["/admin/roles"]}>
                       <RolesAdminPage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/admin/modules"
+                  element={
+                    <ProtectedRoute
+                      requiredAccess={ROUTE_ACCESS["/admin/modules"]}
+                    >
+                      <TenantModulesPage />
                     </ProtectedRoute>
                   }
                 />

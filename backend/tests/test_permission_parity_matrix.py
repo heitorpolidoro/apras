@@ -33,9 +33,19 @@ from pathlib import Path
 
 import pytest
 from fastapi.routing import APIRoute
+from sqlalchemy.pool import StaticPool
+from sqlmodel import Session, SQLModel, create_engine, select
 
-from app.core.permissions import ROUTE_PERMISSIONS, UNGUARDED_ROUTES
+from app.api import deps
+from app.core import tenant_context
+from app.core.permissions import (
+    PERMISSIONS,
+    ROUTE_PERMISSIONS,
+    UNGUARDED_ROUTES,
+    filter_by_modules,
+)
 from app.main import app
+from app.models.tenant import Tenant
 from tests import matrix_world
 from tests.conftest import bundle
 from tests.matrix_world import (
@@ -302,10 +312,47 @@ def test_matrix_covers_every_permission_mapped_route():
     assert len(CELLS) == EXPECTED_CELL_COUNT
 
 
-def test_the_thirteen_unguarded_routes_are_the_only_ones_excluded():
-    """No cell may be dropped for any reason other than being unguarded."""
-    assert len(UNGUARDED_ROUTES) == 13
+def test_the_fifteen_unguarded_routes_are_the_only_ones_excluded():
+    """No cell may be dropped for any reason other than being unguarded.
+
+    13 at the IAM F5 merge base; APRAS-39 adds the two superuser-only
+    module-switch routes, which map to no catalogue permission and therefore
+    add **no** cell -- which is what keeps `EXPECTED_CELL_COUNT` at 1080 and
+    the golden file byte-identical.
+    """
+    assert len(UNGUARDED_ROUTES) == 15
     assert not (set(ROUTE_PERMISSIONS) & UNGUARDED_ROUTES)
+
+
+def test_the_matrix_world_runs_with_every_module_active():
+    """The 1080-cell world has all 26 modules on, in every tenant it builds.
+
+    `matrix_world` seeds its tenants through the ordinary model
+    constructors, so `disabled_modules` is `[]` everywhere and every cell
+    keeps its pre-APRAS-39 answer. Asserted rather than assumed: a future
+    task that turns a module off in a fixture fails *here*, with a clear
+    message, instead of producing a mysterious baseline diff.
+    """
+    engine = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        matrix_world.build_world(session)
+        tenants = session.exec(select(Tenant)).all()
+        assert tenants
+        for tenant in tenants:
+            assert tenant.disabled_modules == [], (
+                f"matrix world tenant {tenant.name!r} has modules disabled: "
+                f"{tenant.disabled_modules}"
+            )
+
+        for tenant in tenants:
+            tenant_context.set_acting_tenant(session, tenant.id)
+            assert filter_by_modules(PERMISSIONS, deps.disabled_modules(session)) == (
+                PERMISSIONS
+            )
+    SQLModel.metadata.drop_all(engine)
 
 
 def test_every_path_parameter_has_a_binding():

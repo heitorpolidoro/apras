@@ -62,6 +62,7 @@ def read_my_permissions(
         tenant_id=tenant.id,
         permissions=sorted(api_deps.get_effective_permissions(current_user, session)),
         landing_path=landing_path_for(current_user, tenant.id),
+        disabled_modules=sorted(api_deps.disabled_modules(session)),
     )
 
 

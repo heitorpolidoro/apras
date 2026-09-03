@@ -31,6 +31,15 @@ from sqlalchemy import create_engine, text
 TEST_POSTGRES_URL = os.environ.get("TEST_POSTGRES_URL")
 _BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+#: ``0033``'s own ``down_revision``. Every case that used to spell "undo the
+#: head migration" as a relative ``-1`` names it explicitly since APRAS-39 put
+#: ``0034`` on top: the precedent is
+#: ``test_downgrading_past_0020_is_a_safe_noop``, retargeted for the same
+#: reason when ``0033`` displaced ``0020`` from the head slot. A relative step
+#: is a claim about *whatever is currently last*, which is never what these
+#: cases mean.
+_BEFORE_0033 = "0032_rename_user_type_to_role"
+
 pytestmark = pytest.mark.skipif(
     not TEST_POSTGRES_URL,
     reason=(
@@ -136,7 +145,7 @@ def test_the_userrole_type_comes_back_with_all_six_labels_on_downgrade(
     isolated_pg_engine,
 ):
     """`downgrade -1` recreates the type with the six labels `0003`/`0014`/`0020` built."""
-    _run_alembic("downgrade", "-1")
+    _run_alembic("downgrade", _BEFORE_0033)
 
     assert _userrole_labels(isolated_pg_engine) == {
         "ADMINISTRATOR",
@@ -173,7 +182,7 @@ def test_the_user_role_column_is_absent_at_head_and_insertable_after_downgrade(
         )
     assert "role" not in columns
 
-    _run_alembic("downgrade", "-1")
+    _run_alembic("downgrade", _BEFORE_0033)
 
     for value, cpf in (("PORTEIRO", "12345678909"), ("RESIDENT", "52998224725")):
         user_id = uuid.uuid4()
@@ -890,7 +899,7 @@ def test_downgrade_removes_tenant_schema(isolated_pg_engine):
     # Re-applying must succeed, so the downgrade left a schema 0028 can
     # migrate again (the fixture's teardown reset assumes nothing about it).
     _run_alembic("upgrade", "head")
-    assert _current_revision(isolated_pg_engine) == "0033_drop_user_role_and_menus"
+    assert _current_revision(isolated_pg_engine) == "0034_add_tenant_modules"
 
 
 # ---------------------------------------------------------------------------
@@ -919,7 +928,7 @@ def test_is_tenant_admin_column_shape_and_backfill(pg_engine_at_0027):
         )
 
     _run_alembic("upgrade", "head")
-    assert _current_revision(pg_engine_at_0027) == "0033_drop_user_role_and_menus"
+    assert _current_revision(pg_engine_at_0027) == "0034_add_tenant_modules"
 
     with pg_engine_at_0027.connect() as conn:
         column = conn.execute(
@@ -987,7 +996,7 @@ def test_permissions_column_shape_and_backfill(pg_engine_at_0027):
         )
 
     _run_alembic("upgrade", "head")
-    assert _current_revision(pg_engine_at_0027) == "0033_drop_user_role_and_menus"
+    assert _current_revision(pg_engine_at_0027) == "0034_add_tenant_modules"
 
     with pg_engine_at_0027.connect() as conn:
         column = conn.execute(
@@ -1086,7 +1095,7 @@ def test_is_superuser_column_shape_and_conversion(pg_engine_at_0027):
             )
 
     _run_alembic("upgrade", "head")
-    assert _current_revision(pg_engine_at_0027) == "0033_drop_user_role_and_menus"
+    assert _current_revision(pg_engine_at_0027) == "0034_add_tenant_modules"
 
     with pg_engine_at_0027.connect() as conn:
         column = conn.execute(
@@ -1720,7 +1729,7 @@ def test_0033_does_not_refuse_an_inactive_or_flagged_user(pg_engine_at_0031):
         _link_tenant(conn, syndic, DEFAULT_TENANT_ID, is_tenant_admin=True)
 
     _run_alembic("upgrade", "head")
-    assert _current_revision(pg_engine_at_0031) == "0033_drop_user_role_and_menus"
+    assert _current_revision(pg_engine_at_0031) == "0034_add_tenant_modules"
 
 
 def test_effective_permissions_are_unchanged_by_0033(pg_engine_at_0031):  # noqa: PLR0915
@@ -1983,7 +1992,7 @@ def test_0033_document_folder_acl_round_trips(pg_engine_at_0031):
     for folder_id, values in before.items():
         assert mapped[folder_id] == [v for v in values if v in LEGACY_ROLE_NAMES_BY_VALUE]
 
-    _run_alembic("downgrade", "-1")
+    _run_alembic("downgrade", _BEFORE_0033)
 
     after = _pairs("allowed_roles_json")
     assert after == before, "the journal must restore the original bytes"
@@ -2065,7 +2074,7 @@ def test_0033_downgrade_restores_the_schema_and_recomputes_roles(
             {"u": newcomer, "r": resident_role},
         )
 
-    _run_alembic("downgrade", "-1")
+    _run_alembic("downgrade", _BEFORE_0033)
 
     with pg_engine_at_0031.connect() as conn:
         roles = dict(
@@ -2142,13 +2151,104 @@ def test_0033_downgrade_refuses_when_the_journal_has_been_dropped(
     with pg_engine_at_0031.begin() as conn:
         conn.execute(text("DROP TABLE f5_backfill_journal"))
 
-    result = _alembic("downgrade", "-1")
+    result = _alembic("downgrade", _BEFORE_0033)
 
     assert result.returncode != 0
     assert "f5_backfill_journal is missing" in result.stderr
 
     # It refuses **before it changes a single thing**: no column recreated,
-    # no rename undone, so the database is left at head, untouched.
-    assert _current_revision(pg_engine_at_0031) == "0033_drop_user_role_and_menus"
+    # no rename undone, so the database is left at head, untouched. Since
+    # APRAS-39 the walk down from head crosses `0034` first, and the whole
+    # walk runs in one transaction, so `0034`'s `DROP COLUMN` is rolled back
+    # with the rest and head is still `0034`.
+    assert _current_revision(pg_engine_at_0031) == "0034_add_tenant_modules"
     assert "role" not in _columns(pg_engine_at_0031, "user")
     assert "allowed_menus" not in _columns(pg_engine_at_0031, "role")
+
+
+# ---------------------------------------------------------------------------
+# 0034_add_tenant_modules (APRAS-39 §4) - the per-tenant module switch
+# ---------------------------------------------------------------------------
+
+
+def test_0034_adds_disabled_modules_not_null_defaulting_to_empty(
+    isolated_pg_engine,
+):
+    """The column exists at head, `NOT NULL`, with a `'[]'` server default.
+
+    SQLite (the rest of the suite) has no notion of a JSON type and would
+    accept anything, so the shape assertion has to live here.
+    """
+    assert "disabled_modules" in _columns(isolated_pg_engine, "tenant")
+
+    with isolated_pg_engine.connect() as conn:
+        row = conn.execute(
+            text(
+                "SELECT data_type, is_nullable, column_default "
+                "FROM information_schema.columns "
+                "WHERE table_name = 'tenant' AND column_name = 'disabled_modules'"
+            )
+        ).one()
+
+    assert row.data_type == "json"
+    assert row.is_nullable == "NO"
+    assert "[]" in row.column_default
+
+
+def test_0034_backfills_every_pre_existing_tenant_to_all_modules_on(
+    pg_engine_at_0027,
+):
+    """The `server_default` **is** the backfill: no data statement needed.
+
+    Seeded before `0028` exists, so the default tenant `0028` creates and a
+    tenant created afterwards are both covered by one upgrade to head.
+    """
+    _run_alembic("upgrade", "0033_drop_user_role_and_menus")
+    extra = uuid.uuid4()
+    with pg_engine_at_0027.begin() as conn:
+        conn.execute(
+            text(
+                "INSERT INTO tenant (id, name, is_active, created_at, updated_at) "
+                "VALUES (:id, :name, true, now(), now())"
+            ),
+            {"id": extra, "name": f"Pre-0034 {extra}"},
+        )
+
+    _run_alembic("upgrade", "head")
+
+    with pg_engine_at_0027.connect() as conn:
+        rows = conn.execute(
+            text("SELECT id, disabled_modules::text FROM tenant")
+        ).all()
+
+    assert rows
+    assert {row.disabled_modules for row in rows} == {"[]"}
+    assert str(DEFAULT_TENANT_ID) in {str(row.id) for row in rows}
+    assert str(extra) in {str(row.id) for row in rows}
+
+
+def test_0034_round_trips(isolated_pg_engine):
+    """No data statement in either direction, so it is exactly reversible."""
+    assert _current_revision(isolated_pg_engine) == "0034_add_tenant_modules"
+
+    _run_alembic("downgrade", "-1")
+
+    assert _current_revision(isolated_pg_engine) == "0033_drop_user_role_and_menus"
+    assert "disabled_modules" not in _columns(isolated_pg_engine, "tenant")
+
+    _run_alembic("upgrade", "head")
+
+    assert _current_revision(isolated_pg_engine) == "0034_add_tenant_modules"
+    assert "disabled_modules" in _columns(isolated_pg_engine, "tenant")
+
+
+def test_0034_is_the_single_head(isolated_pg_engine):
+    """`alembic heads` reports exactly one revision, and it is this one."""
+    result = _alembic("heads")
+
+    assert result.returncode == 0
+    heads = [line for line in result.stdout.splitlines() if "(head)" in line]
+    assert len(heads) == 1
+    assert "0034_add_tenant_modules" in heads[0]
+    # `alembic_version.version_num` is VARCHAR(32).
+    assert len("0034_add_tenant_modules") <= 32

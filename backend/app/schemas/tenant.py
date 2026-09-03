@@ -41,6 +41,40 @@ class TenantRead(TenantBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ModuleStateRead(BaseModel):
+    """One module's state in one tenant (APRAS-39 §6.1)."""
+
+    module: str  # "finance"
+    is_core: bool  # in CORE_MODULES: cannot be disabled
+    is_active: bool  # not in tenant.disabled_modules
+
+
+class TenantModulesRead(BaseModel):
+    """Every module and its state in one tenant, sorted by ``module``.
+
+    Storage is negative (``tenant.disabled_modules``, ``[]`` = everything on)
+    but the read is positive: the *active* set is enumerable per tenant,
+    which is what ER-1 asks for. The same body answers ``GET`` and ``PUT``,
+    so the client re-renders from the server's answer rather than from an
+    optimistic guess.
+    """
+
+    tenant_id: UUID
+    modules: list[ModuleStateRead]  # all 26, sorted by `module`
+
+
+class TenantModulesUpdate(BaseModel):
+    """The complete desired state, declaratively (``PUT``, not ``PATCH``).
+
+    This schema validates *shape* -- a list of strings. Vocabulary
+    (catalogue membership, core-ness) is validated in
+    ``TenantService.set_modules``, where the catalogue lives and where a
+    rejection can be a 400 rather than FastAPI's 422 (§6.3).
+    """
+
+    disabled_modules: list[str]
+
+
 class TenantMemberCreate(BaseModel):
     """Schema for linking an existing user to a tenant.
 

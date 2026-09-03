@@ -283,8 +283,12 @@ def test_the_route_is_unguarded_by_permission_and_superuser_guarded():
     assert SUPERUSER_ROUTE in UNGUARDED_ROUTES
     assert SUPERUSER_ROUTE not in ROUTE_PERMISSIONS
     # The F4 merge base is 192 routes / 180 mapped / 12 unguarded; this slice
-    # adds exactly one route and exactly one allowlist entry.
-    assert len(UNGUARDED_ROUTES) == 13
+    # adds exactly one route and exactly one allowlist entry. APRAS-39 then
+    # added two more allowlist entries by the same convention and for the same
+    # reason (the per-tenant module switch), which is why the count reads 15
+    # while `ROUTE_PERMISSIONS` — the number that governs the parity baseline
+    # — has not moved.
+    assert len(UNGUARDED_ROUTES) == 15
     assert len(ROUTE_PERMISSIONS) == 180
 
     route = next(
@@ -314,7 +318,9 @@ def test_the_superuser_route_is_tenant_scoped_like_the_rest_of_the_users_router(
     handler.
     """
     assert SUPERUSER_ROUTE not in GLOBAL_ROUTES
-    assert len(GLOBAL_ROUTES) == 18
+    # 18 at the IAM F5 merge base; APRAS-39's two module-switch routes are
+    # mounted on the global tenants router and therefore join this set.
+    assert len(GLOBAL_ROUTES) == 20
 
     route = next(
         r

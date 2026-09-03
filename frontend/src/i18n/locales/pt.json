@@ -5,7 +5,9 @@
     "logout": "Sair",
     "close": "Fechar",
     "restrictedAccess": "Acesso restrito",
-    "restrictedAccessMessage": "Você não tem acesso a esta funcionalidade. Peça a um Administrador para liberá-la para o seu papel."
+    "restrictedAccessMessage": "Você não tem acesso a esta funcionalidade. Peça a um Administrador para liberá-la para o seu papel.",
+    "moduleUnavailable": "Módulo não contratado",
+    "moduleUnavailableMessage": "Este módulo não faz parte do plano do seu condomínio. Peça ao administrador para ativá-lo."
   },
   "nav": {
     "tasks": "Tarefas",
@@ -29,7 +31,8 @@
     "voting": "Assembleias",
     "assets": "Patrimônio & Estoque",
     "purchases": "Cotações de Compra",
-    "roles": "Papéis"
+    "roles": "Papéis",
+    "modules": "Módulos"
   },
   "accessControl": {
     "title": "Controle de Acesso",
@@ -1405,7 +1408,7 @@
     "empty": "Nenhum papel ainda.",
     "notFound": "Papel não encontrado.",
     "namePlaceholder": "Nome do papel",
-        "landingPath": "Página inicial do papel",
+    "landingPath": "Página inicial do papel",
     "landingPathNone": "(Nenhuma — vai para o Dashboard)",
     "landingPathHint": "Para onde os membros deste papel são levados ao entrar. É uma preferência, não uma permissão.",
     "name": "Nome",
@@ -1432,6 +1435,60 @@
     "membersLoading": "Carregando membros…",
     "errors": {
       "nameTaken": "Já existe um papel com esse nome."
+    }
+  },
+  "modules": {
+    "title": "Módulos por condomínio",
+    "tenantLabel": "Condomínio",
+    "tenantPlaceholder": "Selecione um condomínio",
+    "save": "Salvar módulos",
+    "saving": "Salvando...",
+    "saved": "Módulos atualizados.",
+    "saveError": "Não foi possível salvar os módulos.",
+    "loadError": "Não foi possível carregar os módulos.",
+    "loading": "Carregando módulos...",
+    "coreBadge": "essencial",
+    "coreHint": "Módulos essenciais estão sempre ativos: sem eles o condomínio não conseguiria administrar os próprios usuários ou papéis.",
+    "empty": "Nenhum condomínio disponível.",
+    "groups": {
+      "core": "Essenciais",
+      "tasks": "Tarefas e categorias",
+      "property": "Lotes e moradores",
+      "communication": "Comunicação",
+      "operations": "Operação",
+      "finance": "Financeiro e patrimônio",
+      "spaces": "Espaços e reservas",
+      "access": "Visitantes e acesso",
+      "governance": "Governança",
+      "other": "Outros"
+    },
+    "names": {
+      "access_control": "Controle de acesso",
+      "announcements": "Comunicados",
+      "assemblies": "Assembleias",
+      "assets": "Patrimônio",
+      "authorizations": "Autorizações de visita",
+      "categories": "Categorias",
+      "documents": "Documentos",
+      "feedback": "Sugestões",
+      "finance": "Finanças",
+      "gate": "Portaria",
+      "inventory": "Estoque",
+      "lots": "Lotes",
+      "occurrences": "Ocorrências",
+      "packages": "Encomendas",
+      "projects": "Obras",
+      "purchases": "Compras",
+      "reservations": "Reservas",
+      "residents": "Moradores",
+      "roles": "Papéis",
+      "spaces": "Espaços reserváveis",
+      "tasks": "Tarefas",
+      "tenants": "Condomínios",
+      "uploads": "Envio de fotos",
+      "users": "Usuários",
+      "visitors": "Visitantes",
+      "votes": "Votações"
     }
   }
 }

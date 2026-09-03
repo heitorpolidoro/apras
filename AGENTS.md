@@ -56,7 +56,12 @@ Building administrators and HOA boards juggle dozens of operational tasks — ma
 ## Frontend (React SPA)
 
 - Single-page application served by Vite; deployed as a static site on **Vercel** (`apras-front`).
-- Client-side routing with `react-router-dom`. Root `/` redirects to `/dashboard`.
+- Client-side routing with `react-router-dom`. Root `/` resolves through
+  `RootRedirect`'s fallback chain (APRAS-39 §10.4): the caller's
+  `landing_path` if its route is accessible → `/dashboard` if accessible →
+  the first `NAV_ITEMS` entry they may see, in declaration order → `/welcome`.
+  The chain exists because a tenant with `tasks` turned off would otherwise
+  strand everyone on a restricted `/dashboard`.
 - Authentication state managed via React Context (`AuthContext`), JWT stored in `sessionStorage` or `localStorage` (depending on "remember me").
 - All API calls go through a centralised Axios client (`src/api/client.ts`) that auto-attaches the `Bearer` token and an optional Vercel protection bypass header.
 - Server-state caching and mutations handled by **TanStack Query** (`useQuery` / `useMutation`).
@@ -72,19 +77,33 @@ Building administrators and HOA boards juggle dozens of operational tasks — ma
 | `/admin/users`     | `AdminUserDashboard`   | `users:update`          |
 | `/admin/roles`     | `RolesAdminPage`       | any of `roles:create/update/delete` |
 | `/admin/roles/:roleId` | `RoleDetailPage`   | the same rule           |
+| `/admin/modules`   | `TenantModulesPage`    | `{superuser:true}`      |
 
 Since APRAS-48 every protected route's rule is one entry of
 `ROUTE_ACCESS` (`frontend/src/features/user-administration/access/routeAccess.ts`),
 passed as `ProtectedRoute`'s single `requiredAccess` prop and reused verbatim
 by the matching `NAV_ITEMS` entry, so a menu and its route can never state
-different rules. Authorization reads the **real** permission set
-(`useCanAccess`); menus read the **simulated** one while an administrator is
-"viewing as" (`useCanShowMenu`) — APRAS-35's invariant, restated over
-permissions. A denied route renders `RestrictedAccessMessage` **in place** and
-never redirects. Two `TRANSITIONAL (IAM F4 -> F5)` fields survive on exactly
-two entries: `legacyMenu`, because `deps.assert_menu_access` still gates 12
-handlers, and `landingRedirect`, the GUEST → `/welcome` / PORTEIRO → `/gate`
-landing rule, which is not authorization.
+different rules. APRAS-39 added a third rule shape, `{superuser:true}`, for
+`/admin/modules`: it is the first frontend surface for a superuser-only
+*backend* route, and such routes carry no catalogue permission, so no
+`{anyOf}` rule could express it. The flag is read from the **real** auth user
+and is never simulated, so "view-as" cannot open an operator screen.
+
+Authorization reads the **real** permission set (`useCanAccess`); menus read
+the **simulated** one while an administrator is "viewing as"
+(`useCanShowMenu`) — APRAS-35's invariant, restated over permissions. A denied
+route renders `RestrictedAccessMessage` **in place** and never redirects; since
+APRAS-39 that component has a second, purely presentational variant for a
+route whose module the tenant has turned off (`common.moduleUnavailable`).
+One field survives, on exactly two entries — `/dashboard` and `/categories`:
+`landingRedirect`, which sends a caller carrying a `landing_path` preference
+(GUEST → `/welcome`, PORTEIRO → `/gate`) to it instead. It is a preference,
+not authorization, which is why it lives on the role row. Since APRAS-39 it
+fires **only when the landing target is itself accessible**: a PORTEIRO whose
+tenant has `gate` turned off stays where `RootRedirect`'s chain put them
+rather than being bounced onto a screen that would refuse them. Its sibling
+`legacyMenu` died together with `deps.assert_menu_access`, which IAM F5
+deleted.
 
 ## Backend (FastAPI)
 
@@ -106,6 +125,7 @@ landing rule, which is not authorization.
 | `/api/v1/roles`  | Roles           | `backend/app/api/v1/endpoints/roles.py`  |
 | `/api/v1/tenants` | Tenants & membership | `backend/app/api/v1/endpoints/tenants.py` |
 | `/api/v1/permissions` | Permission catalogue & effective set | `backend/app/api/v1/endpoints/permissions.py` |
+| `/api/v1/tenants/{id}/modules` | Per-tenant module switch (`GET`/`PUT`, superuser only) | `backend/app/api/v1/endpoints/tenants.py` |
 | `/api/v1/health` | Health check    | `backend/app/api/v1/api.py`              |
 
 ## Data Layer
@@ -360,6 +380,95 @@ tenant.
   asserted literally by `tests/test_user_directory_scope.py`. Do not "fix"
   the doc by renaming them.
 
+### Módulos por tenant
+
+A per-tenant **feature switch** (APRAS-39) that composes with the permission
+model by *stripping*, never by replacing. The 26 modules are exactly the
+`<module>` segments of the catalogue (`permissions.MODULES`, derived and never
+hand-listed, so a module a future task adds is toggleable the day its first
+permission exists). Three of them are `CORE_MODULES` and can never be turned
+off — `tenants`, `users`, `roles` — because a condominium without identity,
+membership and the authorization vocabulary could not administer itself back
+into existence. The other **23** are the billable features.
+
+**Storage is negative.** `tenant.disabled_modules` (portable `JSON`,
+`NOT NULL DEFAULT '[]'`, migration `0034`) lists what is *off*, so `[]` means
+"everything on": the column's `server_default` is the all-on backfill for
+every existing tenant, a new tenant is all-on with no seeding, and a module a
+future task adds is active everywhere with no data step. What it gives up,
+stated so it is not rediscovered: no per-toggle audit row and no efficient
+"which tenants have `finance` on" query. Both belong to `APRAS-40`'s plan
+model, which will write this column from a subscription.
+
+**One enforcement point.** `deps.get_effective_permissions` returns the user's
+authority **minus** every string whose module the acting tenant turned off.
+Route guards, the in-handler `has_permission` checks, the object-level
+`SCOPE_PERMISSIONS` predicates, every service-level check and
+`GET /api/v1/permissions/me` — hence the frontend menu and the frontend routes
+— all follow from that one function. There is no registry mapping routes to
+modules that a new endpoint could forget to join, and no second mechanism.
+
+* **The single exception is the grant surface.** `role_service.assert_can_grant`
+  (and `assert_can_assign_roles`, which delegates to it) compares against
+  `deps.get_grantable_permissions` — the same authority, **unstripped**. The
+  guard validates the *whole resulting bundle*, and four of the six seeded
+  roles carry `finance:read`, so a stripped comparison would 403 a pure
+  *rename* of any of them in a tenant with `finance` off: role and membership
+  administration in that tenant would freeze. Nothing escalates, because a
+  grant can never exceed what the author holds with every module on — which is
+  exactly what they will hold when the operator re-enables it — and the
+  grantee's copy is inert meanwhile. `get_grantable_permissions` has exactly
+  one definition and is referenced only in that guard module, pinned by
+  `tests/test_module_gating_grants.py`.
+* **A superuser is deliberately not filtered.** The global operator *sets* the
+  switch and must be able to inspect and repair a tenant whose module they
+  just turned off. The flag is answered before any tenant is resolved, and the
+  switch is commercial packaging over a tenant's users, not a data boundary.
+* **The refusal is byte-identical to any other 403.** No error-path code is
+  touched. A client that needs to distinguish reads `disabled_modules` from
+  `/permissions/me`; an operator reads `GET /api/v1/tenants/{id}/modules`.
+* **Toggling is non-destructive.** No `role.permissions` row is ever edited, so
+  re-enabling a module restores exactly the previous access with no data
+  migration and no re-authoring. "Inert, not deleted" is what the strip
+  produces.
+* `GET /api/v1/permissions/` is **not** stripped, by construction: it is the
+  static catalogue, identical for every caller, and the role editor needs it
+  to render a permission the author does not hold as a disabled checkbox.
+
+**Companion modules** (operator documentation, not code — the 26 toggle
+independently and the incoherent configurations they allow are safe and
+reversible in one click): `assets` ↔ `inventory`; `reservations` ↔ `spaces`;
+`visitors` ↔ `authorizations` ↔ `gate` ↔ `access_control`; `tasks` →
+`categories`; `assemblies` ↔ `votes`; `lots` → `residents`, `packages`. The
+`/admin/modules` checklist is grouped by these clusters, which is
+presentation, not machinery.
+
+**The two routes**, both superuser-only (`deps.get_current_superuser`) on the
+global tenants router, so a tenant_admin acting in their own tenant gets 403.
+They map to no catalogue permission, by the convention
+`PATCH /users/{id}/superuser` established — `UNGUARDED_ROUTES` grows by two
+and `ROUTE_PERMISSIONS` stays at **180**, which is what keeps
+`tests/data/parity_matrix_baseline.json` byte-identical at 1080 cells.
+
+```bash
+# read every module's state in one tenant
+curl "$API/api/v1/tenants/$TENANT/modules" -H "Authorization: Bearer $TOKEN"
+
+# turn finance off (declarative: the body is the complete desired state)
+curl -X PUT "$API/api/v1/tenants/$TENANT/modules" \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"disabled_modules": ["finance"]}'
+
+# turn everything back on
+curl -X PUT "$API/api/v1/tenants/$TENANT/modules" \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"disabled_modules": []}'
+```
+
+An unknown tenant is **404** (resolved first, so it outranks a bad payload);
+an unknown module string or any core module is **400**, raised before the
+column assignment so a rejected `PUT` leaves the row untouched.
+
 **Install superuser.** `user.is_superuser` (APRAS-47, migration `0031`) is the
 global counterpart of `is_tenant_admin`: every permission in **every** tenant
 and with no acting tenant at all — `deps.get_effective_permissions` answers it
@@ -390,8 +499,9 @@ not of the role.
 **The two permission reads.** `GET /api/v1/permissions/` returns the whole
 static catalogue — one row per permission, pre-split into `module`, `action`
 and `superuser_only` — and `GET /api/v1/permissions/me` returns
-`{tenant_id, permissions[]}`, i.e. `deps.get_effective_permissions` for the
-**acting tenant**, sorted (APRAS-48). The router is mounted `TENANT_SCOPED`,
+`{tenant_id, permissions[], landing_path, disabled_modules[]}`, i.e.
+`deps.get_effective_permissions` for the **acting tenant**, sorted (APRAS-48),
+already stripped of the tenant's disabled modules (APRAS-39). The router is mounted `TENANT_SCOPED`,
 so `/me` resolves its tenant through the same `get_current_tenant` ladder as
 `/user-types/`; `/auth/me` is deliberately **not** the carrier, because it is
 global (`GLOBAL_ROUTES`), so computing permissions there would answer the

@@ -30,6 +30,8 @@ by ``voting_service._assert_can_manage_eligibility`` and are therefore
 already uses.
 """
 
+from collections.abc import Collection, Iterable
+
 # ---------------------------------------------------------------------------
 # Scope permissions (IAM F2, APRAS-46 §4.2)
 # ---------------------------------------------------------------------------
@@ -593,6 +595,14 @@ UNGUARDED_ROUTES: frozenset[tuple[str, str]] = frozenset(
         # whose only job is to be refused by `assert_can_grant` -- and paying
         # six parity-baseline cells for it -- would be the wrong trade.
         ("PATCH", "/api/v1/users/{user_id}/superuser"),
+        # Per-tenant module activation: superuser-only, guarded by
+        # deps.get_current_superuser (APRAS-39 §6.4). Same convention and
+        # same reason as the line above -- minting two catalogue strings
+        # whose only purpose is to be refused by `assert_can_grant` would
+        # cost 12 parity cells (2 routes x 6 profiles) that cannot exist at
+        # the baseline sha, and would move the golden file.
+        ("GET", "/api/v1/tenants/{tenant_id}/modules"),
+        ("PUT", "/api/v1/tenants/{tenant_id}/modules"),
     }
 )
 
@@ -660,3 +670,41 @@ def permission_for_route(method: str, path: str) -> str | None:
 def module_of(permission: str) -> str:
     """The `<module>` segment of a `<module>:<action>` permission string."""
     return permission.split(":", 1)[0]
+
+
+# ---------------------------------------------------------------------------
+# The per-tenant module vocabulary (APRAS-39 §2)
+# ---------------------------------------------------------------------------
+
+#: Every module named by the catalogue. Derived, never hand-listed: a module
+#: introduced by a future task is toggleable (and active) the day its first
+#: permission exists, with nobody having to remember a second list.
+MODULES: frozenset[str] = frozenset(module_of(permission) for permission in PERMISSIONS)
+
+#: The modules a tenant can never turn off: identity, membership and the
+#: authorization vocabulary itself. Disabling any of them would make the
+#: tenant unadministrable from inside -- no user list, no role editor, no
+#: tenant switcher -- and would strip the very permissions the operator needs
+#: to turn it back on from the tenant side.
+CORE_MODULES: frozenset[str] = frozenset({"tenants", "users", "roles"})
+
+#: The 23 billable features.
+TOGGLEABLE_MODULES: frozenset[str] = MODULES - CORE_MODULES
+
+
+def filter_by_modules(
+    permissions: Iterable[str], disabled: Collection[str]
+) -> frozenset[str]:
+    """`permissions` minus every string whose module is in `disabled`.
+
+    Pure and session-free, like everything else in this module. Strings whose
+    module is not a catalogue module (a hand-edited row) are *kept*: the
+    filter removes only what an operator explicitly turned off, which is what
+    preserves `deps.get_effective_permissions`'s documented "unknown strings
+    are kept as is" property.
+    """
+    return frozenset(
+        permission
+        for permission in permissions
+        if module_of(permission) not in disabled
+    )

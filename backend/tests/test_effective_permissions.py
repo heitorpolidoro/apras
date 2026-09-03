@@ -307,3 +307,89 @@ def test_the_bridge_grants_nothing_in_a_tenant_that_did_not_grant_it(
     result = deps.get_effective_permissions(user, session)
 
     assert result == bundle("RESIDENT")
+
+
+# ---------------------------------------------------------------------------
+# The per-tenant module strip (APRAS-39 §5)
+# ---------------------------------------------------------------------------
+#
+# Every case *above* this line runs with `disabled_modules == []`, where the
+# strip is the identity and the stripped and unstripped sets are equal by
+# construction. That is why none of their assertions moved.
+
+
+def _turn_off(session: Session, tenant_id, *modules: str) -> None:
+    tenant = session.get(Tenant, tenant_id)
+    tenant.disabled_modules = list(modules)
+    session.add(tenant)
+    session.commit()
+
+
+def test_the_strip_narrows_an_ordinary_users_bundle(session: Session):
+    """`finance` off removes the module's strings and nothing else."""
+    user = _make_user(session, "RESIDENT", is_superuser=False)
+    tenant_context.set_acting_tenant(session, DEFAULT_TENANT_ID)
+    _turn_off(session, DEFAULT_TENANT_ID, "finance")
+
+    result = deps.get_effective_permissions(user, session)
+
+    assert result == frozenset(
+        p for p in bundle("RESIDENT") if not p.startswith("finance:")
+    )
+
+
+def test_the_strip_bounds_an_acting_tenant_admin(session: Session):
+    """The capability means "everything *this tenant* has", never more."""
+    user = _make_user(session, "RESIDENT", is_superuser=False)
+    session.add(
+        UserTenantLink(
+            user_id=user.id, tenant_id=DEFAULT_TENANT_ID, is_tenant_admin=True
+        )
+    )
+    session.commit()
+    tenant_context.set_acting_tenant(session, DEFAULT_TENANT_ID)
+    _turn_off(session, DEFAULT_TENANT_ID, "finance")
+
+    result = deps.get_effective_permissions(user, session)
+
+    assert result == frozenset(
+        p for p in PERMISSIONS if not p.startswith("finance:")
+    )
+
+
+def test_a_superuser_is_exempt_from_the_strip(session: Session):
+    """§5.3, pinned so it reads as a decision rather than an oversight.
+
+    The global operator *sets* the switch and must be able to inspect and
+    repair a tenant whose module they just turned off.
+    """
+    user = _make_user(session, "RESIDENT", is_superuser=True)
+    tenant_context.set_acting_tenant(session, DEFAULT_TENANT_ID)
+    _turn_off(session, DEFAULT_TENANT_ID, "finance")
+
+    assert deps.get_effective_permissions(user, session) == PERMISSIONS
+
+
+def test_the_strip_is_a_no_op_without_an_acting_tenant(session: Session):
+    """A global route, `app/seed.py`, Alembic and a bare unit-test `Session`."""
+    user = _make_user(session, "RESIDENT", is_superuser=False)
+    _turn_off(session, DEFAULT_TENANT_ID, "finance")
+
+    assert deps.get_effective_permissions(user, session) == bundle("RESIDENT")
+
+
+@pytest.mark.parametrize("role", PARITY_PROFILES)
+def test_the_two_resolvers_are_equal_while_every_module_is_active(
+    session: Session, role
+):
+    """`disabled_modules == []` makes §5.5's swap invisible, for every profile.
+
+    This is the whole reason `test_permission_escalation.py` and
+    `test_legacy_role_permissions.py` need no edit.
+    """
+    user = _make_user(session, role, is_superuser=False)
+    tenant_context.set_acting_tenant(session, DEFAULT_TENANT_ID)
+
+    assert deps.get_effective_permissions(
+        user, session
+    ) == deps.get_grantable_permissions(user, session)

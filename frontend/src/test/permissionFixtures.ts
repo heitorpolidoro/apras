@@ -556,9 +556,15 @@ export const PERMISSIONS_BY_ROLE: Record<string, string[]> = Object.fromEntries(
 export const permissionsOf = (
   role: string,
   extra: readonly string[] = [],
+  disabled_modules: readonly string[] = [],
 ): MyPermissions => ({
   tenant_id: "00000000-0000-0000-0000-000000000001",
   permissions: [...new Set([...(PERMISSIONS_BY_ROLE[role] ?? []), ...extra])].sort(),
+  // APRAS-39: `[]` is the all-on state, which is what every pre-existing
+  // fixture means. The backend always sends the field, so the type requires
+  // it and no consumer carries a defensive `?? []`.
+  landing_path: null,
+  disabled_modules: [...disabled_modules],
 });
 
 /**
@@ -572,11 +578,15 @@ export const permissionsOf = (
 export const settledPermissions = (
   permissions: readonly string[],
   landing_path: string | null = null,
+  disabled_modules: readonly string[] = [],
 ) => ({
   data: {
     tenant_id: "00000000-0000-0000-0000-000000000001",
     permissions: [...permissions],
     landing_path,
+    // APRAS-39 §7: always present, `[]` meaning every module active — which
+    // is what every fixture predating the module switch means.
+    disabled_modules: [...disabled_modules],
   },
   isPending: false,
   isError: false,

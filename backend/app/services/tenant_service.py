@@ -6,22 +6,41 @@ from uuid import UUID
 from sqlmodel import Session, select
 
 from app.core.exceptions import (
+    CoreModuleCannotBeDisabledError,
     TenantAlreadyExistsError,
     TenantMembershipAlreadyExistsError,
     TenantMembershipNotFoundError,
     TenantNotFoundError,
+    UnknownModuleError,
 )
+from app.core.permissions import CORE_MODULES, MODULES
 from app.core.tenant_context import acting_tenant_scope
 from app.models.role import Role
 from app.models.tenant import Tenant, UserTenantLink
 from app.models.user import User
 from app.schemas.tenant import (
+    ModuleStateRead,
     TenantCreate,
     TenantMemberRead,
     TenantMembershipSummary,
+    TenantModulesRead,
+    TenantModulesUpdate,
     TenantUpdate,
 )
 from app.services.role_service import role_names_in
+
+
+def _now() -> datetime:
+    """The naive-UTC clock every ``tenant.updated_at`` write in this module uses.
+
+    One call site, so the two writers cannot drift apart and the naive/aware
+    choice is stated once. It is deliberately naive: ``tenant.updated_at`` is
+    ``TIMESTAMP WITHOUT TIME ZONE`` and every other writer in the codebase
+    fills it the same way, so an aware value here would be the only one of
+    its kind in the table.
+    """
+    return datetime.utcnow()  # noqa: DTZ003
+
 
 #: The six historically-named ``Role`` rows every tenant gets: the five
 #: migration ``0018`` seeded into the default tenant plus ``Porteiro
@@ -216,12 +235,79 @@ class TenantService:
 
         for key, value in update_data.items():
             setattr(tenant, key, value)
-        tenant.updated_at = datetime.utcnow()
+        tenant.updated_at = _now()
 
         session.add(tenant)
         session.commit()
         session.refresh(tenant)
         return tenant
+
+    @classmethod
+    def get_modules(cls, session: Session, tenant_id: UUID) -> TenantModulesRead:
+        """Every module and its state in one tenant (APRAS-39 §6.2).
+
+        An unknown ``tenant_id`` is the existing ``TenantNotFoundError``
+        (404), raised by ``get_tenant`` before anything else runs.
+        """
+        tenant = cls.get_tenant(session, tenant_id)
+        return cls._to_modules_read(tenant)
+
+    @classmethod
+    def set_modules(
+        cls, session: Session, tenant_id: UUID, modules_in: TenantModulesUpdate
+    ) -> TenantModulesRead:
+        """Replace the tenant's disabled-module set, declaratively.
+
+        The tenant is resolved **first**, so an unknown tenant is a 404 even
+        when the payload is also invalid: "which tenant" is answered before
+        "which modules", exactly as every other write in this service does,
+        and an unknown tenant never leaks a vocabulary hint.
+
+        Both validations run **before** the column assignment and before any
+        commit, so a rejected ``PUT`` leaves the row untouched. Duplicates
+        are collapsed silently and an empty list is the legal "everything on"
+        state.
+        """
+        tenant = cls.get_tenant(session, tenant_id)
+        requested = set(modules_in.disabled_modules)
+
+        for module in sorted(requested):
+            if module not in MODULES:
+                raise UnknownModuleError(module)
+        core = requested & CORE_MODULES
+        if core:
+            raise CoreModuleCannotBeDisabledError(sorted(core))
+
+        tenant.disabled_modules = sorted(requested)
+        tenant.updated_at = _now()
+        session.add(tenant)
+        session.commit()
+        session.refresh(tenant)
+        return cls._to_modules_read(tenant)
+
+    @staticmethod
+    def _to_modules_read(tenant: Tenant) -> TenantModulesRead:
+        """The positive read over the negative column.
+
+        ``CORE_MODULES`` is subtracted here for the same reason
+        ``deps.disabled_modules`` subtracts it: a hand-edited row naming a
+        core module strips nothing, so reporting it as inactive would make
+        the operator's diagnostic view disagree with enforcement in exactly
+        the scenario the second line of defence exists for. The read matches
+        the strip by construction.
+        """
+        disabled = set(tenant.disabled_modules) - CORE_MODULES
+        return TenantModulesRead(
+            tenant_id=tenant.id,
+            modules=[
+                ModuleStateRead(
+                    module=module,
+                    is_core=module in CORE_MODULES,
+                    is_active=module not in disabled,
+                )
+                for module in sorted(MODULES)
+            ],
+        )
 
     @classmethod
     def list_members(

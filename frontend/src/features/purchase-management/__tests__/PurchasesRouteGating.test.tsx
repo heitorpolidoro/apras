@@ -86,6 +86,10 @@ const mockAuth = (role: string) => {
           data: {
             tenant_id: "00000000-0000-0000-0000-000000000001",
             permissions: PERMISSIONS_BY_ROLE[role],
+            landing_path: null,
+            // APRAS-39 §7: always sent; `[]` is the all-on state, which is
+            // what this module's denials have always assumed.
+            disabled_modules: [],
           },
         })
       : Promise.resolve({ data: [] })) as never);

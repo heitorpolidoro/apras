@@ -56,6 +56,12 @@ export const ROUTE_ACCESS: Record<string, AccessRule> = {
   "/admin/roles/:roleId": {
     anyOf: ["roles:create", "roles:update", "roles:delete"],
   },
+  // APRAS-39 §10.3: the per-tenant module switch. The first frontend surface
+  // for a superuser-only *backend* route, and by §6.4's convention such
+  // routes carry no catalogue permission — so `{ superuser: true }` is the
+  // only rule that can express it. `{ anyOf: ["tenants:update"] }` would
+  // offer the menu to an acting tenant_admin, whom the API answers 403.
+  "/admin/modules": { superuser: true },
 };
 
 /**
@@ -100,4 +106,5 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { path: "/admin/photo-approvals", labelKey: "nav.photoApprovals" },
   { path: "/admin/access-control", labelKey: "nav.accessControl" },
   { path: "/gate-monitor", labelKey: "nav.gateMonitor" },
+  { path: "/admin/modules", labelKey: "nav.modules" },
 ].map((item) => ({ ...item, access: ROUTE_ACCESS[item.path] }));

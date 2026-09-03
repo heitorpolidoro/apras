@@ -154,27 +154,28 @@ def test_permission_strings_follow_the_convention():
     assert not bad, f"permissions violating <module>:<action>: {bad}"
 
 
-def test_unguarded_allowlist_is_thirteen_routes():
-    assert len(UNGUARDED_ROUTES) == 13
+def test_unguarded_allowlist_is_fifteen_routes():
+    assert len(UNGUARDED_ROUTES) == 15
 
 
 def test_route_count_is_fully_accounted_for():
     """The registry accounts for the whole route table, with no overlap.
 
     The total is recomputed from `app.main.app` rather than hard-coded, so
-    the invariant survives a baseline shift; 193/180/13 is what to expect on
-    the IAM F5 (APRAS-49) tree, which added `PATCH
-    /api/v1/users/{user_id}/superuser` to the allowlist -- the only route and
-    the only allowlist entry that slice adds -- on top of the 192/180/12 IAM
-    F4 (APRAS-48) left. `len(ROUTE_PERMISSIONS)` staying at **180** is the
-    part that must hold unconditionally: it is what keeps the parity matrix
-    at 6 x 180 = 1080 cells and the golden file byte-identical.
+    the invariant survives a baseline shift; 195/180/15 is what to expect on
+    the APRAS-39 tree, which added the two superuser-only module-switch
+    routes `GET`/`PUT /api/v1/tenants/{tenant_id}/modules` to the allowlist
+    -- the only routes and the only allowlist entries that task adds -- on
+    top of the 193/180/13 IAM F5 (APRAS-49) left, itself on top of IAM F4's
+    192/180/12. `len(ROUTE_PERMISSIONS)` staying at **180** is the part that
+    must hold unconditionally: it is what keeps the parity matrix at
+    6 x 180 = 1080 cells and the golden file byte-identical.
     """
     total = len(_all_route_keys())
     assert set(ROUTE_PERMISSIONS) & UNGUARDED_ROUTES == set()
     assert len(ROUTE_PERMISSIONS) + len(UNGUARDED_ROUTES) == total
-    assert len(UNGUARDED_ROUTES) == 13
-    assert len(ROUTE_PERMISSIONS) == total - 13
+    assert len(UNGUARDED_ROUTES) == 15
+    assert len(ROUTE_PERMISSIONS) == total - 15
     assert len(ROUTE_PERMISSIONS) == 180
 
 

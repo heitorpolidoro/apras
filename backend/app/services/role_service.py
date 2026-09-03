@@ -21,7 +21,7 @@ from uuid import UUID
 
 from sqlmodel import Session
 
-from app.api.deps import get_effective_permissions
+from app.api.deps import get_grantable_permissions
 from app.core import tenant_context
 from app.core.exceptions import ForbiddenError
 from app.core.permissions import SUPERUSER_ONLY_PERMISSIONS
@@ -36,9 +36,17 @@ def assert_can_grant(
     """The author may only put permissions they themselves hold into a group,
     and nobody may put a superuser-only permission into one at all.
 
-    `is_tenant_admin` needs no special case: the author's *effective* set is
-    the whole catalogue of the granting tenant (APRAS-47 §4.2), so a
-    capability holder can grant exactly what they hold.
+    "What they hold" is `deps.get_grantable_permissions` — the author's
+    authority **before** APRAS-39's per-tenant module strip, and this is the
+    one deliberate exception to that strip in the whole codebase (§5.5). The
+    switch governs what a user may *do*; it must not freeze who may
+    administer roles. The two readings differ only in a tenant with a
+    disabled module, and the difference is exactly what keeps a pure rename
+    of a `finance:read`-carrying role saveable while `finance` is off.
+
+    `is_tenant_admin` needs no special case: the author's set is the whole
+    catalogue of the granting tenant (APRAS-47 §4.2), so a capability holder
+    can grant exactly what they hold.
 
     The `SUPERUSER_ONLY_PERMISSIONS` branch runs **first** and applies to
     every author, superuser included: those four strings name routes gated by
@@ -62,7 +70,15 @@ def assert_can_grant(
             "These permissions are granted by is_superuser only: "
             + ", ".join(forbidden)
         )
-    missing = sorted(set(permissions) - get_effective_permissions(author, session))
+    # APRAS-39 §5.5: the author's authority **ignoring** the tenant's module
+    # switch. A disabled module must not freeze role administration — this
+    # check reads the *whole resulting bundle*, so a stripped comparison
+    # would 403 a pure rename of any of the four seeded roles that carry
+    # `finance:read`. The grant is harmless: the strings are inert until the
+    # operator re-enables the module, at which point the author holds them
+    # too, so a grant can never exceed what the author holds with every
+    # module on.
+    missing = sorted(set(permissions) - get_grantable_permissions(author, session))
     if missing:
         raise ForbiddenError(
             "You cannot grant permissions you do not hold: " + ", ".join(missing)

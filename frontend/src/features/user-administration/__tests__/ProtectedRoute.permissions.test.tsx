@@ -47,7 +47,13 @@ const answer = (permissions: readonly string[], pending = false) => {
       return pending
         ? new Promise(() => undefined)
         : Promise.resolve({
-            data: { tenant_id: "t-1", permissions: [...permissions] },
+            data: {
+              tenant_id: "t-1",
+              permissions: [...permissions],
+              landing_path: null,
+              // APRAS-39 §7: always sent; `[]` is the all-on state.
+              disabled_modules: [],
+            },
           });
     }
     return Promise.resolve({ data: [] });

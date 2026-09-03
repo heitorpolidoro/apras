@@ -50,6 +50,12 @@ GLOBAL_ROUTES: frozenset[tuple[str, str]] = frozenset(
         # purpose — on a route with no acting tenant the capability is not
         # even readable, so a tenant_admin cannot grant it to themselves.
         ("PATCH", "/api/v1/tenants/{tenant_id}/members/{user_id}"),
+        # APRAS-39: the per-tenant module switch, read and write. Global for
+        # the same reason as the line above -- the module switch is a
+        # property of the tenant, written from outside it: a tenant_admin
+        # must not be able to reach it by acting in their own tenant.
+        ("GET", "/api/v1/tenants/{tenant_id}/modules"),
+        ("PUT", "/api/v1/tenants/{tenant_id}/modules"),
         # Authenticated by X-Device-Key, not a JWT: resolves its tenant from
         # the device it authenticates.
         ("POST", "/api/v1/access-control/webhook/verification"),
@@ -100,9 +106,13 @@ def test_allowlist_has_no_stale_entries():
     assert existing >= GLOBAL_ROUTES, sorted(GLOBAL_ROUTES - existing)
 
 
-def test_allowlist_is_eighteen_routes():
-    """The global surface is small and reviewed; growing it is a decision."""
-    assert len(GLOBAL_ROUTES) == 18
+def test_allowlist_is_twenty_routes():
+    """The global surface is small and reviewed; growing it is a decision.
+
+    18 at the APRAS-49 merge base; APRAS-39 adds the two module-switch
+    routes, which inherit `GLOBAL_SCOPED` from the tenants router mount.
+    """
+    assert len(GLOBAL_ROUTES) == 20
 
 
 def test_route_count_is_fully_accounted_for():

@@ -23,6 +23,8 @@ from app.schemas.tenant import (
     TenantMemberCreate,
     TenantMemberRead,
     TenantMemberUpdate,
+    TenantModulesRead,
+    TenantModulesUpdate,
     TenantRead,
     TenantUpdate,
 )
@@ -73,6 +75,44 @@ def update_tenant(
     """Rename or (de)activate a tenant. Superuser only."""
     return TenantService.update_tenant(
         session=session, tenant_id=tenant_id, tenant_in=tenant_in
+    )
+
+
+# No `response_model=` on either module route: the return annotation is the
+# same type, and ruff's FAST001 rejects declaring it twice — the convention
+# `endpoints/permissions.py` established (IAM F4). The seven older routes in
+# this file predate it and keep their explicit `response_model=`; FastAPI
+# derives the same serialisation contract either way.
+@router.get("/{tenant_id}/modules")
+def get_tenant_modules(
+    tenant_id: UUID,
+    session: Annotated[Session, Depends(get_session)],
+    _: Annotated[User, Depends(api_deps.get_current_superuser)],
+) -> TenantModulesRead:
+    """Every module and its state in one tenant. Superuser only (APRAS-39).
+
+    On the **global** tenants router, so it resolves no acting tenant and a
+    tenant_admin of that very tenant gets 403: the module switch is a
+    property of the tenant, written from outside it.
+    """
+    return TenantService.get_modules(session=session, tenant_id=tenant_id)
+
+
+@router.put("/{tenant_id}/modules")
+def set_tenant_modules(
+    tenant_id: UUID,
+    modules_in: TenantModulesUpdate,
+    session: Annotated[Session, Depends(get_session)],
+    _: Annotated[User, Depends(api_deps.get_current_superuser)],
+) -> TenantModulesRead:
+    """Replace the tenant's disabled-module set. Superuser only (APRAS-39).
+
+    `PUT`, not `PATCH`: the body is the *complete* desired state, so the
+    operation is idempotent and has no partial-update ambiguity. The response
+    is the same body `GET` returns.
+    """
+    return TenantService.set_modules(
+        session=session, tenant_id=tenant_id, modules_in=modules_in
     )
 
 

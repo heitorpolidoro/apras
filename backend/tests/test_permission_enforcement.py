@@ -108,6 +108,15 @@ ADMIN_ONLY_ROUTES: frozenset[tuple[str, str]] = frozenset(
         # flag. It is the sixth and only route this slice adds, and the only
         # one outside `/api/v1/tenants` that `get_current_superuser` guards.
         ("PATCH", "/api/v1/users/{user_id}/superuser"),
+        # APRAS-39 §6.4: the per-tenant module switch, read and write.
+        # Superuser only, on the global tenants router. They **must** declare
+        # `Depends(api_deps.get_current_superuser)` rather than an inlined
+        # `if not user.is_superuser`: this assertion is an exact set over
+        # `_depends_on(route.dependant, deps.get_current_superuser)`, so an
+        # inlined check would be invisible to it and to the two other
+        # structural walkers in this repository.
+        ("GET", "/api/v1/tenants/{tenant_id}/modules"),
+        ("PUT", "/api/v1/tenants/{tenant_id}/modules"),
     }
 )
 
@@ -261,7 +270,7 @@ def test_no_route_depends_on_a_tenant_admin_role_guard():
     assert not hasattr(deps, "get_current_admin_or_manager")
 
 
-def test_get_current_superuser_is_exactly_the_five_tenant_writes_plus_the_grant():
+def test_get_current_superuser_is_exactly_the_seven_tenant_routes_plus_the_grant():
     found = {
         key
         for route in _api_routes()
