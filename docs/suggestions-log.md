@@ -216,3 +216,42 @@
 - (QA) NewInfractionModal sem controle de upload de evidencias (10.1 descreve um; API aceita evidence_urls e o detalhe renderiza) e ContestationForm so com corpo (10.1 diz corpo + anexos; attachment_urls faz round-trip) - follow-up: entradas de anexo no cliente reutilizando o padrao de upload existente.
 - (QA) mensagem do 409 de regra duplicada le mais estreita que a constraint (tenant, origin, article) - citar a origem.
 - (QA) +50 findings ruff nos quatro arquivos de producao novos (FAST001/FAST002/DTZ003/B008/DTZ011, todos com precedente); DTZ003 num modulo de auditoria datada merece revisao.
+
+## [APRAS-50] Testes de migração em Postgres real no CI — 2026-09-06
+
+- 1.2: gemini-scheduled-triage.yml tambem tem push (main / release/**/*, paths-gated) e workflow_dispatch - estreitar a afirmacao para 'nenhum workflow dispara em push para apras-50-proof'.
+- 'roughly sixteen' (4.4) e '~16' (3) contradizem o '≈ 17' do proprio 4.4 (17 e o correto).
+- 4.1: dizer se os runs de prova precisam ser recapturados apos uma rodada de revisao que altere ci.yml ou o guard.
+- Citacao de create_index derivou (l.223-228, nao l.226).
+- Higiene do orquestrador: .meridian/reports/ com 125 arquivos vs trim de 50 do pipeline.md.
+- (code review) ci.yml:139 `if: always()` tambem dispara em cancelamento (timeout) e o guard imprime 'no JUnit XML' em vez da verdade - `if: !cancelled()` mantem a semantica (spec/ER-2 nomeiam always() literalmente).
+- (code review) ci.yml:100 pg_isready responde OK ao servidor bootstrap socket-only do initdb; `-h 127.0.0.1` forca TCP se um dia flakear.
+- (code review) test_assert_no_skips.py:152-154 afirma != 0 onde o script devolve exatamente 2 - pinar == 2; `# noqa: S314` sem motivo em assert_no_skips.py:64.
+- (code review) sem upload-artifact de migration-test-results.xml - evidencia do run vermelho transcrita do log a mao; follow-up barato.
+- (code review) AGENTS.md diz '24 test modules'; ha 111 - deriva pre-existente.
+- (QA) subir migration-test-results.xml como artifact `if: always()` para triagem de run vermelho; MIN_CASES = 53 duplicado em script e teste (deliberado); protecao de branch exigindo o check novo continua sendo passo manual do operador no GitHub.
+
+## [APRAS-51] Alinhar guard e mapeamento de permissão em todas as rotas — 2026-09-06
+
+- 2/6.1: '15 das 16 permissoes sao detidas pelos seis bundles' esta errado nos dois numeros: 25 rotas carregam 20 permissoes distintas e cinco nao sao detidas por todos (tasks:read, tasks:comment, reservations:cancel para GUEST; reservations:reject para GUEST/MANAGER/PORTEIRO/RESIDENT; votes:tally_read para GUEST/PORTEIRO); o delta 3 segue correto - as outras 147 celulas sao inertes por duas razoes (perfil detem a permissao, ou a celula ja registra 403).
+- 4.4: 'todos os seis bundles detem packages:read e packages:pickup' e falso para GUEST; a razao certa da cegueira da matriz e que nenhum bundle detem packages:queue_read sem a permissao mapeada.
+- 4.1: a 'afirmacao geral' e literalmente falsa para GET /tasks/ (tasks.py:52 consulta tasks:read para devolver []) - reescrever como 'consulta a permissao mapeada para RECUSAR o chamador'.
+- 4.3: nomear run_cell/resolve_path/REQUEST_BODIES/QUERY_PARAMS como importados sem modificacao; token do ator sob nova chave de world.tokens do proprio modulo; dizer como o modulo obtem a sessao (cell_client so entrega o TestClient).
+- 4.2: predicado S sem 'and not in D'; afirmar disjuncao par a par das cinco formas.
+
+## [APRAS-52] Histórico de assinatura com rota e tabela na página do superuser — 2026-09-06
+
+- 2.3: renomear test_allowlist_is_twenty_seven_routes (test_tenant_route_scope.py:124) junto com o == 28, como os outros quatro walkers.
+- 2.3: numeros de linha sao pre-APRAS-51 (a 51 insere constantes e o loader _51 acima da l.468 de test_permission_parity_matrix.py) - localizar por nome de funcao/constante.
+- Apagar a secao 10 (pergunta do caminho ja decidida: espelho das irmas em /tenants/{id}/subscription/history).
+- 6.4: adicionar caso de refetch apos troca de plano (5.2 invalida em useSetTenantPlan e useSetTenantCourtesy).
+- ER-1: test_the_superuser_history_matches_the_tenant_side_history compara limit=100 com leitura sem teto - so vale com fixture < 100 linhas; docstring.
+- ER-3 do board foi substituido (baseline _52 impossivel para rota nao mapeada) - registrar no PR body.
+
+## [APRAS-53] Upload de evidências e anexos de contestação no cliente de infrações — 2026-09-06
+
+- 2.2 cita media_service.py:25-26; as constantes estao em :23-24 (valores corretos).
+- 3.6(b): linha do conjunto MIME escreve `new Set(...) === new Set(...)`; a assercao e toEqual.
+- ER-3: 'as unicas mudancas fora de frontend/' e contradito pelos artefatos do pipeline (spec, tasks.json, suggestions-log) - dizer 'fora de frontend/ e de docs/'.
+- 3.6(c): 'tres linhas recursivas' - o modelo _permission_guards tem sete (l.281-287).
+- Board ER-4 carregava um '---' final copiado da regua horizontal; removido pelo orquestrador ao aprovar.

@@ -143,9 +143,61 @@ deleted.
 - **Database**: PostgreSQL 16 (Vercel Postgres in production; local via Docker at port `5436`).
 - **Migrations**: Alembic with `env.py` wired to a non-pooling connection URL for safe DDL.
 
+### Running the Postgres migration tests locally
+
+`backend/tests/test_migrations_postgres.py` needs a real Postgres it is
+allowed to destroy: every fixture runs `DROP SCHEMA public CASCADE` and
+re-runs the Alembic chain. **Never point `TEST_POSTGRES_URL` at the dev
+database on 5436** — it will be emptied. The database must be **UTF-8**:
+migration `0028` seeds `Condomínio Padrão`.
+
+**initdb (no Docker needed — the dev machine's Docker disk is often full):**
+
+```bash
+export PGDATA=/tmp/apras-pgtest PGPORT=55432
+initdb -U postgres -E UTF8 --locale=C "$PGDATA"
+pg_ctl -D "$PGDATA" -o "-p $PGPORT" -l /tmp/apras-pgtest.log start
+createdb -h localhost -p "$PGPORT" -U postgres apras_test
+
+cd backend && TEST_POSTGRES_URL=postgresql://postgres@localhost:55432/apras_test \
+  SECRET_KEY=test uv run pytest tests/test_migrations_postgres.py -v
+
+pg_ctl -D "$PGDATA" stop && rm -rf "$PGDATA"
+```
+
+**Docker, when it has disk:**
+
+```bash
+docker run -d --rm -p 55432:5432 \
+  -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=apras_test \
+  -e POSTGRES_INITDB_ARGS="--encoding=UTF8 --locale=C" postgres:16-alpine
+
+cd backend && TEST_POSTGRES_URL=postgresql://postgres:postgres@localhost:55432/apras_test \
+  SECRET_KEY=test uv run pytest tests/test_migrations_postgres.py -v
+```
+
+Check what you got with `psql "$TEST_POSTGRES_URL" -tAc "SHOW server_encoding"`
+— it must print `UTF8`. Two known divergences, both deliberate: Homebrew's
+`initdb` on this machine is **PostgreSQL 14** while CI and `docker-compose.yml`
+are **16**; and the CI job and both recipes above use `--locale=C`, while
+`docker-compose.yml`'s `db` sets no `POSTGRES_INITDB_ARGS` and so gets
+`en_US.utf8` collation. Nothing in the module asserts a collation-dependent
+ordering today, but a test that starts to must account for the difference.
+For anything that turns on version- or collation-specific catalog behaviour,
+use the Docker recipe (or `brew install postgresql@16`) and treat the CI job
+as the source of truth.
+
 ## CI/CD
 
 - **GitHub Actions** — `ci.yml` runs backend tests (pytest, 90% coverage gate) and frontend tests (Vitest, 75% coverage gate) on every push/PR.
+- **Migration tests** — `ci.yml`'s `backend-migrations` job runs
+  `backend/tests/test_migrations_postgres.py` against a throwaway
+  **Postgres 16 (UTF-8)** service container. The module self-skips wherever
+  `TEST_POSTGRES_URL` is unset, so **CI is the source of truth** for it; a
+  guard step fails the job if the module reports any skip or fewer than 53
+  cases, because a fully-skipped run exits 0. `ci.yml` also accepts
+  `workflow_dispatch`, so any branch can be run manually with
+  `gh workflow run ci.yml --ref <branch>`.
 - **Migrate** — `migrate.yml` runs Alembic migrations on push to `master`.
 - **Release** — `release.yml` handles semantic versioning and releases.
 - **Static Analysis** — SonarCloud and DeepSource are integrated for code quality and security scanning.
@@ -247,6 +299,8 @@ apras/
 │   ├── alembic/                    # Database migration scripts
 │   │   ├── env.py
 │   │   └── versions/               # Individual migration files
+│   ├── scripts/                    # CI helpers (not product code, not collected)
+│   │   └── assert_no_skips.py      # Fails the migration job if its cases skipped
 │   ├── tests/                      # Pytest test suite (24 test modules)
 │   │   ├── conftest.py             # Shared fixtures (in-memory DB, test client)
 │   │   ├── test_tasks_rbac.py      # RBAC permission tests for tasks
@@ -305,7 +359,7 @@ apras/
 ├── package.json                    # Root scripts (Vercel preview deploys)
 ├── .github/
 │   ├── workflows/
-│   │   ├── ci.yml                  # Main CI pipeline (tests + coverage gates)
+│   │   ├── ci.yml                  # Main CI pipeline (tests, coverage gates, Postgres migration job)
 │   │   ├── migrate.yml             # Alembic migration runner on merge to master
 │   │   ├── release.yml             # Automated release workflow
 │   │   └── gemini-*.yml            # AI-assisted triage, review, and dispatch workflows

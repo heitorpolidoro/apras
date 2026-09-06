@@ -114,6 +114,7 @@ pnpm-debug.log*
 docker-compose.override.yml
 .scannerwork/
 test-results.xml
+migration-test-results.xml
 
 # =========================
 # AI Assistants

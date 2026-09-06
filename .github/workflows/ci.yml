@@ -5,6 +5,11 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
+  # This repository does not ship through pull requests, so without a manual
+  # trigger no run can be produced on any ref but `master`. The `push` and
+  # `pull_request` filters stay `[ master ]`: this adds a way to ask for a run,
+  # not a new automatic one.
+  workflow_dispatch:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -49,6 +54,92 @@ jobs:
         path: |
           backend/coverage.xml
           backend/test-results.xml
+
+  # A separate job, not a bigger `backend` one: roughly 30 of the 53 cases
+  # re-run the whole Alembic chain twice (fixture setup and teardown), so
+  # folding it in would add that cost to the job every change waits on. As its
+  # own job it runs in parallel, `Backend Tests`'s duration is unchanged by
+  # construction, and "Backend Migration Tests (Postgres) x" names the failure
+  # class before anyone opens a log. `sonarcloud`'s `needs:` is deliberately
+  # not extended -- this job feeds it nothing.
+  backend-migrations:
+    name: Backend Migration Tests (Postgres)
+    runs-on: ubuntu-latest
+    # A backstop against a hung `alembic` subprocess holding a runner, not a
+    # budget: the steady-state cost is a couple of minutes.
+    timeout-minutes: 20
+    env:
+      SECRET_KEY: "test-secret-key-for-ci"
+      TEST_POSTGRES_URL: "postgresql://postgres:postgres@localhost:5432/apras_test"
+      # `app/db.py` builds an engine at import time. Pointing it at the same
+      # throwaway database means any accidental connection lands somewhere
+      # harmless, and keeps `_alembic`'s POSTGRES_URL override a no-op.
+      POSTGRES_URL: "postgresql://postgres:postgres@localhost:5432/apras_test"
+
+    services:
+      postgres:
+        # The same tag as `docker-compose.yml`'s `db` and the same major as
+        # production (AGENTS.md, "PostgreSQL 16"). If one of the three moves,
+        # all three move together.
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: apras_test
+          # Migration `0028` seeds the non-ASCII `Condomínio Padrão`, so the
+          # cluster must be UTF-8. The image's `LANG` already makes `initdb`
+          # default to UTF8; stating it here survives an image whose `LANG`
+          # changes, and `--locale=C` fixes collation instead of inheriting
+          # whichever locales the base image happens to carry.
+          POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+        ports:
+          # The steps run on the runner host, not inside a container, so the
+          # service has to be reachable on localhost.
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d apras_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v6
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v8.1.0
+      with:
+        enable-cache: false
+        pyproject-file: backend/pyproject.toml
+
+    - name: Set up Python 3.13
+      run: uv python install 3.13
+
+    - name: Install dependencies
+      run: |
+        cd backend
+        uv sync --all-groups
+
+    - name: Verify the throwaway database is UTF-8
+      run: |
+        enc=$(psql "$TEST_POSTGRES_URL" -tAc "SHOW server_encoding")
+        echo "server_encoding=$enc"
+        test "$enc" = "UTF8"
+
+    - name: Run Postgres migration tests
+      run: |
+        cd backend
+        uv run pytest tests/test_migrations_postgres.py -v --durations=15 \
+          --junitxml=migration-test-results.xml -o addopts=
+
+    # `if: always()` is required: a green-but-empty pytest run is the exact
+    # failure this guard exists to catch, and it would never reach a step that
+    # only ran after a *failing* pytest.
+    - name: Assert every migration case actually ran
+      if: always()
+      run: |
+        cd backend
+        uv run python scripts/assert_no_skips.py migration-test-results.xml
 
   frontend:
     name: Frontend Tests

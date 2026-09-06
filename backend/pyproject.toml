@@ -68,6 +68,9 @@ ignore = [
     "ARG001",  # Unused arguments em fixtures/testes (frequente)
     "E501",    # Line too long em testes
 ]
+# CI helpers, deliberately outside `tests/` (`testpaths = tests` must not
+# collect them) and outside any package, so they have no `__init__.py`.
+"scripts/**" = ["INP001"]
 "alembic/**" = [
     "INP001", # Namespace package
     "N806",   # Variable names em migrations
