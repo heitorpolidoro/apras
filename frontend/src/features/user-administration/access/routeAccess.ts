@@ -76,6 +76,20 @@ export const ROUTE_ACCESS: Record<string, AccessRule> = {
   // holds it through the whole-catalogue short-circuit and the API answers 403.
   "/admin/plans": { superuser: true },
   "/admin/subscriptions": { superuser: true },
+  // APRAS-44 §10.2. `{ module: "infractions" }` is specifically **wrong** for
+  // `/infractions`: a module rule means "holds any `infractions:*`", so a
+  // resident holding only `my_lots_read` would be offered the management list
+  // the API answers 403 for. `anyOf` is the shape used on `/gate` and
+  // `/spaces` for exactly this situation.
+  "/infractions": { anyOf: ["infractions:read"] },
+  "/infraction-rules": {
+    anyOf: [
+      "infractions:rule_create",
+      "infractions:rule_update",
+      "infractions:rule_deactivate",
+    ],
+  },
+  "/my-infractions": { anyOf: ["infractions:my_lots_read"] },
 };
 
 /**
@@ -124,4 +138,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { path: "/subscription", labelKey: "nav.subscription" },
   { path: "/admin/plans", labelKey: "nav.plans" },
   { path: "/admin/subscriptions", labelKey: "nav.tenantSubscriptions" },
+  { path: "/infractions", labelKey: "nav.infractions" },
+  { path: "/infraction-rules", labelKey: "nav.infractionRules" },
+  { path: "/my-infractions", labelKey: "nav.myInfractions" },
 ].map((item) => ({ ...item, access: ROUTE_ACCESS[item.path] }));

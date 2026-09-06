@@ -52,6 +52,12 @@ export interface OccurrenceTimeline {
 
 export interface OccurrenceDetail extends Occurrence {
   timeline: OccurrenceTimeline[];
+  /** APRAS-44 §7.4: the infractions promoted from this occurrence.
+   *
+   *  Additive with a default on the backend, so it is always present and
+   *  never `null`; optional here only because the shape predates it and a
+   *  cached payload from an older build could still be in flight. */
+  infraction_ids?: string[];
 }
 
 export interface OccurrenceCreatePayload {

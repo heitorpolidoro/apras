@@ -91,7 +91,18 @@ def fresh_session_fixture(session: Session):
 #: `_TENANT_SCOPED_TABLES` literal therefore cannot name them. The same
 #: constant, and the same reason, as `tests/test_tenant_models.py`'s:
 #: `0028` records history and is not amended. APRAS-40's is the first.
-POST_0028_SCOPED_TABLES = {"tenant_subscription"}
+POST_0028_SCOPED_TABLES = {
+    "tenant_subscription",  # APRAS-40
+    # APRAS-44. Four of the module's seven tables are directly scoped: each is
+    # reached by a route that lists it or fetches it without a scoped parent's
+    # id in the path -- `GET /api/v1/infractions/cycles` and
+    # `GET /api/v1/infraction-settings` are the two non-obvious ones. The other
+    # three inherit through a NOT NULL parent FK.
+    "infraction_rule",
+    "infraction",
+    "infraction_cycle_close",
+    "infraction_settings",
+}
 
 
 def test_registry_matches_the_migrations_scoped_table_list():
@@ -104,7 +115,7 @@ def test_registry_matches_the_migrations_scoped_table_list():
     assert {m.__tablename__ for m in TENANT_SCOPED_MODELS} == (
         set(_migration_scoped_tables()) | POST_0028_SCOPED_TABLES
     )
-    assert len(TENANT_SCOPED_MODELS) == 28
+    assert len(TENANT_SCOPED_MODELS) == 32
 
 
 def test_registry_excludes_the_membership_table():

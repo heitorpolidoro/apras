@@ -4,6 +4,8 @@ import { AlertCircle, CheckCircle2, Clock, Globe, Lock, MapPin, User as UserIcon
 import type { OccurrencePriority, OccurrenceStatus } from "../../../types/occurrence";
 import { useOccurrenceDetail, useUpdateOccurrenceStatus } from "../hooks/useOccurrences";
 import { OccurrenceTimelineLog } from "./OccurrenceTimelineLog";
+import { Link } from "react-router-dom";
+import { useCanShowMenu } from "../../user-administration/access/useCanAccess";
 
 interface OccurrenceDetailsViewProps {
   occurrenceId: string;
@@ -27,6 +29,10 @@ export const OccurrenceDetailsView: React.FC<OccurrenceDetailsViewProps> = ({
   const [resolutionNotes, setResolutionNotes] = useState("");
 
   const isManagement = Boolean(canManage);
+  // APRAS-44 §10.1: the promotion action is offered by the *menu* predicate,
+  // not the route one, so an active simulation sees what the simulated role
+  // would see. The API is what actually refuses, as always.
+  const canPromote = useCanShowMenu({ anyOf: ["infractions:promote"] });
 
   if (isLoading || !occurrence) {
     return (
@@ -232,6 +238,34 @@ export const OccurrenceDetailsView: React.FC<OccurrenceDetailsViewProps> = ({
             timeline={occurrence.timeline || []}
             canManage={canManage}
           />
+
+          {/* APRAS-44 ER-6: the bridge, both ways. The button goes to the
+              infractions screen rather than promoting inline, because the
+              promotion needs a rule and a responsible resident that only that
+              screen's forms can offer. The list below is the return leg. */}
+          {(canPromote || (occurrence.infraction_ids?.length ?? 0) > 0) && (
+            <div className="mt-4 space-y-2" data-testid="occurrence-infractions">
+              {canPromote && (
+                <Link
+                  className="inline-block text-sm text-indigo-600 underline"
+                  data-testid="promote-to-infraction"
+                  to={`/infractions?occurrence=${occurrence.id}`}
+                >
+                  {t("infractions.promote.action")}
+                </Link>
+              )}
+              {(occurrence.infraction_ids ?? []).map((infractionId) => (
+                <Link
+                  key={infractionId}
+                  className="block text-sm text-indigo-600 underline"
+                  data-testid={`promoted-infraction-${infractionId}`}
+                  to={`/infractions?infraction=${infractionId}`}
+                >
+                  {t("infractions.promote.linked")}
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

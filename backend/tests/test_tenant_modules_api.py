@@ -107,7 +107,7 @@ def ordinary_fixture(session: Session) -> User:
 def test_get_lists_every_module_with_its_state(
     tenant_client: TestClient, superuser: User
 ):
-    """All 27 rows, sorted by `module`, all active for a fresh tenant.
+    """All 28 rows, sorted by `module`, all active for a fresh tenant.
 
     Storage is negative (`[]` is "everything on") but the *read* is positive:
     the active set is enumerable per tenant, which is what ER-1 asks for.
@@ -118,7 +118,7 @@ def test_get_lists_every_module_with_its_state(
     body = response.json()
     assert body["tenant_id"] == str(TENANT_A)
     rows = body["modules"]
-    assert len(rows) == 27
+    assert len(rows) == 28
     assert [row["module"] for row in rows] == sorted(MODULES)
     assert all(row["is_active"] for row in rows)
     assert {row["module"] for row in rows if row["is_core"]} == CORE_MODULES
@@ -195,7 +195,7 @@ def test_a_new_tenant_starts_with_every_module_active(
     response = tenant_client.get(_url(tenant_id), headers=_auth(superuser))
 
     assert response.status_code == 200
-    assert len(response.json()["modules"]) == 27
+    assert len(response.json()["modules"]) == 28
     assert all(row["is_active"] for row in response.json()["modules"])
     session.expire_all()
     assert session.get(Tenant, tenant_id).disabled_modules == []
@@ -402,6 +402,6 @@ def test_the_routes_are_unguarded_and_global():
         assert key in GLOBAL_ROUTES
         assert key not in ROUTE_PERMISSIONS
 
-    assert len(ROUTE_PERMISSIONS) == 183
+    assert len(ROUTE_PERMISSIONS) == 201
     assert len(UNGUARDED_ROUTES) == 22
     assert len(GLOBAL_ROUTES) == 27

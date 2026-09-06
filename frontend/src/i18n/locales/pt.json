@@ -35,7 +35,10 @@
     "modules": "Módulos",
     "subscription": "Assinatura",
     "plans": "Planos",
-    "tenantSubscriptions": "Assinaturas dos condomínios"
+    "tenantSubscriptions": "Assinaturas dos condomínios",
+    "infractions": "Infrações",
+    "infractionRules": "Regras de infração",
+    "myInfractions": "Minhas infrações"
   },
   "accessControl": {
     "title": "Controle de Acesso",
@@ -1287,6 +1290,7 @@
       "feedback": "Fale Conosco",
       "finance": "Financeiro",
       "gate": "Portaria",
+      "infractions": "Infrações",
       "inventory": "Estoque",
       "lots": "Lotes",
       "occurrences": "Ocorrências",
@@ -1295,17 +1299,18 @@
       "purchases": "Compras",
       "reservations": "Reservas",
       "residents": "Moradores",
+      "roles": "Papéis",
       "spaces": "Espaços",
       "tasks": "Tarefas",
       "tenants": "Condomínios",
       "uploads": "Envios",
-      "roles": "Papéis",
       "users": "Usuários",
       "visitors": "Visitantes",
       "votes": "Votações"
     },
     "actions": {
       "add_note": "Adicionar nota",
+      "advance": "Avançar processo",
       "approve": "Aprovar",
       "auto_approve": "Aprovar automaticamente",
       "budget_create": "Criar orçamento",
@@ -1320,7 +1325,9 @@
       "close": "Encerrar",
       "comment": "Comentar",
       "comment_delete": "Excluir comentário",
+      "contest": "Contestar",
       "create": "Criar",
+      "cycle_close": "Encerrar ciclo de reincidência",
       "deactivate": "Desativar",
       "decide": "Decidir",
       "delete": "Excluir",
@@ -1365,6 +1372,8 @@
       "photo_create": "Adicionar foto",
       "photo_read": "Ver fotos",
       "pickup": "Retirar",
+      "policy_update": "Editar política de escalonamento",
+      "promote": "Promover ocorrência",
       "queue_read": "Ver fila",
       "quote_create": "Criar cotação",
       "quote_delete": "Excluir cotação",
@@ -1376,7 +1385,12 @@
       "respond": "Responder",
       "retract": "Retirar voto",
       "revoke": "Revogar",
+      "rule_create": "Criar regra",
+      "rule_deactivate": "Desativar regra",
+      "rule_read": "Ver regras",
+      "rule_update": "Editar regra",
       "set_delinquency": "Definir inadimplência",
+      "settings_update": "Editar configurações",
       "summary_read": "Ver resumo",
       "tally_read": "Ver apuração",
       "transaction_create": "Criar lançamento",
@@ -1471,11 +1485,13 @@
       "assemblies": "Assembleias",
       "assets": "Patrimônio",
       "authorizations": "Autorizações de visita",
+      "billing": "Assinatura",
       "categories": "Categorias",
       "documents": "Documentos",
       "feedback": "Sugestões",
       "finance": "Finanças",
       "gate": "Portaria",
+      "infractions": "Infrações",
       "inventory": "Estoque",
       "lots": "Lotes",
       "occurrences": "Ocorrências",
@@ -1491,8 +1507,7 @@
       "uploads": "Envio de fotos",
       "users": "Usuários",
       "visitors": "Visitantes",
-      "votes": "Votações",
-      "billing": "Assinatura"
+      "votes": "Votações"
     }
   },
   "subscription": {
@@ -1586,5 +1601,151 @@
     "loadError": "Não foi possível carregar a assinatura",
     "noSubscription": "Este condomínio ainda não tem assinatura. Atribua um plano para criar uma.",
     "inertPriceNotice": "Valores informativos — nenhuma cobrança é feita."
+  },
+  "infractions": {
+    "actions": {
+      "AVISO": "Aviso",
+      "NOTIFICACAO": "Notificação",
+      "MULTA": "Multa"
+    },
+    "contestation": {
+      "body": "Sua defesa",
+      "submit": "Enviar contestação",
+      "noDeadline": "Não há prazo de defesa aberto para esta infração.",
+      "deadlineOpen": "Prazo de defesa aberto até {{date}}.",
+      "deadlinePassed": "O prazo de defesa terminou em {{date}}."
+    },
+    "cycleClose": {
+      "explanation": "Encerra o ciclo de reincidência de {{name}} para {{article}}. As infrações já registradas mantêm a contagem; só as próximas recomeçam do primeiro passo.",
+      "includeLot": "Registrar o lote como contexto de auditoria",
+      "justification": "Justificativa",
+      "listEmpty": "Nenhum ciclo encerrado.",
+      "listTitle": "Ciclos encerrados",
+      "nothingIsDeleted": "Nada é apagado: o encerramento é um corte para a frente. As infrações já registradas mantêm sua contagem, e apenas as próximas recomeçam do primeiro passo.",
+      "submit": "Encerrar ciclo",
+      "title": "Encerrar ciclo de reincidência"
+    },
+    "empty": "Nenhuma infração registrada.",
+    "errors": {
+      "validation": "Dados inválidos: {{messages}}",
+      "generic": "Não foi possível concluir a operação. Tente novamente."
+    },
+    "fields": {
+      "article": "Artigo",
+      "origin": "Origem",
+      "description": "Descrição",
+      "recidivismWindow": "Janela de reincidência (dias)",
+      "rule": "Regra",
+      "lot": "Lote",
+      "responsible": "Responsável",
+      "occurredOn": "Data do fato",
+      "currentStage": "Estágio atual",
+      "sourceOccurrence": "Ocorrência de origem",
+      "action": "Ação",
+      "deadlineDays": "Prazo (dias)",
+      "fineMode": "Modo da multa",
+      "fineAmount": "Valor",
+      "fineMultiplier": "Multiplicador"
+    },
+    "filters": {
+      "rule": "Filtrar por regra",
+      "lot": "Filtrar por lote",
+      "responsible": "Filtrar por responsável",
+      "stage": "Filtrar por estágio atual",
+      "from": "De",
+      "to": "Até"
+    },
+    "fineModes": {
+      "FIXED": "Valor fixo",
+      "MULTIPLE": "Múltiplo da taxa condominial"
+    },
+    "mine": {
+      "pageTitle": "Minhas infrações",
+      "pageSubtitle": "Infrações registradas para os lotes aos quais você está vinculado.",
+      "empty": "Você não tem infrações registradas.",
+      "deadline": "Prazo de defesa até {{date}}."
+    },
+    "new": {
+      "blockFilter": "Filtrar lotes por quadra",
+      "blockFilterPlaceholder": "Quadra (ex.: A)",
+      "lotsTruncated": "Mostrando {{shown}} de {{total}} lotes. Filtre por quadra acima para alcançar os demais.",
+      "submit": "Registrar",
+      "title": "Registrar infração"
+    },
+    "nextStep": {
+      "title": "Próximo passo",
+      "recidivismCount": "Reincidências na janela",
+      "window": "Janela desde",
+      "stagesApplied": "Estágios aplicados",
+      "ladderIndex": "Posição na escada",
+      "suggestion": "Sugestão: {{action}} (passo {{step}})",
+      "noPolicy": "Esta regra não tem escada de escalonamento. Cadastre a política da regra para poder aplicar a sugestão.",
+      "clamped": "A escada se esgotou: o último passo se repete.",
+      "fineAmount": "Valor sugerido",
+      "feeNotSet": "A taxa condominial de referência não está definida. Informe um valor explícito ou defina a taxa nas configurações.",
+      "note": "Observação",
+      "override": "Aplicar outra ação",
+      "followSuggestion": "Seguir a sugestão",
+      "apply": "Aplicar sugestão",
+      "applyOverride": "Aplicar ação escolhida"
+    },
+    "origins": {
+      "ESTATUTO": "Estatuto",
+      "REGIMENTO_INTERNO": "Regimento Interno",
+      "CONVENCAO": "Convenção"
+    },
+    "pageSubtitle": "Registre e acompanhe o processo de cada infração do condomínio.",
+    "pageTitle": "Infrações",
+    "promote": {
+      "action": "Promover a infração",
+      "linked": "Infração gerada a partir desta ocorrência",
+      "lotFromOccurrence": "Lote da ocorrência",
+      "lotIsTheOccurrences": "O lote é o da ocorrência e não pode ser alterado aqui. Para corrigi-lo, edite a ocorrência.",
+      "occurrenceHasNoLot": "Esta ocorrência não tem lote (área comum). Escolha a qual unidade a infração será atribuída.",
+      "submit": "Promover",
+      "title": "Promover ocorrência a infração"
+    },
+    "rules": {
+      "pageTitle": "Regras de infração",
+      "pageSubtitle": "Catálogo de artigos do condomínio e a escada de escalonamento de cada um.",
+      "newTitle": "Nova regra",
+      "create": "Cadastrar regra",
+      "empty": "Nenhuma regra cadastrada.",
+      "inactive": "Desativada",
+      "editPolicy": "Editar política",
+      "deactivate": "Desativar",
+      "addStep": "Adicionar passo"
+    },
+    "settings": {
+      "title": "Taxa condominial de referência",
+      "explanation": "Uma multa no modo “múltiplo” multiplica este valor. Ele pertence ao módulo de infrações e não cria nenhum lançamento no Financeiro.",
+      "condoFee": "Valor da taxa"
+    },
+    "stageFilter": {
+      "NONE": "Sem estágio aplicado",
+      "AVISO": "Aviso",
+      "NOTIFICACAO": "Notificação",
+      "MULTA": "Multa"
+    },
+    "timeline": {
+      "title": "Histórico",
+      "empty": "Nenhum estágio aplicado ainda.",
+      "contestation": "Contestação",
+      "fineAmount": "Valor da multa",
+      "overridden": "Valor arbitrado",
+      "defenseDueOn": "Prazo de defesa",
+      "deviation": "Ação aplicada fora da sugestão da política."
+    },
+    "total": "{{count}} infração(ões)",
+    "ui": {
+      "all": "Todos",
+      "cancel": "Cancelar",
+      "loading": "Carregando…",
+      "next": "Próxima",
+      "previous": "Anterior",
+      "remove": "Remover",
+      "save": "Salvar",
+      "select": "Selecione"
+    }
   }
 }

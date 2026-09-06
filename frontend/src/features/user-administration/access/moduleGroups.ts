@@ -1,14 +1,14 @@
 /**
  * The companion clusters the module checklists are grouped by (APRAS-39 §2.3).
  *
- * **Presentation, not machinery.** The 27 modules toggle independently, and
+ * **Presentation, not machinery.** The 28 modules toggle independently, and
  * turning one companion off without the other is legal and safe — every
  * endpoint of a disabled module refuses, and it is reversible in one click.
  * Modelling `requires` edges would be a second authorization concept for an
  * operator mistake that costs one checkbox to fix.
  *
  * One constant, two screens: `/admin/modules` (the raw operator switch) and
- * `/subscription` (the tenant's commercial surface) render the same 27 modules
+ * `/subscription` (the tenant's commercial surface) render the same 28 modules
  * in the same order, and a hand-written list copied into both would have to be
  * edited in both forever. Extracted in APRAS-40 round 1 (review S-1).
  *
@@ -16,7 +16,9 @@
  * derives `MODULES` from the permission catalogue precisely so a module a
  * future task adds is toggleable the day its first permission exists, while
  * this list is hand-written. Both pages append an `"other"` group for the
- * remainder, so a 28th module is visible rather than silently dropped.
+ * remainder, so a 29th module is visible rather than silently dropped —
+ * which is how `infractions` rendered before `APRAS-44` round 1 put it in
+ * the cluster the spec placed it in (§3.3).
  */
 export interface ModuleGroup {
   key: string;
@@ -30,7 +32,10 @@ export const MODULE_GROUPS: readonly ModuleGroup[] = [
   { key: "tasks", modules: ["tasks", "categories"] },
   { key: "property", modules: ["lots", "residents", "packages"] },
   { key: "communication", modules: ["announcements", "documents", "feedback"] },
-  { key: "operations", modules: ["occurrences", "projects"] },
+  // `infractions` sits beside `occurrences`: an occurrence is its promotion
+  // source (APRAS-44 §3.3, ER-6), so an operator turning one off wants the
+  // other in front of them.
+  { key: "operations", modules: ["occurrences", "infractions", "projects"] },
   { key: "finance", modules: ["finance", "purchases", "assets", "inventory"] },
   { key: "spaces", modules: ["reservations", "spaces"] },
   {

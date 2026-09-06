@@ -104,7 +104,7 @@ def test_a_superuser_can_grant_is_superuser(
     # And the flag really means the whole catalogue, in this tenant.
     me = client.get("/api/v1/permissions/me", headers=_auth(target))
     assert me.status_code == 200
-    assert len(me.json()["permissions"]) == 161
+    assert len(me.json()["permissions"]) == 174
 
 
 def test_a_superuser_can_revoke_is_superuser(
@@ -288,11 +288,13 @@ def test_the_route_is_unguarded_by_permission_and_superuser_guarded():
     # APRAS-40 seven more (four `/api/v1/plans` and three
     # `/api/v1/tenants/{id}/subscription*`), which is why the count reads 22.
     # `ROUTE_PERMISSIONS` moved 180 -> 183 in APRAS-40, from its three
-    # *permission-guarded* billing routes and nothing else; the F2 golden file
-    # stays byte-identical because those 18 cells live in the additive
-    # `tests/data/parity_matrix_baseline_40.json`.
+    # *permission-guarded* billing routes and nothing else, and 183 -> 201 in
+    # APRAS-44, from its eighteen; the F2 golden file stays byte-identical
+    # because those 18 + 108 cells live in the additive
+    # `tests/data/parity_matrix_baseline_40.json` and `_44.json`. APRAS-44
+    # adds **no** unguarded route, which is why 22 does not move.
     assert len(UNGUARDED_ROUTES) == 22
-    assert len(ROUTE_PERMISSIONS) == 183
+    assert len(ROUTE_PERMISSIONS) == 201
 
     route = next(
         r

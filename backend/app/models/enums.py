@@ -125,6 +125,10 @@ class EntityType(StrEnum):
     LOT = "LOT"
     ANNOUNCEMENT = "ANNOUNCEMENT"
     OCCURRENCE = "OCCURRENCE"
+    # APRAS-44 §4.4: infraction evidence reuses the existing media pipeline
+    # (`POST /api/v1/uploads/photo`), so the module adds no upload route, no
+    # upload permission and no table -- only this vocabulary entry.
+    INFRACTION = "INFRACTION"
 
 
 class StorageProvider(StrEnum):
@@ -341,3 +345,65 @@ class SubscriptionChangeKind(StrEnum):
     COURTESY_GRANT = "COURTESY_GRANT"
     COURTESY_REVOKE = "COURTESY_REVOKE"
     OVERRIDE = "OVERRIDE"
+
+
+class InfractionRuleOrigin(StrEnum):
+    """Which condominium instrument an infraction rule cites (APRAS-44 §7.1).
+
+    Stored as ``sa.String()`` with a ``server_default``, never as a Postgres
+    ``ENUM`` type -- the convention migration ``0027`` established and every
+    enum column in this codebase follows.
+    """
+
+    ESTATUTO = "ESTATUTO"
+    REGIMENTO_INTERNO = "REGIMENTO_INTERNO"
+    CONVENCAO = "CONVENCAO"
+
+
+class InfractionStepAction(StrEnum):
+    """One rung of a rule's escalation ladder, and one applied stage."""
+
+    AVISO = "AVISO"
+    NOTIFICACAO = "NOTIFICACAO"
+    MULTA = "MULTA"
+
+
+class InfractionFineMode(StrEnum):
+    """How a ``MULTA`` step prices itself (APRAS-44 §6.3).
+
+    ``MULTIPLE`` multiplies the tenant's ``infraction_settings.condo_fee_amount``;
+    there is no condominium fee anywhere else in the tree, which is why §5
+    introduces that singleton rather than pretending to read one.
+    """
+
+    FIXED = "FIXED"
+    MULTIPLE = "MULTIPLE"
+
+
+class NextStepReason(StrEnum):
+    """Which of the three suggestion cases a caller is in (APRAS-44 §6.5).
+
+    **Response-only: it reaches no column**, so it needs no ``server_default``
+    and does not appear in migration ``0036``. Total by construction --
+    exactly one value holds for any infraction, derivable from the ladder
+    length ``n`` and ``ladder_index`` alone.
+    """
+
+    SUGGESTED = "SUGGESTED"
+    NO_POLICY = "NO_POLICY"
+    CLAMPED = "CLAMPED"
+
+
+class InfractionStageFilter(StrEnum):
+    """The ``?stage=`` values of ``GET /api/v1/infractions`` (APRAS-44 §4.5).
+
+    **Query-only: it reaches no column.** A separate vocabulary rather than a
+    reuse of :class:`InfractionStepAction` because ``NONE`` is not a step
+    action, and putting it there would make an unappliable action storable in
+    ``infraction_stage.action``.
+    """
+
+    AVISO = "AVISO"
+    NOTIFICACAO = "NOTIFICACAO"
+    MULTA = "MULTA"
+    NONE = "NONE"

@@ -1,0 +1,179 @@
+{
+  "_meta": {
+    "cell_count": 108,
+    "generator": "tests/tools/record_parity_baseline.py",
+    "harness": "tests/matrix_world.py",
+    "merge_base_sha": "a3d1b19440271b1bd938b4144f7f800a4220195c",
+    "regenerate": "cd backend && POSTGRES_URL=sqlite:// SECRET_KEY=parity-matrix uv run python -m tests.tools.record_parity_baseline --out tests/data/parity_matrix_baseline_44.json --merge-base a3d1b19440271b1bd938b4144f7f800a4220195c --routes 'DELETE /api/v1/infraction-rules/{rule_id}' --routes 'GET /api/v1/infraction-rules' --routes 'GET /api/v1/infraction-rules/{rule_id}' --routes 'GET /api/v1/infraction-settings' --routes 'GET /api/v1/infractions' --routes 'GET /api/v1/infractions/cycles' --routes 'GET /api/v1/infractions/my-lots' --routes 'GET /api/v1/infractions/{infraction_id}' --routes 'GET /api/v1/infractions/{infraction_id}/next-step' --routes 'POST /api/v1/infraction-rules' --routes 'POST /api/v1/infractions' --routes 'POST /api/v1/infractions/cycles/close' --routes 'POST /api/v1/infractions/from-occurrence/{occurrence_id}' --routes 'POST /api/v1/infractions/{infraction_id}/contestation' --routes 'POST /api/v1/infractions/{infraction_id}/stages' --routes 'PUT /api/v1/infraction-rules/{rule_id}' --routes 'PUT /api/v1/infraction-rules/{rule_id}/policy' --routes 'PUT /api/v1/infraction-settings'"
+  },
+  "cells": {
+    "ADMINISTRATOR": {
+      "DELETE": {
+        "/api/v1/infraction-rules/{rule_id}": 204
+      },
+      "GET": {
+        "/api/v1/infraction-rules": 200,
+        "/api/v1/infraction-rules/{rule_id}": 200,
+        "/api/v1/infraction-settings": 200,
+        "/api/v1/infractions": 200,
+        "/api/v1/infractions/cycles": 200,
+        "/api/v1/infractions/my-lots": 200,
+        "/api/v1/infractions/{infraction_id}": 200,
+        "/api/v1/infractions/{infraction_id}/next-step": 200
+      },
+      "POST": {
+        "/api/v1/infraction-rules": 201,
+        "/api/v1/infractions": 201,
+        "/api/v1/infractions/cycles/close": 201,
+        "/api/v1/infractions/from-occurrence/{occurrence_id}": 201,
+        "/api/v1/infractions/{infraction_id}/contestation": 201,
+        "/api/v1/infractions/{infraction_id}/stages": 201
+      },
+      "PUT": {
+        "/api/v1/infraction-rules/{rule_id}": 200,
+        "/api/v1/infraction-rules/{rule_id}/policy": 200,
+        "/api/v1/infraction-settings": 200
+      }
+    },
+    "DIRECTOR": {
+      "DELETE": {
+        "/api/v1/infraction-rules/{rule_id}": 403
+      },
+      "GET": {
+        "/api/v1/infraction-rules": 403,
+        "/api/v1/infraction-rules/{rule_id}": 403,
+        "/api/v1/infraction-settings": 403,
+        "/api/v1/infractions": 403,
+        "/api/v1/infractions/cycles": 403,
+        "/api/v1/infractions/my-lots": 403,
+        "/api/v1/infractions/{infraction_id}": 403,
+        "/api/v1/infractions/{infraction_id}/next-step": 403
+      },
+      "POST": {
+        "/api/v1/infraction-rules": 403,
+        "/api/v1/infractions": 403,
+        "/api/v1/infractions/cycles/close": 403,
+        "/api/v1/infractions/from-occurrence/{occurrence_id}": 403,
+        "/api/v1/infractions/{infraction_id}/contestation": 403,
+        "/api/v1/infractions/{infraction_id}/stages": 403
+      },
+      "PUT": {
+        "/api/v1/infraction-rules/{rule_id}": 403,
+        "/api/v1/infraction-rules/{rule_id}/policy": 403,
+        "/api/v1/infraction-settings": 403
+      }
+    },
+    "GUEST": {
+      "DELETE": {
+        "/api/v1/infraction-rules/{rule_id}": 403
+      },
+      "GET": {
+        "/api/v1/infraction-rules": 403,
+        "/api/v1/infraction-rules/{rule_id}": 403,
+        "/api/v1/infraction-settings": 403,
+        "/api/v1/infractions": 403,
+        "/api/v1/infractions/cycles": 403,
+        "/api/v1/infractions/my-lots": 403,
+        "/api/v1/infractions/{infraction_id}": 403,
+        "/api/v1/infractions/{infraction_id}/next-step": 403
+      },
+      "POST": {
+        "/api/v1/infraction-rules": 403,
+        "/api/v1/infractions": 403,
+        "/api/v1/infractions/cycles/close": 403,
+        "/api/v1/infractions/from-occurrence/{occurrence_id}": 403,
+        "/api/v1/infractions/{infraction_id}/contestation": 403,
+        "/api/v1/infractions/{infraction_id}/stages": 403
+      },
+      "PUT": {
+        "/api/v1/infraction-rules/{rule_id}": 403,
+        "/api/v1/infraction-rules/{rule_id}/policy": 403,
+        "/api/v1/infraction-settings": 403
+      }
+    },
+    "MANAGER": {
+      "DELETE": {
+        "/api/v1/infraction-rules/{rule_id}": 403
+      },
+      "GET": {
+        "/api/v1/infraction-rules": 403,
+        "/api/v1/infraction-rules/{rule_id}": 403,
+        "/api/v1/infraction-settings": 403,
+        "/api/v1/infractions": 403,
+        "/api/v1/infractions/cycles": 403,
+        "/api/v1/infractions/my-lots": 403,
+        "/api/v1/infractions/{infraction_id}": 403,
+        "/api/v1/infractions/{infraction_id}/next-step": 403
+      },
+      "POST": {
+        "/api/v1/infraction-rules": 403,
+        "/api/v1/infractions": 403,
+        "/api/v1/infractions/cycles/close": 403,
+        "/api/v1/infractions/from-occurrence/{occurrence_id}": 403,
+        "/api/v1/infractions/{infraction_id}/contestation": 403,
+        "/api/v1/infractions/{infraction_id}/stages": 403
+      },
+      "PUT": {
+        "/api/v1/infraction-rules/{rule_id}": 403,
+        "/api/v1/infraction-rules/{rule_id}/policy": 403,
+        "/api/v1/infraction-settings": 403
+      }
+    },
+    "PORTEIRO": {
+      "DELETE": {
+        "/api/v1/infraction-rules/{rule_id}": 403
+      },
+      "GET": {
+        "/api/v1/infraction-rules": 403,
+        "/api/v1/infraction-rules/{rule_id}": 403,
+        "/api/v1/infraction-settings": 403,
+        "/api/v1/infractions": 403,
+        "/api/v1/infractions/cycles": 403,
+        "/api/v1/infractions/my-lots": 403,
+        "/api/v1/infractions/{infraction_id}": 403,
+        "/api/v1/infractions/{infraction_id}/next-step": 403
+      },
+      "POST": {
+        "/api/v1/infraction-rules": 403,
+        "/api/v1/infractions": 403,
+        "/api/v1/infractions/cycles/close": 403,
+        "/api/v1/infractions/from-occurrence/{occurrence_id}": 403,
+        "/api/v1/infractions/{infraction_id}/contestation": 403,
+        "/api/v1/infractions/{infraction_id}/stages": 403
+      },
+      "PUT": {
+        "/api/v1/infraction-rules/{rule_id}": 403,
+        "/api/v1/infraction-rules/{rule_id}/policy": 403,
+        "/api/v1/infraction-settings": 403
+      }
+    },
+    "RESIDENT": {
+      "DELETE": {
+        "/api/v1/infraction-rules/{rule_id}": 403
+      },
+      "GET": {
+        "/api/v1/infraction-rules": 403,
+        "/api/v1/infraction-rules/{rule_id}": 403,
+        "/api/v1/infraction-settings": 403,
+        "/api/v1/infractions": 403,
+        "/api/v1/infractions/cycles": 403,
+        "/api/v1/infractions/my-lots": 403,
+        "/api/v1/infractions/{infraction_id}": 403,
+        "/api/v1/infractions/{infraction_id}/next-step": 403
+      },
+      "POST": {
+        "/api/v1/infraction-rules": 403,
+        "/api/v1/infractions": 403,
+        "/api/v1/infractions/cycles/close": 403,
+        "/api/v1/infractions/from-occurrence/{occurrence_id}": 403,
+        "/api/v1/infractions/{infraction_id}/contestation": 403,
+        "/api/v1/infractions/{infraction_id}/stages": 403
+      },
+      "PUT": {
+        "/api/v1/infraction-rules/{rule_id}": 403,
+        "/api/v1/infraction-rules/{rule_id}/policy": 403,
+        "/api/v1/infraction-settings": 403
+      }
+    }
+  }
+}

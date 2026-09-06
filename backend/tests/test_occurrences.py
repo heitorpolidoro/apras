@@ -16,6 +16,7 @@ from app.models.user import User
 from app.schemas.lot import LotCreate
 from app.schemas.occurrence import (
     OccurrenceCreate,
+    OccurrenceDetailRead,
     OccurrenceStatusUpdate,
     TimelineNoteCreate,
 )
@@ -213,3 +214,37 @@ def test_occurrences_api_endpoints(
     )
     assert note_res.status_code == 201
     assert note_res.json()["note"] == "Fotos anexadas no grupo"
+
+
+def test_occurrence_detail_read_carries_infraction_ids_and_defaults_to_empty(
+    session: Session,
+):
+    """APRAS-44 §7.4: the promotion link is additive on this schema.
+
+    A field with a default is what lets ER-6 expose the link from the
+    occurrence side without a single existing occurrence test changing -- and
+    an occurrence nobody promoted answers `[]`, never `null`, so the frontend
+    needs no guard.
+    """
+    assert "infraction_ids" in OccurrenceDetailRead.model_fields
+    assert OccurrenceDetailRead.model_fields["infraction_ids"].is_required() is False
+
+    user = make_user(
+        session,
+        email="occ_infr@test.com",
+        full_name="Occurrence Reporter",
+        hashed_password="hash",
+        profile="ADMINISTRATOR",
+        cpf="40364478829",
+    )
+    created = OccurrenceService.create_occurrence(
+        session,
+        user,
+        OccurrenceCreate(
+            category=OccurrenceCategory.NOISE,
+            title="Barulho",
+            description="Som alto após as 22h",
+        ),
+    )
+    detail = OccurrenceService.get_occurrence_by_id(session, user, created.id)
+    assert detail.infraction_ids == []

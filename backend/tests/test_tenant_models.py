@@ -54,8 +54,10 @@ MIGRATION = os.path.join(
     _BACKEND_DIR, "alembic", "versions", "0028_add_tenant_and_membership.py"
 )
 
-# The 20 tables that carry no `tenant_id` and derive their tenant through a
-# NOT NULL foreign key to a directly-scoped parent (spec §2.2).
+# The tables that carry no `tenant_id` and derive their tenant through a
+# NOT NULL foreign key to a directly-scoped parent (spec §2.2). 20 at
+# APRAS-41, 21 with APRAS-40's `subscription_change`, 24 with APRAS-44's
+# three.
 INHERITED_TABLES = {
     "taskcomment": "task",
     "taskhistory": "task",
@@ -81,13 +83,36 @@ INHERITED_TABLES = {
     # to `tenant_subscription`. A second `tenant_id` copy would be a forgeable
     # source of truth that can disagree with the parent.
     "subscription_change": "tenant_subscription",
+    # APRAS-44: the three tables reached only through their parent's id. A
+    # `tenant_id` of their own would be a second, forgeable source of truth
+    # that can disagree with the parent.
+    "infraction_policy_step": "infraction_rule",
+    "infraction_stage": "infraction",
+    "infraction_contestation": "infraction",
 }
 
 # Directly-scoped tables created after migration 0028, whose `tenant_id` is
 # therefore absent from that migration's frozen `_TENANT_SCOPED_TABLES`
 # literal. 0028 records history and must not be edited; new scoped tables
 # register here. APRAS-40 is the first.
-POST_0028_SCOPED_TABLES = {"tenant_subscription"}
+#
+# **Two cases union this constant, not one**, and the second matters as much
+# as the first: `test_partition_of_metadata_is_exhaustive` would otherwise
+# leave the new tables unclassified, and
+# `test_scoped_tables_have_a_not_null_tenant_id_fk` would leave their
+# `tenant_id` column shape the only one in the codebase nothing checks.
+POST_0028_SCOPED_TABLES = {
+    "tenant_subscription",  # APRAS-40
+    # APRAS-44. Four of the module's seven tables are directly scoped: each is
+    # reached by a route that lists it or fetches it without a scoped parent's
+    # id in the path -- `GET /api/v1/infractions/cycles` and
+    # `GET /api/v1/infraction-settings` are the two non-obvious ones. The other
+    # three inherit through a NOT NULL parent FK.
+    "infraction_rule",
+    "infraction",
+    "infraction_cycle_close",
+    "infraction_settings",
+}
 
 # `user` is a global identity (§1.2); `tenant` and `user_tenant_link` are the
 # tenancy tables themselves; `plan` is the install-wide commercial catalogue
@@ -233,7 +258,7 @@ def test_scoped_tables_have_a_not_null_tenant_id_fk(scoped_tables):
 
 
 def test_inherited_tables_have_no_tenant_id_but_a_not_null_parent_fk():
-    """The 20 inherited tables must NOT be denormalised with a `tenant_id`;
+    """The 24 inherited tables must NOT be denormalised with a `tenant_id`;
     each proves its scope through a NOT NULL FK to its listed parent."""
     for name, parent in INHERITED_TABLES.items():
         table = SQLModel.metadata.tables[name]
@@ -250,16 +275,16 @@ def test_inherited_tables_have_no_tenant_id_but_a_not_null_parent_fk():
 
 
 def test_partition_of_metadata_is_exhaustive(scoped_tables):
-    """direct + inherited + unscoped == every table: 28 + 21 + 4 == 53."""
+    """direct + inherited + unscoped == every table: 32 + 24 + 4 == 60."""
     direct = set(scoped_tables) | POST_0028_SCOPED_TABLES
     partition = direct | set(INHERITED_TABLES) | UNSCOPED_TABLES
     assert partition == set(SQLModel.metadata.tables)
     assert not direct & set(INHERITED_TABLES)
     assert not direct & UNSCOPED_TABLES
-    assert len(direct) == 28
-    assert len(INHERITED_TABLES) == 21
+    assert len(direct) == 32
+    assert len(INHERITED_TABLES) == 24
     assert len(UNSCOPED_TABLES) == 4
-    assert len(direct) + len(INHERITED_TABLES) + len(UNSCOPED_TABLES) == 53
+    assert len(direct) + len(INHERITED_TABLES) + len(UNSCOPED_TABLES) == 60
 
 
 def test_user_stays_global():

@@ -39,6 +39,9 @@ import TenantModulesPage from "./features/user-administration/pages/TenantModule
 import SubscriptionPage from "./features/user-administration/pages/SubscriptionPage";
 import PlansAdminPage from "./features/user-administration/pages/PlansAdminPage";
 import TenantSubscriptionsPage from "./features/user-administration/pages/TenantSubscriptionsPage";
+import InfractionsPage from "./features/infraction-management/pages/InfractionsPage";
+import InfractionRulesPage from "./features/infraction-management/pages/InfractionRulesPage";
+import MyInfractionsPage from "./features/infraction-management/pages/MyInfractionsPage";
 import {
   NAV_ITEMS,
   ROUTE_ACCESS,
@@ -314,6 +317,41 @@ function App() {
                   element={
                     <ProtectedRoute requiredAccess={ROUTE_ACCESS["/packages"]}>
                       <PackageStatusPage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* APRAS-44. Three surfaces, three different rules: the
+                    management list, the catalogue + ladder editor, and the
+                    resident's own view. None of them is a `{ module }` rule --
+                    see the reasoning in `routeAccess.ts`. */}
+                <Route
+                  path="/infractions"
+                  element={
+                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/infractions"]}>
+                      <InfractionsPage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/infraction-rules"
+                  element={
+                    <ProtectedRoute
+                      requiredAccess={ROUTE_ACCESS["/infraction-rules"]}
+                    >
+                      <InfractionRulesPage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/my-infractions"
+                  element={
+                    <ProtectedRoute
+                      requiredAccess={ROUTE_ACCESS["/my-infractions"]}
+                    >
+                      <MyInfractionsPage />
                     </ProtectedRoute>
                   }
                 />

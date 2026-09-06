@@ -975,3 +975,77 @@ class InvalidPlanPriceError(DomainError):
 
     def __init__(self, detail: str) -> None:
         super().__init__(detail)
+
+
+# ---------------------------------------------------------------------------
+# APRAS-44 -- the infraction module
+# ---------------------------------------------------------------------------
+
+
+class InfractionRuleNotFoundError(DomainError):
+    """Raised when a rule is not visible in the acting tenant (404)."""
+
+    def __init__(self, rule_id: UUID) -> None:
+        super().__init__(f"Infraction rule with ID {rule_id} not found")
+
+
+class InfractionRuleConflictError(DomainError):
+    """Raised when ``(origin, article)`` is already used in this tenant (409).
+
+    The detail names the article on purpose: the síndico is looking at a form
+    with a free-text field, and "already exists" without the value is not
+    actionable.
+    """
+
+    def __init__(self, article: str) -> None:
+        super().__init__(f"An active rule already cites article '{article}'")
+
+
+class InfractionNotFoundError(DomainError):
+    """Raised when an infraction is not visible in the acting tenant (404)."""
+
+    def __init__(self, infraction_id: UUID) -> None:
+        super().__init__(f"Infraction with ID {infraction_id} not found")
+
+
+class InfractionValidationError(DomainError):
+    """Raised when a submitted reference or a ladder shape is wrong (422).
+
+    422 and not 409: these are validations of the *submitted* payload -- an
+    inactive rule, a responsible who is not a resident of the effective lot, a
+    non-contiguous ladder, a promotion whose ``lot_id`` contradicts the
+    occurrence -- which is the same class as an unparseable UUID. §7.7 states
+    the reasoning; §12.1's `422/400` either-or is resolved to **422**, so the
+    module has exactly one status code for "the body names something wrong".
+    """
+
+    def __init__(self, detail: str) -> None:
+        super().__init__(detail)
+
+
+class InfractionStateError(DomainError):
+    """Raised when the body is shape-valid but the world has no answer (409).
+
+    An empty ladder asked to supply a suggestion, a ``MULTIPLE`` fine with no
+    condominium-fee reference, a contestation with no open deadline. The
+    request is well-formed; it is the state that cannot honour it.
+    """
+
+    def __init__(self, detail: str) -> None:
+        super().__init__(detail)
+
+
+class InfractionContestationForbiddenError(DomainError):
+    """Raised when a caller not linked to the infraction's lot contests (403).
+
+    An **object** check, not a permission check, and therefore applied to
+    every caller including ``is_superuser`` and ``is_tenant_admin``: a
+    contestation is the unit's own act, and signing one on a unit's behalf is
+    a different thing from being allowed to administer the condominium (§7.5).
+    Staff filing a defense on paper is Out of Scope -- it needs its own route
+    and an on-behalf-of field, or the timeline would claim the resident filed
+    something they did not.
+    """
+
+    def __init__(self) -> None:
+        super().__init__("Only the notified unit may contest this infraction")

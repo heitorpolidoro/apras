@@ -179,17 +179,21 @@ def test_route_count_is_fully_accounted_for():
     the 195/180/15 APRAS-39 left, itself on top of the 193/180/13 IAM F5
     (APRAS-49) left and IAM F4's 192/180/12.
 
-    `len(ROUTE_PERMISSIONS)` moving 180 -> **183** is what takes the parity
-    matrix from 6 x 180 = 1080 cells to 6 x 183 = 1098. The F2 golden file
-    stays byte-identical all the same: the 18 new cells live in the additive
-    `tests/data/parity_matrix_baseline_40.json` (APRAS-40 §9.2).
+    APRAS-44 then adds **eighteen** permission-guarded routes and **no**
+    unguarded one, taking 205/183/22 to **223/201/22**.
+
+    `len(ROUTE_PERMISSIONS)` moving 180 -> 183 -> **201** is what takes the
+    parity matrix from 6 x 180 = 1080 cells to 6 x 201 = 1206. The F2 golden
+    file stays byte-identical all the same: APRAS-40's 18 new cells live in
+    `tests/data/parity_matrix_baseline_40.json` (§9.2) and APRAS-44's 108 in
+    `tests/data/parity_matrix_baseline_44.json` (APRAS-44 §8.5).
     """
     total = len(_all_route_keys())
     assert set(ROUTE_PERMISSIONS) & UNGUARDED_ROUTES == set()
     assert len(ROUTE_PERMISSIONS) + len(UNGUARDED_ROUTES) == total
     assert len(UNGUARDED_ROUTES) == 22
     assert len(ROUTE_PERMISSIONS) == total - 22
-    assert len(ROUTE_PERMISSIONS) == 183
+    assert len(ROUTE_PERMISSIONS) == 201
 
 
 def test_every_router_module_has_at_least_one_permission():

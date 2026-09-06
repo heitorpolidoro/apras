@@ -35,7 +35,10 @@
     "modules": "Modules",
     "subscription": "Subscription",
     "plans": "Plans",
-    "tenantSubscriptions": "Tenant subscriptions"
+    "tenantSubscriptions": "Tenant subscriptions",
+    "infractions": "Infractions",
+    "infractionRules": "Infraction rules",
+    "myInfractions": "My infractions"
   },
   "accessControl": {
     "title": "Access Control",
@@ -1287,6 +1290,7 @@
       "feedback": "Feedback",
       "finance": "Finance",
       "gate": "Gatehouse",
+      "infractions": "Infractions",
       "inventory": "Inventory",
       "lots": "Lots",
       "occurrences": "Occurrences",
@@ -1295,17 +1299,18 @@
       "purchases": "Purchases",
       "reservations": "Reservations",
       "residents": "Residents",
+      "roles": "Roles",
       "spaces": "Spaces",
       "tasks": "Tasks",
       "tenants": "Tenants",
       "uploads": "Uploads",
-      "roles": "Roles",
       "users": "Users",
       "visitors": "Visitors",
       "votes": "Votes"
     },
     "actions": {
       "add_note": "Add note",
+      "advance": "Advance process",
       "approve": "Approve",
       "auto_approve": "Auto-approve",
       "budget_create": "Create budget",
@@ -1320,7 +1325,9 @@
       "close": "Close",
       "comment": "Comment",
       "comment_delete": "Delete comment",
+      "contest": "Contest",
       "create": "Create",
+      "cycle_close": "Close recidivism cycle",
       "deactivate": "Deactivate",
       "decide": "Decide",
       "delete": "Delete",
@@ -1365,6 +1372,8 @@
       "photo_create": "Add photo",
       "photo_read": "View photos",
       "pickup": "Pick up",
+      "policy_update": "Edit escalation policy",
+      "promote": "Promote occurrence",
       "queue_read": "View queue",
       "quote_create": "Create quote",
       "quote_delete": "Delete quote",
@@ -1376,7 +1385,12 @@
       "respond": "Respond",
       "retract": "Retract vote",
       "revoke": "Revoke",
+      "rule_create": "Create rule",
+      "rule_deactivate": "Deactivate rule",
+      "rule_read": "View rules",
+      "rule_update": "Edit rule",
       "set_delinquency": "Set delinquency",
+      "settings_update": "Edit settings",
       "summary_read": "View summary",
       "tally_read": "View tally",
       "transaction_create": "Create transaction",
@@ -1471,11 +1485,13 @@
       "assemblies": "Assemblies",
       "assets": "Assets",
       "authorizations": "Visitor authorizations",
+      "billing": "Billing",
       "categories": "Categories",
       "documents": "Documents",
       "feedback": "Feedback",
       "finance": "Finance",
       "gate": "Gatehouse",
+      "infractions": "Infractions",
       "inventory": "Inventory",
       "lots": "Lots",
       "occurrences": "Occurrences",
@@ -1491,8 +1507,7 @@
       "uploads": "Photo uploads",
       "users": "Users",
       "visitors": "Visitors",
-      "votes": "Polls",
-      "billing": "Billing"
+      "votes": "Polls"
     }
   },
   "subscription": {
@@ -1586,5 +1601,151 @@
     "loadError": "Could not load the subscription",
     "noSubscription": "This condominium has no subscription yet. Assign a plan to create one.",
     "inertPriceNotice": "Indicative amounts — nothing is charged."
+  },
+  "infractions": {
+    "actions": {
+      "AVISO": "Warning",
+      "NOTIFICACAO": "Notification",
+      "MULTA": "Fine"
+    },
+    "contestation": {
+      "body": "Your defense",
+      "submit": "Submit contestation",
+      "noDeadline": "There is no open defense deadline for this infraction.",
+      "deadlineOpen": "Defense deadline open until {{date}}.",
+      "deadlinePassed": "The defense deadline ended on {{date}}."
+    },
+    "cycleClose": {
+      "explanation": "Closes {{name}}'s recidivism cycle for {{article}}. Already-registered infractions keep their count; only the next ones restart from the first step.",
+      "includeLot": "Record the lot as audit context",
+      "justification": "Justification",
+      "listEmpty": "No cycle has been closed.",
+      "listTitle": "Closed cycles",
+      "nothingIsDeleted": "Nothing is deleted: closing is a cutoff going forward. Already-registered infractions keep their count, and only the next ones restart from the first step.",
+      "submit": "Close cycle",
+      "title": "Close recidivism cycle"
+    },
+    "empty": "No infraction registered.",
+    "errors": {
+      "validation": "Invalid data: {{messages}}",
+      "generic": "The operation could not be completed. Please try again."
+    },
+    "fields": {
+      "article": "Article",
+      "origin": "Source",
+      "description": "Description",
+      "recidivismWindow": "Recidivism window (days)",
+      "rule": "Rule",
+      "lot": "Lot",
+      "responsible": "Responsible",
+      "occurredOn": "Date of the fact",
+      "currentStage": "Current stage",
+      "sourceOccurrence": "Source occurrence",
+      "action": "Action",
+      "deadlineDays": "Deadline (days)",
+      "fineMode": "Fine mode",
+      "fineAmount": "Amount",
+      "fineMultiplier": "Multiplier"
+    },
+    "filters": {
+      "rule": "Filter by rule",
+      "lot": "Filter by lot",
+      "responsible": "Filter by responsible",
+      "stage": "Filter by current stage",
+      "from": "From",
+      "to": "To"
+    },
+    "fineModes": {
+      "FIXED": "Fixed amount",
+      "MULTIPLE": "Multiple of the condominium fee"
+    },
+    "mine": {
+      "pageTitle": "My infractions",
+      "pageSubtitle": "Infractions registered for the lots you are linked to.",
+      "empty": "You have no registered infractions.",
+      "deadline": "Defense deadline until {{date}}."
+    },
+    "new": {
+      "blockFilter": "Filter lots by block",
+      "blockFilterPlaceholder": "Block (e.g. A)",
+      "lotsTruncated": "Showing {{shown}} of {{total}} lots. Filter by block above to reach the rest.",
+      "submit": "Register",
+      "title": "Register infraction"
+    },
+    "nextStep": {
+      "title": "Next step",
+      "recidivismCount": "Recidivism in the window",
+      "window": "Window since",
+      "stagesApplied": "Stages applied",
+      "ladderIndex": "Ladder position",
+      "suggestion": "Suggestion: {{action}} (step {{step}})",
+      "noPolicy": "This rule has no escalation ladder. Set the rule's policy before applying a suggestion.",
+      "clamped": "The ladder is exhausted: the last step repeats.",
+      "fineAmount": "Suggested amount",
+      "feeNotSet": "The condominium fee reference is not set. Enter an explicit amount or set the fee in the settings.",
+      "note": "Note",
+      "override": "Apply another action",
+      "followSuggestion": "Follow the suggestion",
+      "apply": "Apply suggestion",
+      "applyOverride": "Apply chosen action"
+    },
+    "origins": {
+      "ESTATUTO": "Bylaws",
+      "REGIMENTO_INTERNO": "Internal rules",
+      "CONVENCAO": "Convention"
+    },
+    "pageSubtitle": "Register and follow the process of each condominium infraction.",
+    "pageTitle": "Infractions",
+    "promote": {
+      "action": "Promote to infraction",
+      "linked": "Infraction promoted from this occurrence",
+      "lotFromOccurrence": "The occurrence's lot",
+      "lotIsTheOccurrences": "The lot is the occurrence's and cannot be changed here. To correct it, edit the occurrence.",
+      "occurrenceHasNoLot": "This occurrence has no lot (common area). Choose the unit the infraction is attributed to.",
+      "submit": "Promote",
+      "title": "Promote occurrence to infraction"
+    },
+    "rules": {
+      "pageTitle": "Infraction rules",
+      "pageSubtitle": "The condominium's catalogue of articles and each one's escalation ladder.",
+      "newTitle": "New rule",
+      "create": "Create rule",
+      "empty": "No rule registered.",
+      "inactive": "Deactivated",
+      "editPolicy": "Edit policy",
+      "deactivate": "Deactivate",
+      "addStep": "Add step"
+    },
+    "settings": {
+      "title": "Condominium fee reference",
+      "explanation": "A fine in “multiple” mode multiplies this value. It belongs to the infractions module and creates no Finance entry.",
+      "condoFee": "Fee amount"
+    },
+    "stageFilter": {
+      "NONE": "No stage applied",
+      "AVISO": "Warning",
+      "NOTIFICACAO": "Notification",
+      "MULTA": "Fine"
+    },
+    "timeline": {
+      "title": "History",
+      "empty": "No stage applied yet.",
+      "contestation": "Contestation",
+      "fineAmount": "Fine amount",
+      "overridden": "Manually set",
+      "defenseDueOn": "Defense deadline",
+      "deviation": "Action applied outside the policy suggestion."
+    },
+    "total": "{{count}} infraction(s)",
+    "ui": {
+      "all": "All",
+      "cancel": "Cancel",
+      "loading": "Loading…",
+      "next": "Next",
+      "previous": "Previous",
+      "remove": "Remove",
+      "save": "Save",
+      "select": "Select"
+    }
   }
 }

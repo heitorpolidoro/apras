@@ -35,6 +35,12 @@ from app.core.exceptions import (
     FinancialTransactionNotFoundError,
     FolderAccessDeniedError,
     ForbiddenError,
+    InfractionContestationForbiddenError,
+    InfractionNotFoundError,
+    InfractionRuleConflictError,
+    InfractionRuleNotFoundError,
+    InfractionStateError,
+    InfractionValidationError,
     InsufficientStockError,
     InvalidAnnouncementMediaFormatError,
     InvalidDeviceKeyError,
@@ -143,6 +149,9 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             # APRAS-40 §6.1
             PlanNotFoundError,
             SubscriptionNotFoundError,
+            # APRAS-44 §7.4, §7.5
+            InfractionRuleNotFoundError,
+            InfractionNotFoundError,
         ),
     ):
         status_code = status.HTTP_404_NOT_FOUND
@@ -166,6 +175,9 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             AssetAccessForbiddenError,
             PurchaseAccessForbiddenError,
             CrossTenantWriteError,
+            # APRAS-44 §7.5: an object check, applied to every caller
+            # including a superuser and a tenant admin.
+            InfractionContestationForbiddenError,
         ),
     ):
         status_code = status.HTTP_403_FORBIDDEN
@@ -183,6 +195,10 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             TenantMembershipAlreadyExistsError,
             # APRAS-40 §6.1
             PlanAlreadyExistsError,
+            # APRAS-44: the duplicate article, and the three states in
+            # which a shape-valid request has no answer (§6.3, §6.5, §7.5).
+            InfractionRuleConflictError,
+            InfractionStateError,
         ),
     ):
         status_code = status.HTTP_409_CONFLICT
@@ -196,6 +212,9 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             FinanceCategoryTypeMismatchError,
             InvalidInvoiceFormatError,
             UnknownRoleIdsError,
+            # APRAS-44 §7.7: the module's single 'the body names
+            # something wrong' code -- never 400, never 409.
+            InfractionValidationError,
         ),
     ):
         status_code = status.HTTP_422_UNPROCESSABLE_ENTITY

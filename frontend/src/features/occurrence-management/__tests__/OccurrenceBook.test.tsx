@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter } from "react-router-dom";
 import React from "react";
 import { OccurrenceBookPage } from "../components/OccurrenceBookPage";
 import { OccurrenceTable } from "../components/OccurrenceTable";
@@ -26,6 +27,10 @@ const hasOf = (profile: string) => (permission: string) =>
 vi.mock("../../../api/occurrences");
 vi.mock("../../user-administration/access/useCanAccess", () => ({
   useEffectivePermissionSet: () => ({ has: hasOf("ADMINISTRATOR") }),
+  // APRAS-44 §10.1: `OccurrenceDetailsView` gained the "Promover a infração"
+  // action, gated by the *menu* predicate. The mock has to grow with the
+  // component it stands in for, or the whole module fails to render here.
+  useCanShowMenu: () => true,
 }));
 
 const mockOccurrencesList: PaginatedOccurrencesResponse = {
@@ -89,8 +94,13 @@ const createTestQueryClient = () =>
 
 const renderWithQuery = (ui: React.ReactNode) => {
   const queryClient = createTestQueryClient();
+  // A router, since APRAS-44: `OccurrenceDetailsView` links to the infractions
+  // promoted from the occurrence, so the component now needs the same context
+  // it already has everywhere in the app.
   return render(
-    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>{ui}</MemoryRouter>
+    </QueryClientProvider>
   );
 };
 

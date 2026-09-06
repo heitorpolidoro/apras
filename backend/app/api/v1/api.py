@@ -11,6 +11,7 @@ from app.api.v1.endpoints import (
     documents,
     feedback,
     finance,
+    infractions,
     inventory_movements,
     lots,
     occurrences,
@@ -139,6 +140,28 @@ api_router.include_router(
 # `tenants` in the global set. `plan` carries no `tenant_id`.
 api_router.include_router(
     plans.router, prefix="/plans", tags=["plans"], dependencies=GLOBAL_SCOPED
+)
+# APRAS-44 §4.1: three mounts, one file. Every table of the module is
+# tenant-scoped or inherits a tenant-scoped parent, so nothing here is
+# global. The settings singleton gets its own mount because its two routes
+# hang off the collection path itself, which a prefix cannot express twice.
+api_router.include_router(
+    infractions.rules_router,
+    prefix="/infraction-rules",
+    tags=["infraction-rules"],
+    dependencies=TENANT_SCOPED,
+)
+api_router.include_router(
+    infractions.settings_router,
+    prefix="/infraction-settings",
+    tags=["infraction-rules"],
+    dependencies=TENANT_SCOPED,
+)
+api_router.include_router(
+    infractions.router,
+    prefix="/infractions",
+    tags=["infractions"],
+    dependencies=TENANT_SCOPED,
 )
 
 

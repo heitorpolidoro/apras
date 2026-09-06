@@ -52,6 +52,7 @@ from app.models.enums import (
 )
 from app.models.feedback import Feedback
 from app.models.finance import BudgetLine, FinanceCategory, FinancialTransaction
+from app.models.infraction import InfractionStage
 from app.models.lot import Lot, UserLotLink
 from app.models.media_asset import MediaAsset
 from app.models.occurrence import Occurrence
@@ -128,7 +129,7 @@ def _seed_tenant(raw: Session, tenant_id, actor: User, tag: str) -> dict:  # noq
         return obj
 
     category = add("category", Category(name=f"Cat {tag}", color="#123456"))
-    add("role", Role(name=f"Type {tag}",))
+    add("role", Role(name=f"Type {tag}"))
     lot = add("lot", Lot(block=f"B{tag}", lot_number=f"{tag}1"))
     reservable = add("reservable_space", ReservableSpace(name=f"Space {tag}"))
     folder = add("document_folder", DocumentFolder(name=f"Folder {tag}"))
@@ -1175,10 +1176,15 @@ def test_inherited_models_cover_apras41_partition():
     silently pass an unreviewed ``select(TaskVisibleToLink)``.
 
     20 in APRAS-41; **21** since APRAS-40 added ``subscription_change``, which
-    inherits its tenant through the NOT NULL FK to ``tenant_subscription``.
+    inherits its tenant through the NOT NULL FK to ``tenant_subscription``;
+    **24** since APRAS-44 added ``infraction_policy_step`` (→
+    ``infraction_rule``), ``infraction_stage`` and ``infraction_contestation``
+    (→ ``infraction``). All three are reached only through their parent's id,
+    so a ``tenant_id`` of their own would be a second, forgeable source of
+    truth.
     """
     by_table = _model_name_by_table()
-    assert len(INHERITED_TABLES) == 21
+    assert len(INHERITED_TABLES) == 24
     assert {by_table[table] for table in INHERITED_TABLES} == set(INHERITED_MODELS)
 
 
@@ -1202,10 +1208,13 @@ def test_registry_covers_every_scoped_table():
     """Sanity: the isolation matrix seeds every model the filter protects.
 
     27 in APRAS-41 (migration ``0028``'s frozen literal); **28** since
-    APRAS-40 added the directly-scoped ``tenant_subscription``, which the
-    registry picks up by discovery with no code change of its own.
+    APRAS-40 added the directly-scoped ``tenant_subscription``, and **32**
+    since APRAS-44 added ``infraction_rule``, ``infraction``,
+    ``infraction_cycle_close`` and ``infraction_settings``. All five are
+    picked up by discovery -- any mapped class with a ``tenant_id`` column --
+    with no code change in ``tenant_context`` of its own.
     """
-    assert len(TENANT_SCOPED_MODELS) == 28
+    assert len(TENANT_SCOPED_MODELS) == 32
 
 
 # ---------------------------------------------------------------------------
@@ -1316,3 +1325,199 @@ def test_zero_memberships_with_an_unusable_default_tenant_is_400(
     response = tenant_client.get("/api/v1/categories/", headers=_auth(user))
     assert response.status_code == 400
     assert response.json()["detail"] == "X-Tenant-Id header is required"
+
+
+# ---------------------------------------------------------------------------
+# 10. The infraction module's four scoped tables (APRAS-44 §12.3)
+# ---------------------------------------------------------------------------
+#
+# Written as one end-to-end flow rather than as four rows in `_seed_tenant`,
+# because what has to be proved here is not "the column exists" (that is
+# `test_tenant_models.py`'s job) but that the *routes* of a module built after
+# the tenant boundary landed inherit it with no clause of their own. The
+# service adds no `tenant_id` filter anywhere; `tenant_context`'s loader
+# criteria are the whole mechanism, and this is what says so.
+
+
+def _infraction_flow(client: TestClient, user: User, tenant_id, tag: str) -> dict:
+    """Rule -> policy -> infraction -> stage -> cycle close, in one tenant."""
+    headers = _auth(user, tenant_id)
+
+    rule = client.post(
+        "/api/v1/infraction-rules",
+        json={
+            "article": f"art. {tag}",
+            "origin": "REGIMENTO_INTERNO",
+            "description": f"Regra {tag}",
+            "recidivism_window_days": 365,
+        },
+        headers=headers,
+    )
+    assert rule.status_code == 201, rule.text
+    rule_id = rule.json()["id"]
+
+    policy = client.put(
+        f"/api/v1/infraction-rules/{rule_id}/policy",
+        json={"steps": [{"step_order": 1, "action": "AVISO"}]},
+        headers=headers,
+    )
+    assert policy.status_code == 200, policy.text
+
+    lots = client.get("/api/v1/lots/", headers=headers).json()
+    lot_id = _ids(lots).pop()
+    residents = client.post(
+        f"/api/v1/lots/{lot_id}/residents",
+        json={"full_name": f"Morador {tag}", "cpf": "52998224725"},
+        headers=headers,
+    )
+    assert residents.status_code in {200, 201}, residents.text
+    resident = residents.json()["id"]
+
+    infraction = client.post(
+        "/api/v1/infractions",
+        json={
+            "rule_id": rule_id,
+            "lot_id": lot_id,
+            "responsible_resident_id": resident,
+            "occurred_on": _today().isoformat(),
+            "description": f"Infração {tag}",
+            # A **forged** tenant_id has no field to ride in on -- no create
+            # schema in this module declares one (`test_no_create_or_update_
+            # schema_declares_tenant_id` covers the whole of `app/schemas`) --
+            # so the stamping proof is that the row lands in the acting tenant.
+        },
+        headers=headers,
+    )
+    assert infraction.status_code == 201, infraction.text
+    infraction_id = infraction.json()["id"]
+
+    stage = client.post(
+        f"/api/v1/infractions/{infraction_id}/stages",
+        json={"note": f"Aviso {tag}"},
+        headers=headers,
+    )
+    assert stage.status_code == 201, stage.text
+
+    close = client.post(
+        "/api/v1/infractions/cycles/close",
+        json={
+            "rule_id": rule_id,
+            "responsible_resident_id": resident,
+            "justification": f"Encerramento {tag}",
+        },
+        headers=headers,
+    )
+    assert close.status_code == 201, close.text
+
+    settings = client.put(
+        "/api/v1/infraction-settings",
+        json={"condo_fee_amount": 100.0 if tag == "A" else 999.0},
+        headers=headers,
+    )
+    assert settings.status_code == 200, settings.text
+
+    return {
+        "rule_id": rule_id,
+        "infraction_id": infraction_id,
+        "cycle_close_id": close.json()["id"],
+    }
+
+
+@pytest.fixture(name="two_tenant_infractions")
+def two_tenant_infractions_fixture(
+    tenant_client: TestClient,
+    session: Session,
+    tenant_b: Tenant,
+    user_in_tenant_a: User,
+    user_in_tenant_b: User,
+):
+    """One whole infraction flow in tenant A and another in tenant B."""
+    for tenant_id, user, tag in (
+        (TENANT_A, user_in_tenant_a, "A"),
+        (tenant_b.id, user_in_tenant_b, "B"),
+    ):
+        response = tenant_client.post(
+            "/api/v1/lots/",
+            json={"block": tag, "lot_number": "1"},
+            headers=_auth(user, tenant_id),
+        )
+        assert response.status_code == 201, response.text
+    return {
+        "a": _infraction_flow(tenant_client, user_in_tenant_a, TENANT_A, "A"),
+        "b": _infraction_flow(tenant_client, user_in_tenant_b, tenant_b.id, "B"),
+    }
+
+
+def test_infraction_rows_of_one_tenant_are_invisible_in_the_other(
+    tenant_client: TestClient,
+    tenant_b: Tenant,
+    user_in_tenant_a: User,
+    user_in_tenant_b: User,
+    two_tenant_infractions: dict,
+):
+    """Rules, infractions, cycle closes and the settings singleton, all four."""
+    a, b = two_tenant_infractions["a"], two_tenant_infractions["b"]
+    headers_a = _auth(user_in_tenant_a, TENANT_A)
+    headers_b = _auth(user_in_tenant_b, tenant_b.id)
+
+    rules_a = tenant_client.get("/api/v1/infraction-rules", headers=headers_a)
+    assert _ids(rules_a.json()) == {a["rule_id"]}
+    rules_b = tenant_client.get("/api/v1/infraction-rules", headers=headers_b)
+    assert _ids(rules_b.json()) == {b["rule_id"]}
+
+    list_a = tenant_client.get("/api/v1/infractions", headers=headers_a)
+    assert _ids(list_a.json()) == {a["infraction_id"]}
+    cycles_a = tenant_client.get("/api/v1/infractions/cycles", headers=headers_a)
+    assert _ids(cycles_a.json()) == {a["cycle_close_id"]}
+
+    # The singleton is per tenant, so two tenants hold two different fees.
+    settings_a = tenant_client.get("/api/v1/infraction-settings", headers=headers_a)
+    settings_b = tenant_client.get("/api/v1/infraction-settings", headers=headers_b)
+    assert settings_a.json()["condo_fee_amount"] == 100.0
+    assert settings_b.json()["condo_fee_amount"] == 999.0
+
+
+def test_infraction_by_id_across_tenants_is_404(
+    tenant_client: TestClient,
+    tenant_b: Tenant,
+    user_in_tenant_b: User,
+    two_tenant_infractions: dict,
+):
+    """Not 403: a foreign row is not *refused*, it does not exist here."""
+    a = two_tenant_infractions["a"]
+    headers_b = _auth(user_in_tenant_b, tenant_b.id)
+
+    for path in (
+        f"/api/v1/infraction-rules/{a['rule_id']}",
+        f"/api/v1/infractions/{a['infraction_id']}",
+        f"/api/v1/infractions/{a['infraction_id']}/next-step",
+    ):
+        response = tenant_client.get(path, headers=headers_b)
+        assert response.status_code == 404, (path, response.status_code)
+
+
+def test_the_infraction_stage_and_contestation_inherit_their_parents_tenant(
+    tenant_client: TestClient,
+    raw_session: Session,
+    tenant_b: Tenant,
+    user_in_tenant_b: User,
+    two_tenant_infractions: dict,
+):
+    """A stage is reachable only through its infraction, and that is enough.
+
+    `infraction_stage` carries no `tenant_id`; the proof that it is
+    nevertheless isolated is that the only route that can read it -- the
+    parent's detail -- is already 404 across the boundary, so no timeline
+    entry of tenant A can be observed from tenant B.
+    """
+    a = two_tenant_infractions["a"]
+    assert "tenant_id" not in InfractionStage.__table__.columns
+
+    # Both stages exist in the database...
+    assert len(raw_session.exec(select(InfractionStage)).all()) == 2
+    # ...and neither of tenant A's is reachable from tenant B.
+    response = tenant_client.get(
+        f"/api/v1/infractions/{a['infraction_id']}",
+        headers=_auth(user_in_tenant_b, tenant_b.id),
+    )
+    assert response.status_code == 404

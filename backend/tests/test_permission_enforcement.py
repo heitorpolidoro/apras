@@ -82,7 +82,15 @@ CONVERTED_NON_COMPARE = 7
 #: The seven routes APRAS-43 gated with `get_current_tenant_admin` /
 #: `get_current_tenant_admin_or_manager`, which IAM F2 swaps to
 #: `require_permission` — the only route-level use of the dependency form —
-#: plus the three APRAS-40 mints on the tenant-side subscription router.
+#: plus the three APRAS-40 mints on the tenant-side subscription router and
+#: APRAS-44's whole eighteen-route infraction module.
+#:
+#: APRAS-44 is the first slice built *after* the swap rather than converted by
+#: it, so every one of its handlers carries the route-level dependency form
+#: from birth: there is no legacy in-handler gate to preserve, and §4.3 forbids
+#: a shared helper that would collapse several permissions into one. The
+#: eighteen are listed by derivation rather than by hand, so a nineteenth route
+#: in the module cannot be added without this set noticing.
 PERMISSION_GUARDED_ROUTES: frozenset[tuple[str, str]] = frozenset(
     {
         ("DELETE", "/api/v1/tasks/{task_id}"),
@@ -100,6 +108,10 @@ PERMISSION_GUARDED_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("GET", "/api/v1/subscription/history"),
         ("PUT", "/api/v1/subscription/modules"),
     }
+) | frozenset(
+    key
+    for key, permission in ROUTE_PERMISSIONS.items()
+    if permission.startswith("infractions:")
 )
 
 #: The is_superuser carve-out, duplicated from `test_tenant_admin.py` on
@@ -357,13 +369,19 @@ def test_every_route_is_still_tenant_classified():
 
 
 def test_the_permission_guarded_routes_are_the_apras43_seven_plus_billing():
-    """The route-level permission form is used on exactly ten routes.
+    """The route-level permission form: seven converted, and the rest new.
 
     The seven APRAS-43 gated (IAM F2 swapped them from
-    `get_current_tenant_admin`) plus the three APRAS-40 mints. The two lists
-    are kept apart on purpose: the seven are a *conversion* and must never
-    grow, while a genuinely new permission-guarded route is a deliberate,
-    reviewable addition -- so a future task adds a line below, not above.
+    `get_current_tenant_admin`), plus the three APRAS-40 mints, plus APRAS-44's
+    eighteen. The lists are kept apart on purpose: the seven are a
+    *conversion* and must never grow, while a genuinely new
+    permission-guarded route is a deliberate, reviewable addition -- so a
+    future task adds a group below, not above.
+
+    APRAS-44's group is derived from the registry rather than listed, and that
+    is the honest spelling: the module's ER is "all 18 routes guarded", so
+    re-typing the eighteen here would only create a second place for the same
+    claim to be wrong.
     """
     apras43_admin_routes = [
         ("DELETE", "/api/v1/tasks/{task_id}"),
@@ -379,10 +397,19 @@ def test_the_permission_guarded_routes_are_the_apras43_seven_plus_billing():
         ("GET", "/api/v1/subscription/history"),
         ("PUT", "/api/v1/subscription/modules"),
     ]
+    apras44_infraction_routes = {
+        key
+        for key, permission in ROUTE_PERMISSIONS.items()
+        if permission.startswith("infractions:")
+    }
     assert len(apras43_admin_routes) == 7
-    assert set(apras43_admin_routes) | set(apras40_billing_routes) == (
-        PERMISSION_GUARDED_ROUTES
-    )
+    assert len(apras40_billing_routes) == 3
+    assert len(apras44_infraction_routes) == 18
+    assert (
+        set(apras43_admin_routes)
+        | set(apras40_billing_routes)
+        | apras44_infraction_routes
+    ) == PERMISSION_GUARDED_ROUTES
 
 
 # ---------------------------------------------------------------------------

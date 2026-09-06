@@ -212,3 +212,7 @@
 - test_policy_rejects_non_contiguous_step_order diz '422/400' - unico ou-ou de status no spec; fixar 422.
 - InfractionCreate.source_occurrence_id e aceito e ignorado silenciosamente - remover do schema ou validar.
 - 7.7(2) usa uma unica string de detail tambem para residente inativo; citacoes de linha do 4.5 derivaram; citacao do AGENTS.md no 7.2 esta abreviada.
+- (code review r1-r3) padrao recorrente: hooks/modais entregues sem chamador em producao (usePromoteOccurrence, CycleCloseModal) e testes que mockam a API inteira (api/lots) escondendo um 422 de limite - exigir no briefing do developer um grep de 'sem chamador' por hook/componente novo e ao menos um teste de contrato por client novo que nao mocke a API.
+- (QA) NewInfractionModal sem controle de upload de evidencias (10.1 descreve um; API aceita evidence_urls e o detalhe renderiza) e ContestationForm so com corpo (10.1 diz corpo + anexos; attachment_urls faz round-trip) - follow-up: entradas de anexo no cliente reutilizando o padrao de upload existente.
+- (QA) mensagem do 409 de regra duplicada le mais estreita que a constraint (tenant, origin, article) - citar a origem.
+- (QA) +50 findings ruff nos quatro arquivos de producao novos (FAST001/FAST002/DTZ003/B008/DTZ011, todos com precedente); DTZ003 num modulo de auditoria datada merece revisao.

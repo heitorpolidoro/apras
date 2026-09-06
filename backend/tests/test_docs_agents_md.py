@@ -89,9 +89,13 @@ def test_the_document_states_the_model_that_exists():
     """
     text = re.sub(r"\s+", " ", AGENTS_MD.read_text(encoding="utf-8"))
     for claim in (
-        # permissions in code
-        "159",
-        "26",
+        # permissions in code. The two counts moved with the catalogue:
+        # APRAS-40 minted `billing:read`/`billing:manage` and APRAS-44 the
+        # thirteen `infractions:*`, taking 159/26 to **174/28**. The document
+        # was stale at 159/26 -- neither of the two intervening slices moved
+        # it -- and APRAS-44 corrects it rather than making it wronger.
+        "174",
+        "28",
         "ROUTE_PERMISSIONS",
         "UNGUARDED_ROUTES",
         # roles as data

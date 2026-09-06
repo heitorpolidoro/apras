@@ -281,6 +281,36 @@ PERMISSIONS: frozenset[str] = SCOPE_PERMISSIONS | TIER_PERMISSIONS | frozenset(
         "access_control:facial_template_read",
         "access_control:facial_template_sync",
         "access_control:events_read",
+        # §4.25 infractions (APRAS-44)
+        #
+        # **One** module for the whole surface, never a second
+        # `infraction_rules` one: `MODULES` is derived from this catalogue, so
+        # a second module segment would produce a second independently
+        # toggleable feature -- and a tenant with `infractions` on and
+        # `infraction_rules` off would own a module it cannot configure. The
+        # rule catalogue is a sub-resource, so it carries the sub-resource in
+        # the action, on the `projects:milestone_create` precedent.
+        "infractions:read",
+        "infractions:create",
+        "infractions:advance",
+        "infractions:promote",
+        "infractions:contest",
+        "infractions:cycle_close",
+        # A **filter**, not an inverted gate: `GET /infractions/my-lots`
+        # narrows to the caller's linked lots and refuses nobody, so a staff
+        # member with no linked lot gets `[]`. The precedent is
+        # `gate:logs_read`, not `packages:my_lots_read` -- which is why
+        # `ADMIN_GAP_PERMISSIONS` stays a one-element set.
+        "infractions:my_lots_read",
+        "infractions:rule_read",
+        "infractions:rule_create",
+        "infractions:rule_update",
+        # `rule_deactivate`, not `rule_delete`: `DELETE` soft-deactivates
+        # because infractions reference rules and the lot's history has to
+        # stay whole and navigable. The precedent is `spaces:deactivate`.
+        "infractions:rule_deactivate",
+        "infractions:policy_update",
+        "infractions:settings_update",
     }
 )
 
@@ -578,6 +608,48 @@ ROUTE_PERMISSIONS: dict[tuple[str, str], str] = {
     ("GET", "/api/v1/subscription"): "billing:read",
     ("GET", "/api/v1/subscription/history"): "billing:read",
     ("PUT", "/api/v1/subscription/modules"): "billing:manage",
+    # §4.25 infraction rules & policy -- /api/v1/infraction-rules (APRAS-44)
+    ("GET", "/api/v1/infraction-rules"): "infractions:rule_read",
+    ("GET", "/api/v1/infraction-rules/{rule_id}"): "infractions:rule_read",
+    ("POST", "/api/v1/infraction-rules"): "infractions:rule_create",
+    ("PUT", "/api/v1/infraction-rules/{rule_id}"): "infractions:rule_update",
+    (
+        "DELETE",
+        "/api/v1/infraction-rules/{rule_id}",
+    ): "infractions:rule_deactivate",
+    (
+        "PUT",
+        "/api/v1/infraction-rules/{rule_id}/policy",
+    ): "infractions:policy_update",
+    # §4.25 module settings -- the condominium-fee reference (§5). Read is
+    # `rule_read` because it is part of configuring the ladder; writing it is
+    # its own permission, so a condominium can let a wider group read the
+    # policy than can change what a MULTIPLE fine multiplies.
+    ("GET", "/api/v1/infraction-settings"): "infractions:rule_read",
+    ("PUT", "/api/v1/infraction-settings"): "infractions:settings_update",
+    # §4.25 infractions -- /api/v1/infractions
+    ("GET", "/api/v1/infractions"): "infractions:read",
+    ("GET", "/api/v1/infractions/my-lots"): "infractions:my_lots_read",
+    ("GET", "/api/v1/infractions/cycles"): "infractions:read",
+    ("GET", "/api/v1/infractions/{infraction_id}"): "infractions:read",
+    (
+        "GET",
+        "/api/v1/infractions/{infraction_id}/next-step",
+    ): "infractions:read",
+    ("POST", "/api/v1/infractions"): "infractions:create",
+    (
+        "POST",
+        "/api/v1/infractions/from-occurrence/{occurrence_id}",
+    ): "infractions:promote",
+    (
+        "POST",
+        "/api/v1/infractions/{infraction_id}/stages",
+    ): "infractions:advance",
+    (
+        "POST",
+        "/api/v1/infractions/{infraction_id}/contestation",
+    ): "infractions:contest",
+    ("POST", "/api/v1/infractions/cycles/close"): "infractions:cycle_close",
 }
 
 

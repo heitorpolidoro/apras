@@ -20,7 +20,7 @@ from app.core.permissions import (
 def test_modules_are_derived_from_the_catalogue():
     """`MODULES` is the catalogue's own module set, nothing added or dropped."""
     assert {module_of(permission) for permission in PERMISSIONS} == MODULES
-    assert len(MODULES) == 27
+    assert len(MODULES) == 28
 
 
 def test_core_modules_are_four_and_real():
@@ -40,10 +40,10 @@ def test_core_modules_are_four_and_real():
 
 
 def test_toggleable_modules_partition_the_catalogue():
-    """The 23 billable features and the 4 core ones tile `MODULES` exactly."""
+    """The 24 billable features and the 4 core ones tile `MODULES` exactly."""
     assert TOGGLEABLE_MODULES | CORE_MODULES == MODULES
     assert not (TOGGLEABLE_MODULES & CORE_MODULES)
-    assert len(TOGGLEABLE_MODULES) == 23
+    assert len(TOGGLEABLE_MODULES) == 24
 
 
 def test_filter_by_modules_removes_exactly_one_module():
@@ -76,10 +76,10 @@ def test_filter_by_modules_on_an_empty_disabled_set_is_the_identity():
 def test_every_permission_belongs_to_a_declared_module():
     """No catalogue string can name a module the vocabulary does not know."""
     assert {module_of(p) for p in PERMISSIONS} <= MODULES
-    assert len(PERMISSIONS) == 161
+    assert len(PERMISSIONS) == 174
 
 
-#: The 27 module names, spelled out. Deliberately a literal and not a
+#: The 28 module names, spelled out. Deliberately a literal and not a
 #: derivation: it is the **other half** of the i18n pin
 #: (`frontend/src/i18n/__tests__/index.test.ts`), which compares the label
 #: files against the same 27 names from its own local constant. Neither side
@@ -99,6 +99,7 @@ EXPECTED_MODULE_NAMES = frozenset(
         "feedback",
         "finance",
         "gate",
+        "infractions",
         "inventory",
         "lots",
         "occurrences",
@@ -122,7 +123,7 @@ EXPECTED_MODULE_NAMES = frozenset(
 def test_the_catalogue_modules_are_the_ones_the_ui_labels():
     """A new catalogue module must be labelled in pt **and** en before it ships.
 
-    The frontend asserts `modules.names` carries exactly these 27 keys in both
+    The frontend asserts `modules.names` carries exactly these 28 keys in both
     languages. This is the backend end of the same pin: adding a permission in
     a 27th module turns this red first, and the failure says where to go.
     """

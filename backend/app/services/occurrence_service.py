@@ -269,9 +269,18 @@ class OccurrenceService:
 
         timeline_entries.sort(key=lambda x: x.created_at)
 
+        # APRAS-44 §7.4: the promotion link, read from the infraction side.
+        # Imported inside the method on purpose -- the occurrence module is
+        # the *source* of a promotion and must not acquire an import-time
+        # dependency on the module that consumes it.
+        from app.services.infraction_service import InfractionService
+
         return OccurrenceDetailRead(
             **base_read.model_dump(),
             timeline=timeline_entries,
+            infraction_ids=InfractionService.infraction_ids_of_occurrence(
+                session, occurrence.id
+            ),
         )
 
     @classmethod

@@ -25,10 +25,15 @@ from .enums import (
     FacialTemplateSyncStatus,
     FeedbackCategory,
     FeedbackStatus,
+    InfractionFineMode,
+    InfractionRuleOrigin,
+    InfractionStageFilter,
+    InfractionStepAction,
     LotAssociationType,
     LotStatus,
     MilestoneStatus,
     MovementType,
+    NextStepReason,
     OccurrenceCategory,
     OccurrencePriority,
     OccurrenceStatus,
@@ -51,6 +56,15 @@ from .enums import (
 )
 from .feedback import Feedback
 from .finance import BudgetLine, FinanceCategory, FinancialTransaction
+from .infraction import (
+    Infraction,
+    InfractionContestation,
+    InfractionCycleClose,
+    InfractionPolicyStep,
+    InfractionRule,
+    InfractionSettings,
+    InfractionStage,
+)
 from .lot import Lot, UserLotLink
 from .media_asset import MediaAsset
 from .occurrence import Occurrence, OccurrenceTimeline
@@ -118,6 +132,17 @@ __all__ = [
     "FeedbackStatus",
     "FinanceCategory",
     "FinancialTransaction",
+    "Infraction",
+    "InfractionContestation",
+    "InfractionCycleClose",
+    "InfractionFineMode",
+    "InfractionPolicyStep",
+    "InfractionRule",
+    "InfractionRuleOrigin",
+    "InfractionSettings",
+    "InfractionStage",
+    "InfractionStageFilter",
+    "InfractionStepAction",
     "InventoryMovement",
     "Lot",
     "LotAssociationType",
@@ -126,6 +151,7 @@ __all__ = [
     "MediaAsset",
     "MilestoneStatus",
     "MovementType",
+    "NextStepReason",
     "Occurrence",
     "OccurrenceCategory",
     "OccurrencePriority",

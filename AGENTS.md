@@ -78,6 +78,9 @@ Building administrators and HOA boards juggle dozens of operational tasks — ma
 | `/admin/roles`     | `RolesAdminPage`       | any of `roles:create/update/delete` |
 | `/admin/roles/:roleId` | `RoleDetailPage`   | the same rule           |
 | `/admin/modules`   | `TenantModulesPage`    | `{superuser:true}`      |
+| `/infractions`     | `InfractionsPage`      | any of `infractions:read` |
+| `/infraction-rules`| `InfractionRulesPage`  | any of `infractions:rule_create/rule_update/rule_deactivate` |
+| `/my-infractions`  | `MyInfractionsPage`    | any of `infractions:my_lots_read` |
 
 Since APRAS-48 every protected route's rule is one entry of
 `ROUTE_ACCESS` (`frontend/src/features/user-administration/access/routeAccess.ts`),
@@ -130,6 +133,8 @@ deleted.
 | `/api/v1/plans` | Install-wide plan catalogue (`GET`/`POST`/`GET {id}`/`PATCH {id}`, superuser only) | `backend/app/api/v1/endpoints/plans.py` |
 | `/api/v1/tenants/{id}/subscription` | Per-tenant subscription read and plan assignment (`GET`/`PUT`, superuser only) | `backend/app/api/v1/endpoints/tenants.py` |
 | `/api/v1/tenants/{id}/subscription/courtesy` | Courtesy grants outside the plan (`PUT`, superuser only) | `backend/app/api/v1/endpoints/tenants.py` |
+| `/api/v1/infraction-rules` | Infraction rule catalogue and its escalation policy (`GET`/`POST`/`GET {id}`/`PUT {id}`/`DELETE {id}` soft-deactivates/`PUT {id}/policy`), plus `/api/v1/infraction-settings` (`GET`/`PUT`) | `backend/app/api/v1/endpoints/infractions.py` |
+| `/api/v1/infractions` | The infraction process: list, detail, next-step suggestion, promotion from an occurrence, stage append, contestation and recidivism-cycle closes | `backend/app/api/v1/endpoints/infractions.py` |
 | `/api/v1/health` | Health check    | `backend/app/api/v1/api.py`              |
 
 ## Data Layer
@@ -399,14 +404,15 @@ tenant.
 ### Módulos por tenant
 
 A per-tenant **feature switch** (APRAS-39) that composes with the permission
-model by *stripping*, never by replacing. The 27 modules are exactly the
+model by *stripping*, never by replacing. The 28 modules are exactly the
 `<module>` segments of the catalogue (`permissions.MODULES`, derived and never
 hand-listed, so a module a future task adds is toggleable the day its first
-permission exists). **Four** of them are `CORE_MODULES` and can never be
-turned off — `tenants`, `users`, `roles`, `billing` — because a condominium
-without identity, membership, the authorization vocabulary or the surface it
-contracts modules from could not administer itself back into existence. The
-other **23** are the billable features.
+permission exists — `infractions` in `APRAS-44` is the first to arrive that
+way, with no edit to this switch at all). **Four** of them are `CORE_MODULES`
+and can never be turned off — `tenants`, `users`, `roles`, `billing` — because
+a condominium without identity, membership, the authorization vocabulary or
+the surface it contracts modules from could not administer itself back into
+existence. The other **24** are the billable features.
 
 **Storage is negative.** `tenant.disabled_modules` (portable `JSON`,
 `NOT NULL DEFAULT '[]'`, migration `0034`) lists what is *off*, so `[]` means
@@ -461,12 +467,14 @@ modules that a new endpoint could forget to join, and no second mechanism.
   static catalogue, identical for every caller, and the role editor needs it
   to render a permission the author does not hold as a disabled checkbox.
 
-**Companion modules** (operator documentation, not code — the 27 toggle
+**Companion modules** (operator documentation, not code — the 28 toggle
 independently and the incoherent configurations they allow are safe and
 reversible in one click): `assets` ↔ `inventory`; `reservations` ↔ `spaces`;
 `visitors` ↔ `authorizations` ↔ `gate` ↔ `access_control`; `tasks` →
-`categories`; `assemblies` ↔ `votes`; `lots` → `residents`, `packages`. The
-`/admin/modules` checklist is grouped by these clusters, which is
+`categories`; `assemblies` ↔ `votes`; `lots` → `residents`, `packages`,
+`infractions`; `occurrences` → `infractions` (`APRAS-44`: the promotion source
+and the lot an infraction is always against — both couplings are one checkbox
+to fix). The `/admin/modules` checklist is grouped by these clusters, which is
 presentation, not machinery.
 
 **The two routes**, both superuser-only (`deps.get_current_superuser`) on the
@@ -710,9 +718,9 @@ capability columns; there is no role column and no per-user permission.
 
 ### Permissions are in code
 
-`backend/app/core/permissions.py` is the vocabulary: **159 strings** in **26
+`backend/app/core/permissions.py` is the vocabulary: **174 strings** in **28
 modules**, spelled `<module>:<action>` (`tasks:read`, `purchases:decide`,
-`gate:checkin`). `ROUTE_PERMISSIONS` maps **180** routes to one permission
+`gate:checkin`). `ROUTE_PERMISSIONS` maps **201** routes to one permission
 each; `UNGUARDED_ROUTES` names the rest. A route in neither fails
 `tests/test_permission_registry.py`, in CI, before it can ship with a hole in
 it.
@@ -865,6 +873,121 @@ and is invisible to `Base.metadata`, so `alembic revision --autogenerate` at
 head would propose dropping it; no workflow here runs autogenerate (every
 migration in `alembic/versions/` is hand-written), and this line exists so
 that stays a known fact rather than a lost rollback.
+
+### Infrações
+
+The per-condominium **rule catalogue**, its per-rule escalation ladder, and the
+infraction process (`APRAS-44`). One toggleable module, `infractions`, 13
+permissions, 18 routes, seven tables, migration `0036`.
+
+**Five decisions carry the design, and none of them is an implementation
+detail.**
+
+1. **The fine is isolated from Financeiro.** Applying a `MULTA` records a
+   value, a date and the person it was applied against. It creates **no**
+   `FinancialTransaction`, touches no finance table and imports no finance
+   module. `backend/tests/test_infraction_isolation.py` proves it by AST over
+   the module's five files and by row count over the whole flow, so connecting
+   the two later has to be a *decision* rather than a drift.
+2. **An occurrence can be promoted, and an infraction can be born direct.**
+   `POST /api/v1/infractions/from-occurrence/{id}` sets `source_occurrence_id`
+   and writes an `OccurrenceTimeline` note; `OccurrenceDetailRead.infraction_ids`
+   is the return leg. The same occurrence may be promoted more than once — one
+   incident can breach two articles. Because `occurrence.lot_id` is nullable
+   and `infraction.lot_id` is not, the **effective lot** is the body's when
+   sent and the occurrence's when not, with a 422 if both are absent and a 422
+   if both are present and different.
+3. **Defense is registration only.** A `NOTIFICACAO` step freezes
+   `defense_due_on` on the stage row; the notified unit attaches a written
+   contestation inside it. There is no accept/reject, no adjudicator and no
+   state a contestation moves the process into. Holding
+   `infractions:contest` gets a caller to the route; being linked to the
+   infraction's lot (`UserLotLink` **or** an active `Resident` row) gets them
+   past it — **including a superuser and a tenant admin**, because a
+   contestation is the unit's own act. Staff filing one on a unit's behalf is
+   deliberately out of scope: it needs its own route and an on-behalf-of
+   field, or the timeline would claim the resident filed something they did
+   not.
+4. **Recidivism is personal, not `propter rem`.** The count is per
+   **(rule, responsible person)**, never per lot — CC art. 1337's
+   *reiteradamente* is a property of a person, unlike the quotas of art. 1345.
+   A sale or a tenant change therefore resets the ladder **by construction**,
+   with no reset button and no reset code path, while
+   `GET /api/v1/infractions?lot_id=…` still returns the lot's whole history.
+   `POST /api/v1/infractions/cycles/close` covers only the case the legal
+   addendum names — a change of resident not reflected in the cadastre in time
+   — and it is an auditable, justified **cutoff going forward**: an infraction
+   registered before it keeps its count, its stages and its ladder index, and
+   nothing is ever deleted. Its `lot_id` is optional audit context and is
+   deliberately absent from the recidivism predicate.
+5. **The current stage is derived, never stored.** `infraction` carries no
+   `status` and no `current_stage` column; the current stage is the last row of
+   the append-only `infraction_stage`, ordered by `(applied_on, created_at,
+   id)`. Even `GET /api/v1/infractions?stage=` reads it as a correlated
+   subquery rather than a column, and `?stage=NONE` is "no stage applied yet".
+   A column-set assertion pins the absence, because a convenience column added
+   later is exactly how an append-only history stops being the truth.
+
+**The suggestion algorithm**, `GET /api/v1/infractions/{id}/next-step`, is one
+1-based ordinal collapsing the two escalations — across infractions and within
+one process:
+
+```
+ladder_index   = recidivism_count + stages_applied + 1
+suggested_step = steps_by_order[min(ladder_index, n)]      # n = len(steps)
+is_saturated   = n > 0 and ladder_index >= n
+```
+
+It reads and computes and **never writes**: staff confirm or override, and the
+system never advances a process by itself. `POST /stages` with `action = null`
+applies the suggestion; an explicit `action` is always accepted and records
+`suggestion_followed = false`, so a deviation from policy is itself auditable.
+A rule with **zero** steps is a normal state, not an error: `next-step`
+answers 200 with `reason = "NO_POLICY"`, `action = null` is a 409
+(`"Rule has no escalation policy"`), and an explicit action still works.
+`reason == "CLAMPED"` and `is_saturated` disagree at exactly the last rung,
+where the step *is* the suggestion but nothing was truncated.
+
+**The condominium fee is an explicit parameter**, because there is none to
+read: this codebase has no per-lot billing anywhere. A `MULTIPLE` fine
+multiplies `infraction_settings.condo_fee_amount`, a tenant-scoped singleton
+owned by this module, materialised lazily on the first `PUT` (so migration
+`0036` seeds nothing) and read as all-nulls when absent. With it unset, the
+suggestion answers `fine_amount_unavailable_reason = "CONDO_FEE_NOT_SET"` and
+`POST /stages` is a 409 unless an explicit `fine_amount` is passed. Applied
+amounts are **frozen** on the stage row, so a later change to the fee never
+rewrites history.
+
+**Recommended permission bundle.** Nothing is seeded (the post-F5 doctrine), so
+these are the grants an operator makes, not rows any migration writes:
+
+| Permission | ADMINISTRATOR | DIRECTOR | MANAGER | RESIDENT | PORTEIRO | GUEST |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|
+| `infractions:read` | ✓ | ✓ | ✓ | | | |
+| `infractions:create` | ✓ | ✓ | ✓ | | | |
+| `infractions:advance` | ✓ | ✓ | ✓ | | | |
+| `infractions:promote` | ✓ | ✓ | ✓ | | | |
+| `infractions:cycle_close` | ✓ | ✓ | ✓ | | | |
+| `infractions:contest` | ✓ | ✓ | ✓ | ✓ | | |
+| `infractions:my_lots_read` | ✓ | ✓ | ✓ | ✓ | | |
+| `infractions:rule_read` | ✓ | ✓ | ✓ | | | |
+| `infractions:rule_create` | ✓ | ✓ | | | | |
+| `infractions:rule_update` | ✓ | ✓ | | | | |
+| `infractions:rule_deactivate` | ✓ | ✓ | | | | |
+| `infractions:policy_update` | ✓ | ✓ | | | | |
+| `infractions:settings_update` | ✓ | ✓ | | | | |
+
+`cycle_close` is MANAGER-level because the board's own definition of staff is
+ADMINISTRATOR/DIRECTOR/MANAGER and the act is auditable and additive, never a
+deletion. `infractions:my_lots_read` is a **filter, not an inverted gate**:
+`GET /api/v1/infractions/my-lots` narrows to the caller's linked lots and
+refuses nobody, so a staff member with no linked lot gets `[]` — which is why
+`ADMIN_GAP_PERMISSIONS` stays a one-element set and `packages:my_lots_read` is
+still the only member. `rule_deactivate`, not `rule_delete`: `DELETE
+/api/v1/infraction-rules/{id}` soft-deactivates, because infractions reference
+rules and the lot's history has to stay whole and navigable. A deactivated
+rule refuses to start a *new* infraction (422) while every existing process
+still advances along its very same ladder.
 
 ### Soft Delete
 

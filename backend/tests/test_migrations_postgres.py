@@ -27,6 +27,12 @@ import uuid
 
 import pytest
 from sqlalchemy import create_engine, text
+from sqlmodel import SQLModel
+
+# Imported for its side effect: registering every mapper, so
+# `SQLModel.metadata` is exhaustive when `test_0036_matches_the_model_metadata`
+# compares it against the live Postgres schema.
+import app.models  # noqa: F401
 
 TEST_POSTGRES_URL = os.environ.get("TEST_POSTGRES_URL")
 _BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -39,6 +45,14 @@ _BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 #: is a claim about *whatever is currently last*, which is never what these
 #: cases mean.
 _BEFORE_0033 = "0032_rename_user_type_to_role"
+
+#: The current head. Every "the database is at head" assertion reads this
+#: rather than spelling the revision, so a task that adds a migration moves one
+#: line instead of eight -- and so the eight cases stay claims about *head*
+#: rather than about whichever revision was last when they were written. The
+#: relative `-1` steps were retired for the same reason (see `_BEFORE_0033`).
+HEAD_REVISION = "0036_add_infraction_tables"
+_BEFORE_HEAD = "0035_add_subscription_tables"
 
 pytestmark = pytest.mark.skipif(
     not TEST_POSTGRES_URL,
@@ -574,6 +588,15 @@ TENANT_SCOPED_TABLES = (
     # migration `0035` precisely so it satisfies the four-properties case
     # below like every other member.
     "tenant_subscription",
+    # APRAS-44: the 29th through 32nd. Each is reached by a route that lists
+    # it or fetches it without a scoped parent's id in the path --
+    # `GET /api/v1/infractions/cycles` and `GET /api/v1/infraction-settings`
+    # are the two non-obvious ones -- so each carries its own `tenant_id`,
+    # with the FK named `fk_<table>_tenant_id` for the case below.
+    "infraction_rule",
+    "infraction",
+    "infraction_cycle_close",
+    "infraction_settings",
 )
 
 # The 21 tables that inherit their tenant through a NOT NULL parent FK and
@@ -604,6 +627,10 @@ TENANT_INHERITED_TABLES = (
     # `tenant_subscription`. A second `tenant_id` copy would be a forgeable
     # source of truth that can disagree with the parent.
     "subscription_change",
+    # APRAS-44: reached only through their parent's id, for the same reason.
+    "infraction_policy_step",
+    "infraction_stage",
+    "infraction_contestation",
 )
 
 
@@ -664,7 +691,7 @@ def test_tenant_table_has_exactly_one_default_row(isolated_pg_engine):
 
 
 def test_every_scoped_table_has_not_null_tenant_id(isolated_pg_engine):
-    """All 27 directly-scoped tables carry a NOT NULL tenant_id defaulting to
+    """Every directly-scoped table carries a NOT NULL tenant_id defaulting to
     the default tenant, with an ix_<table>_tenant_id index and a RESTRICT FK."""
     with isolated_pg_engine.connect() as conn:
         columns = {
@@ -711,7 +738,7 @@ def test_every_scoped_table_has_not_null_tenant_id(isolated_pg_engine):
 
 
 def test_inherited_tables_have_no_tenant_id(isolated_pg_engine):
-    """The 21 inherited tables must stay free of a denormalised tenant_id.
+    """The inherited tables must stay free of a denormalised tenant_id.
 
     The final assertion is an **exact set** over the live schema, so it is also
     the guard that catches a new directly-scoped table nobody registered in
@@ -922,7 +949,7 @@ def test_downgrade_removes_tenant_schema(isolated_pg_engine):
     # Re-applying must succeed, so the downgrade left a schema 0028 can
     # migrate again (the fixture's teardown reset assumes nothing about it).
     _run_alembic("upgrade", "head")
-    assert _current_revision(isolated_pg_engine) == "0035_add_subscription_tables"
+    assert _current_revision(isolated_pg_engine) == HEAD_REVISION
 
 
 # ---------------------------------------------------------------------------
@@ -951,7 +978,7 @@ def test_is_tenant_admin_column_shape_and_backfill(pg_engine_at_0027):
         )
 
     _run_alembic("upgrade", "head")
-    assert _current_revision(pg_engine_at_0027) == "0035_add_subscription_tables"
+    assert _current_revision(pg_engine_at_0027) == HEAD_REVISION
 
     with pg_engine_at_0027.connect() as conn:
         column = conn.execute(
@@ -1019,7 +1046,7 @@ def test_permissions_column_shape_and_backfill(pg_engine_at_0027):
         )
 
     _run_alembic("upgrade", "head")
-    assert _current_revision(pg_engine_at_0027) == "0035_add_subscription_tables"
+    assert _current_revision(pg_engine_at_0027) == HEAD_REVISION
 
     with pg_engine_at_0027.connect() as conn:
         column = conn.execute(
@@ -1118,7 +1145,7 @@ def test_is_superuser_column_shape_and_conversion(pg_engine_at_0027):
             )
 
     _run_alembic("upgrade", "head")
-    assert _current_revision(pg_engine_at_0027) == "0035_add_subscription_tables"
+    assert _current_revision(pg_engine_at_0027) == HEAD_REVISION
 
     with pg_engine_at_0027.connect() as conn:
         column = conn.execute(
@@ -1752,7 +1779,7 @@ def test_0033_does_not_refuse_an_inactive_or_flagged_user(pg_engine_at_0031):
         _link_tenant(conn, syndic, DEFAULT_TENANT_ID, is_tenant_admin=True)
 
     _run_alembic("upgrade", "head")
-    assert _current_revision(pg_engine_at_0031) == "0035_add_subscription_tables"
+    assert _current_revision(pg_engine_at_0031) == HEAD_REVISION
 
 
 def test_effective_permissions_are_unchanged_by_0033(pg_engine_at_0031):  # noqa: PLR0915
@@ -2195,7 +2222,7 @@ def test_0033_downgrade_refuses_when_the_journal_has_been_dropped(
     # APRAS-39 the walk down from head crosses `0034` first, and the whole
     # walk runs in one transaction, so `0034`'s `DROP COLUMN` is rolled back
     # with the rest and head is still `0034`.
-    assert _current_revision(pg_engine_at_0031) == "0035_add_subscription_tables"
+    assert _current_revision(pg_engine_at_0031) == HEAD_REVISION
     assert "role" not in _columns(pg_engine_at_0031, "user")
     assert "allowed_menus" not in _columns(pg_engine_at_0031, "role")
 
@@ -2268,7 +2295,7 @@ def test_0034_round_trips(isolated_pg_engine):
     on top: a relative step is a claim about *whatever is currently last*,
     which is never what this case means.
     """
-    assert _current_revision(isolated_pg_engine) == "0035_add_subscription_tables"
+    assert _current_revision(isolated_pg_engine) == HEAD_REVISION
 
     _run_alembic("downgrade", "0033_drop_user_role_and_menus")
 
@@ -2277,7 +2304,7 @@ def test_0034_round_trips(isolated_pg_engine):
 
     _run_alembic("upgrade", "head")
 
-    assert _current_revision(isolated_pg_engine) == "0035_add_subscription_tables"
+    assert _current_revision(isolated_pg_engine) == HEAD_REVISION
     assert "disabled_modules" in _columns(isolated_pg_engine, "tenant")
 
 
@@ -2386,10 +2413,16 @@ def test_0035_seeds_nothing(isolated_pg_engine):
 
 
 def test_0035_round_trips(isolated_pg_engine):
-    """`downgrade -1` drops all three and a re-`upgrade` succeeds."""
-    assert _current_revision(isolated_pg_engine) == "0035_add_subscription_tables"
+    """Downgrading past `0035` drops all three and a re-`upgrade` succeeds.
 
-    _run_alembic("downgrade", "-1")
+    Named explicitly rather than stepped with `-1` since APRAS-44 put `0036` on
+    top -- the same retargeting `test_0034_round_trips` took when `0035`
+    displaced it, and for the same reason: a relative step is a claim about
+    *whatever is currently last*, which is never what this case means.
+    """
+    assert _current_revision(isolated_pg_engine) == HEAD_REVISION
+
+    _run_alembic("downgrade", "0034_add_tenant_modules")
 
     assert _current_revision(isolated_pg_engine) == "0034_add_tenant_modules"
     with isolated_pg_engine.connect() as conn:
@@ -2403,7 +2436,7 @@ def test_0035_round_trips(isolated_pg_engine):
 
     _run_alembic("upgrade", "head")
 
-    assert _current_revision(isolated_pg_engine) == "0035_add_subscription_tables"
+    assert _current_revision(isolated_pg_engine) == HEAD_REVISION
     with isolated_pg_engine.connect() as conn:
         restored = {
             row.tablename
@@ -2417,13 +2450,248 @@ def test_0035_round_trips(isolated_pg_engine):
     assert restored == {"plan", "tenant_subscription", "subscription_change"}
 
 
-def test_0035_is_the_single_head(isolated_pg_engine):
-    """`alembic heads` reports exactly one revision, and it is this one."""
+def test_there_is_exactly_one_head_and_it_is_the_current_one(isolated_pg_engine):
+    """`alembic heads` reports exactly one revision, and it is `HEAD_REVISION`.
+
+    Was `test_0035_is_the_single_head`; renamed rather than duplicated, because
+    "there is one head" is a property of the *chain*, not of whichever
+    migration happens to sit at its end.
+    """
     result = _alembic("heads")
 
     assert result.returncode == 0
     heads = [line for line in result.stdout.splitlines() if "(head)" in line]
     assert len(heads) == 1
-    assert "0035_add_subscription_tables" in heads[0]
+    assert HEAD_REVISION in heads[0]
     # `alembic_version.version_num` is VARCHAR(32).
-    assert len("0035_add_subscription_tables") <= 32
+    assert len(HEAD_REVISION) <= 32
+
+
+# ---------------------------------------------------------------------------
+# 0036_add_infraction_tables (APRAS-44 §9) - rules, policy, process, cycles
+# ---------------------------------------------------------------------------
+
+_INFRACTION_TABLES = (
+    "infraction_rule",
+    "infraction_policy_step",
+    "infraction",
+    "infraction_stage",
+    "infraction_contestation",
+    "infraction_cycle_close",
+    "infraction_settings",
+)
+
+
+def _present_tables(engine, names: tuple[str, ...]) -> set[str]:
+    """Which of `names` exist as tables right now.
+
+    Bound parameters rather than an interpolated `IN (...)`: the names here are
+    module constants, but a test that models the shape of a real query badly is
+    a test somebody will copy.
+    """
+    with engine.connect() as conn:
+        return set(
+            conn.execute(
+                text(
+                    "SELECT tablename FROM pg_tables WHERE schemaname = 'public' "
+                    "AND tablename = ANY(:names)"
+                ),
+                {"names": list(names)},
+            )
+            .scalars()
+            .all()
+        )
+
+
+def test_0036_creates_the_seven_tables(isolated_pg_engine):
+    assert _present_tables(isolated_pg_engine, _INFRACTION_TABLES) == set(
+        _INFRACTION_TABLES
+    )
+
+
+def test_0036_declares_the_constraints_the_model_declares(isolated_pg_engine):
+    """The FK delete actions and the three uniques -- the shapes SQLite cannot
+    verify.
+
+    `confdeltype`: `r` = RESTRICT, `c` = CASCADE, `n` = SET NULL, `a` = NO
+    ACTION. The mix is not decoration: `RESTRICT` on the four parents an
+    infraction *names* is what stops a rule, lot, resident or actor being
+    deleted out from under a recorded process, while `CASCADE` on the two
+    children is what makes an infraction deletable as one unit if a future
+    task ever adds that route.
+    """
+    rule = _constraints(isolated_pg_engine, "infraction_rule")
+    assert rule["fk_infraction_rule_tenant_id"] == ("f", "r")
+    assert rule["uq_infraction_rule_tenant_origin_article"][0] == "u"
+
+    step = _constraints(isolated_pg_engine, "infraction_policy_step")
+    assert step["infraction_policy_step_rule_id_fkey"] == ("f", "c")
+    assert step["uq_infraction_policy_step_rule_order"][0] == "u"
+    assert "tenant_id" not in _columns(isolated_pg_engine, "infraction_policy_step")
+
+    infraction = _constraints(isolated_pg_engine, "infraction")
+    assert infraction["fk_infraction_tenant_id"] == ("f", "r")
+    assert infraction["infraction_rule_id_fkey"] == ("f", "r")
+    assert infraction["infraction_lot_id_fkey"] == ("f", "r")
+    assert infraction["infraction_responsible_resident_id_fkey"] == ("f", "r")
+    assert infraction["infraction_registered_by_id_fkey"] == ("f", "r")
+    # The promotion link survives the occurrence's deletion as a null.
+    assert infraction["infraction_source_occurrence_id_fkey"] == ("f", "n")
+
+    stage = _constraints(isolated_pg_engine, "infraction_stage")
+    assert stage["infraction_stage_infraction_id_fkey"] == ("f", "c")
+    assert stage["infraction_stage_actor_id_fkey"] == ("f", "r")
+    assert "tenant_id" not in _columns(isolated_pg_engine, "infraction_stage")
+
+    contestation = _constraints(isolated_pg_engine, "infraction_contestation")
+    assert contestation["infraction_contestation_infraction_id_fkey"] == ("f", "c")
+    # SET NULL and not RESTRICT: the parent stage is CASCADE-deleted with the
+    # infraction, so a RESTRICT here would deadlock the two rules against each
+    # other. The contestation keeps its own NOT NULL, CASCADE `infraction_id`.
+    assert contestation["infraction_contestation_stage_id_fkey"] == ("f", "n")
+
+    close = _constraints(isolated_pg_engine, "infraction_cycle_close")
+    assert close["fk_infraction_cycle_close_tenant_id"] == ("f", "r")
+    assert close["infraction_cycle_close_rule_id_fkey"] == ("f", "r")
+
+    settings = _constraints(isolated_pg_engine, "infraction_settings")
+    assert settings["fk_infraction_settings_tenant_id"] == ("f", "r")
+    assert settings["uq_infraction_settings_tenant"][0] == "u"
+    assert settings["infraction_settings_updated_by_id_fkey"] == ("f", "n")
+
+
+def test_0036_gets_the_two_nullability_decisions_right(isolated_pg_engine):
+    """Both are decisions, not oversights, and both are load-bearing.
+
+    `infraction.lot_id` NOT NULL is why §7.4's effective-lot rule exists;
+    `infraction_cycle_close.lot_id` nullable is §6.2 property 5 -- audit
+    context, never part of the recidivism match.
+    """
+    with isolated_pg_engine.connect() as conn:
+        rows = conn.execute(
+            text(
+                "SELECT table_name, column_name, is_nullable "
+                "FROM information_schema.columns "
+                "WHERE table_schema = 'public' AND column_name = 'lot_id' "
+                "AND table_name IN "
+                "('infraction', 'infraction_cycle_close', 'occurrence')"
+            )
+        ).all()
+    nullable = {row.table_name: row.is_nullable for row in rows}
+    assert nullable["infraction"] == "NO"
+    assert nullable["infraction_cycle_close"] == "YES"
+    # The asymmetry the effective-lot rule exists for, both halves at once.
+    assert nullable["occurrence"] == "YES"
+
+
+def test_0036_stores_enums_as_strings_and_creates_no_postgres_type(
+    isolated_pg_engine,
+):
+    """Migration `0027`'s convention: `sa.String()`, never a native ENUM.
+
+    Which is also why `downgrade()` has no type to drop, and why adding a
+    fourth `InfractionRuleOrigin` value later is a code change with no DDL.
+    """
+    with isolated_pg_engine.connect() as conn:
+        types = conn.execute(
+            text(
+                "SELECT data_type, table_name, column_name "
+                "FROM information_schema.columns "
+                "WHERE table_schema = 'public' AND table_name IN "
+                "('infraction_rule', 'infraction_policy_step', 'infraction_stage') "
+                "AND column_name IN ('origin', 'action', 'fine_mode')"
+            )
+        ).all()
+        native = conn.execute(
+            text(
+                "SELECT typname FROM pg_type WHERE typtype = 'e' "
+                "AND typname LIKE 'infraction%'"
+            )
+        ).scalars().all()
+
+    assert types, "the enum columns are missing"
+    assert {row.data_type for row in types} == {"character varying"}
+    assert native == []
+
+
+def test_0036_creates_the_recidivism_index(isolated_pg_engine):
+    """The composite §6.2's count reads, in the order it reads it."""
+    with isolated_pg_engine.connect() as conn:
+        definition = conn.execute(
+            text(
+                "SELECT indexdef FROM pg_indexes WHERE schemaname = 'public' "
+                "AND indexname = 'ix_infraction_recidivism'"
+            )
+        ).scalar_one()
+    for column in (
+        "tenant_id",
+        "rule_id",
+        "responsible_resident_id",
+        "occurred_on",
+    ):
+        assert column in definition, definition
+
+
+def test_0036_seeds_nothing(isolated_pg_engine):
+    """No seeded rule, no seeded policy, **no settings row**.
+
+    The settings singleton is materialised lazily on the first `PUT` (§5),
+    which is what keeps this migration exactly reversible and the no-seeds
+    doctrine intact.
+    """
+    with isolated_pg_engine.connect() as conn:
+        counts = conn.execute(
+            text(
+                " UNION ALL ".join(
+                    f"SELECT '{table}' AS name, count(*) AS n FROM {table}"  # noqa: S608
+                    for table in _INFRACTION_TABLES
+                )
+            )
+        ).all()
+    assert {row.name: row.n for row in counts} == dict.fromkeys(_INFRACTION_TABLES, 0)
+
+
+def test_0036_round_trips(isolated_pg_engine):
+    """`downgrade -1` drops all seven and a re-`upgrade` restores them."""
+    assert _current_revision(isolated_pg_engine) == HEAD_REVISION
+
+    _run_alembic("downgrade", "-1")
+
+    assert _current_revision(isolated_pg_engine) == _BEFORE_HEAD
+    assert _present_tables(isolated_pg_engine, _INFRACTION_TABLES) == set()
+
+    _run_alembic("upgrade", "head")
+
+    assert _current_revision(isolated_pg_engine) == HEAD_REVISION
+    assert _present_tables(isolated_pg_engine, _INFRACTION_TABLES) == set(
+        _INFRACTION_TABLES
+    )
+
+
+def test_0036_matches_the_model_metadata(isolated_pg_engine):
+    """The Alembic schema and `SQLModel.metadata` agree, column for column.
+
+    The one check that catches the whole class of "the migration was written
+    by hand and drifted from the model": the rest of the suite builds its
+    schema with `create_all()` on SQLite, so a column the migration spells
+    differently would never be exercised by anything else.
+    """
+    with isolated_pg_engine.connect() as conn:
+        rows = conn.execute(
+            text(
+                "SELECT table_name, column_name, is_nullable "
+                "FROM information_schema.columns WHERE table_schema = 'public' "
+                "AND table_name LIKE 'infraction%'"
+            )
+        ).all()
+
+    live: dict[str, dict[str, bool]] = {}
+    for row in rows:
+        live.setdefault(row.table_name, {})[row.column_name] = (
+            row.is_nullable == "YES"
+        )
+
+    for name in _INFRACTION_TABLES:
+        table = SQLModel.metadata.tables[name]
+        expected = {column.name: bool(column.nullable) for column in table.columns}
+        assert live[name] == expected, name

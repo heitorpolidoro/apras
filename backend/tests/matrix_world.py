@@ -12,10 +12,11 @@ What it provides
 
 * :data:`CELLS` -- ``(profile, method, path)`` for every
   ``ROUTE_PERMISSIONS`` key and every :data:`PARITY_PROFILES` entry:
-  ``6 x 183 == 1098``. 1080 of them are recorded in the frozen IAM F2
+  ``6 x 201 == 1206``. 1080 of them are recorded in the frozen IAM F2
   baseline; the 18 APRAS-40 adds live in the additive
-  ``tests/data/parity_matrix_baseline_40.json`` (APRAS-40 §9.2), which is
-  what keeps the F2 file byte-identical.
+  ``tests/data/parity_matrix_baseline_40.json`` (APRAS-40 §9.2) and the 108
+  APRAS-44 adds in ``tests/data/parity_matrix_baseline_44.json``
+  (APRAS-44 §8.5), which is what keeps the F2 file byte-identical.
   The twenty-two ``UNGUARDED_ROUTES`` are excluded because none of them makes
   a **role-dimension, catalogue-permission** authorization decision: eight are
   unauthenticated (``/``, ``/api/v1/health``, login, signup,
@@ -98,6 +99,9 @@ from app.models.enums import (
     AuthorizationStatus,
     EntityType,
     FeedbackCategory,
+    InfractionFineMode,
+    InfractionRuleOrigin,
+    InfractionStepAction,
     MovementType,
     OccurrenceCategory,
     PhotoApprovalStatus,
@@ -109,6 +113,12 @@ from app.models.enums import (
 )
 from app.models.feedback import Feedback
 from app.models.finance import BudgetLine, FinanceCategory, FinancialTransaction
+from app.models.infraction import (
+    Infraction,
+    InfractionPolicyStep,
+    InfractionRule,
+    InfractionStage,
+)
 from app.models.lot import Lot, UserLotLink
 from app.models.media_asset import MediaAsset
 from app.models.occurrence import Occurrence
@@ -282,6 +292,11 @@ class MatrixWorld:
     finance_category_id: uuid.UUID
     budget_line_id: uuid.UUID
     transaction_id: uuid.UUID
+    # APRAS-44 §12.6: an active rule with a three-rung ladder, and one
+    # infraction already carrying a NOTIFICACAO whose deadline is open, so
+    # the contestation cell measures authorization and not state.
+    infraction_rule_id: uuid.UUID
+    infraction_id: uuid.UUID
     built_at: datetime = field(default_factory=_now)
 
 
@@ -676,6 +691,79 @@ def build_world(session: Session) -> MatrixWorld:  # noqa: PLR0915
     session.refresh(budget_line)
     session.refresh(transaction)
 
+    # --- APRAS-44 -----------------------------------------------------------
+    # An **active** rule (§7.7 refuses a deactivated one) with the three-rung
+    # ladder of §12.6, and one infraction on `world.lot` whose responsible is a
+    # resident of that lot. `build_world` already gives every profile user both
+    # a `UserLotLink` to `lot` and an active `Resident` row on it, so §7.6's
+    # predicate holds for all six profiles: the 403 never fires, the
+    # contestation cell measures authorization, and `GET /infractions/my-lots`
+    # returns one item rather than `[]`.
+    #
+    # No `infraction_settings` row is seeded, so `GET /infraction-settings`
+    # exercises the §5 absent-row read.
+    infraction_rule = InfractionRule(
+        article="art. 12",
+        origin=InfractionRuleOrigin.REGIMENTO_INTERNO,
+        description="Matrix infraction rule",
+        recidivism_window_days=365,
+        is_active=True,
+    )
+    session.add(infraction_rule)
+    session.commit()
+    session.refresh(infraction_rule)
+
+    session.add(
+        InfractionPolicyStep(
+            rule_id=infraction_rule.id,
+            step_order=1,
+            action=InfractionStepAction.AVISO,
+        )
+    )
+    session.add(
+        InfractionPolicyStep(
+            rule_id=infraction_rule.id,
+            step_order=2,
+            action=InfractionStepAction.NOTIFICACAO,
+            defense_deadline_days=30,
+        )
+    )
+    session.add(
+        InfractionPolicyStep(
+            rule_id=infraction_rule.id,
+            step_order=3,
+            action=InfractionStepAction.MULTA,
+            fine_mode=InfractionFineMode.FIXED,
+            fine_fixed_amount=100.0,
+        )
+    )
+
+    infraction = Infraction(
+        rule_id=infraction_rule.id,
+        lot_id=lot.id,
+        responsible_resident_id=spare_resident.id,
+        registered_by_id=users["ADMINISTRATOR"].id,
+        occurred_on=(now - timedelta(days=1)).date(),
+        description="Matrix infraction",
+    )
+    session.add(infraction)
+    session.commit()
+    session.refresh(infraction)
+
+    session.add(
+        InfractionStage(
+            infraction_id=infraction.id,
+            action=InfractionStepAction.NOTIFICACAO,
+            applied_on=now.date(),
+            note="Matrix notification",
+            actor_id=users["ADMINISTRATOR"].id,
+            defense_due_on=(now + timedelta(days=30)).date(),
+            policy_step_order=2,
+            suggestion_followed=True,
+        )
+    )
+    session.commit()
+
     return MatrixWorld(
         tokens={
             role_value: create_access_token(str(user.id))
@@ -719,6 +807,8 @@ def build_world(session: Session) -> MatrixWorld:  # noqa: PLR0915
         finance_category_id=finance_category.id,
         budget_line_id=budget_line.id,
         transaction_id=transaction.id,
+        infraction_rule_id=infraction_rule.id,
+        infraction_id=infraction.id,
     )
 
 
@@ -748,6 +838,19 @@ def _path_params() -> dict[tuple[str, str], Binder]:
         "category_id": "category_id",
         "comment_id": "task_comment_id",
         "device_id": "device_id",
+        # APRAS-44. Three `by_name` entries, not six `(path, name)` pairs: the
+        # derived map is keyed by path, so `{rule_id}` on two paths,
+        # `{infraction_id}` on four and `{occurrence_id}` on one produce seven
+        # entries from these three lines.
+        #
+        # `occurrence_id` needs its own binder and does **not** inherit the
+        # existing `("/api/v1/occurrences/", "occurrence_id")` one: that lives
+        # in `by_prefix`, which is consulted only when the parameter is
+        # literally named `id`. Without this line `_path_params()` raises
+        # `KeyError` at import and the whole matrix module fails to collect.
+        "infraction_id": "infraction_id",
+        "occurrence_id": "occurrence_id",
+        "rule_id": "infraction_rule_id",
         "lot_id": "lot_id",
         "media_id": "announcement_media_id",
         "milestone_id": "milestone_id",
@@ -855,7 +958,7 @@ class _NoBody:
     """The route declares no body model. Sending one would be meaningless.
 
     An *explicit* entry rather than a missing one: `REQUEST_BODIES` must
-    cover exactly the 90 POST/PUT/PATCH routes, and "this route takes no
+    cover exactly the 99 POST/PUT/PATCH routes, and "this route takes no
     body" is a decision that has to be visible in the map.
     """
 
@@ -893,8 +996,8 @@ def _today() -> str:
     return _now().date().isoformat()
 
 
-#: `(METHOD, path) -> body spec`, for exactly the 90 POST/PUT/PATCH routes
-#: of `ROUTE_PERMISSIONS`. The 24 DELETE routes declare no body model and are
+#: `(METHOD, path) -> body spec`, for exactly the 99 POST/PUT/PATCH routes
+#: of `ROUTE_PERMISSIONS`. The 25 DELETE routes declare no body model and are
 #: deliberately absent. A missing entry is never allowed to default to `{}`.
 REQUEST_BODIES: dict[tuple[str, str], BodySpec] = {
     # --- tasks -------------------------------------------------------------
@@ -1166,6 +1269,55 @@ REQUEST_BODIES: dict[tuple[str, str], BodySpec] = {
     # unmanaged world owes it, and the semantic oracle forbids a permitted
     # 422.
     ("PUT", "/api/v1/subscription/modules"): _static({"active_modules": []}),
+    # --- infractions (APRAS-44 §11) ----------------------------------------
+    # Nine entries: every POST/PUT of the module's 18 routes. The one DELETE
+    # and the eight GETs contribute none -- 1 + 8 + 9 = 18.
+    #
+    # Every body that names an object resolves it from the seeded world and
+    # must satisfy §7.7, or the create cells would record 422 instead of 201
+    # and measure request shape instead of authorization: `rule_id` names the
+    # **active** `world.infraction_rule` and `responsible_resident_id` names a
+    # resident **of** `world.lot`.
+    ("POST", "/api/v1/infraction-rules"): _static(
+        {
+            "article": "art. 99",
+            "origin": InfractionRuleOrigin.ESTATUTO.value,
+            "description": "Matrix new infraction rule",
+            "recidivism_window_days": 180,
+        }
+    ),
+    ("PUT", "/api/v1/infraction-rules/{rule_id}"): _static(
+        {"description": "Matrix renamed infraction rule"}
+    ),
+    ("PUT", "/api/v1/infraction-rules/{rule_id}/policy"): _static(
+        {"steps": [{"step_order": 1, "action": InfractionStepAction.AVISO.value}]}
+    ),
+    ("PUT", "/api/v1/infraction-settings"): _static({"condo_fee_amount": 100.0}),
+    ("POST", "/api/v1/infractions"): lambda w: {
+        "rule_id": str(w.infraction_rule_id),
+        "lot_id": str(w.lot_id),
+        "responsible_resident_id": str(w.resident_id),
+        "occurred_on": _today(),
+        "description": "Matrix new infraction",
+    },
+    # `lot_id` is omitted, so the promotion cell exercises §7.4's ordinary
+    # case -- `world.occurrence.lot_id` is set.
+    ("POST", "/api/v1/infractions/from-occurrence/{occurrence_id}"): lambda w: {
+        "rule_id": str(w.infraction_rule_id),
+        "responsible_resident_id": str(w.resident_id),
+    },
+    ("POST", "/api/v1/infractions/{infraction_id}/stages"): _static(
+        {"note": "Matrix stage note"}
+    ),
+    ("POST", "/api/v1/infractions/{infraction_id}/contestation"): _static(
+        {"body": "Matrix contestation body"}
+    ),
+    # `lot_id` omitted: §4.4 makes it optional audit context.
+    ("POST", "/api/v1/infractions/cycles/close"): lambda w: {
+        "rule_id": str(w.infraction_rule_id),
+        "responsible_resident_id": str(w.resident_id),
+        "justification": "Matrix cycle close justification",
+    },
 }
 
 
@@ -1270,6 +1422,6 @@ def matrix_engine(database_path: str) -> Iterator[Engine]:
 
 
 def seed_once(engine: Engine) -> MatrixWorld:
-    """Build and commit the world exactly once. 1080 cells, one world."""
+    """Build and commit the world exactly once. 1206 cells, one world."""
     with Session(engine) as session:
         return build_world(session)

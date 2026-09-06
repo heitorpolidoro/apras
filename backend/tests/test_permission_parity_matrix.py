@@ -6,15 +6,17 @@ the shared `tests/matrix_world.py` harness, each asserted equal to the status
 code recorded in `tests/data/parity_matrix_baseline.json` **before** a single
 production file was touched.
 
-APRAS-40 adds three permission-guarded routes, so the live matrix is now
-`6 x 183 == 1098` cells. The F2 file is **not** re-recorded for them: it stays
-byte-identical (`test_the_f2_baseline_is_untouched_by_apras_40`), and the 18
-new cells live in the additive `tests/data/parity_matrix_baseline_40.json`,
-whose `_meta.merge_base_sha` names the branch point the `+3` route delta is
-measured from rather than a sha its statuses could be reproduced at -- the
-three routes do not exist there. Every semantic oracle below reads
-`load_union()`, the two files keyed the way `CELLS` is keyed; the provenance
-and hygiene cases stay one per file.
+APRAS-40 adds three permission-guarded routes and APRAS-44 eighteen, so the
+live matrix is now `6 x 201 == 1206` cells. The F2 file is **not** re-recorded
+for them: it stays byte-identical (`test_the_f2_baseline_is_untouched_by_apras_40`),
+and the new cells live in the additive
+`tests/data/parity_matrix_baseline_40.json` (18) and
+`tests/data/parity_matrix_baseline_44.json` (108), whose `_meta.merge_base_sha`
+names the branch point each route delta is measured from rather than a sha its
+statuses could be reproduced at -- the routes do not exist there. The two shas
+are **different**, and deliberately: each file records its own branch point.
+Every semantic oracle below reads `load_union()`, the three files keyed the way
+`CELLS` is keyed; the provenance and hygiene cases stay one per file.
 
 The baseline's provenance is *reproducibility, not chronology* (§6.4): this
 task ships as one commit, so "the JSON was committed first" is unprovable
@@ -80,11 +82,16 @@ BASELINE_PATH = BACKEND_ROOT / "tests" / "data" / "parity_matrix_baseline.json"
 BASELINE_40_PATH = (
     BACKEND_ROOT / "tests" / "data" / "parity_matrix_baseline_40.json"
 )
+BASELINE_44_PATH = (
+    BACKEND_ROOT / "tests" / "data" / "parity_matrix_baseline_44.json"
+)
+LEGACY_BUNDLES_PATH = BACKEND_ROOT / "tests" / "data" / "legacy_role_bundles.json"
 HARNESS_PATH = BACKEND_ROOT / "tests" / "matrix_world.py"
 
 F2_CELL_COUNT = 1080
 APRAS_40_CELL_COUNT = 18
-EXPECTED_CELL_COUNT = F2_CELL_COUNT + APRAS_40_CELL_COUNT
+APRAS_44_CELL_COUNT = 108
+EXPECTED_CELL_COUNT = F2_CELL_COUNT + APRAS_40_CELL_COUNT + APRAS_44_CELL_COUNT
 
 F2_MERGE_BASE_SHA = "02c2025abcda4626569921eafb3863dfc540eb9e"
 #: Measured at the APRAS-39 merge base (68cfd1d) with
@@ -92,6 +99,12 @@ F2_MERGE_BASE_SHA = "02c2025abcda4626569921eafb3863dfc540eb9e"
 #: so "byte-identical" is a machine statement rather than an intention.
 F2_BASELINE_SHA256 = (
     "3691cea1cddfa13ddcba4cf9b5c1c3e8b7bbac7c295bae4bbd4e3e8c45c016cd"
+)
+#: `shasum -a 256 backend/tests/data/legacy_role_bundles.json` at the APRAS-44
+#: merge base (a3d1b19), pinned by APRAS-44 §12.4 so "untouched" is a machine
+#: statement rather than an intention.
+LEGACY_BUNDLES_SHA256 = (
+    "f5444b6911326a489eac9ade72aa29bcd63fca8ac898b73af285468590c90206"
 )
 
 #: The three routes APRAS-40 adds to `ROUTE_PERMISSIONS`, and the exact set the
@@ -103,6 +116,22 @@ APRAS_40_ROUTES = frozenset(
         ("PUT", "/api/v1/subscription/modules"),
     }
 )
+
+#: The eighteen routes APRAS-44 adds. **Derived**, not listed: the module's
+#: contract is "every `infractions:*` permission guards a route", so a
+#: hand-written copy here would be a second place for the same claim to rot.
+#: `test_the_three_baselines_partition_route_permissions_exactly` still pins
+#: the count, so a nineteenth route cannot slip in unrecorded.
+APRAS_44_ROUTES = frozenset(
+    key
+    for key, permission in ROUTE_PERMISSIONS.items()
+    if permission.startswith("infractions:")
+)
+
+#: The routes recorded in an *additive* file rather than in the frozen F2 one.
+#: Every oracle that says "except the new routes" reads this, so adding a
+#: fourth file is one line rather than a grep.
+ADDITIVE_ROUTES = APRAS_40_ROUTES | APRAS_44_ROUTES
 
 #: The profiles `matrix_world.build_world` builds with `is_superuser=True` --
 #: the ADMINISTRATOR profile only. Not asserted by fiat:
@@ -133,7 +162,7 @@ F5_PATH_RENAMES: dict[str, str] = {
 }
 
 WRITE_METHODS = frozenset({"POST", "PUT", "PATCH"})
-EXPECTED_REQUEST_BODY_COUNT = 90
+EXPECTED_REQUEST_BODY_COUNT = 99
 META_KEYS = frozenset(
     {"merge_base_sha", "generator", "harness", "cell_count", "regenerate"}
 )
@@ -335,6 +364,11 @@ def load_apras_40_baseline() -> dict:
     return load_file(BASELINE_40_PATH)
 
 
+def load_apras_44_baseline() -> dict:
+    """The additive file of APRAS-44 §8.5, and only ever that."""
+    return load_file(BASELINE_44_PATH)
+
+
 def cells_of(baseline: dict) -> set[tuple[str, str, str]]:
     """Every `(role, method, path)` a document records, keyed the way `CELLS`
     is keyed -- i.e. with `F5_PATH_RENAMES` already applied."""
@@ -347,16 +381,16 @@ def cells_of(baseline: dict) -> set[tuple[str, str, str]]:
 
 
 def load_union() -> dict[tuple[str, str, str], int]:
-    """Both baselines as one `CELLS`-keyed cell map.
+    """All three baselines as one `CELLS`-keyed cell map.
 
-    Overlap is an error, not a merge: the two files partition
-    `ROUTE_PERMISSIONS` and a cell appearing in both would mean one of them
+    Overlap is an error, not a merge: the three files partition
+    `ROUTE_PERMISSIONS` and a cell appearing in two would mean one of them
     had been re-recorded. `F5_PATH_RENAMES` is applied to **both** -- it is
     the identity on every path it does not name, and one keying rule is
     cheaper to keep true than two.
     """
     merged: dict[tuple[str, str, str], int] = {}
-    for path in (BASELINE_PATH, BASELINE_40_PATH):
+    for path in (BASELINE_PATH, BASELINE_40_PATH, BASELINE_44_PATH):
         for role, by_method in load_file(path)["cells"].items():
             for method, by_path in by_method.items():
                 for route, status in by_path.items():
@@ -439,13 +473,16 @@ def test_the_twenty_two_unguarded_routes_are_the_only_ones_excluded():
     three `/api/v1/tenants/{tenant_id}/subscription*`). None of the nine maps
     to a catalogue permission, so none adds a cell -- the 18 new cells come
     from APRAS-40's three *permission-guarded* routes and nothing else.
+    **APRAS-44 grows this list by zero**: all eighteen of its routes are
+    authenticated and every one makes a permission decision, so all eighteen
+    are measured and its 108 cells come from nowhere else.
     """
     assert len(UNGUARDED_ROUTES) == 22
     assert not (set(ROUTE_PERMISSIONS) & UNGUARDED_ROUTES)
 
 
 def test_the_matrix_world_runs_with_every_module_active():
-    """The 1098-cell world has all 27 modules on, in every tenant it builds.
+    """The 1206-cell world has all 28 modules on, in every tenant it builds.
 
     `matrix_world` seeds its tenants through the ordinary model
     constructors, so `disabled_modules` is `[]` everywhere and every cell
@@ -678,21 +715,140 @@ def test_the_apras_40_baseline_records_only_integer_status_codes():
                 assert isinstance(status, int)
 
 
-def test_the_two_baselines_partition_route_permissions_exactly():
-    """Disjoint, and together exactly `ROUTE_PERMISSIONS`.
+def test_the_apras_44_baseline_declares_its_provenance():
+    """The same five `_meta` keys, and its **own** merge base.
 
-    `f2 | new == set(ROUTE_PERMISSIONS)` is exact rather than a subset because
-    APRAS-49's three tier permissions are deliberately **not** route-mapped,
-    so the map stays at its base size plus APRAS-40's `+3` and nothing else
-    creeps in.
+    `merge_base_sha` here is APRAS-44's branch point -- the commit at which
+    APRAS-40 landed -- and **not** the value APRAS-40 wrote in its own file,
+    which is APRAS-40's branch point. The two files record two different shas,
+    each its own, and this case is what says so mechanically rather than in a
+    comment: the APRAS-40 test only checks the field is 40 hex, so a copied
+    sha would otherwise be silent.
+    """
+    meta = load_apras_44_baseline()["_meta"]
+    assert set(meta) == META_KEYS, "no timestamp, hostname or absolute path"
+    assert re.fullmatch(r"[0-9a-f]{40}", meta["merge_base_sha"])
+    assert meta["cell_count"] == APRAS_44_CELL_COUNT == 108
+    assert meta["merge_base_sha"] in meta["regenerate"]
+    assert "--routes" in meta["regenerate"]
+    assert "git worktree add" not in meta["regenerate"]
+    assert (BACKEND_ROOT / meta["generator"]).exists()
+    assert (BACKEND_ROOT / meta["harness"]).exists()
+    assert meta["merge_base_sha"] != load_apras_40_baseline()["_meta"][
+        "merge_base_sha"
+    ]
+    # The scoped invocation names all eighteen routes, so the recipe is
+    # executable exactly as written.
+    assert meta["regenerate"].count("--routes") == 18
+    assert BASELINE_44_PATH.name in meta["regenerate"]
+
+
+def test_the_apras_44_baseline_carries_no_absolute_path_and_no_timestamp():
+    raw = BASELINE_44_PATH.read_text(encoding="utf-8")
+    assert str(BACKEND_ROOT) not in raw
+    assert not re.search(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}", raw)
+
+
+def test_the_apras_44_baseline_records_only_integer_status_codes():
+    for by_method in load_apras_44_baseline()["cells"].values():
+        for by_path in by_method.values():
+            for status in by_path.values():
+                assert isinstance(status, int)
+
+
+def test_the_apras_44_baseline_matches_the_predicted_answers():
+    """§8.4's table, as an assertion rather than as prose.
+
+    A recorded value that disagrees with this is a bug in the code, not a new
+    prediction (APRAS-40 §9.2.3 step 3). The five non-ADMINISTRATOR profiles
+    hold no `infractions:*` -- nothing is seeded post-F5 -- so all 90 of their
+    cells are the plain denial shape and need no `DENIAL_SHAPE_OVERRIDES`
+    entry.
+    """
+    cells = load_apras_44_baseline()["cells"]
+    expected_admin = {
+        ("GET", "/api/v1/infraction-rules"): 200,
+        ("GET", "/api/v1/infraction-rules/{rule_id}"): 200,
+        ("POST", "/api/v1/infraction-rules"): 201,
+        ("PUT", "/api/v1/infraction-rules/{rule_id}"): 200,
+        ("DELETE", "/api/v1/infraction-rules/{rule_id}"): 204,
+        ("PUT", "/api/v1/infraction-rules/{rule_id}/policy"): 200,
+        ("GET", "/api/v1/infraction-settings"): 200,
+        ("PUT", "/api/v1/infraction-settings"): 200,
+        ("GET", "/api/v1/infractions"): 200,
+        ("GET", "/api/v1/infractions/my-lots"): 200,
+        ("GET", "/api/v1/infractions/cycles"): 200,
+        ("GET", "/api/v1/infractions/{infraction_id}"): 200,
+        ("GET", "/api/v1/infractions/{infraction_id}/next-step"): 200,
+        ("POST", "/api/v1/infractions"): 201,
+        ("POST", "/api/v1/infractions/from-occurrence/{occurrence_id}"): 201,
+        ("POST", "/api/v1/infractions/{infraction_id}/stages"): 201,
+        ("POST", "/api/v1/infractions/{infraction_id}/contestation"): 201,
+        ("POST", "/api/v1/infractions/cycles/close"): 201,
+    }
+    recorded_admin = {
+        (method, path): status
+        for method, by_path in cells["ADMINISTRATOR"].items()
+        for path, status in by_path.items()
+    }
+    assert recorded_admin == expected_admin
+
+    others = [
+        status
+        for profile, by_method in cells.items()
+        if profile != "ADMINISTRATOR"
+        for by_path in by_method.values()
+        for status in by_path.values()
+    ]
+    assert len(others) == 90
+    assert set(others) == {403}
+
+
+def test_the_legacy_role_bundles_are_untouched_by_apras_44():
+    """§8.2, made mechanical.
+
+    `legacy_role_bundles.json` is IAM F5's recording of what the retired enum
+    used to mean, made *before* the map was deleted. APRAS-44's permissions did
+    not exist then and must not be back-dated into it: the six bundles are what
+    the parity oracle reads, so a string added here would silently move the
+    predicted verdict of a cell it could not have produced.
+    """
+    raw = LEGACY_BUNDLES_PATH.read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == LEGACY_BUNDLES_SHA256
+    bundles = json.loads(raw)["bundles"]
+    offenders = sorted(
+        (profile, permission)
+        for profile, permissions in bundles.items()
+        for permission in permissions
+        if permission.startswith("infractions:")
+    )
+    assert not offenders, offenders
+
+
+def test_the_three_baselines_partition_route_permissions_exactly():
+    """Pairwise disjoint, and together exactly `ROUTE_PERMISSIONS`.
+
+    `f2 | forty | forty_four == set(ROUTE_PERMISSIONS)` is exact rather than a
+    subset because APRAS-49's three tier permissions are deliberately **not**
+    route-mapped, so the map stays at its base size plus APRAS-40's `+3` and
+    APRAS-44's `+18`, and nothing else creeps in.
     """
     f2 = {(method, path) for _role, method, path in cells_of(load_baseline())}
-    new = {(method, path) for _role, method, path in cells_of(load_apras_40_baseline())}
+    forty = {
+        (method, path) for _role, method, path in cells_of(load_apras_40_baseline())
+    }
+    forty_four = {
+        (method, path) for _role, method, path in cells_of(load_apras_44_baseline())
+    }
 
-    assert new == APRAS_40_ROUTES
-    assert not (f2 & new), "the two baselines must not overlap"
-    assert f2 | new == set(ROUTE_PERMISSIONS)
-    assert f2 == set(ROUTE_PERMISSIONS) - APRAS_40_ROUTES
+    assert forty == APRAS_40_ROUTES
+    assert forty_four == APRAS_44_ROUTES
+    assert len(forty_four) == 18
+    assert not (f2 & forty), "the F2 and APRAS-40 baselines overlap"
+    assert not (f2 & forty_four), "the F2 and APRAS-44 baselines overlap"
+    assert not (forty & forty_four), "the APRAS-40 and APRAS-44 baselines overlap"
+    assert f2 | forty | forty_four == set(ROUTE_PERMISSIONS)
+    assert f2 == set(ROUTE_PERMISSIONS) - ADDITIVE_ROUTES
 
     union = load_union()
     assert set(union) == set(CELLS)
@@ -757,11 +913,11 @@ def test_the_recorder_scopes_by_route_and_validates_the_merge_base():
 
 
 def test_the_superuser_branch_changes_no_f2_verdict():
-    """Additive on the 18 new cells, inert on the 1080 recorded ones."""
+    """Additive on the 18 + 108 new cells, inert on the 1080 recorded ones."""
     moved = sorted(
         cell
         for cell in CELLS
-        if (cell[1], cell[2]) not in APRAS_40_ROUTES
+        if (cell[1], cell[2]) not in ADDITIVE_ROUTES
         and holds(*cell) != holds_by_bundle(*cell)
     )
     assert not moved, f"the superuser branch moved an F2 verdict: {moved}"
@@ -777,7 +933,7 @@ def test_the_admin_gap_is_the_only_bundle_gap_the_superuser_branch_excludes():
     unheld = sorted(
         (method, path)
         for method, path in ROUTE_PERMISSIONS
-        if (method, path) not in APRAS_40_ROUTES
+        if (method, path) not in ADDITIVE_ROUTES
         and not holds_by_bundle("ADMINISTRATOR", method, path)
     )
     assert unheld == [("GET", "/api/v1/packages/my-lots")]
@@ -967,7 +1123,7 @@ def test_permitted_422_is_bounded():
 
 
 # ---------------------------------------------------------------------------
-# ER-3 -- the 1080 cells
+# ER-3 -- the 1206 cells
 # ---------------------------------------------------------------------------
 
 

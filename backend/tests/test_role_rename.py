@@ -61,11 +61,16 @@ def test_route_permissions_uses_the_roles_module():
     assert not [p for p in ROUTE_PERMISSIONS.values() if p.startswith("user_types:")]
 
 
-def test_the_catalogue_has_161_permissions_in_27_modules():
-    """156 -> 159 (§3.0); the module count is unchanged, `user_types` -> `roles`."""
-    assert len(PERMISSIONS) == 161
+def test_the_catalogue_has_174_permissions_in_28_modules():
+    """156 -> 159 (§3.0), then APRAS-39/40's `billing` and APRAS-44's 13.
+
+    The rename this module is about (`user_types` -> `roles`) is what the two
+    membership assertions below pin; the two counts move with the catalogue
+    and are stated so a silent addition cannot ride along.
+    """
+    assert len(PERMISSIONS) == 174
     modules = {module_of(permission) for permission in PERMISSIONS}
-    assert len(modules) == 27
+    assert len(modules) == 28
     assert "roles" in modules
     assert "user_types" not in modules
 

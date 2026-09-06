@@ -84,6 +84,11 @@ class OccurrenceDetailRead(OccurrenceRead):
     """Schema for reading full occurrence details with timeline history."""
 
     timeline: list[OccurrenceTimelineRead] = Field(default_factory=list)
+    # APRAS-44 §7.4: the occurrence side of the promotion link. Read-only and
+    # additive with a default, so no existing occurrence test changes; one
+    # occurrence may be promoted more than once, because one incident can
+    # breach two rules.
+    infraction_ids: list[UUID] = Field(default_factory=list)
 
 
 class PaginatedOccurrenceRead(BaseModel):
