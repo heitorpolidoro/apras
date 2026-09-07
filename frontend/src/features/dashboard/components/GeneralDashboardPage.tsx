@@ -110,16 +110,22 @@ export const GeneralDashboardPage: React.FC = () => {
             <p className="text-sm sm:text-base text-muted-foreground">
               {t("dashboard.general.welcomeSubtitle")}
             </p>
-            {user?.roles && user.roles.length > 0 && (
+            {(user?.is_superuser || (user?.roles && user.roles.length > 0)) && (
               <div className="flex flex-wrap gap-1.5 pt-1">
-                {user.roles.map((role) => (
-                  <span
-                    key={role.id}
-                    className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-primary/10 text-primary border border-primary/20"
-                  >
-                    {role.name}
+                {user?.is_superuser && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+                    {t("common.globalAdmin")}
                   </span>
-                ))}
+                )}
+                {user?.roles &&
+                  user.roles.map((role) => (
+                    <span
+                      key={role.id}
+                      className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-primary/10 text-primary border border-primary/20"
+                    >
+                      {role.name.replace(/\s*\(papel\)$/i, "").trim()}
+                    </span>
+                  ))}
               </div>
             )}
           </div>

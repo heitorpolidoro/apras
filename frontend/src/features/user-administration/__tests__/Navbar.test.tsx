@@ -5,6 +5,7 @@ import Navbar from "../components/Navbar";
 import { SidebarProvider } from "../context/SidebarContext";
 import { useSimulation } from "../context/SimulationContext";
 import * as AuthHook from "../context/AuthContext";
+import type { User } from "../../../../types/auth";
 import { useRoles } from "../../../hooks/useRoles";
 import { useMyPermissions } from "../../../hooks/usePermissionQueries";
 import {
@@ -265,6 +266,82 @@ describe("Navbar", () => {
 
     // The badge joins **every** role name (§8.2), not a single enum label.
     expect(screen.getByText("DIRECTOR, Gerente")).toBeInTheDocument();
+  });
+
+  it("renders 'Administrador global' when user is superuser", () => {
+    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      user: {
+        id: "1",
+        email: "heitor.polidoro@gmail.com",
+        full_name: "Heitor Polidoro",
+        is_superuser: true,
+        roles: [{ id: "role-admin", name: "Administrador (papel)" }],
+        is_active: true,
+      } as unknown as User,
+      login: vi.fn(),
+      logout: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter>
+        <Navbar />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Administrador global")).toBeInTheDocument();
+  });
+
+  it("renders 'Administrador global (Morador)' when superuser has another tenant role", () => {
+    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      user: {
+        id: "1",
+        email: "heitor.polidoro@gmail.com",
+        full_name: "Heitor Polidoro",
+        is_superuser: true,
+        roles: [{ id: "role-resident", name: "Morador (papel)" }],
+        is_active: true,
+      } as unknown as User,
+      login: vi.fn(),
+      logout: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter>
+        <Navbar />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Administrador global (Morador)")).toBeInTheDocument();
+  });
+
+  it("strips (papel) suffix from role names for regular users", () => {
+    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      user: {
+        id: "2",
+        email: "resident@example.com",
+        full_name: "Resident User",
+        is_superuser: false,
+        roles: [{ id: "role-resident", name: "Morador (papel)" }],
+        is_active: true,
+      } as unknown as User,
+      login: vi.fn(),
+      logout: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter>
+        <Navbar />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Morador")).toBeInTheDocument();
+    expect(screen.queryByText("Morador (papel)")).toBeNull();
   });
 
   it("renders the simulation toggle for a real ADMINISTRATOR", () => {

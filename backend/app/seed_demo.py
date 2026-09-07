@@ -75,6 +75,13 @@ def run_seed(db_url: str | None = None) -> None:
         TenantService.ensure_legacy_roles(session, tenant_id)
         session.commit()
 
+        # Clean legacy "(papel)" suffix from role names if present
+        for role_row in session.exec(select(Role).where(Role.tenant_id == tenant_id)).all():
+            if " (papel)" in role_row.name:
+                role_row.name = role_row.name.replace(" (papel)", "").strip()
+                session.add(role_row)
+        session.commit()
+
         roles_by_name = {
             r.name: r
             for r in session.exec(select(Role).where(Role.tenant_id == tenant_id)).all()
@@ -86,7 +93,7 @@ def run_seed(db_url: str | None = None) -> None:
             select(User).where(User.email == "heitor.polidoro@gmail.com")
         ).first()
         if heitor:
-            admin_role = roles_by_name.get("Administrador (papel)")
+            admin_role = roles_by_name.get("Administrador") or roles_by_name.get("Administrador (papel)")
             if admin_role and admin_role not in heitor.roles:
                 heitor.roles.append(admin_role)
                 session.add(heitor)
@@ -100,35 +107,35 @@ def run_seed(db_url: str | None = None) -> None:
                 "full_name": "Administrador do Sistema",
                 "cpf": "52998224725",
                 "is_superuser": True,
-                "role": "Administrador (papel)",
+                "role": "Administrador",
             },
             {
                 "email": "sindico@apras.com",
                 "full_name": "Carlos Silva (Síndico)",
                 "cpf": "11144477735",
                 "is_superuser": False,
-                "role": "Diretor (papel)",
+                "role": "Diretor",
             },
             {
                 "email": "zelador@apras.com",
                 "full_name": "Marcos Oliveira (Zelador)",
                 "cpf": "08050681057",
                 "is_superuser": False,
-                "role": "Gerente (papel)",
+                "role": "Gerente",
             },
             {
                 "email": "porteiro@apras.com",
                 "full_name": "José Santos (Portaria)",
                 "cpf": "07491723040",
                 "is_superuser": False,
-                "role": "Porteiro (papel)",
+                "role": "Porteiro",
             },
             {
                 "email": "morador@apras.com",
                 "full_name": "Ana Souza (Moradora)",
                 "cpf": "38812345678",
                 "is_superuser": False,
-                "role": "Morador (papel)",
+                "role": "Morador",
             },
         ]
 
@@ -158,7 +165,7 @@ def run_seed(db_url: str | None = None) -> None:
                 session.refresh(user)
 
             # Link role
-            role_obj = roles_by_name.get(spec["role"])
+            role_obj = roles_by_name.get(spec["role"]) or roles_by_name.get(f"{spec['role']} (papel)")
             if role_obj and role_obj not in user.roles:
                 user.roles.append(role_obj)
                 session.add(user)

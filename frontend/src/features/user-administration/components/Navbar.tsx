@@ -17,6 +17,9 @@ const LANGUAGES = [
   { code: "en", label: "EN" },
 ];
 
+const cleanRoleName = (name: string): string =>
+  name.replace(/\s*\(papel\)$/i, "").trim();
+
 const Navbar: React.FC = () => {
   const { user, logout, isAuthenticated } = useAuth();
   const canSimulate = usePermissionSet().has("roles:update");
@@ -31,16 +34,30 @@ const Navbar: React.FC = () => {
 
   const simulatedRoleNames = (roles ?? [])
     .filter((role) => simulatedRoleIds.includes(role.id))
-    .map((role) => role.name)
+    .map((role) => cleanRoleName(role.name))
     .join(", ");
 
-  const roleSubtitle = isSimulating
-    ? t("simulation.simulatingAs", {
-        roles: simulatedRoleNames || t("simulation.noRoles"),
-      })
-    : user?.roles && user.roles.length > 0
-      ? user.roles.map((ut) => ut.name).join(", ")
-      : null;
+  let roleSubtitle: string | null = null;
+  if (isSimulating) {
+    roleSubtitle = t("simulation.simulatingAs", {
+      roles: simulatedRoleNames || t("simulation.noRoles"),
+    });
+  } else if (user?.is_superuser) {
+    const localRoles = (user.roles ?? [])
+      .map((ut) => cleanRoleName(ut.name))
+      .filter(
+        (name) =>
+          name.toLowerCase() !== "administrador" &&
+          name.toLowerCase() !== "administrator",
+      );
+    if (localRoles.length > 0) {
+      roleSubtitle = `${t("common.globalAdmin")} (${localRoles.join(", ")})`;
+    } else {
+      roleSubtitle = t("common.globalAdmin");
+    }
+  } else if (user?.roles && user.roles.length > 0) {
+    roleSubtitle = user.roles.map((ut) => cleanRoleName(ut.name)).join(", ");
+  }
 
   return (
     <>
@@ -134,7 +151,9 @@ const Navbar: React.FC = () => {
                   "text-xs font-medium leading-tight",
                   isSimulating
                     ? "text-amber-600 dark:text-amber-400 font-semibold"
-                    : "text-primary/80",
+                    : user?.is_superuser
+                      ? "text-primary font-semibold"
+                      : "text-muted-foreground",
                 )}
               >
                 {roleSubtitle}

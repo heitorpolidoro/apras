@@ -7,7 +7,8 @@
     "restrictedAccess": "Restricted access",
     "restrictedAccessMessage": "You don't have access to this feature. Ask an Administrator to grant it to your role.",
     "moduleUnavailable": "Module not enabled",
-    "moduleUnavailableMessage": "This module is not part of your condominium's plan. Ask the administrator to enable it."
+    "moduleUnavailableMessage": "This module is not part of your condominium's plan. Ask the administrator to enable it.",
+    "globalAdmin": "Global Admin"
   },
   "nav": {
     "home": "Home",
