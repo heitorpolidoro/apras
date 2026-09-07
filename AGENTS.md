@@ -131,7 +131,7 @@ deleted.
 | `/api/v1/tenants/{id}/modules` | Per-tenant module switch (`GET`/`PUT`, superuser only) | `backend/app/api/v1/endpoints/tenants.py` |
 | `/api/v1/subscription` | Tenant-side subscription area (`GET`, `PUT /modules`, `GET /history`) | `backend/app/api/v1/endpoints/subscription.py` |
 | `/api/v1/plans` | Install-wide plan catalogue (`GET`/`POST`/`GET {id}`/`PATCH {id}`, superuser only) | `backend/app/api/v1/endpoints/plans.py` |
-| `/api/v1/tenants/{id}/subscription` | Per-tenant subscription read and plan assignment (`GET`/`PUT`, superuser only) | `backend/app/api/v1/endpoints/tenants.py` |
+| `/api/v1/tenants/{id}/subscription` | Per-tenant subscription read and plan assignment (`GET`/`PUT`, plus `GET /history`, superuser only) | `backend/app/api/v1/endpoints/tenants.py` |
 | `/api/v1/tenants/{id}/subscription/courtesy` | Courtesy grants outside the plan (`PUT`, superuser only) | `backend/app/api/v1/endpoints/tenants.py` |
 | `/api/v1/infraction-rules` | Infraction rule catalogue and its escalation policy (`GET`/`POST`/`GET {id}`/`PUT {id}`/`DELETE {id}` soft-deactivates/`PUT {id}/policy`), plus `/api/v1/infraction-settings` (`GET`/`PUT`) | `backend/app/api/v1/endpoints/infractions.py` |
 | `/api/v1/infractions` | The infraction process: list, detail, next-step suggestion, promotion from an occurrence, stage append, contestation and recidivism-cycle closes | `backend/app/api/v1/endpoints/infractions.py` |
@@ -539,7 +539,8 @@ They map to no catalogue permission, by the convention
 `tests/data/parity_matrix_baseline.json` byte-identical at 1080 cells.
 (`APRAS-40` then took the registry to **183/22**; the F2 file is still
 byte-identical, because its 18 new cells live in the additive
-`tests/data/parity_matrix_baseline_40.json`.)
+`tests/data/parity_matrix_baseline_40.json`; `APRAS-52` takes it to
+**201/23**, still with no new cell.)
 
 ```bash
 # read every module's state in one tenant
@@ -683,6 +684,17 @@ curl -X PUT "$API/api/v1/tenants/$TENANT/subscription/courtesy" \
   -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
   -d '{"courtesy_modules": ["finance"], "reason": "negociação"}'
 ```
+
+**The fourth operator route** (`APRAS-52`):
+`GET /api/v1/tenants/{id}/subscription/history` returns one tenant's
+`subscription_change` rows newest first (`changed_at desc`, `id desc` as
+tiebreak), paginated by `?skip=`(`ge=0`, default 0) and `?limit=`(`ge=1,le=100`,
+default 50) — 200 `[]` for a tenant with no subscription, 404 for an unknown
+one. It is superuser-only (`deps.get_current_superuser`, never an in-handler
+flag check) and maps to **no catalogue permission**, by the same convention as
+its three siblings, so it takes `UNGUARDED_ROUTES` to **23** and
+`ADMIN_ONLY_ROUTES` to **16** while `ROUTE_PERMISSIONS` and `PERMISSIONS` stay
+**201/174** and all four parity baselines stay byte-identical.
 
 **Out of scope, named so it is not rediscovered in review:** charging of any
 kind and every provider-shaped artefact (SDK, API key, webhook receiver,

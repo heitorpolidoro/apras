@@ -254,6 +254,10 @@
 - 6.4: adicionar caso de refetch apos troca de plano (5.2 invalida em useSetTenantPlan e useSetTenantCourtesy).
 - ER-1: test_the_superuser_history_matches_the_tenant_side_history compara limit=100 com leitura sem teto - so vale com fixture < 100 linhas; docstring.
 - ER-3 do board foi substituido (baseline _52 impossivel para rota nao mapeada) - registrar no PR body.
+- (code review) subscription_service.py:325-337 resolve nomes de plano/autor com um session.get por id distinto (23 queries para 20 linhas, 2*limit+2) - dois selects in_() deixariam O(1) por pagina.
+- (code review) AGENTS.md:541-543 atribui o crescimento 183->201 de rotas mapeadas (108 celulas) a esta tarefa, que so moveu 22->23; texto literal pedido pela spec 7.3.
+- (code review) TenantSubscriptionsPage.tsx:337 mostra changed_at ISO cru (espelho de SubscriptionPage.tsx:272) - formatar ambos ou nenhum; considerar keepPreviousData no paginador.
+- (QA) tabela sem <caption> e paginador sem aria-live (troca de pagina nao anunciada); ao cair numa pagina 2 esvaziada apos um save, mostra estado vazio com Previous habilitado sem dica.
 
 ## [APRAS-53] Upload de evidências e anexos de contestação no cliente de infrações — 2026-09-06
 

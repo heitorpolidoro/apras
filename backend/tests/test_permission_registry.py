@@ -162,8 +162,8 @@ def test_permission_strings_follow_the_convention():
     assert not bad, f"permissions violating <module>:<action>: {bad}"
 
 
-def test_unguarded_allowlist_is_twenty_two_routes():
-    assert len(UNGUARDED_ROUTES) == 22
+def test_unguarded_allowlist_is_twenty_three_routes():
+    assert len(UNGUARDED_ROUTES) == 23
 
 
 def test_route_count_is_fully_accounted_for():
@@ -180,7 +180,10 @@ def test_route_count_is_fully_accounted_for():
     (APRAS-49) left and IAM F4's 192/180/12.
 
     APRAS-44 then adds **eighteen** permission-guarded routes and **no**
-    unguarded one, taking 205/183/22 to **223/201/22**.
+    unguarded one, taking 205/183/22 to **223/201/22**. APRAS-52 adds one
+    unguarded one and no mapped one -- the operator-side change-history read,
+    superuser-guarded and mapping to no catalogue permission -- taking
+    223/201/22 to **224/201/23**.
 
     `len(ROUTE_PERMISSIONS)` moving 180 -> 183 -> **201** is what takes the
     parity matrix from 6 x 180 = 1080 cells to 6 x 201 = 1206. The F2 golden
@@ -191,8 +194,8 @@ def test_route_count_is_fully_accounted_for():
     total = len(_all_route_keys())
     assert set(ROUTE_PERMISSIONS) & UNGUARDED_ROUTES == set()
     assert len(ROUTE_PERMISSIONS) + len(UNGUARDED_ROUTES) == total
-    assert len(UNGUARDED_ROUTES) == 22
-    assert len(ROUTE_PERMISSIONS) == total - 22
+    assert len(UNGUARDED_ROUTES) == 23
+    assert len(ROUTE_PERMISSIONS) == total - 23
     assert len(ROUTE_PERMISSIONS) == 201
 
 

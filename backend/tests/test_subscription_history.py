@@ -10,14 +10,19 @@ one.
 from __future__ import annotations
 
 import ast
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 import pytest
 from fastapi.routing import APIRoute
 
-from app.core.permissions import TOGGLEABLE_MODULES
+from app.core.permissions import ROUTE_PERMISSIONS, TOGGLEABLE_MODULES, UNGUARDED_ROUTES
 from app.main import app
+from app.models.subscription import SubscriptionChange
+from app.models.tenant import Tenant
+from app.services.subscription_service import SubscriptionService
 from tests.subscription_helpers import (
     TENANT_A,
     auth,
@@ -28,6 +33,16 @@ from tests.subscription_helpers import (
     subscribe,
     subscription_id,
 )
+from tests.test_permission_alignment import (
+    MEMBERSHIP_GATED,
+    REFUSAL_SHAPES,
+    SERVICE_ENFORCED,
+    UNENFORCED,
+)
+from tests.test_permission_enforcement import (
+    ADMIN_ONLY_ROUTES as ENFORCEMENT_ADMIN_ONLY,
+)
+from tests.test_tenant_admin import ADMIN_ONLY_ROUTES as TENANT_ADMIN_ADMIN_ONLY
 
 if TYPE_CHECKING:  # pragma: no cover
     from fastapi.testclient import TestClient
@@ -283,3 +298,121 @@ def test_the_only_writer_of_the_history_is_record():
         }
     )
     assert everywhere == ["app/services/subscription_service.py"]
+
+
+# ---------------------------------------------------------------------------
+# APRAS-52 — the operator-side history read, and the service it shares
+# ---------------------------------------------------------------------------
+
+OPERATOR_HISTORY_ROUTE = (
+    "GET",
+    "/api/v1/tenants/{tenant_id}/subscription/history",
+)
+
+
+def test_the_operator_history_route_is_not_permission_mapped():
+    """It is unmapped and superuser-guarded, like its three siblings.
+
+    Stated as a checked fact rather than a silence: the route is outside
+    `test_permission_alignment.py`'s walk (which iterates `ROUTE_PERMISSIONS`),
+    so nothing there would go red if someone "helpfully" registered it in one
+    of the mapped-route subsets. Each of `MEMBERSHIP_GATED`,
+    `SERVICE_ENFORCED` and `REFUSAL_SHAPES` is asserted elsewhere to be a
+    subset of the mapped routes, so any such addition is a red test -- this
+    case is what names the requirement.
+    """
+    assert OPERATOR_HISTORY_ROUTE in UNGUARDED_ROUTES
+    assert OPERATOR_HISTORY_ROUTE not in ROUTE_PERMISSIONS
+    assert OPERATOR_HISTORY_ROUTE not in UNENFORCED
+    assert OPERATOR_HISTORY_ROUTE not in MEMBERSHIP_GATED
+    assert OPERATOR_HISTORY_ROUTE not in SERVICE_ENFORCED
+    assert OPERATOR_HISTORY_ROUTE not in REFUSAL_SHAPES
+    assert OPERATOR_HISTORY_ROUTE in ENFORCEMENT_ADMIN_ONLY
+    assert OPERATOR_HISTORY_ROUTE in TENANT_ADMIN_ADMIN_ONLY
+
+
+def test_the_tenant_side_history_is_unpaginated_by_default(
+    session: Session, tenant_client: TestClient, superuser
+):
+    """`limit=None` means no `LIMIT`, so APRAS-40's route is untouched."""
+    plan = make_plan(session, included=["documents", "projects"])
+    subscribe(session, tenant_id=TENANT_A, plan=plan)
+    tenant_admin = make_tenant_admin(session)
+    for index in range(3):
+        tenant_client.put(
+            f"{_sub_url(TENANT_A)}/courtesy",
+            json={
+                "courtesy_modules": ["assets"] if index % 2 == 0 else [],
+                "reason": f"volta {index}",
+            },
+            headers=auth(superuser),
+        )
+
+    rows = tenant_client.get(HISTORY_URL, headers=auth(tenant_admin, TENANT_A)).json()
+
+    session.expire_all()
+    tenant = session.get(Tenant, TENANT_A)
+    service_rows = SubscriptionService.list_history(session=session, tenant=tenant)
+
+    assert len(rows) == 3
+    assert len(service_rows) == len(rows)
+    assert [str(row.id) for row in service_rows] == [row["id"] for row in rows]
+
+
+def test_the_history_order_is_deterministic_for_rows_sharing_a_timestamp(
+    session: Session, tenant_client: TestClient, superuser
+):
+    """Two rows with an identical `changed_at` order by `id` **descending**.
+
+    `changed_at.desc()` alone is not a total order, so the `id.desc()`
+    tiebreak of APRAS-52 §3.1 is what keeps `skip`/`limit` from returning the
+    same row twice (or skipping one) across two pages.
+
+    The two ids are explicit, and the **low** one is inserted **first**, so
+    descending-id order is the exact reverse of insertion order. That is what
+    makes the case load-bearing: with the tiebreak removed the engine falls
+    back on insertion order and the `["segunda", "primeira"]` assertion below
+    goes red, rather than passing either way.
+    """
+    plan = make_plan(session, included=["documents"])
+    subscription = subscribe(session, tenant_id=TENANT_A, plan=plan)
+    # Naive on purpose: `subscription_change.changed_at` is written from
+    # `datetime.utcnow()` and stored without a timezone, so a tz-aware literal
+    # would not compare with what the service reads back.
+    shared = datetime(2026, 3, 1, 12, 0, 0)  # noqa: DTZ001
+    low_id = UUID("00000000-0000-4000-8000-0000000000a1")
+    high_id = UUID("ffffffff-ffff-4fff-bfff-ffffffffffa2")
+    for row_id, reason in ((low_id, "primeira"), (high_id, "segunda")):
+        session.add(
+            SubscriptionChange(
+                id=row_id,
+                subscription_id=subscription.id,
+                kind="COURTESY_GRANT",
+                modules_added=["assets"],
+                modules_removed=[],
+                reason=reason,
+                changed_by_id=superuser.id,
+                changed_at=shared,
+            )
+        )
+    session.commit()
+    session.expire_all()
+    tenant = session.get(Tenant, TENANT_A)
+
+    first_read = SubscriptionService.list_history(session=session, tenant=tenant)
+    second_read = SubscriptionService.list_history(session=session, tenant=tenant)
+    assert len({row.changed_at for row in first_read}) == 1
+    # The exact order, not merely a stable one: highest id first, which is the
+    # reverse of the order the two rows were inserted in.
+    assert [row.id for row in first_read] == [high_id, low_id]
+    assert [row.reason for row in first_read] == ["segunda", "primeira"]
+    assert [row.id for row in second_read] == [high_id, low_id]
+
+    page_one = SubscriptionService.list_history(session=session, tenant=tenant, limit=1)
+    page_two = SubscriptionService.list_history(
+        session=session, tenant=tenant, skip=1, limit=1
+    )
+    assert [row.id for row in page_one] == [high_id]
+    assert [row.id for row in page_two] == [low_id]
+    assert {row.id for row in page_one} & {row.id for row in page_two} == set()
+    assert [row.id for row in page_one + page_two] == [row.id for row in first_read]

@@ -540,7 +540,7 @@ def test_matrix_covers_every_permission_mapped_route():
     assert len(CELLS) == EXPECTED_CELL_COUNT
 
 
-def test_the_twenty_two_unguarded_routes_are_the_only_ones_excluded():
+def test_the_twenty_three_unguarded_routes_are_the_only_ones_excluded():
     """No cell may be dropped for any reason other than being unguarded.
 
     13 at the IAM F5 merge base; APRAS-39 added the two superuser-only
@@ -550,9 +550,12 @@ def test_the_twenty_two_unguarded_routes_are_the_only_ones_excluded():
     from APRAS-40's three *permission-guarded* routes and nothing else.
     **APRAS-44 grows this list by zero**: all eighteen of its routes are
     authenticated and every one makes a permission decision, so all eighteen
-    are measured and its 108 cells come from nowhere else.
+    are measured and its 108 cells come from nowhere else. APRAS-52 grows
+    this list by one -- the operator-side history read -- and by zero cells,
+    for the same reason as APRAS-40's nine: it maps to no catalogue
+    permission.
     """
-    assert len(UNGUARDED_ROUTES) == 22
+    assert len(UNGUARDED_ROUTES) == 23
     assert not (set(ROUTE_PERMISSIONS) & UNGUARDED_ROUTES)
 
 

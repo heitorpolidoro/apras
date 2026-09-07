@@ -1600,7 +1600,12 @@
     "loading": "Carregando...",
     "loadError": "Não foi possível carregar a assinatura",
     "noSubscription": "Este condomínio ainda não tem assinatura. Atribua um plano para criar uma.",
-    "inertPriceNotice": "Valores informativos — nenhuma cobrança é feita."
+    "inertPriceNotice": "Valores informativos — nenhuma cobrança é feita.",
+    "historyTitle": "Histórico de alterações",
+    "historyEmpty": "Nenhuma alteração ainda.",
+    "previous": "Anterior",
+    "next": "Próxima",
+    "page": "Página {{page}}"
   },
   "infractions": {
     "actions": {

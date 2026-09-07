@@ -5,6 +5,7 @@ import {
   useSetTenantCourtesy,
   useSetTenantPlan,
   useTenantSubscription,
+  useTenantSubscriptionHistory,
 } from "../../../hooks/usePlans";
 import { useAllTenants } from "../../../hooks/useTenantModules";
 import type { SubscriptionStatus } from "../../../types/subscription";
@@ -27,10 +28,13 @@ import type { SubscriptionStatus } from "../../../types/subscription";
  * this is the commercial surface. Both are reachable, they write the same
  * column, and `/admin/modules` remains the repair tool.
  *
- * The change history lives on the tenant-side `/subscription` page: the three
- * operator routes are read, plan and courtesy, and this task deliberately adds
- * no fourth (a per-tenant history route would be an eighth superuser route and
- * is out of the declared accounting).
+ * **The change history is here since APRAS-52.** APRAS-40 §8.4/§10.3 asked
+ * for this table and deviation D10 deferred it, because §5.3 pinned exactly
+ * three operator routes and none of them returned history. APRAS-52 added the
+ * fourth — `GET /api/v1/tenants/{id}/subscription/history`, superuser-only and
+ * mapped to no catalogue permission, like its three siblings — and the table
+ * below reads it. The tenant-side `/subscription` page keeps its own copy of
+ * the same rows, scoped by the acting tenant instead of by path.
  */
 
 const STATUSES: readonly SubscriptionStatus[] = [
@@ -38,6 +42,13 @@ const STATUSES: readonly SubscriptionStatus[] = [
   "SUSPENDED",
   "CANCELED",
 ];
+
+/**
+ * The page size of the history control. There is deliberately no total count:
+ * a bare list signals its last page by being short, and an `{items, total}`
+ * envelope would need a second query on a route whose twin returns a list.
+ */
+const HISTORY_PAGE_SIZE = 20;
 
 const TenantSubscriptionsPage: React.FC = () => {
   const { t } = useTranslation();
@@ -51,6 +62,7 @@ const TenantSubscriptionsPage: React.FC = () => {
   const [reason, setReason] = useState("");
   const [reasonError, setReasonError] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [historyPage, setHistoryPage] = useState(0);
 
   const { data: tenants } = useAllTenants();
   const { data: plans } = usePlans();
@@ -60,6 +72,11 @@ const TenantSubscriptionsPage: React.FC = () => {
   const { data, isPending, isError } = useTenantSubscription(tenantId);
   const planMutation = useSetTenantPlan(tenantId);
   const courtesyMutation = useSetTenantCourtesy(tenantId);
+  const { data: history } = useTenantSubscriptionHistory(
+    tenantId,
+    historyPage * HISTORY_PAGE_SIZE,
+    HISTORY_PAGE_SIZE,
+  );
 
   const toggleable = useMemo(
     () => (data?.modules ?? []).filter((row) => !row.is_core),
@@ -124,9 +141,11 @@ const TenantSubscriptionsPage: React.FC = () => {
           value={tenantId ?? ""}
           onChange={(event) => {
             setSaved(false);
-            // Unsaved edits belong to the tenant they were made in.
+            // Unsaved edits belong to the tenant they were made in, and so
+            // does a page number.
             setCourtesyEdits({});
             setReason("");
+            setHistoryPage(0);
             setChosenTenantId(event.target.value || null);
           }}
         >
@@ -287,6 +306,61 @@ const TenantSubscriptionsPage: React.FC = () => {
               {courtesyMutation.isError && (
                 <span role="alert">{t("tenantSubscriptions.saveError")}</span>
               )}
+            </div>
+          </section>
+
+          <section className="flex flex-col gap-2">
+            <h2 className="text-lg font-bold">
+              {t("tenantSubscriptions.historyTitle")}
+            </h2>
+            {history && history.length === 0 && (
+              <p>{t("tenantSubscriptions.historyEmpty")}</p>
+            )}
+            {history && history.length > 0 && (
+              <table>
+                <thead>
+                  <tr>
+                    <th>{t("subscription.historyTitle")}</th>
+                    <th>{t("subscription.added")}</th>
+                    <th>{t("subscription.removed")}</th>
+                    <th>{t("subscription.author")}</th>
+                    <th>{t("subscription.when")}</th>
+                    <th>{t("subscription.reason")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.map((row) => (
+                    <tr key={row.id}>
+                      <td>{t(`subscription.kind.${row.kind}`)}</td>
+                      <td>{row.modules_added.join(", ")}</td>
+                      <td>{row.modules_removed.join(", ")}</td>
+                      <td>{row.changed_by_name}</td>
+                      <td>{row.changed_at}</td>
+                      <td>{row.reason}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={() => setHistoryPage((current) => current - 1)}
+                disabled={historyPage === 0}
+              >
+                {t("tenantSubscriptions.previous")}
+              </button>
+              <span>
+                {t("tenantSubscriptions.page", { page: historyPage + 1 })}
+              </span>
+              <button
+                type="button"
+                onClick={() => setHistoryPage((current) => current + 1)}
+                // A short page is the last-page signal a bare list gives.
+                disabled={(history?.length ?? 0) < HISTORY_PAGE_SIZE}
+              >
+                {t("tenantSubscriptions.next")}
+              </button>
             </div>
           </section>
         </>

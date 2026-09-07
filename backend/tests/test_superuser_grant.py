@@ -292,8 +292,10 @@ def test_the_route_is_unguarded_by_permission_and_superuser_guarded():
     # APRAS-44, from its eighteen; the F2 golden file stays byte-identical
     # because those 18 + 108 cells live in the additive
     # `tests/data/parity_matrix_baseline_40.json` and `_44.json`. APRAS-44
-    # adds **no** unguarded route, which is why 22 does not move.
-    assert len(UNGUARDED_ROUTES) == 22
+    # adds **no** unguarded route, which is why 22 did not move there.
+    # APRAS-52 adds exactly one, the operator-side subscription-history read,
+    # taking the count to 23 while `ROUTE_PERMISSIONS` stays at 201.
+    assert len(UNGUARDED_ROUTES) == 23
     assert len(ROUTE_PERMISSIONS) == 201
 
     route = next(
@@ -324,8 +326,9 @@ def test_the_superuser_route_is_tenant_scoped_like_the_rest_of_the_users_router(
     """
     assert SUPERUSER_ROUTE not in GLOBAL_ROUTES
     # 18 at the IAM F5 merge base; APRAS-39's two module-switch routes are
-    # mounted on the global tenants router and therefore join this set.
-    assert len(GLOBAL_ROUTES) == 27
+    # mounted on the global tenants router and therefore join this set, as do
+    # APRAS-40's seven and APRAS-52's history read.
+    assert len(GLOBAL_ROUTES) == 28
 
     route = next(
         r

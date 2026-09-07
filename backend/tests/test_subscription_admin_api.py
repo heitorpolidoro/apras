@@ -1,8 +1,10 @@
 """The per-tenant subscription, from the operator's side (APRAS-40 §5.3, §4.4).
 
-Three routes on the **existing global** `tenants` router, beside APRAS-39's
+**Four** routes on the **existing global** `tenants` router, beside APRAS-39's
 `/modules` pair and for its reasons: the subject is a tenant named in the path,
-written from outside it, by an actor whose authority is global.
+written from outside it, by an actor whose authority is global. APRAS-40
+shipped three -- the read, the plan write and the courtesy write -- and
+APRAS-52 adds the fourth, the change-history read.
 """
 
 import uuid
@@ -16,12 +18,15 @@ from app.models.enums import SubscriptionChangeKind
 from app.models.subscription import TenantSubscription
 from app.schemas.subscription import SubscriptionAdminUpdate
 from app.services.subscription_service import SubscriptionService
+from tests import matrix_world
+from tests.conftest import bundle
 from tests.subscription_helpers import (
     TENANT_A,
     auth,
     disabled_of,
     history_of,
     make_plan,
+    make_role_holder,
     make_superuser,
     make_tenant_admin,
     module_row,
@@ -36,6 +41,10 @@ def _url(tenant_id) -> str:
 
 def _courtesy_url(tenant_id) -> str:
     return f"/api/v1/tenants/{tenant_id}/subscription/courtesy"
+
+
+def _history_url(tenant_id) -> str:
+    return f"/api/v1/tenants/{tenant_id}/subscription/history"
 
 
 @pytest.fixture(name="superuser")
@@ -437,11 +446,15 @@ def test_courtesy_rejects_unknown_and_core_modules(
 # ---------------------------------------------------------------------------
 
 
-def test_a_tenant_admin_gets_403_on_all_three_routes_including_own_tenant(
+def test_a_tenant_admin_gets_403_on_all_four_routes_including_own_tenant(
     session: Session, tenant_client: TestClient, superuser
 ):
     """This router is global and resolves no acting tenant, so the capability
-    is not even readable here."""
+    is not even readable here.
+
+    Four routes since APRAS-52: the read, the plan write, the courtesy write
+    and the history read.
+    """
     plan = make_plan(session, included=["documents"])
     subscribe(session, tenant_id=TENANT_A, plan=plan)
     tenant_admin = make_tenant_admin(session)
@@ -457,12 +470,17 @@ def test_a_tenant_admin_gets_403_on_all_three_routes_including_own_tenant(
     assert refused.status_code == 403
     assert refused.json()["detail"] == "The user doesn't have enough privileges"
 
+    history = tenant_client.get(_history_url(TENANT_A), headers=headers)
+    assert history.status_code == 403
+    assert history.json()["detail"] == "The user doesn't have enough privileges"
+
 
 def test_unauthenticated_is_401(tenant_client: TestClient):
     assert tenant_client.get(_url(TENANT_A)).status_code == 401
     assert tenant_client.put(
         _url(TENANT_A), json={"plan_id": str(uuid.uuid4())}
     ).status_code == 401
+    assert tenant_client.get(_history_url(TENANT_A)).status_code == 401
 
 
 def test_unknown_tenant_is_404_and_a_missing_subscription_is_404_on_courtesy(
@@ -527,3 +545,203 @@ def test_the_superuser_read_matches_the_tenant_side_read(
 
     assert operator_view.status_code == tenant_view.status_code == 200
     assert operator_view.json() == tenant_view.json()
+
+
+# ---------------------------------------------------------------------------
+# The fourth operator route: the per-tenant change history (APRAS-52 §2.1)
+# ---------------------------------------------------------------------------
+
+
+def _seed_three_kinds(session: Session, tenant_client: TestClient, superuser):
+    """A plan change, a tenant-side contracting act and a courtesy grant,
+    in that order, against `TENANT_A`. Returns the tenant admin who acted.
+
+    Every seeding request is asserted to have succeeded. A silently-refused
+    `PUT` here would write no history row, and the cases built on this helper
+    would then assert an ordering over a shorter list -- failing for a reason
+    that has nothing to do with what they are testing, or worse, passing.
+    """
+    narrow = make_plan(session, name="Estreito", included=["documents"])
+    wide = make_plan(session, name="Largo", included=["documents", "projects"])
+    subscribe(session, tenant_id=TENANT_A, plan=narrow)
+    tenant_admin = make_tenant_admin(session)
+
+    plan_change = tenant_client.put(
+        _url(TENANT_A), json={"plan_id": str(wide.id)}, headers=auth(superuser)
+    )
+    assert plan_change.status_code == 200, plan_change.text
+
+    contracted = tenant_client.put(
+        "/api/v1/subscription/modules",
+        json={"active_modules": ["documents", "projects"]},
+        headers=auth(tenant_admin, TENANT_A),
+    )
+    assert contracted.status_code == 200, contracted.text
+
+    courtesy = tenant_client.put(
+        _courtesy_url(TENANT_A),
+        json={"courtesy_modules": ["assets"], "reason": "cortesia"},
+        headers=auth(superuser),
+    )
+    assert courtesy.status_code == 200, courtesy.text
+
+    return tenant_admin
+
+
+def test_the_history_route_returns_the_rows_newest_first_with_author_and_kind(
+    session: Session, tenant_client: TestClient, superuser
+):
+    """The same rows the tenant-side history returns, named by path."""
+    tenant_admin = _seed_three_kinds(session, tenant_client, superuser)
+
+    response = tenant_client.get(_history_url(TENANT_A), headers=auth(superuser))
+
+    assert response.status_code == 200
+    rows = response.json()
+    assert [row["kind"] for row in rows] == [
+        "COURTESY_GRANT",
+        "CONTRACTED",
+        "PLAN_CHANGE",
+    ]
+    assert rows[0]["changed_by_id"] == str(superuser.id)
+    assert rows[0]["changed_by_name"] == superuser.full_name
+    assert rows[0]["modules_added"] == ["assets"]
+    assert rows[0]["modules_removed"] == []
+    assert rows[0]["reason"] == "cortesia"
+    assert rows[1]["changed_by_name"] == tenant_admin.full_name
+    assert rows[1]["modules_added"] == ["projects"]
+    assert rows[2]["from_plan_name"] == "Estreito"
+    assert rows[2]["to_plan_name"] == "Largo"
+    assert rows[0]["changed_at"] >= rows[1]["changed_at"] >= rows[2]["changed_at"]
+
+
+def test_the_history_route_paginates_with_skip_and_limit(
+    session: Session, tenant_client: TestClient, superuser
+):
+    """Two disjoint pages whose concatenation is the unpaginated read."""
+    _seed_three_kinds(session, tenant_client, superuser)
+
+    everything = tenant_client.get(
+        _history_url(TENANT_A), headers=auth(superuser)
+    ).json()
+    assert len(everything) == 3
+
+    first = tenant_client.get(
+        _history_url(TENANT_A), params={"limit": 2}, headers=auth(superuser)
+    )
+    rest = tenant_client.get(
+        _history_url(TENANT_A), params={"skip": 2, "limit": 2}, headers=auth(superuser)
+    )
+
+    assert first.status_code == rest.status_code == 200
+    assert first.json() == everything[:2]
+    assert rest.json() == everything[2:]
+    first_ids = {row["id"] for row in first.json()}
+    rest_ids = {row["id"] for row in rest.json()}
+    assert first_ids & rest_ids == set()
+    assert first.json() + rest.json() == everything
+
+
+def test_the_history_route_rejects_an_out_of_range_page(
+    session: Session, tenant_client: TestClient, superuser
+):
+    """FastAPI's own 422, from `Query(ge=..., le=...)` and no handler code."""
+    for params in ({"skip": -1}, {"limit": 0}, {"limit": 101}):
+        response = tenant_client.get(
+            _history_url(TENANT_A), params=params, headers=auth(superuser)
+        )
+        assert response.status_code == 422, params
+
+
+def test_the_history_route_is_empty_for_a_tenant_with_no_subscription(
+    tenant_client: TestClient, superuser
+):
+    """Adopting billing is opt-in (APRAS-40 §4.6), so this is 200 `[]`."""
+    response = tenant_client.get(_history_url(TENANT_A), headers=auth(superuser))
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_the_history_route_is_404_for_an_unknown_tenant(
+    tenant_client: TestClient, superuser
+):
+    response = tenant_client.get(_history_url(uuid.uuid4()), headers=auth(superuser))
+
+    assert response.status_code == 404
+
+
+def test_the_history_route_shows_only_that_tenants_rows(
+    session: Session, tenant_client: TestClient, superuser, tenant_b
+):
+    """`SubscriptionChange` is reached only through its parent's id."""
+    plan_a = make_plan(session, name="Plano A", included=["documents"])
+    plan_b = make_plan(session, name="Plano B", included=["projects"])
+    subscribe(session, tenant_id=TENANT_A, plan=plan_a)
+    subscribe(session, tenant_id=tenant_b.id, plan=plan_b)
+
+    tenant_client.put(
+        _courtesy_url(TENANT_A),
+        json={"courtesy_modules": ["finance"], "reason": "só do A"},
+        headers=auth(superuser),
+    )
+    tenant_client.put(
+        _courtesy_url(tenant_b.id),
+        json={"courtesy_modules": ["assets"], "reason": "só do B"},
+        headers=auth(superuser),
+    )
+
+    rows_a = tenant_client.get(_history_url(TENANT_A), headers=auth(superuser)).json()
+    rows_b = tenant_client.get(
+        _history_url(tenant_b.id), headers=auth(superuser)
+    ).json()
+
+    assert [row["reason"] for row in rows_a] == ["só do A"]
+    assert [row["reason"] for row in rows_b] == ["só do B"]
+    assert {row["id"] for row in rows_a} & {row["id"] for row in rows_b} == set()
+
+
+def test_the_superuser_history_matches_the_tenant_side_history(
+    session: Session, tenant_client: TestClient, superuser
+):
+    """One `list_history`, two paths to it -- so the two surfaces cannot drift.
+
+    The comparison is sound only while the fixture stays **under 100 rows**:
+    the operator read is capped at `limit=100` (the route's `le`) while the
+    tenant-side read is uncapped, so seeding a hundred-and-first row here
+    would turn this red for a reason that is not a drift.
+    """
+    _seed_three_kinds(session, tenant_client, superuser)
+
+    operator_view = tenant_client.get(
+        _history_url(TENANT_A), params={"limit": 100}, headers=auth(superuser)
+    )
+    tenant_view = tenant_client.get(
+        "/api/v1/subscription/history", headers=auth(superuser, TENANT_A)
+    )
+
+    assert operator_view.status_code == tenant_view.status_code == 200
+    assert operator_view.json() == tenant_view.json()
+    assert len(operator_view.json()) == 3
+
+
+@pytest.mark.parametrize("profile", matrix_world.PARITY_PROFILES)
+def test_the_history_route_refuses_the_six_legacy_profiles(
+    session: Session, tenant_client: TestClient, superuser, profile: str
+):
+    """The six parity cells this route would have had, kept as requests.
+
+    APRAS-52 §4: the parity matrix measures exactly `ROUTE_PERMISSIONS`, and
+    the committed recorder rejects an unmapped route with `SystemExit(2)`, so
+    no `parity_matrix_baseline_52.json` can exist. This case is the
+    substitute, and it is strictly stronger than a recorded 403 would be: it
+    issues six real requests and pins the answer.
+    """
+    plan = make_plan(session, included=["documents"])
+    subscribe(session, tenant_id=TENANT_A, plan=plan)
+    actor, _role = make_role_holder(session, permissions=sorted(bundle(profile)))
+
+    response = tenant_client.get(_history_url(TENANT_A), headers=auth(actor, TENANT_A))
+
+    assert response.status_code == 403, profile
+    assert response.json()["detail"] == "The user doesn't have enough privileges"

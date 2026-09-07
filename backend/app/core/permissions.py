@@ -711,6 +711,12 @@ UNGUARDED_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("PUT", "/api/v1/tenants/{tenant_id}/subscription"),
         # superuser-only, guarded by deps.get_current_superuser (APRAS-40)
         ("PUT", "/api/v1/tenants/{tenant_id}/subscription/courtesy"),
+        # APRAS-52: the fourth per-tenant subscription route, the operator's
+        # change-history read. Same convention and same reason as the three
+        # lines above -- it maps to no catalogue permission, so it adds no
+        # parity cell and no baseline file.
+        # superuser-only, guarded by deps.get_current_superuser (APRAS-52)
+        ("GET", "/api/v1/tenants/{tenant_id}/subscription/history"),
     }
 )
 

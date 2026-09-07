@@ -64,6 +64,11 @@ GLOBAL_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("GET", "/api/v1/tenants/{tenant_id}/subscription"),
         ("PUT", "/api/v1/tenants/{tenant_id}/subscription"),
         ("PUT", "/api/v1/tenants/{tenant_id}/subscription/courtesy"),
+        # APRAS-52: the fourth of that block, the operator's change-history
+        # read. Global for the same reason -- it is read from outside the
+        # tenant, by an actor whose authority is global, and the tenant is
+        # named in the path rather than resolved from a header.
+        ("GET", "/api/v1/tenants/{tenant_id}/subscription/history"),
         # APRAS-40: the install-wide plan catalogue. `plan` carries no
         # `tenant_id` at all -- it is a global table like `tenant` itself --
         # and every route is superuser-only, so the whole router is global.
@@ -121,18 +126,20 @@ def test_allowlist_has_no_stale_entries():
     assert existing >= GLOBAL_ROUTES, sorted(GLOBAL_ROUTES - existing)
 
 
-def test_allowlist_is_twenty_seven_routes():
+def test_allowlist_is_twenty_eight_routes():
     """The global surface is small and reviewed; growing it is a decision.
 
     18 at the APRAS-49 merge base; APRAS-39 added the two module-switch
     routes, which inherit `GLOBAL_SCOPED` from the tenants router mount;
     APRAS-40 adds seven more -- the three per-tenant subscription routes on
     that same mount and the four routes of the new, wholly superuser-only
-    `plans` router. The three *tenant-side* `/api/v1/subscription` routes are
-    deliberately **not** here: they are `TENANT_SCOPED`, because a
-    permission-guarded route must resolve an acting tenant.
+    `plans` router; APRAS-52 adds the twenty-eighth, the operator-side
+    change-history read on that same mount. The three *tenant-side*
+    `/api/v1/subscription` routes are deliberately **not** here: they are
+    `TENANT_SCOPED`, because a permission-guarded route must resolve an
+    acting tenant.
     """
-    assert len(GLOBAL_ROUTES) == 27
+    assert len(GLOBAL_ROUTES) == 28
 
 
 def test_route_count_is_fully_accounted_for():

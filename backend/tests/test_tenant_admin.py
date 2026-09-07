@@ -742,6 +742,11 @@ ADMIN_ONLY_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("GET", "/api/v1/tenants/{tenant_id}/subscription"),
         ("PUT", "/api/v1/tenants/{tenant_id}/subscription"),
         ("PUT", "/api/v1/tenants/{tenant_id}/subscription/courtesy"),
+        # APRAS-52 §2.2: the fourth per-tenant subscription route, the
+        # operator's change-history read. A tenant_admin of that very tenant
+        # is refused here too -- the router is global, so the capability is
+        # not even readable.
+        ("GET", "/api/v1/tenants/{tenant_id}/subscription/history"),
         ("GET", "/api/v1/plans/"),
         ("POST", "/api/v1/plans/"),
         ("GET", "/api/v1/plans/{plan_id}"),
@@ -791,15 +796,16 @@ def test_only_the_superuser_grant_is_both_scoped_and_superuser_guarded():
     assert set(offenders) == SUPERUSER_GUARDED_SCOPED_ROUTES, sorted(offenders)
 
 
-def test_get_current_superuser_is_exactly_the_fifteen_operator_routes():
+def test_get_current_superuser_is_exactly_the_sixteen_operator_routes():
     """The name states the count, so the count is asserted beside it.
 
     8 at the APRAS-39 merge base; APRAS-40 adds **7** (four `/api/v1/plans`
     and three `/api/v1/tenants/{tenant_id}/subscription*`), all seven
-    declaring a real `Depends(api_deps.get_current_superuser)`. The `len`
-    assertion is what keeps this module's whole premise true -- that its case
-    names state its counts -- after round 1 shipped a name saying fourteen
-    over a set of fifteen.
+    declaring a real `Depends(api_deps.get_current_superuser)`; APRAS-52 adds
+    the **sixteenth**, the per-tenant change-history read, declared the same
+    way. The `len` assertion is what keeps this module's whole premise true
+    -- that its case names state its counts -- after round 1 shipped a name
+    saying fourteen over a set of fifteen.
     """
     found = {
         key
@@ -808,4 +814,4 @@ def test_get_current_superuser_is_exactly_the_fifteen_operator_routes():
         for key in _route_keys(route)
     }
     assert found == ADMIN_ONLY_ROUTES
-    assert len(ADMIN_ONLY_ROUTES) == 15
+    assert len(ADMIN_ONLY_ROUTES) == 16

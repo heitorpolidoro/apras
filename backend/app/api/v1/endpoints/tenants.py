@@ -12,7 +12,7 @@ succeed anyway. Deactivate with `PATCH {"is_active": false}` instead.
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlmodel import Session
 
 from app.api import deps as api_deps
@@ -21,6 +21,7 @@ from app.models.user import User
 from app.schemas.subscription import (
     CourtesyUpdate,
     SubscriptionAdminUpdate,
+    SubscriptionChangeRead,
     SubscriptionRead,
 )
 from app.schemas.tenant import (
@@ -139,7 +140,8 @@ def set_tenant_modules(
 #
 # On the **existing global** tenants router, beside APRAS-39's `/modules`
 # pair and for its reasons: the subject is a tenant named in the path, written
-# from outside it, by an actor whose authority is global. All three declare a
+# from outside it, by an actor whose authority is global. APRAS-52 adds the
+# fourth, `GET /{tenant_id}/subscription/history`. All four declare a
 # real `Depends(api_deps.get_current_superuser)` -- never an in-handler
 # `if not user.is_superuser` -- because the three structural walkers
 # (`test_permission_enforcement.py`, `test_tenant_admin.py`,
@@ -192,6 +194,35 @@ def set_tenant_courtesy(
     """
     return SubscriptionService.set_courtesy(
         session=session, tenant_id=tenant_id, payload=payload, actor=current_user
+    )
+
+
+@router.get("/{tenant_id}/subscription/history")
+def get_tenant_subscription_history(
+    tenant_id: UUID,
+    session: Annotated[Session, Depends(get_session)],
+    _: Annotated[User, Depends(api_deps.get_current_superuser)],
+    # The bounds are `infractions.py` / `finance.py`'s convention
+    # (`ge=0`, `ge=1, le=100`, defaults 0/50), written in this module's own
+    # `Annotated` spelling: every other parameter here is `Annotated`, and the
+    # bare `Query(default=...)` form is `FAST002`, which this file does not
+    # carry today.
+    skip: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> list[SubscriptionChangeRead]:
+    """One tenant's change history, newest first. Superuser only (APRAS-52).
+
+    The fourth route of the §5.3 sibling block, and the one APRAS-40 §8.4
+    asked for and D10 deferred: the rows already exist -- every plan change,
+    courtesy grant/revoke, tenant contracting act and raw operator override
+    writes one through `SubscriptionService.record`.
+
+    200 with `[]` for a tenant that has adopted no subscription (APRAS-40
+    §4.6 -- adopting billing is opt-in, never a 404), 404 for an unknown
+    tenant, and FastAPI's own 422 for a `skip`/`limit` out of range.
+    """
+    return SubscriptionService.list_history_for_tenant(
+        session=session, tenant_id=tenant_id, skip=skip, limit=limit
     )
 
 

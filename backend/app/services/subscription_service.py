@@ -287,18 +287,40 @@ class SubscriptionService:
 
     @classmethod
     def list_history(
-        cls, *, session: Session, tenant: Tenant
+        cls,
+        *,
+        session: Session,
+        tenant: Tenant,
+        skip: int = 0,
+        limit: int | None = None,
     ) -> list[SubscriptionChangeRead]:
         """One tenant's history, newest first. Empty when it has no
-        subscription (§4.6) -- a 200 with `[]`, never a 404."""
+        subscription (§4.6) -- a 200 with `[]`, never a 404.
+
+        `limit=None` means *no* `LIMIT`, so the tenant-side route
+        (`GET /api/v1/subscription/history`) keeps APRAS-40's behaviour byte
+        for byte. `skip`/`limit` are applied in **SQL**, not by slicing a
+        fully materialised list, so the two name-resolution loops below stay
+        O(page).
+
+        The order carries a deterministic tiebreak on `id`: two rows written
+        in one call (a courtesy grant plus its revoke) can share a
+        `changed_at`, and without it they would page unstably.
+        """
         subscription = cls.get_subscription(session=session, tenant_id=tenant.id)
         if subscription is None:
             return []
-        rows = session.exec(
+        statement = (
             select(SubscriptionChange)
             .where(SubscriptionChange.subscription_id == subscription.id)
-            .order_by(SubscriptionChange.changed_at.desc())
-        ).all()
+            .order_by(
+                SubscriptionChange.changed_at.desc(), SubscriptionChange.id.desc()
+            )
+            .offset(skip)
+        )
+        if limit is not None:
+            statement = statement.limit(limit)
+        rows = session.exec(statement).all()
 
         plan_names: dict[UUID, str] = {}
         for row in rows:
@@ -573,3 +595,22 @@ class SubscriptionService:
     def read_for_tenant(cls, *, session: Session, tenant_id: UUID) -> SubscriptionRead:
         """The same body `GET /api/v1/subscription` returns, named by path."""
         return cls.build_read(session, cls._get_tenant(session, tenant_id))
+
+    @classmethod
+    def list_history_for_tenant(
+        cls, *, session: Session, tenant_id: UUID, skip: int = 0, limit: int = 50
+    ) -> list[SubscriptionChangeRead]:
+        """The same rows `GET /api/v1/subscription/history` returns, named by
+        path (APRAS-52 §3.1).
+
+        `_get_tenant` raises `TenantNotFoundError` for an unknown id, so this
+        is a 404 through the existing global handler -- the same status the
+        sibling `GET /{tenant_id}/subscription` gives, with no new error class
+        and no new handler.
+        """
+        return cls.list_history(
+            session=session,
+            tenant=cls._get_tenant(session, tenant_id),
+            skip=skip,
+            limit=limit,
+        )

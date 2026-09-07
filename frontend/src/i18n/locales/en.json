@@ -1600,7 +1600,12 @@
     "loading": "Loading...",
     "loadError": "Could not load the subscription",
     "noSubscription": "This condominium has no subscription yet. Assign a plan to create one.",
-    "inertPriceNotice": "Indicative amounts — nothing is charged."
+    "inertPriceNotice": "Indicative amounts — nothing is charged.",
+    "historyTitle": "Change history",
+    "historyEmpty": "No changes yet.",
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page {{page}}"
   },
   "infractions": {
     "actions": {

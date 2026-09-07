@@ -4,6 +4,7 @@ import type {
   Plan,
   PlanPayload,
   Subscription,
+  SubscriptionChange,
   TenantSubscriptionPayload,
 } from "../types/subscription";
 
@@ -75,6 +76,23 @@ export const putTenantCourtesy = async (
   const response = await apiClient.put<Subscription>(
     `/tenants/${tenantId}/subscription/courtesy`,
     payload,
+  );
+  return response.data;
+};
+
+/**
+ * One tenant's change history, newest first (APRAS-52 §5.1). Superuser only,
+ * and the operator-side twin of `/subscription/history`: the same rows, named
+ * by path rather than by the acting tenant.
+ */
+export const getTenantSubscriptionHistory = async (
+  tenantId: string,
+  skip: number,
+  limit: number,
+): Promise<SubscriptionChange[]> => {
+  const response = await apiClient.get<SubscriptionChange[]>(
+    `/tenants/${tenantId}/subscription/history`,
+    { params: { skip, limit } },
   );
   return response.data;
 };

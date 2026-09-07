@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createPlan,
   getTenantSubscription,
+  getTenantSubscriptionHistory,
   listPlans,
   putTenantCourtesy,
   putTenantSubscription,
@@ -57,10 +58,32 @@ export const useTenantSubscription = (tenantId: string | null) =>
   });
 
 /**
+ * One page of a tenant's change history. Idle until a tenant is chosen.
+ *
+ * Keyed under `"tenants"` for the same reason as `useTenantSubscription`: it
+ * is named by an explicit tenant id, not by the acting tenant, so
+ * `setActingTenant`'s eviction sweep must preserve it. `skip`/`limit` are part
+ * of the key, so each page is cached on its own.
+ */
+export const useTenantSubscriptionHistory = (
+  tenantId: string | null,
+  skip: number,
+  limit: number,
+) =>
+  useQuery({
+    queryKey: ["tenants", tenantId, "subscription", "history", skip, limit],
+    enabled: !!tenantId,
+    queryFn: () => getTenantSubscriptionHistory(tenantId as string, skip, limit),
+  });
+
+/**
  * Assign or change a tenant's plan.
  *
  * Invalidates `["me","permissions"]`: this changes `tenant.disabled_modules`,
- * and the operator may be a member of the tenant they just changed.
+ * and the operator may be a member of the tenant they just changed. It also
+ * invalidates the history **prefix**, which matches every page: `setQueryData`
+ * on the exact subscription key does not refresh descendant keys, so without
+ * it the table under the button would keep showing the pre-save rows.
  */
 export const useSetTenantPlan = (tenantId: string | null) => {
   const queryClient = useQueryClient();
@@ -71,6 +94,9 @@ export const useSetTenantPlan = (tenantId: string | null) => {
       queryClient.setQueryData(["tenants", tenantId, "subscription"], data);
       void queryClient.invalidateQueries({
         queryKey: ["tenants", tenantId, "modules"],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["tenants", tenantId, "subscription", "history"],
       });
       void queryClient.invalidateQueries({ queryKey: ["me", "permissions"] });
     },
@@ -87,6 +113,9 @@ export const useSetTenantCourtesy = (tenantId: string | null) => {
       queryClient.setQueryData(["tenants", tenantId, "subscription"], data);
       void queryClient.invalidateQueries({
         queryKey: ["tenants", tenantId, "modules"],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["tenants", tenantId, "subscription", "history"],
       });
       void queryClient.invalidateQueries({ queryKey: ["me", "permissions"] });
     },
