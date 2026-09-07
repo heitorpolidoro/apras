@@ -38,7 +38,19 @@
     "tenantSubscriptions": "Tenant subscriptions",
     "infractions": "Infractions",
     "infractionRules": "Infraction rules",
-    "myInfractions": "My infractions"
+    "myInfractions": "My infractions",
+    "collapseMenu": "Collapse menu",
+    "expandMenu": "Expand menu",
+    "openMenu": "Open menu",
+    "groups": {
+      "operations": "Operations",
+      "access": "Gate & Security",
+      "community": "Community & Social",
+      "infractions": "Infractions & Rules",
+      "registry": "Registry",
+      "financial": "Financial & Plans",
+      "administration": "System"
+    }
   },
   "accessControl": {
     "title": "Access Control",

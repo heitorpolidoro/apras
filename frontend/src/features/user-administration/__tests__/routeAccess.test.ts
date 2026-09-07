@@ -2,7 +2,12 @@ import { describe, it, expect } from "vitest";
 // Vite's `?raw` import, so the assertion is about the file the bundler ships
 // and needs no Node builtins under the app's `tsconfig` (types: vite/client).
 import APP_SOURCE from "../../../App.tsx?raw";
-import { AUTHENTICATED_ONLY_PATHS, NAV_ITEMS, ROUTE_ACCESS,  } from "../access/routeAccess";
+import {
+  AUTHENTICATED_ONLY_PATHS,
+  NAV_GROUPS,
+  NAV_ITEMS,
+  ROUTE_ACCESS,
+} from "../access/routeAccess";
 
 /**
  * The `<Route path="…">` entries of `App.tsx` whose element mounts a
@@ -78,5 +83,21 @@ describe("ROUTE_ACCESS / NAV_ITEMS", () => {
     expect(paths).toContain("/subscription");
     expect(paths).toContain("/admin/plans");
     expect(paths).toContain("/admin/subscriptions");
+  });
+
+  it("NAV_GROUPS covers all 30 NAV_ITEMS with zero omissions and zero duplicates", () => {
+    expect(NAV_GROUPS).toHaveLength(7);
+    const navItemPaths = NAV_ITEMS.map((item) => item.path);
+    expect(navItemPaths).toHaveLength(30);
+
+    const allGroupPaths = NAV_GROUPS.flatMap((group) => group.itemPaths);
+    expect(allGroupPaths).toHaveLength(30);
+
+    // No duplicates within all groups combined
+    const uniqueGroupPaths = new Set(allGroupPaths);
+    expect(uniqueGroupPaths.size).toBe(30);
+
+    // Exact match of paths between NAV_GROUPS and NAV_ITEMS
+    expect([...allGroupPaths].sort()).toEqual([...navItemPaths].sort());
   });
 });

@@ -2,6 +2,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import Navbar from "../components/Navbar";
+import { SidebarProvider } from "../context/SidebarContext";
 import * as AuthHook from "../context/AuthContext";
 import { useRoles } from "../../../hooks/useRoles";
 import { useMyPermissions } from "../../../hooks/usePermissionQueries";
@@ -620,5 +621,42 @@ describe("Navbar", () => {
 
     expect(screen.getByText("Tarefas")).toBeInTheDocument();
     expect(screen.getByText("Categorias")).toBeInTheDocument();
+  });
+
+  it("renders hamburger toggle button on mobile and desktop collapse button", () => {
+    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      user: {
+        id: "1",
+        email: "director@example.com",
+        full_name: "Director User",
+        is_superuser: false,
+        roles: [{ id: "profile-director", name: "DIRECTOR" }],
+        is_active: true,
+      },
+      login: vi.fn() as never,
+      logout: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <SidebarProvider>
+          <Navbar />
+        </SidebarProvider>
+      </MemoryRouter>,
+    );
+
+    // Mobile hamburger menu toggle button
+    const mobileToggle = screen.getByRole("button", { name: "Abrir menu" });
+    expect(mobileToggle).toBeInTheDocument();
+
+    // Desktop collapse toggle buttons (both in Navbar header and Sidebar brand header)
+    const desktopToggles = screen.getAllByRole("button", { name: "Recolher menu" });
+    expect(desktopToggles.length).toBeGreaterThanOrEqual(1);
+
+    // Clicking desktop toggle updates its state across buttons
+    fireEvent.click(desktopToggles[0]);
+    expect(screen.getAllByRole("button", { name: "Expandir menu" }).length).toBeGreaterThanOrEqual(1);
   });
 });

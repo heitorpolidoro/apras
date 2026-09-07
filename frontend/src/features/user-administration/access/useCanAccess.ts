@@ -152,6 +152,15 @@ export const useCanShowMenu = (
   return { allowed: evaluate(rule, set, isSuperuser), isLoading: set.isLoading };
 };
 
+/** Predicate version of useCanShowMenu for filtering menu items/groups in bulk. */
+export const useCanShowMenuPredicate = (): ((
+  rule?: AccessRule,
+) => boolean) => {
+  const set = useEffectivePermissionSet();
+  const isSuperuser = useIsSuperuser();
+  return (rule?: AccessRule) => evaluate(rule, set, isSuperuser);
+};
+
 /**
  * "Could the caller open this path?", for the two consumers that must agree
  * about it (APRAS-39 §10.4, code review round 1 finding 2).

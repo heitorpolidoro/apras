@@ -280,3 +280,22 @@
 - Unica ocorrencia em prosa que a guarda textual vai pegar: docstring de _next_cast_at em voting_service.py:437.
 - 7: a generalizacao do refresh e mais ampla que a evidencia (asset_service.py:313/331, purchase_service.py:623/636 - conclusao vale porque os bodies nao leem o timestamp nao-refrescado).
 - 5.0: tabela por slice sem coluna para as quatro cercas de diff do 5.5.
+
+## [APRAS-55] Reorganizar navegação com menu lateral colapsável agrupado por áreas funcionais — 2026-09-07
+
+1. **Localize mobile hamburger `aria-label` (`nav.openMenu`)**:
+   - In § 1.2 and § 3.5, the hamburger toggle button specifies static `aria-label="Abrir menu"`. While desktop collapse/expand controls are localized via `t("nav.collapseMenu")` and `t("nav.expandMenu")`, adding a dedicated translation key `nav.openMenu` (`"Abrir menu"` / `"Open menu"`) in `pt.json` and `en.json` ensures full bilingual coverage for all navigation controls per ER-7.
+
+2. **Clarify test boundaries between `Sidebar.test.tsx` and `Navbar.test.tsx`**:
+   - In § 4.1, "Mobile Drawer Behavior" is listed under `Sidebar.test.tsx` with "Verify hamburger opens the mobile drawer". Since the hamburger toggle button lives in `Navbar.tsx`, testing the complete hamburger-to-drawer opening interaction is best performed in `Navbar.test.tsx` (which renders both `Navbar` and `Sidebar` within `SidebarProvider`), while testing backdrop clicks and close buttons can remain in `Sidebar.test.tsx`.
+
+## [APRAS-55] Reorganizar navegação com menu lateral colapsável agrupado por áreas funcionais — 2026-09-07
+
+1. **Mid-file imports in `frontend/src/App.tsx:121-125`**:
+   `useMyPermissions` was originally placed at line 121 (below `RootRedirect`), and lines 122–125 append `useAuth`, `SidebarProvider`, `useSidebar`, and `cn`. Furthermore, `AuthProvider` is already imported from `./features/user-administration/context/AuthContext` at line 14, creating duplicate import statements from the same module. Moving these imports to the top of `App.tsx` and consolidating `useAuth` with `AuthProvider` would improve file structure and cleanliness.
+
+2. **Generic fallback icon in `frontend/src/features/user-administration/components/Sidebar.tsx:94`**:
+   `ICON_MAP[item.iconName] || CheckSquare` uses `CheckSquare` as a default fallback. While all 30 current routes in `NAV_ITEMS` have explicit mappings in `ICON_MAP`, using a more neutral layout icon (e.g. `Folder` or `LayoutGrid`) as the default could avoid confusing a generic link with a task checkbox if any future route icon name is mistyped or missing.
+
+---
+

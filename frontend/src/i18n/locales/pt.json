@@ -38,7 +38,19 @@
     "tenantSubscriptions": "Assinaturas dos condomínios",
     "infractions": "Infrações",
     "infractionRules": "Regras de infração",
-    "myInfractions": "Minhas infrações"
+    "myInfractions": "Minhas infrações",
+    "collapseMenu": "Recolher menu",
+    "expandMenu": "Expandir menu",
+    "openMenu": "Abrir menu",
+    "groups": {
+      "operations": "Operações",
+      "access": "Acessos & Segurança",
+      "community": "Comunidade & Convivência",
+      "infractions": "Infrações & Regras",
+      "registry": "Cadastros",
+      "financial": "Financeiro & Planos",
+      "administration": "Sistema"
+    }
   },
   "accessControl": {
     "title": "Controle de Acesso",

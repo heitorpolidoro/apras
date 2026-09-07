@@ -103,7 +103,92 @@ export interface NavItem {
   path: string;
   labelKey: string;
   access: AccessRule;
+  iconName: string;
 }
+
+export interface NavGroup {
+  id: string;
+  titleKey: string;
+  itemPaths: readonly string[];
+}
+
+/**
+ * The functional groups organizing the navigation sidebar.
+ */
+export const NAV_GROUPS: readonly NavGroup[] = [
+  {
+    id: "operations",
+    titleKey: "nav.groups.operations",
+    itemPaths: [
+      "/dashboard",
+      "/categories",
+      "/projects",
+      "/purchases",
+      "/assets",
+    ],
+  },
+  {
+    id: "access",
+    titleKey: "nav.groups.access",
+    itemPaths: [
+      "/gate",
+      "/gate-monitor",
+      "/authorizations",
+      "/packages",
+      "/admin/access-control",
+    ],
+  },
+  {
+    id: "community",
+    titleKey: "nav.groups.community",
+    itemPaths: [
+      "/announcements",
+      "/documents",
+      "/reservations",
+      "/spaces",
+      "/voting",
+      "/occurrences",
+      "/feedback",
+    ],
+  },
+  {
+    id: "infractions",
+    titleKey: "nav.groups.infractions",
+    itemPaths: [
+      "/my-infractions",
+      "/infractions",
+      "/infraction-rules",
+    ],
+  },
+  {
+    id: "registry",
+    titleKey: "nav.groups.registry",
+    itemPaths: [
+      "/lots",
+      "/users/contact-info",
+    ],
+  },
+  {
+    id: "financial",
+    titleKey: "nav.groups.financial",
+    itemPaths: [
+      "/finance",
+      "/subscription",
+    ],
+  },
+  {
+    id: "administration",
+    titleKey: "nav.groups.administration",
+    itemPaths: [
+      "/admin/users",
+      "/admin/roles",
+      "/admin/photo-approvals",
+      "/admin/modules",
+      "/admin/plans",
+      "/admin/subscriptions",
+    ],
+  },
+];
 
 /**
  * The navigation bar, in display order. Every entry's `access` **is** the
@@ -111,34 +196,34 @@ export interface NavItem {
  * menu can never outlive or contradict its route's rule.
  */
 export const NAV_ITEMS: readonly NavItem[] = [
-  { path: "/dashboard", labelKey: "nav.tasks" },
-  { path: "/categories", labelKey: "nav.categories" },
-  { path: "/lots", labelKey: "nav.lots" },
-  { path: "/authorizations", labelKey: "nav.authorizations" },
-  { path: "/gate", labelKey: "nav.gate" },
-  { path: "/occurrences", labelKey: "nav.occurrences" },
-  { path: "/packages", labelKey: "nav.packages" },
-  { path: "/voting", labelKey: "nav.voting" },
-  { path: "/feedback", labelKey: "nav.feedback" },
-  { path: "/reservations", labelKey: "nav.reservations" },
-  { path: "/spaces", labelKey: "nav.manageSpaces" },
-  { path: "/documents", labelKey: "nav.documents" },
-  { path: "/projects", labelKey: "projects.navItem" },
-  { path: "/announcements", labelKey: "nav.announcements" },
-  { path: "/finance", labelKey: "nav.finance" },
-  { path: "/assets", labelKey: "nav.assets" },
-  { path: "/purchases", labelKey: "nav.purchases" },
-  { path: "/users/contact-info", labelKey: "nav.contactInfo" },
-  { path: "/admin/users", labelKey: "nav.administration" },
-  { path: "/admin/roles", labelKey: "nav.roles" },
-  { path: "/admin/photo-approvals", labelKey: "nav.photoApprovals" },
-  { path: "/admin/access-control", labelKey: "nav.accessControl" },
-  { path: "/gate-monitor", labelKey: "nav.gateMonitor" },
-  { path: "/admin/modules", labelKey: "nav.modules" },
-  { path: "/subscription", labelKey: "nav.subscription" },
-  { path: "/admin/plans", labelKey: "nav.plans" },
-  { path: "/admin/subscriptions", labelKey: "nav.tenantSubscriptions" },
-  { path: "/infractions", labelKey: "nav.infractions" },
-  { path: "/infraction-rules", labelKey: "nav.infractionRules" },
-  { path: "/my-infractions", labelKey: "nav.myInfractions" },
+  { path: "/dashboard", labelKey: "nav.tasks", iconName: "CheckSquare" },
+  { path: "/categories", labelKey: "nav.categories", iconName: "Tag" },
+  { path: "/lots", labelKey: "nav.lots", iconName: "Building" },
+  { path: "/authorizations", labelKey: "nav.authorizations", iconName: "UserCheck" },
+  { path: "/gate", labelKey: "nav.gate", iconName: "ShieldCheck" },
+  { path: "/occurrences", labelKey: "nav.occurrences", iconName: "BookOpen" },
+  { path: "/packages", labelKey: "nav.packages", iconName: "Package" },
+  { path: "/voting", labelKey: "nav.voting", iconName: "Vote" },
+  { path: "/feedback", labelKey: "nav.feedback", iconName: "MessageSquare" },
+  { path: "/reservations", labelKey: "nav.reservations", iconName: "CalendarDays" },
+  { path: "/spaces", labelKey: "nav.manageSpaces", iconName: "MapPin" },
+  { path: "/documents", labelKey: "nav.documents", iconName: "FolderArchive" },
+  { path: "/projects", labelKey: "projects.navItem", iconName: "HardHat" },
+  { path: "/announcements", labelKey: "nav.announcements", iconName: "Megaphone" },
+  { path: "/finance", labelKey: "nav.finance", iconName: "DollarSign" },
+  { path: "/assets", labelKey: "nav.assets", iconName: "Boxes" },
+  { path: "/purchases", labelKey: "nav.purchases", iconName: "ShoppingCart" },
+  { path: "/users/contact-info", labelKey: "nav.contactInfo", iconName: "Phone" },
+  { path: "/admin/users", labelKey: "nav.administration", iconName: "Users" },
+  { path: "/admin/roles", labelKey: "nav.roles", iconName: "Shield" },
+  { path: "/admin/photo-approvals", labelKey: "nav.photoApprovals", iconName: "Camera" },
+  { path: "/admin/access-control", labelKey: "nav.accessControl", iconName: "KeyRound" },
+  { path: "/gate-monitor", labelKey: "nav.gateMonitor", iconName: "Tv" },
+  { path: "/admin/modules", labelKey: "nav.modules", iconName: "Sliders" },
+  { path: "/subscription", labelKey: "nav.subscription", iconName: "CreditCard" },
+  { path: "/admin/plans", labelKey: "nav.plans", iconName: "Sparkles" },
+  { path: "/admin/subscriptions", labelKey: "nav.tenantSubscriptions", iconName: "Building2" },
+  { path: "/infractions", labelKey: "nav.infractions", iconName: "FileWarning" },
+  { path: "/infraction-rules", labelKey: "nav.infractionRules", iconName: "Scale" },
+  { path: "/my-infractions", labelKey: "nav.myInfractions", iconName: "AlertCircle" },
 ].map((item) => ({ ...item, access: ROUTE_ACCESS[item.path] }));

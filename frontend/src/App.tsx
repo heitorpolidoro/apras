@@ -119,6 +119,30 @@ export const RootRedirect: React.FC = () => {
 };
 
 import { useMyPermissions } from "./hooks/usePermissionQueries";
+import { useAuth } from "./features/user-administration/context/AuthContext";
+import { SidebarProvider } from "./features/user-administration/context/SidebarContext";
+import { useSidebar } from "./features/user-administration/context/useSidebar";
+import { cn } from "./lib/utils";
+
+const AppLayoutContent: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const { isAuthenticated } = useAuth();
+  const { isCollapsed } = useSidebar();
+
+  return (
+    <div
+      className={cn(
+        "min-h-screen flex flex-col bg-background text-foreground transition-all duration-300 ease-in-out",
+        isAuthenticated && (isCollapsed ? "md:ml-20" : "md:ml-64"),
+      )}
+    >
+      <SimulationBanner />
+      <main className="flex-1">{children}</main>
+    </div>
+  );
+};
+
 function App() {
   return (
     <AuthProvider>
@@ -128,11 +152,12 @@ function App() {
           because App is always rendered inside a QueryClientProvider. */}
       <TenantProvider>
         <SimulationProvider>
-          <BrowserRouter>
-            <div className="App">
-              <Navbar />
-              <SimulationBanner />
-              <Routes>
+          <SidebarProvider>
+            <BrowserRouter>
+              <div className="App min-h-screen bg-background">
+                <Navbar />
+                <AppLayoutContent>
+                  <Routes>
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/signup" element={<SignupPage />} />
                 <Route
@@ -454,11 +479,13 @@ function App() {
 
                 <Route path="/" element={<RootRedirect />} />
               </Routes>
-            </div>
-          </BrowserRouter>
-        </SimulationProvider>
-      </TenantProvider>
-    </AuthProvider>
+            </AppLayoutContent>
+          </div>
+        </BrowserRouter>
+      </SidebarProvider>
+    </SimulationProvider>
+  </TenantProvider>
+</AuthProvider>
   );
 }
 
