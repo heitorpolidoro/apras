@@ -63,8 +63,15 @@ from pathlib import Path
 from fastapi.staticfiles import StaticFiles
 
 uploads_dir = Path("static/uploads")
-uploads_dir.mkdir(parents=True, exist_ok=True)
-app.mount("/static/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
+try:
+    uploads_dir.mkdir(parents=True, exist_ok=True)
+except OSError:
+    # Read-only filesystem (e.g. a Vercel function): the directory cannot be
+    # created, and uploads are served from external storage there. Importing
+    # must never fail on this — a crash here takes every route down.
+    uploads_dir = None
+if uploads_dir is not None:
+    app.mount("/static/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
 
 
 @app.get("/")
