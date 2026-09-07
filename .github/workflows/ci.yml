@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SECRET_KEY: "test-secret-key-for-ci"
-      POSTGRES_URL: "postgresql://postgres:password@localhost/nexdom"
+      POSTGRES_URL: "postgresql://postgres:password@localhost/apras"
     
     steps:
     - name: Checkout code

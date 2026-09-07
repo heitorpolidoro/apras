@@ -50,7 +50,7 @@ origins = get_origins()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_origin_regex=r"https://(nexdom|apras)-(front|app)-.*\.vercel\.app|https://(nexdom|apras)-app\.vercel\.app",
+    allow_origin_regex=r"https://apras-(front|app)-.*\.vercel\.app|https://apras-app\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -42,9 +42,6 @@ class Settings(BaseSettings):
 
     # CORS
     BACKEND_CORS_ORIGINS: list[str] = [
-        "https://nexdom.vercel.app",
-        "https://nexdom-front.vercel.app",
-        "https://nexdom-app.vercel.app",
         "https://apras.vercel.app",
         "https://apras-front.vercel.app",
         "https://apras-app.vercel.app",

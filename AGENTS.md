@@ -936,10 +936,10 @@ The words "user type" and "group" no longer name anything: the entity is a
 
 ```bash
 # 1. back up first -- 0033 is not byte-reversible
-pg_dump -h localhost -p 5436 -U postgres nexdom > /tmp/nexdom-pre-f5.sql
+pg_dump -h localhost -p 5436 -U postgres apras > /tmp/apras-pre-f5.sql
 
 # 2. migrate
-cd backend && POSTGRES_URL=postgresql://postgres:postgres@localhost:5436/nexdom \
+cd backend && POSTGRES_URL=postgresql://postgres:postgres@localhost:5436/apras \
   .venv/bin/alembic upgrade head
 
 # 3. if a guard refuses, it prints the affected users; fix and re-run:
