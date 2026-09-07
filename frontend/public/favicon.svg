@@ -1,14 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#1fb27f"/>
-      <stop offset="1" stop-color="#0e7a58"/>
-    </linearGradient>
-  </defs>
-  <rect width="64" height="64" rx="14" fill="url(#bg)"/>
-  <!-- "A" drawn as a rooftop: the counter is the attic window, the gap between the legs is the door -->
-  <path fill="#ffffff" fill-rule="evenodd"
-        d="M32 11 L54 50 H43 L39.2 43 H24.8 L21 50 H10 Z M26.6 36.5 H37.4 L32 26.5 Z"/>
-  <!-- ground line -->
-  <rect x="10" y="52" width="44" height="3" rx="1.5" fill="#ffffff" fill-opacity="0.85"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><defs><linearGradient id="bg" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#1fb27f"/><stop offset="1" stop-color="#0e7a58"/></linearGradient></defs><rect width="64" height="64" fill="url(#bg)" rx="14"/><path fill="#fff" fill-rule="evenodd" d="M32 11 L54 50 H43 L39.2 43 H24.8 L21 50 H10 Z M26.6 36.5 H37.4 L32 26.5 Z"/><rect width="44" height="3" x="10" y="52" fill="#fff" fill-opacity=".85" rx="1.5"/></svg>
