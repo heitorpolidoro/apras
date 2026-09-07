@@ -76,10 +76,14 @@ export const MyInfractionsPage: React.FC = () => {
           <InfractionStageTimeline entries={infraction.timeline} />
 
           <ContestationForm
+            infractionId={infraction.id}
             defenseDueOn={infraction.defense_due_on}
             isSubmitting={contest.isPending}
-            onSubmit={(body) =>
-              contest.mutate({ id: infraction.id, data: { body } })
+            onSubmit={(body, attachmentUrls) =>
+              contest.mutate({
+                id: infraction.id,
+                data: { body, attachment_urls: attachmentUrls },
+              })
             }
           />
         </div>

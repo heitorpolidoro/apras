@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { Button } from "../../../components/ui/button";
+import { AttachmentUploader } from "./AttachmentUploader";
 import { useLots } from "../../lot-management/hooks/useLots";
 import { useLotResidents } from "../../lot-management/hooks/useResidents";
 import type {
@@ -113,6 +114,9 @@ export const NewInfractionModal: React.FC<{
     occurrence ? occurrence.created_at.slice(0, 10) : "",
   );
   const [description, setDescription] = useState(occurrence?.description ?? "");
+  // Create mode only: `InfractionPromote` has no `evidence_urls`, so the
+  // promotion route would drop the field in silence.
+  const [evidenceUrls, setEvidenceUrls] = useState<string[]>([]);
 
   const ruleId = ruleChoice || activeRules[0]?.id || "";
   // A lotless promotion deliberately has **no** default: attributing a
@@ -153,6 +157,7 @@ export const NewInfractionModal: React.FC<{
       responsible_resident_id: residentId,
       occurred_on: occurredOn,
       description,
+      evidence_urls: evidenceUrls,
     });
   };
 
@@ -311,6 +316,20 @@ export const NewInfractionModal: React.FC<{
             onChange={(event) => setDescription(event.target.value)}
           />
         </label>
+
+        {/* Create mode only, and with no `entityId`: the infraction does not
+            exist yet, so the asset is born unlinked and the real bond is the
+            URL inside `evidence_urls`. `canSubmit` is untouched — evidence is
+            optional on the route, and requiring it would make
+            `uploads:photo_create` a prerequisite of `infractions:create`. */}
+        {!isPromotion && (
+          <AttachmentUploader
+            value={evidenceUrls}
+            onChange={setEvidenceUrls}
+            label={t("infractions.attachments.evidenceLabel")}
+            disabled={isSubmitting}
+          />
+        )}
 
         {error && (
           <p

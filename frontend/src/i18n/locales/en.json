@@ -1613,6 +1613,21 @@
       "NOTIFICACAO": "Notification",
       "MULTA": "Fine"
     },
+    "attachments": {
+      "label": "Attachments",
+      "evidenceLabel": "Evidence",
+      "add": "Add files",
+      "hint": "{{types}}, up to {{limit}} per file.",
+      "uploading": "Uploading {{name}}...",
+      "remove": "Remove attachment",
+      "none": "No attachments.",
+      "tooLarge": "{{name}} is {{size}} and exceeds the {{limit}} limit.",
+      "unsupportedType": "{{name}} is not in an accepted format.",
+      "imageAlt": "Attachment {{index}}",
+      "timelineTitle": "Attachments",
+      "permissionRequired": "Attachments are unavailable for your profile.",
+      "loading": "Loading permissions..."
+    },
     "contestation": {
       "body": "Your defense",
       "submit": "Submit contestation",

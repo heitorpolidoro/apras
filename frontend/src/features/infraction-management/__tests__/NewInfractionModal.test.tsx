@@ -5,10 +5,30 @@ import { MemoryRouter } from "react-router-dom";
 import { NewInfractionModal } from "../components/NewInfractionModal";
 import * as lotsApi from "../../../api/lots";
 import * as residentsApi from "../../../api/residents";
+import { uploadPhoto } from "../../../api/uploads";
+import { useMyPermissions } from "../../../hooks/usePermissionQueries";
+import { settledPermissions } from "../../../test/permissionFixtures";
 import type { InfractionRule } from "../../../types/infraction";
 
 vi.mock("../../../api/lots");
 vi.mock("../../../api/residents");
+vi.mock("../../../api/uploads", async () => {
+  const actual =
+    await vi.importActual<typeof import("../../../api/uploads")>(
+      "../../../api/uploads",
+    );
+  return { ...actual, uploadPhoto: vi.fn() };
+});
+
+/**
+ * The staff persona (APRAS-53 §3.6(a)). Without it the attachment gate hides
+ * the control and the evidence cases below would measure its absence by
+ * accident rather than the field they exist to assert.
+ */
+vi.mock("../../../hooks/usePermissionQueries", () => ({
+  useMyPermissions: vi.fn(),
+  usePermissionCatalogue: vi.fn(() => ({ data: [], isPending: false })),
+}));
 
 /**
  * Create mode and **promote mode** (ER-6), which is the half the round-1 review
@@ -52,6 +72,13 @@ const renderModal = (props: Record<string, unknown>) =>
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(useMyPermissions).mockReturnValue(
+    settledPermissions([
+      "infractions:create",
+      "infractions:read",
+      "uploads:photo_create",
+    ]) as never,
+  );
   vi.mocked(lotsApi.getLots).mockResolvedValue({
     items: [
       { id: "lot-1", block: "A", lot_number: "101" },
@@ -161,7 +188,68 @@ describe("NewInfractionModal — create mode", () => {
       responsible_resident_id: "res-1",
       occurred_on: "2026-09-01",
       description: "Som alto.",
+      // The route documents `default_factory=list`, so the key is sent and is
+      // empty — evidence is optional and `canSubmit` never asked for it.
+      evidence_urls: [],
     });
+  });
+
+  it("carries the uploaded evidence URLs into the create body", async () => {
+    const onSubmit = vi.fn();
+    vi.mocked(uploadPhoto).mockResolvedValue({
+      url: "/static/uploads/2026/09/prova.png",
+    } as never);
+
+    renderModal({ rules: [rule()], onClose: vi.fn(), onSubmit });
+
+    await waitFor(() =>
+      expect(
+        (screen.getByLabelText("Responsável") as HTMLSelectElement).options
+          .length,
+      ).toBe(2),
+    );
+    fireEvent.change(screen.getByLabelText("Responsável"), {
+      target: { value: "res-1" },
+    });
+    fireEvent.change(screen.getByLabelText("Data do fato"), {
+      target: { value: "2026-09-01" },
+    });
+    fireEvent.change(screen.getByLabelText("Descrição"), {
+      target: { value: "Som alto." },
+    });
+
+    fireEvent.change(screen.getByTestId("attachment-file-input"), {
+      target: { files: [new File(["x"], "prova.png", { type: "image/png" })] },
+    });
+    await screen.findByTestId("attachment-chip");
+
+    fireEvent.click(screen.getByTestId("submit-new-infraction"));
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        evidence_urls: ["/static/uploads/2026/09/prova.png"],
+      }),
+    );
+  });
+
+  it("hides the attachment control in promote mode, permission or not", () => {
+    // `InfractionPromote` has no `evidence_urls`: the route would drop it.
+    renderModal({
+      rules: [rule()],
+      occurrence: {
+        id: "occ-1",
+        protocol_number: "OCO-2026-000009",
+        lot_id: "lot-1",
+        description: "Som alto depois das 23h.",
+        created_at: "2026-08-30T12:00:00",
+      },
+      onClose: vi.fn(),
+      onSubmit: vi.fn(),
+      onPromote: vi.fn(),
+    });
+
+    expect(screen.queryByTestId("attachment-uploader")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("attachment-file-input")).not.toBeInTheDocument();
   });
 });
 

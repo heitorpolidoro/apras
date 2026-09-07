@@ -1613,6 +1613,21 @@
       "NOTIFICACAO": "Notificação",
       "MULTA": "Multa"
     },
+    "attachments": {
+      "label": "Anexos",
+      "evidenceLabel": "Evidências",
+      "add": "Adicionar arquivos",
+      "hint": "{{types}}, até {{limit}} por arquivo.",
+      "uploading": "Enviando {{name}}...",
+      "remove": "Remover anexo",
+      "none": "Nenhum anexo.",
+      "tooLarge": "{{name}} tem {{size}} e excede o limite de {{limit}}.",
+      "unsupportedType": "{{name}} não está em um formato aceito.",
+      "imageAlt": "Anexo {{index}}",
+      "timelineTitle": "Anexos",
+      "permissionRequired": "Anexos indisponíveis para o seu perfil.",
+      "loading": "Carregando permissões..."
+    },
     "contestation": {
       "body": "Sua defesa",
       "submit": "Enviar contestação",

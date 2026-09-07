@@ -67,6 +67,34 @@ export const InfractionStageTimeline: React.FC<{
             </div>
           )}
 
+          {/* Read-only, for both kinds: a stage can carry evidence just as a
+              contestation carries its attachments. No edit, no delete and no
+              permission gate — display is not governed by
+              `uploads:photo_create`. */}
+          {entry.attachment_urls.length > 0 && (
+            <div className="mt-2" data-testid="timeline-attachments">
+              <span className="text-xs text-gray-500">
+                {t("infractions.attachments.timelineTitle")}
+              </span>
+              <ul className="mt-1 space-y-1 text-sm">
+                {entry.attachment_urls.map((url, index) => (
+                  <li key={url} className="flex items-center gap-2">
+                    <img
+                      src={url}
+                      alt={t("infractions.attachments.imageAlt", {
+                        index: index + 1,
+                      })}
+                      className="h-10 w-10 rounded object-cover"
+                    />
+                    <a className="text-indigo-600 underline" href={url}>
+                      {url}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {entry.kind === "STAGE" && entry.suggestion_followed === false && (
             <div className="mt-1 text-xs text-amber-700">
               {t("infractions.timeline.deviation")}

@@ -266,3 +266,17 @@
 - ER-3: 'as unicas mudancas fora de frontend/' e contradito pelos artefatos do pipeline (spec, tasks.json, suggestions-log) - dizer 'fora de frontend/ e de docs/'.
 - 3.6(c): 'tres linhas recursivas' - o modelo _permission_guards tem sete (l.281-287).
 - Board ER-4 carregava um '---' final copiado da regua horizontal; removido pelo orquestrador ao aprovar.
+- (code review) markup thumbnail+link duplicado 3x (AttachmentUploader.tsx:201, InfractionDetailsView.tsx:80, InfractionStageTimeline.tsx:70) - extrair um AttachmentThumb.
+- (code review, backend follow-up) attachment_urls e evidence_urls sao list[str] sem validacao server-side (schemas/infraction.py:230,303) e agora sao renderizados como href de conteudo enviado por morador; React 19 bloqueia javascript: mas validar esquema/host de URL na escrita e o certo.
+- (code review) AttachmentUploader.tsx:23 mostra 'WEBP' onde o servidor diz 'WebP'; personas redeclaradas em seis arquivos de teste (permissionFixtures.ts poderia hospedar); raise AssertionError morto apos pytest.fail em test_uploads.py:216.
+- (QA, pre-existente desde a 44) ContestationForm nao e gateado por infractions:contest: morador com uploads:photo_create + my_lots_read mas sem contest ve o formulario inteiro, sobe o MediaAsset, submete e recebe 403 silencioso sem erro renderizado - gatear o formulario e renderizar a recusa.
+- (QA, backend follow-up) POST /uploads/photo nao valida entity_id: chamador do tenant A armazena asset apontando para infracao do tenant B (201); a rota de contestacao esta corretamente escopada (404), nada cruza - validar entity_id contra o tenant na escrita.
+
+## [APRAS-54] Dívida de lint do backend e ruff como gate de CI — 2026-09-07
+
+- 4.4 linha 7: cinco reimplementacoes privadas de _now() em app/ (models/plan.py:18, models/subscription.py:23, services/subscription_service.py:59, services/tenant_service.py:48, services/plan_service.py:38), nao duas - a guarda forca todas, mas a lista esta curta.
+- Piso real de # noqa ~89 (o slice 3 apaga seis `# noqa: DTZ003` que RUF100 nao conta); gate <= 108 inalterado.
+- 2: cadeia pos-automacao medida em replay 953 -> 868 -> 780 -> 414 -> 303 (o 695 omite o ruff format que o 4.3 roda apos o fix de FAST); 3.2 manda re-medir.
+- Unica ocorrencia em prosa que a guarda textual vai pegar: docstring de _next_cast_at em voting_service.py:437.
+- 7: a generalizacao do refresh e mais ampla que a evidencia (asset_service.py:313/331, purchase_service.py:623/636 - conclusao vale porque os bodies nao leem o timestamp nao-refrescado).
+- 5.0: tabela por slice sem coluna para as quatro cercas de diff do 5.5.

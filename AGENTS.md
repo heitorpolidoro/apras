@@ -1080,6 +1080,25 @@ these are the grants an operator makes, not rows any migration writes:
 | `infractions:rule_deactivate` | ✓ | ✓ | | | | |
 | `infractions:policy_update` | ✓ | ✓ | | | | |
 | `infractions:settings_update` | ✓ | ✓ | | | | |
+| `uploads:photo_create` | ✓ | ✓ | ✓ | ✓ | | |
+
+`uploads:photo_create` is not an `infractions` permission, but it belongs in
+this bundle because since APRAS-51 `POST /api/v1/uploads/photo` demands it: a
+role that contests (`infractions:contest`) without it can write the defense and
+cannot attach proof — the client shows the
+`infractions.attachments.permissionRequired` notice instead of an upload that
+would take a 403. A role that registers infractions (`infractions:create`)
+needs it for the same reason, for the evidence.
+
+**The ✓ on that row are the infractions flow's own cut, not a catalogue-wide
+recommendation.** They mark only the roles this table already lists as
+registering or contesting an infraction. PORTEIRO is blank **here** because
+none of the 13 `infractions:*` rows above gives it `infractions:create` or
+`infractions:contest`, not because denying it uploads is advised — the legacy
+bundles in `frontend/src/test/permissionFixtures.ts` grant
+`uploads:photo_create` to nearly every profile, and nothing in APRAS-53 changes
+them. An operator who wants the gatekeeper photographing occurrences grants the
+permission through the `uploads` module, which is where it comes from.
 
 `cycle_close` is MANAGER-level because the board's own definition of staff is
 ADMINISTRATOR/DIRECTOR/MANAGER and the act is auditable and additive, never a

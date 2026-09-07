@@ -73,10 +73,20 @@ export const InfractionDetailsView: React.FC<{
           </p>
         )}
 
+        {/* Reading is never gated on `uploads:photo_create`: whoever may see
+            the infraction may see its proof, and a permission to create does
+            not govern display. */}
         {infraction.evidence_urls.length > 0 && (
           <ul className="mt-3 space-y-1 text-sm" data-testid="evidence-list">
-            {infraction.evidence_urls.map((url) => (
-              <li key={url}>
+            {infraction.evidence_urls.map((url, index) => (
+              <li key={url} className="flex items-center gap-2">
+                <img
+                  src={url}
+                  alt={t("infractions.attachments.imageAlt", {
+                    index: index + 1,
+                  })}
+                  className="h-10 w-10 rounded object-cover"
+                />
                 <a className="text-indigo-600 underline" href={url}>
                   {url}
                 </a>

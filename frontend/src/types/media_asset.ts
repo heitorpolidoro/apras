@@ -4,7 +4,11 @@ export type EntityType =
   | 'EMPLOYEE'
   | 'LOT'
   | 'ANNOUNCEMENT'
-  | 'OCCURRENCE';
+  | 'OCCURRENCE'
+  // Already in `app/models/enums.py` since APRAS-44 §4.4; the client union was
+  // the only side missing it, and a value outside the server enum is a FastAPI
+  // 422 raised before the handler runs.
+  | 'INFRACTION';
 
 export type StorageProvider =
   | 'LOCAL_DISK'

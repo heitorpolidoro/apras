@@ -3,12 +3,19 @@ import uuid
 
 import pytest
 from fastapi import status
+from fastapi.dependencies.models import Dependant
+from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 from PIL import Image
 from sqlmodel import Session
 
+from app.api import deps
+from app.core.permissions import ROUTE_PERMISSIONS
 from app.core.security import create_access_token, get_password_hash
+from app.main import app
+from app.models.enums import EntityType
 from app.models.user import User
+from app.services import media_service as media_service_module
 from tests.conftest import make_user
 
 
@@ -168,3 +175,103 @@ def test_delete_photo(client: TestClient, resident_token: str, admin_token: str)
 
     get_res = client.get(f"/api/v1/uploads/photos/{photo_id}", headers=headers)
     assert get_res.status_code == status.HTTP_404_NOT_FOUND
+
+
+#: The other half of this pin, named in every failure message below. Neither
+#: side can import the other across the language boundary, so each states the
+#: constant and points at the other -- the shape
+#: `lotSelectContract.test.tsx` ↔
+#: `test_infractions.py::test_the_lots_route_ceiling_matches_the_lot_selects_limit`
+#: and `i18n/__tests__/index.test.ts` ↔ `test_module_vocabulary.py` already use.
+_FRONTEND_CLIENT = "frontend/src/api/uploads.ts"
+_FRONTEND_TWIN = (
+    "frontend/src/features/infraction-management/__tests__/uploadContract.test.tsx"
+)
+
+
+def _permission_guards(dependant: Dependant) -> list[deps.PermissionRequired]:
+    """Every `PermissionRequired` mounted anywhere under `dependant`.
+
+    Same seven lines as `test_permission_enforcement.py::_permission_guards`,
+    local to this file rather than imported across test modules.
+    """
+    found = []
+    if isinstance(dependant.call, deps.PermissionRequired):
+        found.append(dependant.call)
+    for sub in dependant.dependencies:
+        found.extend(_permission_guards(sub))
+    return found
+
+
+def _upload_photo_route() -> APIRoute:
+    """The live `POST /api/v1/uploads/photo`, read off `app.main.app`."""
+    for route in app.routes:
+        if (
+            isinstance(route, APIRoute)
+            and route.path == "/api/v1/uploads/photo"
+            and "POST" in route.methods
+        ):
+            return route
+    pytest.fail(
+        "POST /api/v1/uploads/photo is not mounted on app.main.app. "
+        f"The infraction uploader ({_FRONTEND_CLIENT}) posts to it on every "
+        "evidence and contestation attachment; if the route moved, move the "
+        f"client and the literal in {_FRONTEND_TWIN} with it."
+    )
+    raise AssertionError  # pragma: no cover - pytest.fail never returns
+
+
+def test_the_upload_contract_matches_the_infraction_uploader():
+    """The backend half of the APRAS-53 two-sided pin.
+
+    The infraction module's attachment control (`AttachmentUploader.tsx`)
+    reuses this route through the existing client, and declares five facts
+    about it as local literals -- 5 MiB, the three MIME types, the
+    `INFRACTION` entity vocabulary, the route and the permission it demands.
+    This case states the same five against the **live objects**, so changing
+    the server without changing the client fails here, and changing the client
+    without changing the server fails over there.
+    """
+    assert media_service_module.MAX_FILE_SIZE == 5 * 1024 * 1024, (
+        "media_service.MAX_FILE_SIZE changed. "
+        f"`UPLOAD_MAX_FILE_SIZE_BYTES` in {_FRONTEND_CLIENT} pre-checks file "
+        "size against this number and `infractions.attachments.hint` "
+        f"interpolates it; update both, and the literal in {_FRONTEND_TWIN}."
+    )
+
+    documented_mime_types = {"image/jpeg", "image/png", "image/webp"}
+    assert documented_mime_types == media_service_module.ALLOWED_MIME_TYPES, (
+        "media_service.ALLOWED_MIME_TYPES changed. "
+        f"`UPLOAD_ALLOWED_MIME_TYPES` in {_FRONTEND_CLIENT} feeds the "
+        "`accept=` of the infraction attachment input and its client-side "
+        f"pre-check; update it, and the literal in {_FRONTEND_TWIN}."
+    )
+
+    assert EntityType.INFRACTION.value == "INFRACTION", (
+        "EntityType.INFRACTION changed value. Both infraction forms send it as "
+        f"`entity_type`; a value outside this enum is a FastAPI 422 before the "
+        f"handler runs. Update `INFRACTION_ENTITY_TYPE` "
+        f"(frontend AttachmentUploader.tsx) and the literal in {_FRONTEND_TWIN}."
+    )
+
+    assert (
+        ROUTE_PERMISSIONS[("POST", "/api/v1/uploads/photo")]
+        == "uploads:photo_create"
+    ), (
+        "ROUTE_PERMISSIONS for POST /api/v1/uploads/photo changed. "
+        f"`UPLOAD_PHOTO_PERMISSION` in {_FRONTEND_CLIENT} is what the "
+        "attachment control asks `usePermissionSet().has()` before rendering; "
+        f"update it, and the literal in {_FRONTEND_TWIN}."
+    )
+
+    guards = [
+        guard.permission for guard in _permission_guards(_upload_photo_route().dependant)
+    ]
+    assert "uploads:photo_create" in guards, (
+        "POST /api/v1/uploads/photo no longer carries "
+        "PermissionRequired('uploads:photo_create') in its dependency tree "
+        f"(found: {guards}). APRAS-51 put it there and APRAS-53 gates the "
+        "infraction attachment control on it: without the guard the client is "
+        "stricter than the server and hides a control the route would accept. "
+        f"Either restore the guard or drop the gate in {_FRONTEND_TWIN}."
+    )

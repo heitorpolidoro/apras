@@ -20,9 +20,32 @@ import * as api from "../../../api/infractions";
 import * as occurrencesApi from "../../../api/occurrences";
 import * as lotsApi from "../../../api/lots";
 import * as residentsApi from "../../../api/residents";
+import { useMyPermissions } from "../../../hooks/usePermissionQueries";
+import { settledPermissions } from "../../../test/permissionFixtures";
 import type { Infraction } from "../../../types/infraction";
 
 vi.mock("../../../api/infractions");
+
+/**
+ * APRAS-53 put `AttachmentUploader` inside `NewInfractionModal`, and it reads
+ * `usePermissionSet()`; the real `useMyPermissions` needs an `AuthProvider`.
+ * The staff persona is stated once, globally, since no assertion in this file
+ * is about the gate.
+ */
+vi.mock("../../../hooks/usePermissionQueries", () => ({
+  useMyPermissions: vi.fn(),
+  usePermissionCatalogue: vi.fn(() => ({ data: [], isPending: false })),
+}));
+
+beforeEach(() =>
+  vi.mocked(useMyPermissions).mockReturnValue(
+    settledPermissions([
+      "infractions:create",
+      "infractions:read",
+      "uploads:photo_create",
+    ]) as never,
+  ),
+);
 vi.mock("../../../api/occurrences");
 vi.mock("../../../api/lots");
 vi.mock("../../../api/residents");

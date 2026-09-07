@@ -7,6 +7,8 @@ import {
   NewInfractionModal,
 } from "../components/NewInfractionModal";
 import apiClient from "../../../api/client";
+import { useMyPermissions } from "../../../hooks/usePermissionQueries";
+import { settledPermissions } from "../../../test/permissionFixtures";
 
 /**
  * The test that would have caught round 2's blocking defect (CR3).
@@ -37,6 +39,17 @@ vi.mock("../../../api/client", () => ({
 }));
 
 /**
+ * The modal renders APRAS-53's `AttachmentUploader`, which reads
+ * `usePermissionSet()`; the real `useMyPermissions` needs an `AuthProvider`.
+ * The persona is irrelevant to every assertion below — this file is about the
+ * lot select — so it is the staff one, stated once.
+ */
+vi.mock("../../../hooks/usePermissionQueries", () => ({
+  useMyPermissions: vi.fn(),
+  usePermissionCatalogue: vi.fn(() => ({ data: [], isPending: false })),
+}));
+
+/**
  * `GET /api/v1/lots/` declares `Query(default=100, ge=1, le=100)`. Stated here
  * as a literal and asserted against the live route by the backend half named
  * above — a derivation from the client would compare the client with itself.
@@ -61,6 +74,13 @@ const renderModal = () =>
 describe("the lot select's contract with GET /api/v1/lots/", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useMyPermissions).mockReturnValue(
+      settledPermissions([
+        "infractions:create",
+        "infractions:read",
+        "uploads:photo_create",
+      ]) as never,
+    );
     vi.mocked(apiClient.get).mockResolvedValue({
       data: { items: [], total: 0, skip: 0, limit: LOT_SELECT_LIMIT },
     });

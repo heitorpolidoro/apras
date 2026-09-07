@@ -1,23 +1,32 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../../components/ui/button";
+import { AttachmentUploader } from "./AttachmentUploader";
 
 /**
- * The notified unit's written defense (ER-7).
+ * The notified unit's written defense (ER-7), with its attachments (APRAS-53).
  *
  * Rendered **only inside `/my-infractions`**, which already lists nothing but
  * the caller's own lots — so §7.5's 403 is unreachable from the UI and this
  * component needs no client-side lot check. What it does need is the deadline
  * state, because a closed deadline is a 409 the resident should never have to
  * discover by submitting.
+ *
+ * The attachment control is gated on `uploads:photo_create` inside
+ * `AttachmentUploader`; submit is **not**. A resident holding
+ * `infractions:contest` without it sees the read-only notice and still files
+ * the defense in writing, with `attachment_urls: []`.
  */
 export const ContestationForm: React.FC<{
+  /** The infraction exists here, so the asset is linked through `entity_id`. */
+  infractionId: string;
   defenseDueOn: string | null;
-  onSubmit: (body: string) => void;
+  onSubmit: (body: string, attachmentUrls: string[]) => void;
   isSubmitting?: boolean;
-}> = ({ defenseDueOn, onSubmit, isSubmitting = false }) => {
+}> = ({ infractionId, defenseDueOn, onSubmit, isSubmitting = false }) => {
   const { t } = useTranslation();
   const [body, setBody] = useState("");
+  const [attachmentUrls, setAttachmentUrls] = useState<string[]>([]);
 
   const open =
     defenseDueOn !== null &&
@@ -47,10 +56,17 @@ export const ContestationForm: React.FC<{
         value={body}
         onChange={(event) => setBody(event.target.value)}
       />
+      <AttachmentUploader
+        value={attachmentUrls}
+        onChange={setAttachmentUrls}
+        entityId={infractionId}
+        label={t("infractions.attachments.label")}
+        disabled={isSubmitting}
+      />
       <Button
         data-testid="submit-contestation"
         disabled={!body.trim() || isSubmitting}
-        onClick={() => onSubmit(body)}
+        onClick={() => onSubmit(body, attachmentUrls)}
       >
         {t("infractions.contestation.submit")}
       </Button>
