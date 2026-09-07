@@ -138,13 +138,22 @@ describe("Sidebar component", () => {
   });
 
   it("highlights the active link with text-primary", async () => {
-    renderSidebar(["tasks:read", "categories:read"], "/dashboard");
+    renderSidebar(["tasks:read", "categories:read"], "/tasks");
 
     const tarefasLink = await screen.findByRole("link", { name: "Tarefas" });
     expect(tarefasLink.className).toContain("text-primary");
 
     const categoriesLink = screen.getByRole("link", { name: "Categorias" });
     expect(categoriesLink.className).not.toContain("bg-primary/10");
+  });
+
+  it("renders Início link and highlights when on /", async () => {
+    renderSidebar(["tasks:read"], "/");
+
+    const homeLink = await screen.findByRole("link", { name: "Início" });
+    expect(homeLink).toBeInTheDocument();
+    expect(homeLink.className).toContain("text-primary");
+    expect(homeLink).toHaveAttribute("href", "/");
   });
 
 const MobileTestController: React.FC = () => {

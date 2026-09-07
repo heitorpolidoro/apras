@@ -43,7 +43,7 @@ describe("ROUTE_ACCESS / NAV_ITEMS", () => {
     expect(unruled).toEqual([]);
   });
 
-  it("only /dashboard and /categories carry landingRedirect, and nothing carries legacyMenu", () => {
+  it("only /categories, /dashboard, and /tasks carry landingRedirect, and nothing carries legacyMenu", () => {
     const withLegacyMenu = Object.entries(ROUTE_ACCESS)
       .filter(([, rule]) => "legacyMenu" in rule)
       .map(([path]) => path)
@@ -54,10 +54,10 @@ describe("ROUTE_ACCESS / NAV_ITEMS", () => {
       .sort();
 
     // `legacyMenu` died with the `allowed_menus` gate (IAM F5, §4.1); its
-    // sibling `landingRedirect` survives on exactly the same two routes,
+    // sibling `landingRedirect` survives on exactly the landing-honouring routes,
     // because landing is a preference rather than authorization (§10.4).
     expect(withLegacyMenu).toEqual([]);
-    expect(withLanding).toEqual(["/categories", "/dashboard"]);
+    expect(withLanding).toEqual(["/categories", "/dashboard", "/tasks"]);
   });
 
   it("the two role routes share one rule shape", () => {

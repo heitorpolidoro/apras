@@ -13,12 +13,13 @@ import type { AccessRule } from "../../../types/permissions";
  * module rule would be wrong, and each occurrence says why.
  */
 export const ROUTE_ACCESS: Record<string, AccessRule> = {
-  // `landingRedirect` marks the two routes that honour the caller's
+  // `landingRedirect` marks the routes that honour the caller's
   // `landing_path` (IAM F5, APRAS-49 §10.4). Landing is not authorization —
   // a PORTEIRO genuinely holds `tasks:read`, so no permission predicate can
   // express "pin the gatekeeper to the gate" — which is why it is a
   // preference stored on the role row rather than a rule. Its sibling
   // `legacyMenu` died with the menu gate it read (§4.1).
+  "/tasks": { module: "tasks", landingRedirect: true },
   "/dashboard": { module: "tasks", landingRedirect: true },
   "/categories": { module: "categories", landingRedirect: true },
   "/lots": { module: "lots" },
@@ -97,7 +98,7 @@ export const ROUTE_ACCESS: Record<string, AccessRule> = {
  * the whole gate. `/welcome` is the GUEST landing page, so gating it on a
  * permission a GUEST does not hold would be a redirect loop.
  */
-export const AUTHENTICATED_ONLY_PATHS: readonly string[] = ["/welcome"];
+export const AUTHENTICATED_ONLY_PATHS: readonly string[] = ["/welcome", "/"];
 
 export interface NavItem {
   path: string;
@@ -120,7 +121,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     id: "operations",
     titleKey: "nav.groups.operations",
     itemPaths: [
-      "/dashboard",
+      "/tasks",
       "/categories",
       "/projects",
       "/purchases",
@@ -196,7 +197,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
  * menu can never outlive or contradict its route's rule.
  */
 export const NAV_ITEMS: readonly NavItem[] = [
-  { path: "/dashboard", labelKey: "nav.tasks", iconName: "CheckSquare" },
+  { path: "/tasks", labelKey: "nav.tasks", iconName: "CheckSquare" },
   { path: "/categories", labelKey: "nav.categories", iconName: "Tag" },
   { path: "/lots", labelKey: "nav.lots", iconName: "Building" },
   { path: "/authorizations", labelKey: "nav.authorizations", iconName: "UserCheck" },

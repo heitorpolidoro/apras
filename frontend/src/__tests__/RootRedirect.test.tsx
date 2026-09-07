@@ -97,12 +97,13 @@ describe("RootRedirect", () => {
     expect(screen.queryByText("Welcome Page")).toBeNull();
   });
 
-  it("sends everyone else to /dashboard (unchanged behaviour)", () => {
+  it("renders General Dashboard directly at / for callers with no overriding landing", () => {
     withLanding(null, ["tasks:read"]);
 
     renderRoot();
 
-    expect(screen.getByText("Dashboard Page")).toBeInTheDocument();
+    expect(screen.getByText("Painel Geral")).toBeInTheDocument();
+    expect(screen.getByText("Bem-vindo ao painel central do seu condomínio.")).toBeInTheDocument();
   });
 
   it("holds a spinner while the query is still settling", () => {
@@ -124,19 +125,13 @@ describe("RootRedirect", () => {
     expect(screen.queryByText("Dashboard Page")).toBeNull();
   });
 
-  it("lands a multi-role user on the first landing_path by role name", () => {
-    // "First non-null, ordered by role name" is total and deterministic, but
-    // it is only *identical* to the retired enum switch for users with one
-    // landing-carrying role: a user holding both `Administrador (papel)` and
-    // `Porteiro (papel)` lands on `/dashboard`, where the switch — keyed on a
-    // single global value — would also have. The backend picks; this asserts
-    // the frontend honours whatever it picked, and nothing more.
-    withLanding("/dashboard", ["tasks:read"]);
+  it("lands a multi-role user on the first landing_path by role name when overriding", () => {
+    // A role specifying a non-root landing (like /gate) redirects to it if accessible
+    withLanding("/gate", ["gate:checkin"]);
 
     renderRoot();
 
-    expect(screen.getByText("Dashboard Page")).toBeInTheDocument();
-    expect(screen.queryByText("Gate Page")).toBeNull();
+    expect(screen.getByText("Gate Page")).toBeInTheDocument();
   });
 });
 
@@ -157,7 +152,7 @@ describe("RootRedirect", () => {
  * the only thing that can change a landing. These cases assert the specific
  * path, so a reorder is caught.
  */
-describe("RootRedirect fallback chain (APRAS-39)", () => {
+describe("RootRedirect landing behavior (APRAS-56)", () => {
   const withPermissions = (
     permissions: string[],
     landing_path: string | null = null,
@@ -180,7 +175,7 @@ describe("RootRedirect fallback chain (APRAS-39)", () => {
       <MemoryRouter initialEntries={["/"]}>
         <Routes>
           <Route path="/" element={<RootRedirect />} />
-          <Route path="/dashboard" element={<div>Dashboard Page</div>} />
+          <Route path="/tasks" element={<div>Tasks Page</div>} />
           <Route path="/welcome" element={<div>Welcome Page</div>} />
           <Route path="/gate" element={<div>Gate Page</div>} />
           <Route path="/lots" element={<div>Lots Page</div>} />
@@ -195,7 +190,7 @@ describe("RootRedirect fallback chain (APRAS-39)", () => {
     mockAuth();
   });
 
-  it("honours landing_path when its route is accessible", () => {
+  it("honours landing_path when its route is accessible and not root", () => {
     withPermissions(["gate:checkin"], "/gate");
 
     renderWide();
@@ -203,48 +198,34 @@ describe("RootRedirect fallback chain (APRAS-39)", () => {
     expect(screen.getByText("Gate Page")).toBeInTheDocument();
   });
 
-  it("lands on the first accessible nav item when the landing module is disabled", () => {
-    // `tasks` off: `landing_path` (/dashboard) and `/dashboard` both fail.
-    // `/lots` precedes `/occurrences` in NAV_ITEMS declaration order, so the
-    // answer is `/lots` and asserting the *specific* path is what catches a
-    // reorder.
+  it("renders General Dashboard at / when landing_path is /", () => {
+    withPermissions(["tasks:read"], "/");
+
+    renderWide();
+
+    expect(screen.getByText("Painel Geral")).toBeInTheDocument();
+  });
+
+  it("renders General Dashboard directly at / when landing module is disabled", () => {
+    // When a specific landing path (e.g. /gate) is inaccessible due to disabled module,
+    // RootRedirect stays at / and renders GeneralDashboardPage
     withPermissions(
-      ["lots:read", "occurrences:read"],
-      "/dashboard",
-      ["tasks"],
+      ["tasks:read", "lots:read"],
+      "/gate",
+      ["gate"],
     );
 
     renderWide();
 
-    expect(screen.getByText("Lots Page")).toBeInTheDocument();
-    expect(screen.queryByText("Dashboard Page")).toBeNull();
-    expect(screen.queryByText("Occurrences Page")).toBeNull();
+    expect(screen.getByText("Painel Geral")).toBeInTheDocument();
+    expect(screen.queryByText("Gate Page")).toBeNull();
   });
 
-  it("lands on /welcome when every module the user's role covers is disabled", () => {
-    // The empty-set terminal is real: PORTEIRO's 14 permissions span five
-    // modules (`gate`, `lots`, `packages`, `reservations`, `tasks`) and all
-    // five are toggleable, so a tenant that buys only the finance package
-    // leaves its porteiros with an empty effective set. `/welcome` carries no
-    // rule at all, so this is a landing, not a redirect loop.
-    withPermissions([], "/gate", [
-      "gate",
-      "lots",
-      "packages",
-      "reservations",
-      "tasks",
-    ]);
-
-    renderWide();
-
-    expect(screen.getByText("Welcome Page")).toBeInTheDocument();
-  });
-
-  it("still prefers /dashboard when it is accessible and landing_path is null", () => {
+  it("renders General Dashboard at / when landing_path is null", () => {
     withPermissions(["tasks:read"]);
 
     renderWide();
 
-    expect(screen.getByText("Dashboard Page")).toBeInTheDocument();
+    expect(screen.getByText("Painel Geral")).toBeInTheDocument();
   });
 });

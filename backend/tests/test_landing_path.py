@@ -156,9 +156,17 @@ def test_permissions_me_landing_path_follows_the_simulated_roles(
 # ---------------------------------------------------------------------------
 
 
-def test_the_allowlist_is_the_five_in_app_paths():
+def test_the_allowlist_is_the_seven_in_app_paths():
     assert frozenset(
-        {"/dashboard", "/gate", "/welcome", "/announcements", "/occurrences"}
+        {
+            "/",
+            "/dashboard",
+            "/tasks",
+            "/gate",
+            "/welcome",
+            "/announcements",
+            "/occurrences",
+        }
     ) == LANDING_PATHS
 
 

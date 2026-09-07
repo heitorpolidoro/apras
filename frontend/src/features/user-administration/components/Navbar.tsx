@@ -8,7 +8,7 @@ import { useSidebar } from "../context/useSidebar";
 import { cn } from "../../../lib/utils";
 import SimulationControls from "./SimulationControls";
 import Sidebar from "./Sidebar";
-import { Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Menu } from "lucide-react";
 
 const LANGUAGES = [
   { code: "pt", label: "PT" },
@@ -19,7 +19,7 @@ const Navbar: React.FC = () => {
   const { user, logout, isAuthenticated } = useAuth();
   const canSimulate = usePermissionSet().has("roles:update");
   const { tenants, actingTenantId, setActingTenant } = useTenant();
-  const { isCollapsed, toggleMobile, toggleCollapsed } = useSidebar();
+  const { isCollapsed, toggleMobile } = useSidebar();
   const { t, i18n } = useTranslation();
   const currentLang = i18n.resolvedLanguage ?? i18n.language;
 
@@ -44,23 +44,6 @@ const Navbar: React.FC = () => {
             className="md:hidden p-2 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
           >
             <Menu className="size-5" />
-          </button>
-
-          {/* Desktop quick collapse/expand toggle */}
-          <button
-            type="button"
-            onClick={toggleCollapsed}
-            aria-label={
-              isCollapsed ? t("nav.expandMenu") : t("nav.collapseMenu")
-            }
-            title={isCollapsed ? t("nav.expandMenu") : t("nav.collapseMenu")}
-            className="hidden md:flex p-2 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-          >
-            {isCollapsed ? (
-              <PanelLeftOpen className="size-5" />
-            ) : (
-              <PanelLeftClose className="size-5" />
-            )}
           </button>
 
           {/* Logo on mobile */}

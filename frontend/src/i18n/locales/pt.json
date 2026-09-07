@@ -10,6 +10,7 @@
     "moduleUnavailableMessage": "Este módulo não faz parte do plano do seu condomínio. Peça ao administrador para ativá-lo."
   },
   "nav": {
+    "home": "Início",
     "tasks": "Tarefas",
     "categories": "Categorias",
     "lots": "Lotes",
@@ -50,6 +51,50 @@
       "registry": "Cadastros",
       "financial": "Financeiro & Planos",
       "administration": "Sistema"
+    }
+  },
+  "dashboard": {
+    "general": {
+      "title": "Painel Geral",
+      "welcome": "Olá, {{name}}",
+      "welcomeSubtitle": "Bem-vindo ao painel central do seu condomínio.",
+      "noTenant": "Nenhum condomínio selecionado",
+      "quickAccess": "Acesso Rápido",
+      "access": "Acessar",
+      "modules": {
+        "tasks": {
+          "title": "Tarefas",
+          "description": "Visualize e acompanhe as atividades e demandas operacionais."
+        },
+        "gate": {
+          "title": "Portaria & Visitantes",
+          "description": "Gerencie autorizações de entrada, prestadores e portaria."
+        },
+        "packages": {
+          "title": "Encomendas",
+          "description": "Controle o recebimento e a retirada de encomendas de moradores."
+        },
+        "occurrences": {
+          "title": "Livro de Ocorrências",
+          "description": "Registre e acompanhe ocorrências e chamados no condomínio."
+        },
+        "reservations": {
+          "title": "Reservas de Espaços",
+          "description": "Consulte a disponibilidade e reserve áreas comuns e comodidades."
+        },
+        "announcements": {
+          "title": "Comunicados",
+          "description": "Leia os comunicados, avisos e notícias recentes do condomínio."
+        },
+        "finance": {
+          "title": "Financeiro",
+          "description": "Demonstrativos, balancetes e prestação de contas do condomínio."
+        },
+        "infractions": {
+          "title": "Infrações",
+          "description": "Consulte o regulamento interno e o andamento de processos de infração."
+        }
+      }
     }
   },
   "accessControl": {

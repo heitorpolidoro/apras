@@ -145,7 +145,7 @@ const AdminUserDashboard: React.FC = () => {
         </h1>
         <div className="flex gap-3">
           <Button variant="outline" asChild>
-            <Link to="/dashboard">{t("admin.backToDashboard")}</Link>
+            <Link to="/">{t("admin.backToDashboard")}</Link>
           </Button>
           <Button variant="ghost" onClick={logout}>
             {t("common.logout")}

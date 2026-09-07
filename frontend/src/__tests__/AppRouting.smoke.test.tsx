@@ -123,4 +123,22 @@ describe("App routing smoke test (real router, real pages)", () => {
     expect(screen.getByRole("button", { name: "Entrar" })).toBeInTheDocument();
     expect(window.location.pathname).toBe("/login");
   });
+
+  it("redirects an unauthenticated visit to /tasks onto the login form", async () => {
+    renderAppAt("/tasks");
+
+    expect(await screen.findByLabelText("E-mail")).toBeInTheDocument();
+    expect(screen.getByLabelText("Senha")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Entrar" })).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/login");
+  });
+
+  it("redirects an unauthenticated visit to / onto the login form", async () => {
+    renderAppAt("/");
+
+    expect(await screen.findByLabelText("E-mail")).toBeInTheDocument();
+    expect(screen.getByLabelText("Senha")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Entrar" })).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/login");
+  });
 });

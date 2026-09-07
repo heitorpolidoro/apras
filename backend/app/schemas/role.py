@@ -14,7 +14,9 @@ from app.core.permissions import PERMISSIONS
 #: frontend consumes it. Adding a path here is a reviewable decision.
 LANDING_PATHS: frozenset[str] = frozenset(
     {
+        "/",
         "/dashboard",
+        "/tasks",
         "/gate",
         "/welcome",
         "/announcements",

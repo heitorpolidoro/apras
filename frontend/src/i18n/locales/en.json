@@ -10,6 +10,7 @@
     "moduleUnavailableMessage": "This module is not part of your condominium's plan. Ask the administrator to enable it."
   },
   "nav": {
+    "home": "Home",
     "tasks": "Tasks",
     "categories": "Categories",
     "lots": "Lots",
@@ -50,6 +51,50 @@
       "registry": "Registry",
       "financial": "Financial & Plans",
       "administration": "System"
+    }
+  },
+  "dashboard": {
+    "general": {
+      "title": "General Dashboard",
+      "welcome": "Hello, {{name}}",
+      "welcomeSubtitle": "Welcome to your condominium central dashboard.",
+      "noTenant": "No condominium selected",
+      "quickAccess": "Quick Access",
+      "access": "Open",
+      "modules": {
+        "tasks": {
+          "title": "Tasks",
+          "description": "View and track operational activities and task demands."
+        },
+        "gate": {
+          "title": "Gate & Visitors",
+          "description": "Manage gatehouse check-ins, guest entries, and authorizations."
+        },
+        "packages": {
+          "title": "Packages",
+          "description": "Track incoming and collected resident packages and deliveries."
+        },
+        "occurrences": {
+          "title": "Occurrence Book",
+          "description": "Log and follow up on condominium occurrences and service requests."
+        },
+        "reservations": {
+          "title": "Reservations",
+          "description": "Check availability and reserve common areas and amenities."
+        },
+        "announcements": {
+          "title": "Announcements",
+          "description": "Read recent announcements, notices, and condominium updates."
+        },
+        "finance": {
+          "title": "Finance",
+          "description": "Financial statements, balance reports, and accountability."
+        },
+        "infractions": {
+          "title": "Infractions",
+          "description": "Consult internal rules, notices, and ongoing infraction procedures."
+        }
+      }
     }
   },
   "accessControl": {

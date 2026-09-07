@@ -131,13 +131,12 @@ describe("Navbar", () => {
     expect(screen.getByText("Administração")).toBeDefined();
   });
 
-  it("applies active class to dashboard link when on /dashboard", () => {
+  it("applies active class to tasks link when on /tasks", () => {
     vi.spyOn(AuthHook, "useAuth").mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
       user: {
         id: "1",
-
         email: "test@example.com",
         full_name: "Test User",
         is_superuser: false,
@@ -149,7 +148,7 @@ describe("Navbar", () => {
     });
 
     render(
-      <MemoryRouter initialEntries={["/dashboard"]}>
+      <MemoryRouter initialEntries={["/tasks"]}>
         <Navbar />
       </MemoryRouter>,
     );
@@ -623,7 +622,7 @@ describe("Navbar", () => {
     expect(screen.getByText("Categorias")).toBeInTheDocument();
   });
 
-  it("renders hamburger toggle button on mobile and desktop collapse button", () => {
+  it("renders hamburger toggle button on mobile and desktop collapse button in sidebar", () => {
     vi.spyOn(AuthHook, "useAuth").mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
@@ -651,12 +650,12 @@ describe("Navbar", () => {
     const mobileToggle = screen.getByRole("button", { name: "Abrir menu" });
     expect(mobileToggle).toBeInTheDocument();
 
-    // Desktop collapse toggle buttons (both in Navbar header and Sidebar brand header)
-    const desktopToggles = screen.getAllByRole("button", { name: "Recolher menu" });
-    expect(desktopToggles.length).toBeGreaterThanOrEqual(1);
+    // Desktop collapse toggle button inside Sidebar
+    const desktopToggle = screen.getByRole("button", { name: "Recolher menu" });
+    expect(desktopToggle).toBeInTheDocument();
 
-    // Clicking desktop toggle updates its state across buttons
-    fireEvent.click(desktopToggles[0]);
-    expect(screen.getAllByRole("button", { name: "Expandir menu" }).length).toBeGreaterThanOrEqual(1);
+    // Clicking desktop toggle updates its state
+    fireEvent.click(desktopToggle);
+    expect(screen.getByRole("button", { name: "Expandir menu" })).toBeInTheDocument();
   });
 });

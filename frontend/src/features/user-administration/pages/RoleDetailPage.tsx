@@ -23,6 +23,8 @@ import type { Role } from "../../../types/auth";
  * discover that by trial.
  */
 const LANDING_PATHS = [
+  "/",
+  "/tasks",
   "/dashboard",
   "/gate",
   "/welcome",

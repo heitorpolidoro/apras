@@ -1,6 +1,7 @@
 import type React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import TaskDashboard from "./features/task-management/components/TaskDashboard";
+import GeneralDashboardPage from "./features/dashboard/components/GeneralDashboardPage";
 import CategoriesPage from "./features/task-management/components/CategoriesPage";
 import { LotsPage } from "./features/lot-management/components/LotsPage";
 import LoginPage from "./features/user-administration/pages/LoginPage";
@@ -11,9 +12,13 @@ import AdminUserDashboard from "./features/user-administration/pages/AdminUserDa
 import ContactInfoDashboard from "./features/user-administration/pages/ContactInfoDashboard";
 import GuestWelcomePage from "./features/user-administration/pages/GuestWelcomePage";
 import ProtectedRoute from "./features/user-administration/components/ProtectedRoute";
-import { AuthProvider } from "./features/user-administration/context/AuthContext";
+import { AuthProvider, useAuth } from "./features/user-administration/context/AuthContext";
 import { SimulationProvider } from "./features/user-administration/context/SimulationContext";
 import { TenantProvider } from "./features/user-administration/context/TenantContext";
+import { SidebarProvider } from "./features/user-administration/context/SidebarContext";
+import { useSidebar } from "./features/user-administration/context/useSidebar";
+import { useMyPermissions } from "./hooks/usePermissionQueries";
+import { cn } from "./lib/utils";
 import Navbar from "./features/user-administration/components/Navbar";
 import SimulationBanner from "./features/user-administration/components/SimulationBanner";
 import { VisitorAuthPage } from "./features/visitor-management/components/VisitorAuthPage";
@@ -42,10 +47,7 @@ import TenantSubscriptionsPage from "./features/user-administration/pages/Tenant
 import InfractionsPage from "./features/infraction-management/pages/InfractionsPage";
 import InfractionRulesPage from "./features/infraction-management/pages/InfractionRulesPage";
 import MyInfractionsPage from "./features/infraction-management/pages/MyInfractionsPage";
-import {
-  NAV_ITEMS,
-  ROUTE_ACCESS,
-} from "./features/user-administration/access/routeAccess";
+import { ROUTE_ACCESS } from "./features/user-administration/access/routeAccess";
 import {
   useCanOpenPath,
   usePermissionSet,
@@ -77,52 +79,18 @@ export const RootRedirect: React.FC = () => {
   const set = usePermissionSet();
   const canOpen = useCanOpenPath();
 
-  // APRAS-39 §10.4: `landing_path ?? "/dashboard"` can now point at a route
-  // the caller cannot open — a tenant with `tasks` off strands everyone on a
-  // restricted `/dashboard`. The chain therefore falls back, in order:
-  // `landing_path` if accessible → `/dashboard` if accessible → the first
-  // `NAV_ITEMS` entry the caller may see → `/welcome`.
-  //
-  // Accessibility is measured with `useCanOpenPath`, i.e. the **real**
-  // permission set, and it is the *same* predicate `ProtectedRoute` consults
-  // before firing its `landingRedirect` bounce. Sharing it is what makes the
-  // chain's answer stick: with two evaluations, the chain rejects a landing
-  // whose module is off, picks `/dashboard`, and `/dashboard`'s own
-  // `landingRedirect` sends the caller straight back to the rejected landing.
-  //
-  // "The first entry" means the first in `NAV_ITEMS` *declaration order* — a
-  // module-level array literal, therefore stable across renders, reloads and
-  // machines. `.find()` over that array, never over a `Set` or
-  // `Object.keys`, so two users with the same permission set always land on
-  // the same path.
-
-  // Hold the render until the set arrives; do **not** navigate on a guess.
-  // `useMyPermissions` is `enabled: useActingTenantReady()`, so on a cold load
-  // of `/` it is disabled-and-pending on the very first render — and a
-  // `<Navigate>` there unmounts this component before the chain ever runs,
-  // which would make the whole fallback inert on the one path most users
-  // take. One spinner frame is the price; it is the same call
-  // `ProtectedRoute` makes three lines from here, for the same reason.
   if (set.isLoading) return <Spinner />;
 
   const landing = data?.landing_path ?? null;
 
-  const target =
-    (canOpen(landing) && landing) ||
-    (canOpen("/dashboard") && "/dashboard") ||
-    NAV_ITEMS.find((item) => canOpen(item.path))?.path ||
-    // `/welcome` (`GuestWelcomePage`) carries no rule at all, so the chain
-    // terminates at something renderable rather than looping.
-    "/welcome";
+  // If user has a specific landing configured that is accessible and not root, redirect to it
+  if (landing && landing !== "/" && canOpen(landing)) {
+    return <Navigate to={landing} replace />;
+  }
 
-  return <Navigate to={target} replace />;
+  // Otherwise render General Dashboard directly
+  return <GeneralDashboardPage />;
 };
-
-import { useMyPermissions } from "./hooks/usePermissionQueries";
-import { useAuth } from "./features/user-administration/context/AuthContext";
-import { SidebarProvider } from "./features/user-administration/context/SidebarContext";
-import { useSidebar } from "./features/user-administration/context/useSidebar";
-import { cn } from "./lib/utils";
 
 const AppLayoutContent: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -167,12 +135,16 @@ function App() {
                 <Route path="/reset-password" element={<ResetPasswordPage />} />
 
                 <Route
-                  path="/dashboard"
+                  path="/tasks"
                   element={
-                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/dashboard"]}>
+                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/tasks"]}>
                       <TaskDashboard />
                     </ProtectedRoute>
                   }
+                />
+                <Route
+                  path="/dashboard"
+                  element={<Navigate to="/tasks" replace />}
                 />
 
                 <Route
@@ -477,7 +449,14 @@ function App() {
                   }
                 />
 
-                <Route path="/" element={<RootRedirect />} />
+                <Route
+                  path="/"
+                  element={
+                    <ProtectedRoute>
+                      <RootRedirect />
+                    </ProtectedRoute>
+                  }
+                />
               </Routes>
             </AppLayoutContent>
           </div>

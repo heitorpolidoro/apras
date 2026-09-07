@@ -161,7 +161,7 @@ describe("the landing chain against the real ProtectedRoute", () => {
 
     renderApp();
 
-    expect(await screen.findByText("Dashboard Content")).toBeInTheDocument();
+    expect(await screen.findByText("Painel Geral")).toBeInTheDocument();
     expect(screen.queryByText(t("common.moduleUnavailable"))).toBeNull();
     expect(screen.queryByText("Gate Content")).toBeNull();
   });
@@ -248,14 +248,16 @@ describe("the landing chain against the real ProtectedRoute", () => {
     expect(await screen.findByText("Dashboard Content")).toBeInTheDocument();
   });
 
-  it("lands on /welcome when every module the persona's role covers is off", async () => {
+  it("renders General Dashboard at / when every module the persona's role covers is off", async () => {
     // PORTEIRO's 14 permissions span five modules, all toggleable. A tenant
     // that buys only the finance package leaves them with an empty set.
+    // In APRAS-56, when their preferred landing (/gate) is disabled, RootRedirect
+    // renders GeneralDashboardPage directly at / rather than /welcome.
     answer([], "/gate", ["gate", "lots", "packages", "reservations", "tasks"]);
 
     renderApp();
 
-    expect(await screen.findByText("Welcome Content")).toBeInTheDocument();
+    expect(await screen.findByText("Painel Geral")).toBeInTheDocument();
   });
 });
 
@@ -322,7 +324,7 @@ describe("the cold-load sequence: disabled -> loading -> settled", () => {
     expect(container.querySelector(".animate-spin")).not.toBeNull();
     expect(screen.queryByText("Gate Content")).toBeNull();
 
-    // ...and once it settles, the chain runs and rejects the disabled landing.
+    // ...and once it settles, RootRedirect renders General Dashboard directly.
     settle({
       data: {
         tenant_id: "00000000-0000-0000-0000-000000000001",
@@ -333,7 +335,7 @@ describe("the cold-load sequence: disabled -> loading -> settled", () => {
     });
 
     await waitFor(() =>
-      expect(screen.getByText("Dashboard Content")).toBeInTheDocument(),
+      expect(screen.getByText("Painel Geral")).toBeInTheDocument(),
     );
     expect(screen.queryByText("Gate Content")).toBeNull();
   });

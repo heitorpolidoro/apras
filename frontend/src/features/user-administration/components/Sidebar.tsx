@@ -11,6 +11,7 @@ import { useCanShowMenuPredicate } from "../access/useCanAccess";
 import { useSidebar } from "../context/useSidebar";
 import { cn } from "../../../lib/utils";
 import {
+  Home,
   CheckSquare,
   Tag,
   Building,
@@ -109,6 +110,55 @@ const SidebarItemLink: React.FC<{
       )}
     >
       <IconComponent
+        className={cn(
+          "size-4.5 shrink-0 transition-transform group-hover:scale-110",
+          isActive
+            ? "text-primary"
+            : "text-muted-foreground group-hover:text-foreground",
+        )}
+      />
+      {!isCollapsed && (
+        <span className={cn("truncate", isActive && "text-primary")}>
+          {label}
+        </span>
+      )}
+      {isActive && (
+        <div
+          className={cn(
+            "absolute left-0 top-1.5 bottom-1.5 w-1 bg-primary rounded-r-full",
+            isCollapsed && "left-0.5",
+          )}
+        />
+      )}
+    </Link>
+  );
+};
+
+const SidebarHomeLink: React.FC<{
+  isCollapsed: boolean;
+  onNavigate?: () => void;
+}> = ({ isCollapsed, onNavigate }) => {
+  const location = useLocation();
+  const { t } = useTranslation();
+
+  const isActive = location.pathname === "/";
+  const label = t("nav.home");
+
+  return (
+    <Link
+      to="/"
+      onClick={onNavigate}
+      title={isCollapsed ? label : undefined}
+      aria-label={label}
+      className={cn(
+        "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all group relative",
+        isActive
+          ? "bg-primary/10 text-primary font-semibold"
+          : "text-muted-foreground hover:bg-accent/60 hover:text-foreground font-medium",
+        isCollapsed ? "justify-center px-2 py-2.5" : "",
+      )}
+    >
+      <Home
         className={cn(
           "size-4.5 shrink-0 transition-transform group-hover:scale-110",
           isActive
@@ -274,6 +324,12 @@ export const Sidebar: React.FC = () => {
 
         {/* Scrollable Navigation Groups */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 space-y-1">
+          <div className="mb-2">
+            <SidebarHomeLink
+              isCollapsed={collapsed}
+              onNavigate={isMobileView ? closeMobile : undefined}
+            />
+          </div>
           {groupsWithVisibleItems.map(({ group, visibleItems }) => (
             <SidebarGroupSection
               key={group.id}

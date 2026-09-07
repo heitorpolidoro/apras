@@ -272,6 +272,8 @@ describe("RoleDetailPage", () => {
     )) as HTMLSelectElement;
     expect([...select.options].map((option) => option.value)).toEqual([
       "",
+      "/",
+      "/tasks",
       "/dashboard",
       "/gate",
       "/welcome",

@@ -90,7 +90,7 @@ const ContactInfoDashboard: React.FC = () => {
         </h1>
         <div className="flex gap-3">
           <Button variant="outline" asChild>
-            <Link to="/dashboard">{t("contactInfo.backToDashboard")}</Link>
+            <Link to="/">{t("contactInfo.backToDashboard")}</Link>
           </Button>
           <Button variant="ghost" onClick={logout}>
             {t("common.logout")}
