@@ -368,6 +368,7 @@
     "noRolesAvailable": "Nenhum papel disponível.",
     "stopButton": "Encerrar simulação",
     "bannerLabel": "Visualizando como: {{roles}}",
+    "simulatingAs": "Admin global como {{roles}}",
     "noRoles": "nenhum papel",
     "readOnlyTask": "Somente leitura nesta visualização simulada",
     "mutationBlocked": "Ação bloqueada: você está em modo de simulação.",

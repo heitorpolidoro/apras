@@ -5,6 +5,8 @@ import { useAuth } from "../context/AuthContext";
 import { usePermissionSet } from "../access/useCanAccess";
 import { useTenant } from "../context/useTenant";
 import { useSidebar } from "../context/useSidebar";
+import { useSimulation } from "../context/SimulationContext";
+import { useRoles } from "../../../hooks/useRoles";
 import { cn } from "../../../lib/utils";
 import SimulationControls from "./SimulationControls";
 import Sidebar from "./Sidebar";
@@ -20,10 +22,25 @@ const Navbar: React.FC = () => {
   const canSimulate = usePermissionSet().has("roles:update");
   const { tenants, actingTenantId, setActingTenant } = useTenant();
   const { isCollapsed, toggleMobile } = useSidebar();
+  const { isSimulating, simulatedRoleIds } = useSimulation();
+  const { data: roles } = useRoles();
   const { t, i18n } = useTranslation();
   const currentLang = i18n.resolvedLanguage ?? i18n.language;
 
   if (!isAuthenticated) return null;
+
+  const simulatedRoleNames = (roles ?? [])
+    .filter((role) => simulatedRoleIds.includes(role.id))
+    .map((role) => role.name)
+    .join(", ");
+
+  const roleSubtitle = isSimulating
+    ? t("simulation.simulatingAs", {
+        roles: simulatedRoleNames || t("simulation.noRoles"),
+      })
+    : user?.roles && user.roles.length > 0
+      ? user.roles.map((ut) => ut.name).join(", ")
+      : null;
 
   return (
     <>
@@ -111,9 +128,16 @@ const Navbar: React.FC = () => {
             <span className="text-sm font-semibold text-foreground leading-tight">
               {user?.full_name}
             </span>
-            {user?.roles && user.roles.length > 0 && (
-              <span className="text-xs text-primary/80 font-medium leading-tight">
-                {user.roles.map((ut) => ut.name).join(", ")}
+            {roleSubtitle && (
+              <span
+                className={cn(
+                  "text-xs font-medium leading-tight",
+                  isSimulating
+                    ? "text-amber-600 dark:text-amber-400 font-semibold"
+                    : "text-primary/80",
+                )}
+              >
+                {roleSubtitle}
               </span>
             )}
           </div>

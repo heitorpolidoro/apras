@@ -368,6 +368,7 @@
     "noRolesAvailable": "No roles available.",
     "stopButton": "End simulation",
     "bannerLabel": "Viewing as: {{roles}}",
+    "simulatingAs": "Global admin as {{roles}}",
     "noRoles": "no role",
     "readOnlyTask": "Read-only in this simulated view",
     "mutationBlocked": "Action blocked: you are in simulation mode.",

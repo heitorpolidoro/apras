@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import { SidebarProvider } from "../context/SidebarContext";
+import { useSimulation } from "../context/SimulationContext";
 import * as AuthHook from "../context/AuthContext";
 import { useRoles } from "../../../hooks/useRoles";
 import { useMyPermissions } from "../../../hooks/usePermissionQueries";
@@ -657,5 +658,44 @@ describe("Navbar", () => {
     // Clicking desktop toggle updates its state
     fireEvent.click(desktopToggle);
     expect(screen.getByRole("button", { name: "Expandir menu" })).toBeInTheDocument();
+  });
+
+  it("renders simulated role label under username when in simulation mode", () => {
+    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      user: {
+        id: "1",
+        email: "admin@example.com",
+        full_name: "Admin User",
+        is_superuser: true,
+        roles: [{ id: "profile-admin", name: "ADMINISTRATOR" }],
+        is_active: true,
+      },
+      login: vi.fn() as never,
+      logout: vi.fn(),
+    });
+
+    vi.mocked(useSimulation).mockReturnValue({
+      simulatedRoleIds: ["role-porteiro"],
+      isSimulating: true,
+      setSimulatedRoleIds: vi.fn(),
+      stopSimulation: vi.fn(),
+    });
+
+    vi.mocked(useRoles).mockReturnValue({
+      data: [{ id: "role-porteiro", name: "Porteiro" }],
+    } as any);
+
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <SidebarProvider>
+          <Navbar />
+        </SidebarProvider>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Admin User")).toBeInTheDocument();
+    expect(screen.getByText("Admin global como Porteiro")).toBeInTheDocument();
   });
 });
