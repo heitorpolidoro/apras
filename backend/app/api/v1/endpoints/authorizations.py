@@ -130,7 +130,9 @@ def revoke_authorization(
 def get_authorization(
     authorization_id: UUID,
     session: Annotated[Session, Depends(deps.get_session)],
-    current_user: Annotated[User, Depends(deps.get_current_user)],
+    current_user: Annotated[
+        User, Depends(deps.require_permission("authorizations:gate_lookup"))
+    ],
 ) -> VisitorAuthorizationRead:
     """Fetch a single visitor pre-authorization by ID.
 
@@ -154,7 +156,9 @@ def get_authorization(
 def get_authorization_qr_code(
     authorization_id: UUID,
     session: Annotated[Session, Depends(deps.get_session)],
-    current_user: Annotated[User, Depends(deps.get_current_user)],
+    current_user: Annotated[
+        User, Depends(deps.require_permission("authorizations:gate_lookup"))
+    ],
 ) -> Response:
     """Return a PNG QR code encoding the authorization's ID.
 

@@ -288,7 +288,13 @@ def test_the_divergent_guest_state_is_unreachable(
     """
     guest = _user(session, "Convidado", [])
 
-    assert client.get("/api/v1/tasks/", headers=_auth(guest)).json() == []
+    # Since APRAS-51 the listing route enforces its mapped `tasks:read` in the
+    # dependency tree, so the refusal is a 403 rather than the empty list this
+    # line used to read. The claim is unchanged: the converted comparison is
+    # never reached, and now it is not reached one dependency earlier.
+    listing = client.get("/api/v1/tasks/", headers=_auth(guest))
+    assert listing.status_code == 403
+    assert listing.json()["detail"] == "The user doesn't have enough privileges"
     assert (
         client.get(
             f"/api/v1/tasks/{world['untargeted'].id}/history", headers=_auth(guest)

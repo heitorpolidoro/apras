@@ -374,7 +374,9 @@ def list_eligible_lots(
 def get_tally(
     vote_id: UUID,
     session: Annotated[Session, Depends(get_session)],
-    current_user: Annotated[User, Depends(api_deps.get_current_user)],
+    current_user: Annotated[
+        User, Depends(api_deps.require_permission("votes:tally_read"))
+    ],
 ) -> TallyRead:
     """Participation count while open; full tally only once closed."""
     vote = voting_service.get_vote(session, vote_id)

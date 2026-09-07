@@ -98,26 +98,44 @@ def test_guest_cannot_create_task(client: TestClient, session: Session, guest_da
     assert resp.status_code == 403
 
 
-def test_guest_task_list_is_empty(client: TestClient, session: Session, guest_data):
-    """GUEST lists tasks and gets an empty list.
+def test_guest_task_list_is_refused(client: TestClient, session: Session, guest_data):
+    """GUEST listing tasks is a **403**.
 
-    The history, in one place, because this case has now had three answers.
+    The history, in one place, because this case has now had four answers.
     Before APRAS-8 the GUEST role check made the list unconditionally empty
     (200 with `[]`). APRAS-8's `allowed_menus` gate then ran *first* and made
-    it a 403. IAM F5 (APRAS-49 §4.2) deleted that gate, so the answer is the
-    permission layer's again -- and it is the **same 200** that
-    `tests/data/parity_matrix_baseline.json` recorded for
-    `("GUEST", "GET", "/api/v1/tasks/")` before a single guard was converted.
+    it a 403. IAM F5 (APRAS-49 §4.2) deleted that gate, so the answer went
+    back to the permission layer's 200-with-`[]`.
 
-    This module is otherwise construction-only; these four menu-gate cases
-    are the exception, and the matrix is what proves the new answers are the
-    pre-F2 ones rather than a regression.
+    APRAS-51 deletes that empty-list early return: `GET /api/v1/tasks/` is
+    mapped to `tasks:read` and now enforces it with
+    `Depends(require_permission("tasks:read"))`, so a non-holder is refused
+    instead of served an empty page. It is the one intentional refusal-shape
+    change of that task, and it is the parity cell
+    `("GUEST", "GET", "/api/v1/tasks/")` moving 200 -> 403 in
+    `tests/data/parity_matrix_baseline_51.json`.
+
+    The sibling below keeps the other half of the claim: a *holder* still
+    gets its list.
     """
     _director_creates_task(client, guest_data)
     token = get_token(client, "guest_rbac", "pass")
     resp = client.get("/api/v1/tasks/", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 403
+    assert resp.json()["detail"] == "The user doesn't have enough privileges"
+
+
+def test_a_holder_of_tasks_read_still_lists_tasks(
+    client: TestClient, session: Session, guest_data
+):
+    """The other half of APRAS-51: the guard narrows, it does not close."""
+    task_id = _director_creates_task(client, guest_data)
+    dir_token = get_token(client, "director_guest_rbac", "pass")
+    resp = client.get(
+        "/api/v1/tasks/", headers={"Authorization": f"Bearer {dir_token}"}
+    )
     assert resp.status_code == 200
-    assert resp.json() == []
+    assert task_id in {item["id"] for item in resp.json()}
 
 
 def test_guest_cannot_edit_task(client: TestClient, session: Session, guest_data):
@@ -150,7 +168,15 @@ def test_guest_cannot_see_task_history(
 
 
 def test_guest_cannot_comment(client: TestClient, session: Session, guest_data):
-    """GUEST gets 404 commenting (was 403 through the menu gate, §4.2)."""
+    """GUEST gets **403** commenting.
+
+    Was 403 through the menu gate (§4.2), then 404 through
+    `assert_manager_can_see_task` once IAM F5 deleted that gate. APRAS-51 maps
+    what was always mapped: `POST /tasks/{id}/comments` enforces
+    `tasks:comment` in the dependency tree, which FastAPI solves before the
+    handler runs, so the 404 never happens. Parity cell
+    `("GUEST", "POST", "/api/v1/tasks/{task_id}/comments")`: 404 -> 403.
+    """
     task_id = _director_creates_task(client, guest_data)
     token = get_token(client, "guest_rbac", "pass")
     resp = client.post(
@@ -158,7 +184,22 @@ def test_guest_cannot_comment(client: TestClient, session: Session, guest_data):
         headers={"Authorization": f"Bearer {token}"},
         json={"content": "guest comment"},
     )
-    assert resp.status_code == 404
+    assert resp.status_code == 403
+    assert resp.json()["detail"] == "The user doesn't have enough privileges"
+
+
+def test_a_holder_of_tasks_comment_still_comments(
+    client: TestClient, session: Session, guest_data
+):
+    """The holder half of the comment guard."""
+    task_id = _director_creates_task(client, guest_data)
+    dir_token = get_token(client, "director_guest_rbac", "pass")
+    resp = client.post(
+        f"/api/v1/tasks/{task_id}/comments",
+        headers={"Authorization": f"Bearer {dir_token}"},
+        json={"content": "director comment"},
+    )
+    assert resp.status_code == 201
 
 
 def test_guest_cannot_create_category(

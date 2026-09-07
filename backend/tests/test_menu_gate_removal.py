@@ -158,15 +158,17 @@ def test_a_user_without_tasks_read_is_still_refused(
     """The narrowing that did **not** happen: the permission still decides.
 
     Removing the gate widened the population that reaches the handler; it did
-    not widen what the handler allows. A caller with no `tasks:read` gets the
-    empty list `parity_matrix_baseline.json` records for GUEST, and a write
-    they cannot make is still a 403.
+    not widen what the handler allows. Since APRAS-51 the listing route
+    enforces its mapped `tasks:read` in the dependency tree, so a caller
+    without it is refused outright rather than served the empty list this case
+    used to assert -- the parity cell `("GUEST", "GET", "/api/v1/tasks/")`
+    moving 200 -> 403. A write they cannot make is still a 403.
     """
     user = _member(session, "Sem tarefas", ["categories:read"])
 
     listing = client.get("/api/v1/tasks/", headers=_auth(user))
-    assert listing.status_code == 200
-    assert listing.json() == []
+    assert listing.status_code == 403
+    assert listing.json()["detail"] == "The user doesn't have enough privileges"
 
     creation = client.post(
         "/api/v1/tasks/",

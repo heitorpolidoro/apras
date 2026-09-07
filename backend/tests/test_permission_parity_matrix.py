@@ -15,7 +15,18 @@ and the new cells live in the additive
 names the branch point each route delta is measured from rather than a sha its
 statuses could be reproduced at -- the routes do not exist there. The two shas
 are **different**, and deliberately: each file records its own branch point.
-Every semantic oracle below reads `load_union()`, the three files keyed the way
+
+APRAS-51 adds a **fourth** file, and it is the first one that is *not*
+additive: `tests/data/parity_matrix_baseline_51.json` records the 25 routes
+whose mapped permission was never enforced x the six profiles = 150 cells,
+every one of which already exists in the F2 1080. It is loaded as an
+**overriding layer** — `OVERRIDDEN_CELLS`, derived from its own keys — so
+`load_union()` still returns 1206 entries and no `APRAS_51_CELL_COUNT` addend
+exists. Three assertions make the override un-abusable: the diff against F2 is
+exactly the three cells of `APRAS_51_CELL_DELTA`, each correction only ever
+restricts, and its route set is exactly the 25 and a subset of F2's.
+
+Every semantic oracle below reads `load_union()`, the four files keyed the way
 `CELLS` is keyed; the provenance and hygiene cases stay one per file.
 
 The baseline's provenance is *reproducibility, not chronology* (§6.4): this
@@ -75,6 +86,7 @@ from tests.matrix_world import (
     run_cell,
     seed_once,
 )
+from tests.test_permission_alignment import APRAS_51_ROUTES
 from tests.tools import record_parity_baseline
 
 BACKEND_ROOT = Path(__file__).resolve().parent.parent
@@ -85,12 +97,22 @@ BASELINE_40_PATH = (
 BASELINE_44_PATH = (
     BACKEND_ROOT / "tests" / "data" / "parity_matrix_baseline_44.json"
 )
+BASELINE_51_PATH = (
+    BACKEND_ROOT / "tests" / "data" / "parity_matrix_baseline_51.json"
+)
 LEGACY_BUNDLES_PATH = BACKEND_ROOT / "tests" / "data" / "legacy_role_bundles.json"
 HARNESS_PATH = BACKEND_ROOT / "tests" / "matrix_world.py"
 
 F2_CELL_COUNT = 1080
 APRAS_40_CELL_COUNT = 18
 APRAS_44_CELL_COUNT = 108
+#: **Not an addend.** `_51` is an *override*: its 150 keys already belong to
+#: the F2 1080, so `load_union()` must still return 1206 entries. Adding this
+#: to `EXPECTED_CELL_COUNT` would turn
+#: `test_matrix_covers_every_permission_mapped_route` and
+#: `test_the_three_baselines_partition_route_permissions_exactly` red. It lives here
+#: so `_meta.cell_count` has one named thing to be equal to.
+APRAS_51_CELL_COUNT = 150
 EXPECTED_CELL_COUNT = F2_CELL_COUNT + APRAS_40_CELL_COUNT + APRAS_44_CELL_COUNT
 
 F2_MERGE_BASE_SHA = "02c2025abcda4626569921eafb3863dfc540eb9e"
@@ -131,7 +153,24 @@ APRAS_44_ROUTES = frozenset(
 #: The routes recorded in an *additive* file rather than in the frozen F2 one.
 #: Every oracle that says "except the new routes" reads this, so adding a
 #: fourth file is one line rather than a grep.
+#:
+#: `APRAS_51_ROUTES` is deliberately **not** here: `_51` is an override, not an
+#: addition. Its 25 routes exist in the F2 file and are part of the 1080, so an
+#: oracle that skips "the new routes" must still measure them.
 ADDITIVE_ROUTES = APRAS_40_ROUTES | APRAS_44_ROUTES
+
+#: The three cells APRAS-51 moves, `(profile, method, path) -> (old, new)`.
+#: Spelled out rather than computed, so the diff below is compared against a
+#: prediction instead of against itself. All three are GUEST, all three are
+#: `tasks` routes, and all three were `DENIAL_SHAPE_OVERRIDES` entries: the
+#: documented empty-list refusal of `list_tasks` and two
+#: `assert_manager_can_see_task` 404s that the new route-level guard now
+#: outranks.
+APRAS_51_CELL_DELTA: dict[tuple[str, str, str], tuple[int, int]] = {
+    ("GUEST", "GET", "/api/v1/tasks/"): (200, 403),
+    ("GUEST", "POST", "/api/v1/tasks/{task_id}/comments"): (404, 403),
+    ("GUEST", "PATCH", "/api/v1/tasks/{task_id}/comments/{comment_id}"): (404, 403),
+}
 
 #: The profiles `matrix_world.build_world` builds with `is_superuser=True` --
 #: the ADMINISTRATOR profile only. Not asserted by fiat:
@@ -169,28 +208,28 @@ META_KEYS = frozenset(
 
 
 # ---------------------------------------------------------------------------
-# The denial-shape overrides (§6.4) -- exactly six, all GUEST
+# The denial-shape overrides (§6.4) -- exactly three, all GUEST
 # ---------------------------------------------------------------------------
 
-#: A *denied* cell normally answers 403. These six answer something else, and
-#: the reason is derivable rather than asserted by fiat: `tasks:read`,
-#: `tasks:update` and `tasks:comment` are each `{A, D, M, R, P}` in the
-#: recorded bundles, so GUEST is the only denied profile on the six task
-#: routes that reach `assert_manager_can_see_task` (which raises
-#: `TaskNotFoundError`) or the `list_tasks` empty-list early return.
+#: A *denied* cell normally answers 403. These three answer something else,
+#: and the reason is derivable rather than asserted by fiat: `tasks:read` and
+#: `tasks:update` are each `{A, D, M, R, P}` in the recorded bundles, so GUEST
+#: is the only denied profile on the three task routes that still reach
+#: `assert_manager_can_see_task`, which raises `TaskNotFoundError`.
+#:
+#: **Six before APRAS-51.** The other three -- the `list_tasks` empty-list
+#: early return and the two `tasks:comment` 404s -- are the exact cells that
+#: task moves to 403 (`APRAS_51_CELL_DELTA`), because a route-level
+#: `require_permission` now runs before the handler that used to answer them.
+#: The three survivors are untouched: their routes are **not** among the 25,
+#: so `assert_manager_can_see_task` is still the first thing GUEST meets.
 DENIAL_SHAPE_OVERRIDES: dict[tuple[str, str, str], tuple[int, str]] = {
-    ("GUEST", "GET", "/api/v1/tasks/"): (
-        200,
-        "documented empty-list refusal, endpoints/tasks.py list_tasks",
-    ),
     ("GUEST", "PATCH", "/api/v1/tasks/{task_id}"): (
         404,
         "assert_manager_can_see_task raises TaskNotFoundError for GUEST",
     ),
     ("GUEST", "GET", "/api/v1/tasks/{task_id}/history"): (404, "idem"),
     ("GUEST", "GET", "/api/v1/tasks/{task_id}/comments"): (404, "idem"),
-    ("GUEST", "POST", "/api/v1/tasks/{task_id}/comments"): (404, "idem"),
-    ("GUEST", "PATCH", "/api/v1/tasks/{task_id}/comments/{comment_id}"): (404, "idem"),
 }
 
 
@@ -369,6 +408,19 @@ def load_apras_44_baseline() -> dict:
     return load_file(BASELINE_44_PATH)
 
 
+def load_apras_51_baseline() -> dict:
+    """The **overriding** file of APRAS-51 §6.2, and only ever that.
+
+    Unlike `_40` and `_44` this document is not additive: every one of its 150
+    cells already exists in the frozen F2 file, and for those keys its value
+    wins (`OVERRIDDEN_CELLS`). The F2 file is still not re-recorded --
+    `record_parity_baseline.refuse_the_frozen_baseline` would not let it be,
+    and a re-record would move `_meta.merge_base_sha` off `02c2025…` and turn
+    the star test of IAM F2 into a tautology.
+    """
+    return load_file(BASELINE_51_PATH)
+
+
 def cells_of(baseline: dict) -> set[tuple[str, str, str]]:
     """Every `(role, method, path)` a document records, keyed the way `CELLS`
     is keyed -- i.e. with `F5_PATH_RENAMES` already applied."""
@@ -380,14 +432,28 @@ def cells_of(baseline: dict) -> set[tuple[str, str, str]]:
     }
 
 
-def load_union() -> dict[tuple[str, str, str], int]:
-    """All three baselines as one `CELLS`-keyed cell map.
+def cells_of_51() -> set[tuple[str, str, str]]:
+    """`OVERRIDDEN_CELLS`: the keys `_51` supersedes, **derived**.
 
-    Overlap is an error, not a merge: the three files partition
-    `ROUTE_PERMISSIONS` and a cell appearing in two would mean one of them
-    had been re-recorded. `F5_PATH_RENAMES` is applied to **both** -- it is
-    the identity on every path it does not name, and one keying rule is
-    cheaper to keep true than two.
+    Never a 150-tuple literal -- that is exactly the hand list §4.2 rejects,
+    and deriving it is safe because three assertions bound it from outside:
+    `_meta.cell_count == 150`, the route-set clause of
+    `test_the_three_baselines_partition_route_permissions_exactly`, and the
+    exact three-cell delta below.
+    """
+    return cells_of(load_apras_51_baseline())
+
+
+def load_union() -> dict[tuple[str, str, str], int]:
+    """The four baselines as one `CELLS`-keyed cell map.
+
+    Three of them **partition**: overlap among F2, `_40` and `_44` is an
+    error, not a merge, because a cell appearing in two would mean one of them
+    had been re-recorded. The fourth, `_51`, is an **overriding layer**: its
+    keys must already exist (they are F2's), and for those keys only its value
+    wins. `F5_PATH_RENAMES` is applied throughout -- it is the identity on
+    every path it does not name, and one keying rule is cheaper to keep true
+    than two.
     """
     merged: dict[tuple[str, str, str], int] = {}
     for path in (BASELINE_PATH, BASELINE_40_PATH, BASELINE_44_PATH):
@@ -397,6 +463,15 @@ def load_union() -> dict[tuple[str, str, str], int]:
                     key = (role, method, F5_PATH_RENAMES.get(route, route))
                     assert key not in merged, f"the two baselines overlap at {key}"
                     merged[key] = status
+    for role, by_method in load_apras_51_baseline()["cells"].items():
+        for method, by_path in by_method.items():
+            for route, status in by_path.items():
+                key = (role, method, F5_PATH_RENAMES.get(route, route))
+                assert key in merged, (
+                    f"the APRAS-51 baseline overrides a cell that does not "
+                    f"exist: {key}"
+                )
+                merged[key] = status
     return merged
 
 
@@ -825,6 +900,115 @@ def test_the_legacy_role_bundles_are_untouched_by_apras_44():
     assert not offenders, offenders
 
 
+def test_the_apras_51_baseline_declares_its_provenance():
+    """Its own merge base, and a provenance caveat stronger than `_40`'s.
+
+    For `_40` and `_44`, running the `regenerate` recipe at `merge_base_sha`
+    fails loudly: `select_cells` exits 2 because the routes do not exist
+    there. For `_51` the 25 routes **do** exist at the branch point, so the
+    recipe *succeeds* and silently produces the **pre-fix** statuses. The
+    recipe is therefore a description of how this file was made -- after the
+    production change -- and not a command that reproduces it from the merge
+    base. This case is what keeps that difference from being a comment
+    somebody deletes.
+    """
+    meta = load_apras_51_baseline()["_meta"]
+    assert set(meta) == META_KEYS, "no timestamp, hostname or absolute path"
+    assert re.fullmatch(r"[0-9a-f]{40}", meta["merge_base_sha"])
+    assert meta["cell_count"] == APRAS_51_CELL_COUNT == 150
+    assert meta["merge_base_sha"] in meta["regenerate"]
+    assert "--routes" in meta["regenerate"]
+    assert "git worktree add" not in meta["regenerate"]
+    assert (BACKEND_ROOT / meta["generator"]).exists()
+    assert (BACKEND_ROOT / meta["harness"]).exists()
+    # Its own branch point, never a copy of one of the other two.
+    assert meta["merge_base_sha"] != F2_MERGE_BASE_SHA
+    assert meta["merge_base_sha"] != load_apras_40_baseline()["_meta"][
+        "merge_base_sha"
+    ]
+    assert meta["merge_base_sha"] != load_apras_44_baseline()["_meta"][
+        "merge_base_sha"
+    ]
+    # The scoped invocation names all 25 routes, so the recipe is executable
+    # exactly as written.
+    assert meta["regenerate"].count("--routes") == 25
+    assert BASELINE_51_PATH.name in meta["regenerate"]
+
+
+def test_the_apras_51_baseline_carries_no_absolute_path_and_no_timestamp():
+    raw = BASELINE_51_PATH.read_text(encoding="utf-8")
+    assert str(BACKEND_ROOT) not in raw
+    assert not re.search(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}", raw)
+
+
+def test_the_apras_51_baseline_records_only_integer_status_codes():
+    for by_method in load_apras_51_baseline()["cells"].values():
+        for by_path in by_method.values():
+            for status in by_path.values():
+                assert isinstance(status, int)
+
+
+def test_the_apras_51_baseline_differs_from_f2_in_exactly_three_cells():
+    """The override is not allowed to move anything it did not claim to move.
+
+    Both sides are keyed through `cells_of`/`F5_PATH_RENAMES`: the F2 file
+    records `GET /api/v1/user-types/`, the recorder writes the live
+    `GET /api/v1/roles/`, so six of the 150 cells would otherwise fail to
+    key-match and read as "missing" rather than "unchanged". The other 147
+    superseded cells are therefore **proven** inert rather than assumed.
+    """
+    f2 = {
+        (role, method, F5_PATH_RENAMES.get(path, path)): status
+        for role, by_method in load_baseline()["cells"].items()
+        for method, by_path in by_method.items()
+        for path, status in by_path.items()
+    }
+    fifty_one = {
+        (role, method, F5_PATH_RENAMES.get(path, path)): status
+        for role, by_method in load_apras_51_baseline()["cells"].items()
+        for method, by_path in by_method.items()
+        for path, status in by_path.items()
+    }
+    assert len(fifty_one) == APRAS_51_CELL_COUNT
+    missing = sorted(set(fifty_one) - set(f2))
+    assert not missing, f"APRAS-51 cells that are not F2 cells: {missing}"
+
+    diff = {
+        key: (f2[key], status)
+        for key, status in fifty_one.items()
+        if f2[key] != status
+    }
+    assert diff == APRAS_51_CELL_DELTA
+
+
+def test_every_apras_51_correction_only_restricts():
+    """An override can never turn a denial into a permission."""
+    for cell, (_old, new) in APRAS_51_CELL_DELTA.items():
+        assert new == 403, cell
+        assert not holds(*cell), f"{cell} moved to 403 for a profile that holds it"
+
+
+def test_the_apras_51_delta_empties_three_denial_shape_overrides():
+    """The three moved cells are exactly the three entries that left §6.4.
+
+    Stated as an assertion because it is the whole reason
+    `DENIAL_SHAPE_OVERRIDES` went from six to three: not a cleanup, a
+    consequence.
+    """
+    assert len(DENIAL_SHAPE_OVERRIDES) == 3
+    assert not (set(APRAS_51_CELL_DELTA) & set(DENIAL_SHAPE_OVERRIDES))
+    assert len(APRAS_51_CELL_DELTA) + len(DENIAL_SHAPE_OVERRIDES) == 6
+
+
+def test_the_overridden_cells_are_the_twenty_five_routes_times_six():
+    """`OVERRIDDEN_CELLS` is derived, and here is what bounds it."""
+    overridden = cells_of_51()
+    assert len(overridden) == APRAS_51_CELL_COUNT == 150
+    assert {(method, path) for _role, method, path in overridden} == APRAS_51_ROUTES
+    assert {role for role, _m, _p in overridden} == set(PARITY_PROFILES)
+    assert overridden <= set(CELLS)
+
+
 def test_the_three_baselines_partition_route_permissions_exactly():
     """Pairwise disjoint, and together exactly `ROUTE_PERMISSIONS`.
 
@@ -832,6 +1016,10 @@ def test_the_three_baselines_partition_route_permissions_exactly():
     subset because APRAS-49's three tier permissions are deliberately **not**
     route-mapped, so the map stays at its base size plus APRAS-40's `+3` and
     APRAS-44's `+18`, and nothing else creeps in.
+
+    `_51` is deliberately **not** part of the pairwise-disjointness clause: it
+    overrides F2 rather than partitioning with it, so its route set is
+    asserted to be exactly the 25 and a *subset* of F2's instead.
     """
     f2 = {(method, path) for _role, method, path in cells_of(load_baseline())}
     forty = {
@@ -841,9 +1029,16 @@ def test_the_three_baselines_partition_route_permissions_exactly():
         (method, path) for _role, method, path in cells_of(load_apras_44_baseline())
     }
 
+    fifty_one = {
+        (method, path) for _role, method, path in cells_of(load_apras_51_baseline())
+    }
+
     assert forty == APRAS_40_ROUTES
     assert forty_four == APRAS_44_ROUTES
     assert len(forty_four) == 18
+    assert fifty_one == APRAS_51_ROUTES
+    assert len(fifty_one) == 25
+    assert fifty_one <= f2, "the APRAS-51 override names a route F2 never recorded"
     assert not (f2 & forty), "the F2 and APRAS-40 baselines overlap"
     assert not (f2 & forty_four), "the F2 and APRAS-44 baselines overlap"
     assert not (forty & forty_four), "the APRAS-40 and APRAS-44 baselines overlap"
@@ -1027,9 +1222,12 @@ def test_every_denied_cell_is_denied_in_the_baseline():
     assert not offenders, f"denied cells that did not answer 403: {offenders}"
 
 
-def test_denial_shape_overrides_is_exactly_six():
-    assert len(DENIAL_SHAPE_OVERRIDES) == 6
+def test_denial_shape_overrides_is_exactly_three():
+    assert len(DENIAL_SHAPE_OVERRIDES) == 3
     assert {role for role, _m, _p in DENIAL_SHAPE_OVERRIDES} == {"GUEST"}
+    # None of the survivors is a route APRAS-51 converted: their 404 is still
+    # `assert_manager_can_see_task`'s, reached because nothing outranks it.
+    assert not ({(m, p) for _r, m, p in DENIAL_SHAPE_OVERRIDES} & APRAS_51_ROUTES)
 
 
 def test_every_denial_shape_override_is_needed():

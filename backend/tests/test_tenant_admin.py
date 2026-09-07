@@ -485,15 +485,18 @@ def test_tenant_admin_holds_nothing_elsewhere(
 ):
     """In tenant B the capability is not readable, so the bundle is all.
 
-    The list is *empty*, not refused: `tasks:read` is not a route-level
-    guard, and an empty answer is what `parity_matrix_baseline.json` records
-    for a caller with no `tasks:read` (§4.2).
+    The list is **refused**, not empty: since APRAS-51 `tasks:read` *is* a
+    route-level guard on `GET /api/v1/tasks/`, so a caller who resolves no
+    `tasks:read` in the acting tenant gets `require_permission`'s 403 instead
+    of the empty page it used to be served. The claim of this case is
+    unchanged and is if anything sharper -- the capability grants nothing
+    outside the tenant that granted it.
     """
     response = tenant_client.get(
         "/api/v1/tasks/", headers=_auth(tenant_admin, tenant_b.id)
     )
-    assert response.status_code == 200
-    assert response.json() == []
+    assert response.status_code == 403
+    assert response.json()["detail"] == "The user doesn't have enough privileges"
 
 
 def test_an_ordinary_role_still_admits_a_member_without_the_capability(

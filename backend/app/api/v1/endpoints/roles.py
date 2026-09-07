@@ -19,9 +19,11 @@ router = APIRouter()
 @router.get("/", response_model=list[RoleRead])
 def read_roles(
     session: Annotated[Session, Depends(get_session)],
-    current_user: Annotated[User, Depends(api_deps.get_current_user)],  # noqa: ARG001
+    current_user: Annotated[  # noqa: ARG001
+        User, Depends(api_deps.require_permission("roles:read"))
+    ],
 ) -> list[Role]:
-    """Retrieve all roles."""
+    """Retrieve all roles. Requires `roles:read` (APRAS-51)."""
     return session.exec(select(Role)).all()
 
 

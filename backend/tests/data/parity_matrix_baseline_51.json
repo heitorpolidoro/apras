@@ -1,0 +1,233 @@
+{
+  "_meta": {
+    "cell_count": 150,
+    "generator": "tests/tools/record_parity_baseline.py",
+    "harness": "tests/matrix_world.py",
+    "merge_base_sha": "f71608f77cd14203589b12f460433bb2891d57d4",
+    "regenerate": "cd backend && POSTGRES_URL=sqlite:// SECRET_KEY=parity-matrix uv run python -m tests.tools.record_parity_baseline --out tests/data/parity_matrix_baseline_51.json --merge-base f71608f77cd14203589b12f460433bb2891d57d4 --routes 'DELETE /api/v1/uploads/photos/{photo_id}' --routes 'GET /api/v1/access-logs' --routes 'GET /api/v1/authorizations/{authorization_id}' --routes 'GET /api/v1/authorizations/{authorization_id}/qr-code' --routes 'GET /api/v1/categories/' --routes 'GET /api/v1/feedback' --routes 'GET /api/v1/feedback/{id}' --routes 'GET /api/v1/lots/{lot_id}/residents' --routes 'GET /api/v1/reservable-spaces/' --routes 'GET /api/v1/residents/{resident_id}' --routes 'GET /api/v1/roles/' --routes 'GET /api/v1/tasks/' --routes 'GET /api/v1/uploads/photos/{photo_id}' --routes 'GET /api/v1/users/' --routes 'GET /api/v1/visitors' --routes 'GET /api/v1/visitors/{visitor_id}' --routes 'GET /api/v1/votes/{vote_id}/tally' --routes 'PATCH /api/v1/tasks/{task_id}/comments/{comment_id}' --routes 'POST /api/v1/feedback' --routes 'POST /api/v1/space-reservations/{reservation_id}/cancel' --routes 'POST /api/v1/space-reservations/{reservation_id}/reject' --routes 'POST /api/v1/tasks/{task_id}/comments' --routes 'POST /api/v1/uploads/photo' --routes 'POST /api/v1/visitors' --routes 'PUT /api/v1/visitors/{visitor_id}'"
+  },
+  "cells": {
+    "ADMINISTRATOR": {
+      "DELETE": {
+        "/api/v1/uploads/photos/{photo_id}": 204
+      },
+      "GET": {
+        "/api/v1/access-logs": 200,
+        "/api/v1/authorizations/{authorization_id}": 200,
+        "/api/v1/authorizations/{authorization_id}/qr-code": 200,
+        "/api/v1/categories/": 200,
+        "/api/v1/feedback": 200,
+        "/api/v1/feedback/{id}": 200,
+        "/api/v1/lots/{lot_id}/residents": 200,
+        "/api/v1/reservable-spaces/": 200,
+        "/api/v1/residents/{resident_id}": 200,
+        "/api/v1/roles/": 200,
+        "/api/v1/tasks/": 200,
+        "/api/v1/uploads/photos/{photo_id}": 200,
+        "/api/v1/users/": 200,
+        "/api/v1/visitors": 200,
+        "/api/v1/visitors/{visitor_id}": 200,
+        "/api/v1/votes/{vote_id}/tally": 200
+      },
+      "PATCH": {
+        "/api/v1/tasks/{task_id}/comments/{comment_id}": 200
+      },
+      "POST": {
+        "/api/v1/feedback": 201,
+        "/api/v1/space-reservations/{reservation_id}/cancel": 200,
+        "/api/v1/space-reservations/{reservation_id}/reject": 200,
+        "/api/v1/tasks/{task_id}/comments": 201,
+        "/api/v1/uploads/photo": 400,
+        "/api/v1/visitors": 201
+      },
+      "PUT": {
+        "/api/v1/visitors/{visitor_id}": 200
+      }
+    },
+    "DIRECTOR": {
+      "DELETE": {
+        "/api/v1/uploads/photos/{photo_id}": 204
+      },
+      "GET": {
+        "/api/v1/access-logs": 200,
+        "/api/v1/authorizations/{authorization_id}": 200,
+        "/api/v1/authorizations/{authorization_id}/qr-code": 200,
+        "/api/v1/categories/": 200,
+        "/api/v1/feedback": 200,
+        "/api/v1/feedback/{id}": 200,
+        "/api/v1/lots/{lot_id}/residents": 200,
+        "/api/v1/reservable-spaces/": 200,
+        "/api/v1/residents/{resident_id}": 200,
+        "/api/v1/roles/": 200,
+        "/api/v1/tasks/": 200,
+        "/api/v1/uploads/photos/{photo_id}": 200,
+        "/api/v1/users/": 200,
+        "/api/v1/visitors": 200,
+        "/api/v1/visitors/{visitor_id}": 200,
+        "/api/v1/votes/{vote_id}/tally": 200
+      },
+      "PATCH": {
+        "/api/v1/tasks/{task_id}/comments/{comment_id}": 403
+      },
+      "POST": {
+        "/api/v1/feedback": 201,
+        "/api/v1/space-reservations/{reservation_id}/cancel": 200,
+        "/api/v1/space-reservations/{reservation_id}/reject": 200,
+        "/api/v1/tasks/{task_id}/comments": 201,
+        "/api/v1/uploads/photo": 400,
+        "/api/v1/visitors": 201
+      },
+      "PUT": {
+        "/api/v1/visitors/{visitor_id}": 200
+      }
+    },
+    "GUEST": {
+      "DELETE": {
+        "/api/v1/uploads/photos/{photo_id}": 403
+      },
+      "GET": {
+        "/api/v1/access-logs": 200,
+        "/api/v1/authorizations/{authorization_id}": 200,
+        "/api/v1/authorizations/{authorization_id}/qr-code": 200,
+        "/api/v1/categories/": 200,
+        "/api/v1/feedback": 200,
+        "/api/v1/feedback/{id}": 403,
+        "/api/v1/lots/{lot_id}/residents": 200,
+        "/api/v1/reservable-spaces/": 200,
+        "/api/v1/residents/{resident_id}": 200,
+        "/api/v1/roles/": 200,
+        "/api/v1/tasks/": 403,
+        "/api/v1/uploads/photos/{photo_id}": 200,
+        "/api/v1/users/": 200,
+        "/api/v1/visitors": 200,
+        "/api/v1/visitors/{visitor_id}": 200,
+        "/api/v1/votes/{vote_id}/tally": 403
+      },
+      "PATCH": {
+        "/api/v1/tasks/{task_id}/comments/{comment_id}": 403
+      },
+      "POST": {
+        "/api/v1/feedback": 201,
+        "/api/v1/space-reservations/{reservation_id}/cancel": 403,
+        "/api/v1/space-reservations/{reservation_id}/reject": 403,
+        "/api/v1/tasks/{task_id}/comments": 403,
+        "/api/v1/uploads/photo": 400,
+        "/api/v1/visitors": 201
+      },
+      "PUT": {
+        "/api/v1/visitors/{visitor_id}": 200
+      }
+    },
+    "MANAGER": {
+      "DELETE": {
+        "/api/v1/uploads/photos/{photo_id}": 403
+      },
+      "GET": {
+        "/api/v1/access-logs": 200,
+        "/api/v1/authorizations/{authorization_id}": 200,
+        "/api/v1/authorizations/{authorization_id}/qr-code": 200,
+        "/api/v1/categories/": 200,
+        "/api/v1/feedback": 200,
+        "/api/v1/feedback/{id}": 403,
+        "/api/v1/lots/{lot_id}/residents": 200,
+        "/api/v1/reservable-spaces/": 200,
+        "/api/v1/residents/{resident_id}": 200,
+        "/api/v1/roles/": 200,
+        "/api/v1/tasks/": 200,
+        "/api/v1/uploads/photos/{photo_id}": 200,
+        "/api/v1/users/": 200,
+        "/api/v1/visitors": 200,
+        "/api/v1/visitors/{visitor_id}": 200,
+        "/api/v1/votes/{vote_id}/tally": 200
+      },
+      "PATCH": {
+        "/api/v1/tasks/{task_id}/comments/{comment_id}": 403
+      },
+      "POST": {
+        "/api/v1/feedback": 201,
+        "/api/v1/space-reservations/{reservation_id}/cancel": 403,
+        "/api/v1/space-reservations/{reservation_id}/reject": 403,
+        "/api/v1/tasks/{task_id}/comments": 201,
+        "/api/v1/uploads/photo": 400,
+        "/api/v1/visitors": 201
+      },
+      "PUT": {
+        "/api/v1/visitors/{visitor_id}": 200
+      }
+    },
+    "PORTEIRO": {
+      "DELETE": {
+        "/api/v1/uploads/photos/{photo_id}": 403
+      },
+      "GET": {
+        "/api/v1/access-logs": 200,
+        "/api/v1/authorizations/{authorization_id}": 200,
+        "/api/v1/authorizations/{authorization_id}/qr-code": 200,
+        "/api/v1/categories/": 200,
+        "/api/v1/feedback": 200,
+        "/api/v1/feedback/{id}": 403,
+        "/api/v1/lots/{lot_id}/residents": 200,
+        "/api/v1/reservable-spaces/": 200,
+        "/api/v1/residents/{resident_id}": 200,
+        "/api/v1/roles/": 200,
+        "/api/v1/tasks/": 200,
+        "/api/v1/uploads/photos/{photo_id}": 200,
+        "/api/v1/users/": 200,
+        "/api/v1/visitors": 200,
+        "/api/v1/visitors/{visitor_id}": 200,
+        "/api/v1/votes/{vote_id}/tally": 403
+      },
+      "PATCH": {
+        "/api/v1/tasks/{task_id}/comments/{comment_id}": 403
+      },
+      "POST": {
+        "/api/v1/feedback": 201,
+        "/api/v1/space-reservations/{reservation_id}/cancel": 403,
+        "/api/v1/space-reservations/{reservation_id}/reject": 403,
+        "/api/v1/tasks/{task_id}/comments": 201,
+        "/api/v1/uploads/photo": 400,
+        "/api/v1/visitors": 201
+      },
+      "PUT": {
+        "/api/v1/visitors/{visitor_id}": 200
+      }
+    },
+    "RESIDENT": {
+      "DELETE": {
+        "/api/v1/uploads/photos/{photo_id}": 204
+      },
+      "GET": {
+        "/api/v1/access-logs": 200,
+        "/api/v1/authorizations/{authorization_id}": 200,
+        "/api/v1/authorizations/{authorization_id}/qr-code": 200,
+        "/api/v1/categories/": 200,
+        "/api/v1/feedback": 200,
+        "/api/v1/feedback/{id}": 200,
+        "/api/v1/lots/{lot_id}/residents": 200,
+        "/api/v1/reservable-spaces/": 200,
+        "/api/v1/residents/{resident_id}": 200,
+        "/api/v1/roles/": 200,
+        "/api/v1/tasks/": 200,
+        "/api/v1/uploads/photos/{photo_id}": 200,
+        "/api/v1/users/": 200,
+        "/api/v1/visitors": 200,
+        "/api/v1/visitors/{visitor_id}": 200,
+        "/api/v1/votes/{vote_id}/tally": 200
+      },
+      "PATCH": {
+        "/api/v1/tasks/{task_id}/comments/{comment_id}": 403
+      },
+      "POST": {
+        "/api/v1/feedback": 201,
+        "/api/v1/space-reservations/{reservation_id}/cancel": 200,
+        "/api/v1/space-reservations/{reservation_id}/reject": 403,
+        "/api/v1/tasks/{task_id}/comments": 201,
+        "/api/v1/uploads/photo": 400,
+        "/api/v1/visitors": 201
+      },
+      "PUT": {
+        "/api/v1/visitors/{visitor_id}": 200
+      }
+    }
+  }
+}

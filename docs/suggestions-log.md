@@ -238,6 +238,13 @@
 - 4.1: a 'afirmacao geral' e literalmente falsa para GET /tasks/ (tasks.py:52 consulta tasks:read para devolver []) - reescrever como 'consulta a permissao mapeada para RECUSAR o chamador'.
 - 4.3: nomear run_cell/resolve_path/REQUEST_BODIES/QUERY_PARAMS como importados sem modificacao; token do ator sob nova chave de world.tokens do proprio modulo; dizer como o modulo obtem a sessao (cell_client so entrega o TestClient).
 - 4.2: predicado S sem 'and not in D'; afirmar disjuncao par a par das cinco formas.
+- (code review) POST /space-reservations/{id}/reject fica duplamente gateado: reservations:reject na rota (APRAS-51) + reservations:approve no servico (reservation_service.py:298), sem celula de paridade que note - follow-up: decidir se rejeitar exige approve ou se o servico deve checar reject.
+- (code review) request_as em test_permission_alignment.py duplica matrix_world.run_cell; importa _FILE_BYTES/_NoBody privados.
+- (code review r2) test_docs_agents_md.py:18 passa a importar app.main transitivamente via o modulo de alinhamento - acoplamento correto, mas o arquivo perde a propriedade 'sem import da app'.
+- (code review r2) secao 'Permissions are in code' do AGENTS.md esta virando changelog; na proxima edicao, subsecao 'Permission enforcement'.
+- (QA) ER-4 'ruff check/format --check limpos' e falso repo-wide (1145 erros, 183 arquivos reformatariam), igual na base - ruff nao roda em nenhum workflow; este diff adiciona zero e remove quatro (assunto da APRAS-54).
+- (QA) caso degenerado {module:X} com permissao de escrita mostra 403 como 'Erro de conexao / Could not connect to the server', nao o texto de autorizacao que o §9 promete - corrigir o mapeamento no parseApiError do frontend.
+- (QA) direcao positiva de POST /uploads/photo nao assertavel porque matrix_world._FILE_BYTES nao e imagem decodificavel - trocar por um PNG minimo valido.
 
 ## [APRAS-52] Histórico de assinatura com rota e tabela na página do superuser — 2026-09-06
 

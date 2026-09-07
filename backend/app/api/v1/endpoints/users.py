@@ -63,14 +63,15 @@ def read_users(
     session: Annotated[Session, Depends(get_session)],
     tenant: Annotated[Tenant, Depends(api_deps.get_current_tenant)],
     current_user: Annotated[  # noqa: ARG001
-        User, Depends(api_deps.get_current_user)
+        User, Depends(api_deps.require_permission("users:read"))
     ],
     is_active: bool | None = None,
 ) -> list[UserRead]:
     """Retrieve the users visible in the acting tenant.
 
-    Available to all authenticated users, as before; what changed is the
-    target set, which is now membership-filtered for everyone (§6.2).
+    Requires `users:read` since APRAS-51 -- the permission the registry has
+    always mapped this route to. The target set stays membership-filtered for
+    everyone (§6.2).
     """
     statement = UserService.visible_users_statement(tenant.id)
     if is_active is not None:

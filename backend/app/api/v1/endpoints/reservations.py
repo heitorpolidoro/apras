@@ -55,9 +55,11 @@ def _require_non_guest(
 @spaces_router.get("/", response_model=list[ReservableSpaceRead])
 def list_reservable_spaces(
     session: Annotated[Session, Depends(get_session)],
-    current_user: Annotated[User, Depends(api_deps.get_current_user)],
+    current_user: Annotated[
+        User, Depends(api_deps.require_permission("spaces:read"))
+    ],
 ) -> list[ReservableSpaceRead]:
-    """List active reservable spaces. Any authenticated user, including GUEST."""
+    """List active reservable spaces. Requires `spaces:read` (APRAS-51)."""
     _ = current_user
     return ReservableSpaceService.get_spaces(session=session)
 
@@ -183,10 +185,27 @@ def approve_space_reservation(
 def reject_space_reservation(
     reservation_id: UUID,
     session: Annotated[Session, Depends(get_session)],
-    current_user: Annotated[User, Depends(api_deps.get_current_user)],
+    current_user: Annotated[
+        User, Depends(api_deps.require_permission("reservations:reject"))
+    ],
     _decision: SpaceReservationDecision | None = None,
 ) -> SpaceReservationRead:
-    """Reject a PENDING reservation. ADMINISTRATOR/DIRECTOR only."""
+    """Reject a PENDING reservation. ADMINISTRATOR/DIRECTOR only.
+
+    **Double-gated on two different permissions, and deliberately left that
+    way (APRAS-51).** The route requires its mapped `reservations:reject`;
+    `SpaceReservationService.decide_reservation` then requires
+    `reservations:approve` for both decisions, so a role holding only one of
+    the pair cannot reject. The service check is pre-existing behaviour that
+    APRAS-51 may not move — hoisting or removing it is a behaviour change, not
+    an alignment — and **no parity cell notices**, because all six legacy
+    bundles hold both strings: the same structural blindness §4.4 documents
+    for the `packages:queue_read` short-circuit. It is pinned in
+    `tests/test_permission_alignment.py::HOLDER_SECOND_GATE`. The resolution —
+    either map this route to `reservations:approve` or make the service read
+    the route's own permission — is a follow-up, beside §10's `tenants:read`
+    retirement.
+    """
     SpaceReservationService.decide_reservation(
         session=session,
         current_user=current_user,
@@ -204,7 +223,9 @@ def reject_space_reservation(
 def cancel_space_reservation(
     reservation_id: UUID,
     session: Annotated[Session, Depends(get_session)],
-    current_user: Annotated[User, Depends(api_deps.get_current_user)],
+    current_user: Annotated[
+        User, Depends(api_deps.require_permission("reservations:cancel"))
+    ],
 ) -> SpaceReservationRead:
     """Cancel a PENDING/CONFIRMED reservation, per the cancellation rules."""
     SpaceReservationService.cancel_reservation(

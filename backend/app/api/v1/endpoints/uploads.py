@@ -3,13 +3,22 @@ from typing import Optional
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
 from sqlmodel import Session
 
-from app.api.deps import get_current_active_user, get_db
+from app.api.deps import get_current_active_user, get_db, require_permission
 from app.models.enums import EntityType
 from app.models.user import User
 from app.schemas.media_asset import MediaAssetRead, MediaAssetListResponse, PhotoRejectRequest
 from app.services.media_service import media_service
 
 router = APIRouter(prefix="/uploads", tags=["Uploads"])
+
+#: The three APRAS-51 guards, bound once at import. Same reason as
+#: `endpoints/feedback.py`: this module uses the older
+#: `current_user: User = Depends(...)` spelling, and a call in an argument
+#: default is `B008`. `get_current_active_user` stays imported -- the three
+#: photo-moderation routes still use it.
+_require_photo_create = require_permission("uploads:photo_create")
+_require_photo_read = require_permission("uploads:photo_read")
+_require_photo_delete = require_permission("uploads:delete")
 
 
 @router.post("/photo", response_model=MediaAssetRead, status_code=status.HTTP_201_CREATED)
@@ -18,7 +27,7 @@ async def upload_photo(
     entity_type: EntityType = Form(...),
     entity_id: Optional[uuid.UUID] = Form(None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(_require_photo_create),
 ) -> MediaAssetRead:
     file_bytes = await file.read()
     filename = file.filename or "upload.jpg"
@@ -70,7 +79,7 @@ def reject_photo(
 def delete_photo(
     photo_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(_require_photo_delete),
 ) -> None:
     media_service.delete_photo(session=db, photo_id=photo_id, current_user=current_user)
 
@@ -79,6 +88,6 @@ def delete_photo(
 def get_photo_metadata(
     photo_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(_require_photo_read),
 ) -> MediaAssetRead:
     return media_service.get_photo_metadata(session=db, photo_id=photo_id)

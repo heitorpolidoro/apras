@@ -83,7 +83,9 @@ def check_out_visitor(
 )
 def list_access_logs(
     session: Annotated[Session, Depends(deps.get_session)],
-    current_user: Annotated[User, Depends(deps.get_current_user)],
+    current_user: Annotated[
+        User, Depends(deps.require_permission("gate:logs_read"))
+    ],
     lot_id: UUID | None = None,
     visitor_id: UUID | None = None,
     skip: int = 0,

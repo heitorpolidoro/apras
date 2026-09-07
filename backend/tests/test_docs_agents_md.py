@@ -15,6 +15,9 @@ else they are a claim about the present, and the present does not have them.
 import pathlib
 import re
 
+from app.core.permissions import ROUTE_PERMISSIONS
+from tests import test_permission_alignment as alignment
+
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 AGENTS_MD = REPO_ROOT / "AGENTS.md"
 
@@ -113,6 +116,64 @@ def test_the_document_states_the_model_that_exists():
         "f5_backfill_journal",
         "one-way door",
         "refuses to run",
+    ):
+        assert claim in text, f"AGENTS.md does not state: {claim!r}"
+
+
+def test_the_document_states_the_five_enforcement_form_counts():
+    """The five form counts are pinned to the constants, not re-typed.
+
+    `174` and `201` immediately above them are machine-checked; without this
+    case the five numbers beside them would be prose, and prose beside a
+    checked number is the shape APRAS-51 exists to remove. They are read from
+    `tests/test_permission_alignment.py`'s literals -- the same ones its
+    structural walk asserts against the live app -- so the document cannot
+    drift from the code in either direction.
+    """
+    text = re.sub(r"\s+", " ", AGENTS_MD.read_text(encoding="utf-8"))
+    for count, phrase in (
+        (alignment.EXPECTED_DEPENDENCY_FORM, "route-level"),
+        (alignment.EXPECTED_SUPERUSER_FORM, "`get_current_superuser`"),
+        (alignment.EXPECTED_MEMBERSHIP_FORM, "membership-gated"),
+        (alignment.EXPECTED_SERVICE_FORM, "service-enforced"),
+        (alignment.EXPECTED_IN_HANDLER_FORM, "in-handler"),
+    ):
+        claim = f"{count} {phrase}"
+        assert claim in text, f"AGENTS.md does not state the form count: {claim!r}"
+
+    assert f"places all {len(ROUTE_PERMISSIONS)} in exactly one" in text
+    assert f"sweeps the other {len(alignment.SWEPT_ROUTES)}" in text
+
+
+def test_the_document_states_that_every_mapped_route_is_enforced():
+    """APRAS-51 ER-4: the enforcement claim is machine-checked, like the counts.
+
+    A doc sentence saying "every mapped route is proven enforced" is worth
+    exactly as much as the test that keeps it true, so it is pinned here
+    beside the 174/201 counts it sits next to -- naming the module that proves
+    it, both deliberate exceptions, the five ownership/self-service routes
+    that gained a permission requirement, and the production impact.
+    """
+    text = re.sub(r"\s+", " ", AGENTS_MD.read_text(encoding="utf-8"))
+    for claim in (
+        # the claim and the test that carries it
+        "Every mapped route is now proven enforced",
+        "backend/tests/test_permission_alignment.py",
+        "UNENFORCED",
+        # the two declared, non-dependency forms
+        "five routes are enforced in a service",
+        "BallotRejection(ROLE_FORBIDDEN)",
+        "packages:queue_read",
+        "gated by **membership**",
+        # the production impact (§9), in the words the PR body reproduces
+        "lost access",
+        "The user doesn't have enough privileges",
+        "RestrictedAccessMessage",
+        "no backfill",
+        # the five ownership/self-service routes that now also need the
+        # mapped permission (code review round 0, suggestion 7)
+        "because of **who they were**",
+        "conditional on `reservations:cancel`",
     ):
         assert claim in text, f"AGENTS.md does not state: {claim!r}"
 

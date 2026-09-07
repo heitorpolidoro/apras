@@ -25,7 +25,9 @@ router = APIRouter()
 )
 def list_visitors(
     session: Annotated[Session, Depends(deps.get_session)],
-    current_user: Annotated[User, Depends(deps.get_current_user)],
+    current_user: Annotated[  # noqa: ARG001
+        User, Depends(deps.require_permission("visitors:read"))
+    ],
     q: str | None = None,
     skip: int = 0,
     limit: int = 100,
@@ -44,7 +46,9 @@ def list_visitors(
 def create_visitor(
     visitor_in: VisitorCreate,
     session: Annotated[Session, Depends(deps.get_session)],
-    current_user: Annotated[User, Depends(deps.get_current_user)],
+    current_user: Annotated[  # noqa: ARG001
+        User, Depends(deps.require_permission("visitors:create"))
+    ],
 ) -> VisitorRead:
     """Create a new visitor master profile."""
     visitor = VisitorService.create_visitor(session, visitor_in)
@@ -59,7 +63,9 @@ def create_visitor(
 def get_visitor(
     visitor_id: UUID,
     session: Annotated[Session, Depends(deps.get_session)],
-    current_user: Annotated[User, Depends(deps.get_current_user)],
+    current_user: Annotated[  # noqa: ARG001
+        User, Depends(deps.require_permission("visitors:read"))
+    ],
 ) -> VisitorRead:
     """Get visitor profile by ID."""
     visitor = VisitorService.get_visitor_by_id(session, visitor_id)
@@ -75,7 +81,9 @@ def update_visitor(
     visitor_id: UUID,
     visitor_in: VisitorUpdate,
     session: Annotated[Session, Depends(deps.get_session)],
-    current_user: Annotated[User, Depends(deps.get_current_user)],
+    current_user: Annotated[  # noqa: ARG001
+        User, Depends(deps.require_permission("visitors:update"))
+    ],
 ) -> VisitorRead:
     """Update visitor profile details."""
     visitor = VisitorService.update_visitor(session, visitor_id, visitor_in)

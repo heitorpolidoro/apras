@@ -77,7 +77,9 @@ def _to_detail_read(resident) -> ResidentDetailRead:
 def list_residents_by_lot(
     lot_id: UUID,
     session: Annotated[Session, Depends(deps.get_session)],
-    current_user: Annotated[User, Depends(deps.get_current_user)],
+    current_user: Annotated[
+        User, Depends(deps.require_permission("residents:read"))
+    ],
     skip: int = 0,
     limit: int = 100,
 ) -> PaginatedResidentRead:
@@ -112,7 +114,9 @@ def create_resident(
 def get_resident(
     resident_id: UUID,
     session: Annotated[Session, Depends(deps.get_session)],
-    current_user: Annotated[User, Depends(deps.get_current_user)],
+    current_user: Annotated[
+        User, Depends(deps.require_permission("residents:read"))
+    ],
 ) -> ResidentDetailRead:
     resident = ResidentService.get_resident_by_id(session, resident_id, current_user)
     return _to_detail_read(resident)

@@ -40,18 +40,20 @@ def create_task(
 @router.get("/", response_model=list[TaskRead])
 def list_tasks(
     session: Annotated[Session, Depends(get_session)],
-    current_user: Annotated[User, Depends(api_deps.get_current_user)],
+    current_user: Annotated[User, Depends(api_deps.require_permission("tasks:read"))],
     status: Annotated[TaskStatus | None, Query()] = None,
     priority: Annotated[TaskPriority | None, Query()] = None,
     assigned_to_id: Annotated[UUID | None, Query()] = None,
     category_id: Annotated[UUID | None, Query()] = None,
 ) -> list[TaskRead]:
-    """List tasks with optional filters. GUEST sees no tasks."""
-    # The documented empty-list refusal, kept verbatim: turning it into a
-    # 403 would be a divergence the parity matrix rejects.
-    if not api_deps.has_permission(current_user, session, "tasks:read"):
-        return []
+    """List tasks with optional filters. A non-holder of `tasks:read` is 403.
 
+    APRAS-51: the documented empty-list refusal that used to live here is
+    gone. It was the one place a handler consulted its own mapped permission
+    and answered `200 []` instead of refusing, and it is the only intentional
+    refusal-shape change of that task -- one parity cell moves, GUEST's
+    `GET /api/v1/tasks/`, from 200 to 403.
+    """
     from app.models.category import Category
     from app.models.task import TaskVisibleToLink
     from app.models.role import Role
@@ -213,9 +215,11 @@ def create_comment(
     task_id: UUID,
     comment_in: TaskCommentCreate,
     session: Annotated[Session, Depends(get_session)],
-    current_user: Annotated[User, Depends(api_deps.get_current_user)],
+    current_user: Annotated[
+        User, Depends(api_deps.require_permission("tasks:comment"))
+    ],
 ) -> TaskCommentRead:
-    """Add a comment to a task. Any authenticated user can comment."""
+    """Add a comment to a task. Requires `tasks:comment` (APRAS-51)."""
     db_task = session.get(Task, task_id)
     if not db_task or db_task.is_deleted:
         raise TaskNotFoundError(task_id)
@@ -235,9 +239,11 @@ def update_comment(
     comment_id: UUID,
     comment_in: TaskCommentUpdate,
     session: Annotated[Session, Depends(get_session)],
-    current_user: Annotated[User, Depends(api_deps.get_current_user)],
+    current_user: Annotated[
+        User, Depends(api_deps.require_permission("tasks:comment"))
+    ],
 ) -> TaskCommentRead:
-    """Edit a comment. Only the comment author can edit it."""
+    """Edit a comment. Requires `tasks:comment`; only the author may edit."""
     db_task = session.get(Task, task_id)
     if not db_task or db_task.is_deleted:
         raise TaskNotFoundError(task_id)

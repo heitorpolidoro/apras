@@ -779,9 +779,47 @@ each; `UNGUARDED_ROUTES` names the rest. A route in neither fails
 `tests/test_permission_registry.py`, in CI, before it can ship with a hole in
 it.
 
-The module deliberately imports nothing — no FastAPI, no SQLModel, not even a
+That module deliberately imports nothing — no FastAPI, no SQLModel, not even a
 model — so it stays importable from Alembic, from a script and from a test
 with no database.
+
+**Every mapped route is now proven enforced** (APRAS-51).
+`backend/tests/test_permission_alignment.py` places all 201 in exactly one
+declared enforcement form — 53 route-level `Depends(require_permission(P))`,
+5 `get_current_superuser`, 3 membership-gated, 5 service-enforced, 135
+in-handler — with the exception allowlist `UNENFORCED` **empty**, and sweeps
+the other 193 with a real request from a caller holding the whole catalogue
+except the route's own permission, pinning the *shape* of the refusal. Two
+forms are deliberate and are proven per route rather than excused: **five
+routes are enforced in a service** — the two ballot routes, whose
+`voting_service._assert_can_cast` writes a `BallotRejection(ROLE_FORBIDDEN)`
+row and answers `"Este perfil não vota"` before the 403, and the three
+`packages` routes, whose `PackageService._assert_lot_access` lets a
+`packages:queue_read` gatehouse holder through without the mapped permission —
+and **the three global tenant reads** (`GET /tenants`,
+`GET /tenants/{id}`, `GET /tenants/{id}/members`) are gated by **membership**,
+not by `tenants:read`/`tenants:members_read`, because they are global-scoped
+and a permission gate there would refuse a user their own tenant list.
+
+*Production impact of that alignment, stated once:* since IAM F5 nothing is
+seeded, so **every role that does not hold the mapped permission lost access to
+those routes** on deploy — including roles that reached those screens before,
+because the map claimed a gate the code did not have. That removal is the
+point of the change, not a side effect. It surfaces as a **403** carrying
+`PermissionRequired`'s existing detail `"The user doesn't have enough
+privileges"` and the frontend's existing `RestrictedAccessMessage` in place;
+there is no backfill and no migration, and the operator's lever is to grant
+the permission in the role editor.
+
+Five of the 25 previously served a caller because of **who they were**, and
+now also require the mapped permission: `GET /api/v1/feedback/{id}` and
+`POST /api/v1/feedback` (the reporter), `POST
+/api/v1/space-reservations/{id}/cancel` (the reservation's owner), and `GET` /
+`DELETE /api/v1/uploads/photos/{photo_id}` (the photo's uploader). "The owner
+can always cancel their own reservation" is now conditional on
+`reservations:cancel`. No parity cell moves — all six legacy bundles hold
+these five strings — which is exactly why it is written down here rather than
+left to the matrix to notice.
 
 ### Roles are data
 

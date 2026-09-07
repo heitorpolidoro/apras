@@ -569,12 +569,32 @@ class PermissionRequired:
     and a shared sub-dependency is solved once per request, so this is
     self-sufficient and free.
 
-    It is used on **exactly** the seven routes whose gate is already a
-    route-level `Depends`. A gate that runs inside the handler today must
-    stay inside the handler: FastAPI solves sub-dependencies *before* it
-    raises body-validation errors, so moving one into the dependency tree
-    would flip a denied caller's `422` (invalid body) or `404` (missing
-    object) into a `403`.
+    **Which routes carry it.** Any route in `ROUTE_PERMISSIONS` whose
+    enforcement form is **D**, the route-level dependency form. That is not a
+    fixed list and it is deliberately not enumerated here: the set is walked
+    off `route.dependant` and asserted by
+    `tests/test_permission_enforcement.py::PERMISSION_GUARDED_ROUTES`, which
+    also pins its size, and every mapped route is placed in exactly one of the
+    five declared forms by `tests/test_permission_alignment.py`. Adding a
+    route to this form is an ordinary, reviewable change: update that literal.
+
+    IAM F2 (APRAS-46) shipped this class on seven routes and said so here.
+    That sentence is retired, not merely stale: APRAS-40 added three, APRAS-44
+    eighteen and APRAS-51 twenty-five, and a docstring naming a count is the
+    exact defect class APRAS-51 exists to close — a normative statement about
+    enforcement that the code contradicts.
+
+    **The rule that still binds** is about *moving* a gate, not about adding
+    one. A gate that runs inside the handler today must stay inside the
+    handler: FastAPI solves sub-dependencies *before* it raises
+    body-validation errors, so hoisting one into the dependency tree would
+    flip a denied caller's `422` (invalid body) or `404` (missing object) into
+    a `403`. It is what keeps the five `SERVICE_ENFORCED` routes
+    (`tests/test_permission_alignment.py`) out of this form — converting them
+    would delete a `BallotRejection` audit row, a Portuguese user-facing
+    message and the `packages:queue_read` gatehouse short-circuit. What
+    APRAS-51 added instead is a gate where there was **none**, on 25 routes
+    the map already claimed, which moves three parity cells and no others.
     """
 
     def __init__(self, permission: str) -> None:

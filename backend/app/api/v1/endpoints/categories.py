@@ -30,14 +30,15 @@ def _require_category_write_permission(
 def list_categories(
     session: Annotated[Session, Depends(get_session)],
     current_user: Annotated[  # noqa: ARG001
-        User, Depends(api_deps.get_current_user)
+        User, Depends(api_deps.require_permission("categories:read"))
     ],
 ) -> list[CategoryRead]:
-    """List every active category. Any authenticated caller.
+    """List every active category. Requires `categories:read` (APRAS-51).
 
-    The dependency stays even though the handler no longer reads it: it is
-    what makes the route authenticated. IAM F5 (APRAS-49 §4.1) removed the
-    the `assert_menu_access(...)` line that used to consume it.
+    The dependency stays unread by the handler: it is what makes the route
+    authenticated *and*, since APRAS-51, what enforces the permission the
+    registry has always mapped it to. IAM F5 (APRAS-49 §4.1) removed the
+    `assert_menu_access(...)` line that used to consume it.
     """
     return CategoryService.get_categories(session=session)
 
