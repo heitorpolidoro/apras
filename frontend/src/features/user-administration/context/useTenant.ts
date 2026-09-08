@@ -66,4 +66,11 @@ export const useTenant = (): TenantContextValue =>
  * above an auth guard — today exactly one, `useRoles`, which
  * `Navbar` and `ProtectedRoute` both call above their own guards.
  */
-export const useActingTenantReady = (): boolean => !useAuth().isLoading;
+export const useActingTenantReady = (): boolean => {
+  const { isLoading, isAuthenticated } = useAuth();
+  // "Nothing to decide" is not "ready": `Navbar` and `ProtectedRoute` mount
+  // above the auth guard, so on `/login` and `/signup` their hooks run with
+  // no token. Without the second conjunct those two queries left the app
+  // unauthenticated and came back 401 (retried three times each).
+  return !isLoading && isAuthenticated;
+};

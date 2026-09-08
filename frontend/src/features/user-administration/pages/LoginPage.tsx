@@ -24,7 +24,10 @@ const LoginPage: React.FC = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // Fetch dev users if available (endpoint returns 404 in production)
+    // The dev-login picker exists only in development builds; the endpoint
+    // answers 404 in production, and the browser logs every failed XHR even
+    // when the promise is caught, so the request must not be made at all.
+    if (!import.meta.env.DEV) return;
     void apiClient
       .get<User[]>("/auth/dev-users")
       .then((res) => {

@@ -5,7 +5,7 @@ import Navbar from "../components/Navbar";
 import { SidebarProvider } from "../context/SidebarContext";
 import { useSimulation } from "../context/SimulationContext";
 import * as AuthHook from "../context/AuthContext";
-import type { User } from "../../../../types/auth";
+import type { User } from "../../../types/auth";
 import { useRoles } from "../../../hooks/useRoles";
 import { useMyPermissions } from "../../../hooks/usePermissionQueries";
 import {
