@@ -5,6 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
+from app.core import clock
 from app.core.exceptions import (
     ForbiddenError,
     ReservableSpaceNotFoundError,
@@ -51,7 +52,7 @@ def make_space(
     return space
 
 
-NOW = datetime(2026, 6, 1, 12, 0, 0)
+NOW = datetime(2026, 6, 1, 12, 0, 0)  # noqa: DTZ001  # naive literal matching the naive column
 
 
 def dt(hour: int, day: int = 1) -> datetime:
@@ -120,7 +121,7 @@ def test_create_reservation_inactive_space_not_found(session: Session):
 
 
 def test_end_time_must_be_after_start_time():
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError):  # noqa: PT011  # the service raises a bare ValueError here; there is no narrower type
         SpaceReservationCreate(
             space_id=uuid.uuid4(), start_time=dt(11), end_time=dt(10)
         )
@@ -457,7 +458,7 @@ def test_owner_can_cancel_future_reservation(session: Session):
     space = make_space(session)
     resident = _local_user(session, "RESIDENT", "cancel1@test.com", "38381384000")
 
-    future_start = datetime.utcnow() + timedelta(days=1)
+    future_start = clock.db_now() + timedelta(days=1)
     future_end = future_start + timedelta(hours=1)
     reservation_in = SpaceReservationCreate(
         space_id=space.id, start_time=future_start, end_time=future_end
@@ -480,8 +481,8 @@ def test_owner_cannot_cancel_past_reservation(session: Session):
     reservation = SpaceReservation(
         space_id=space.id,
         reserved_by_id=resident.id,
-        start_time=datetime.utcnow() - timedelta(hours=2),
-        end_time=datetime.utcnow() - timedelta(hours=1),
+        start_time=clock.db_now() - timedelta(hours=2),
+        end_time=clock.db_now() - timedelta(hours=1),
         status=ReservationStatus.CONFIRMED,
     )
     session.add(reservation)
@@ -498,7 +499,7 @@ def test_owner_cannot_cancel_someone_elses_reservation(session: Session):
     owner = _local_user(session, "RESIDENT", "owner1@test.com", "56321863030")
     other = _local_user(session, "RESIDENT", "other1@test.com", "71563824020")
 
-    future_start = datetime.utcnow() + timedelta(days=1)
+    future_start = clock.db_now() + timedelta(days=1)
     reservation = SpaceReservation(
         space_id=space.id,
         reserved_by_id=owner.id,
@@ -524,8 +525,8 @@ def test_staff_can_cancel_any_reservation_including_started(
     reservation = SpaceReservation(
         space_id=space.id,
         reserved_by_id=resident.id,
-        start_time=datetime.utcnow() - timedelta(hours=1),
-        end_time=datetime.utcnow() + timedelta(hours=1),
+        start_time=clock.db_now() - timedelta(hours=1),
+        end_time=clock.db_now() + timedelta(hours=1),
         status=ReservationStatus.CONFIRMED,
     )
     session.add(reservation)
@@ -551,8 +552,8 @@ def test_cancel_already_cancelled_not_found(session: Session):
     reservation = SpaceReservation(
         space_id=space.id,
         reserved_by_id=resident.id,
-        start_time=datetime.utcnow() + timedelta(days=1),
-        end_time=datetime.utcnow() + timedelta(days=1, hours=1),
+        start_time=clock.db_now() + timedelta(days=1),
+        end_time=clock.db_now() + timedelta(days=1, hours=1),
         status=ReservationStatus.CANCELLED,
     )
     session.add(reservation)
@@ -820,9 +821,7 @@ def test_mine_true_overrides_space_id_even_for_admin(session: Session, admin_use
 # ---------------------------------------------------------------------------
 
 
-def test_create_reservation_endpoint_success(
-    client: TestClient, session: Session
-):
+def test_create_reservation_endpoint_success(client: TestClient, session: Session):
     space = make_space(session)
     _local_user(session, "RESIDENT", "ep1@test.com", "88289649000")
     token = get_token(client, "ep1", "pass")
@@ -886,9 +885,7 @@ def test_create_reservation_endpoint_conflict_returns_409(
     assert second.status_code == 409
 
 
-def test_approve_endpoint_forbidden_for_non_staff(
-    client: TestClient, session: Session
-):
+def test_approve_endpoint_forbidden_for_non_staff(client: TestClient, session: Session):
     space = make_space(session, requires_approval=True)
     _local_user(session, "RESIDENT", "ep3@test.com", "58551598000")
     token = get_token(client, "ep3", "pass")
@@ -970,8 +967,8 @@ def test_cancel_endpoint_success_for_owner(client: TestClient, session: Session)
     _local_user(session, "RESIDENT", "ep6@test.com", "91190721030")
     token = get_token(client, "ep6", "pass")
 
-    future_start = (datetime.utcnow() + timedelta(days=1)).isoformat()
-    future_end = (datetime.utcnow() + timedelta(days=1, hours=1)).isoformat()
+    future_start = (clock.db_now() + timedelta(days=1)).isoformat()
+    future_end = (clock.db_now() + timedelta(days=1, hours=1)).isoformat()
     create_resp = client.post(
         "/api/v1/space-reservations/",
         headers={"Authorization": f"Bearer {token}"},
@@ -991,17 +988,15 @@ def test_cancel_endpoint_success_for_owner(client: TestClient, session: Session)
     assert response.json()["status"] == "CANCELLED"
 
 
-def test_cancel_endpoint_forbidden_for_non_owner(
-    client: TestClient, session: Session
-):
+def test_cancel_endpoint_forbidden_for_non_owner(client: TestClient, session: Session):
     space = make_space(session)
     _local_user(session, "RESIDENT", "ep7@test.com", "64118918000")
     owner_token = get_token(client, "ep7", "pass")
     _local_user(session, "RESIDENT", "ep8@test.com", "77565175090")
     other_token = get_token(client, "ep8", "pass")
 
-    future_start = (datetime.utcnow() + timedelta(days=1)).isoformat()
-    future_end = (datetime.utcnow() + timedelta(days=1, hours=1)).isoformat()
+    future_start = (clock.db_now() + timedelta(days=1)).isoformat()
+    future_end = (clock.db_now() + timedelta(days=1, hours=1)).isoformat()
     create_resp = client.post(
         "/api/v1/space-reservations/",
         headers={"Authorization": f"Bearer {owner_token}"},

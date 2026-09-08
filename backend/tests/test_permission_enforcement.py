@@ -99,28 +99,32 @@ CONVERTED_NON_COMPARE = 7
 #: that module's structural walk, this set and the `_51` parity artefact all
 #: have to name the same 25, and three copies of one literal is three places
 #: for it to rot.
-PERMISSION_GUARDED_ROUTES: frozenset[tuple[str, str]] = frozenset(
-    {
-        ("DELETE", "/api/v1/tasks/{task_id}"),
-        ("DELETE", "/api/v1/lots/{lot_id}"),
-        ("PATCH", "/api/v1/users/{user_id}"),
-        ("PATCH", "/api/v1/users/{user_id}/contact-info"),
-        ("POST", "/api/v1/roles/"),
-        ("PATCH", "/api/v1/roles/{role_id}"),
-        ("DELETE", "/api/v1/roles/{role_id}"),
-        # APRAS-40 §5.1. `billing:read` / `billing:manage` are the first
-        # permission-guarded catalogue strings minted since the legacy
-        # bundles were recorded, which is why they are also the first to
-        # need the parity oracle's superuser branch (§9.2.4.1).
-        ("GET", "/api/v1/subscription"),
-        ("GET", "/api/v1/subscription/history"),
-        ("PUT", "/api/v1/subscription/modules"),
-    }
-) | frozenset(
-    key
-    for key, permission in ROUTE_PERMISSIONS.items()
-    if permission.startswith("infractions:")
-) | APRAS_51_ROUTES
+PERMISSION_GUARDED_ROUTES: frozenset[tuple[str, str]] = (
+    frozenset(
+        {
+            ("DELETE", "/api/v1/tasks/{task_id}"),
+            ("DELETE", "/api/v1/lots/{lot_id}"),
+            ("PATCH", "/api/v1/users/{user_id}"),
+            ("PATCH", "/api/v1/users/{user_id}/contact-info"),
+            ("POST", "/api/v1/roles/"),
+            ("PATCH", "/api/v1/roles/{role_id}"),
+            ("DELETE", "/api/v1/roles/{role_id}"),
+            # APRAS-40 §5.1. `billing:read` / `billing:manage` are the first
+            # permission-guarded catalogue strings minted since the legacy
+            # bundles were recorded, which is why they are also the first to
+            # need the parity oracle's superuser branch (§9.2.4.1).
+            ("GET", "/api/v1/subscription"),
+            ("GET", "/api/v1/subscription/history"),
+            ("PUT", "/api/v1/subscription/modules"),
+        }
+    )
+    | frozenset(
+        key
+        for key, permission in ROUTE_PERMISSIONS.items()
+        if permission.startswith("infractions:")
+    )
+    | APRAS_51_ROUTES
+)
 
 #: The is_superuser carve-out, duplicated from `test_tenant_admin.py` on
 #: purpose: this module states its own boundary, and the original test keeps
@@ -173,7 +177,9 @@ ADMIN_ONLY_ROUTES: frozenset[tuple[str, str]] = frozenset(
 #: here so `test_every_route_is_still_tenant_classified` can run without
 #: importing another test module.
 GLOBAL_PREFIXES = ("/api/v1/tenants", "/api/v1/auth", "/api/v1/health")
-GLOBAL_EXTRA = frozenset({("GET", "/"), ("POST", "/api/v1/access-control/webhook/verification")})
+GLOBAL_EXTRA = frozenset(
+    {("GET", "/"), ("POST", "/api/v1/access-control/webhook/verification")}
+)
 
 
 # ---------------------------------------------------------------------------
@@ -555,9 +561,7 @@ def test_no_model_names_a_retired_role_literal():
         tree = ast.parse(path.read_text(encoding="utf-8"))
         where = _function_index(tree)
         for node in ast.walk(tree):
-            named = (
-                isinstance(node, ast.Attribute) and node.attr in retired
-            ) or (
+            named = (isinstance(node, ast.Attribute) and node.attr in retired) or (
                 isinstance(node, ast.Constant)
                 and isinstance(node.value, str)
                 and node.value in retired

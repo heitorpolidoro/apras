@@ -4,13 +4,13 @@ Deliberately isolated: this module knows nothing about Financeiro, Patrimônio
 & Estoque or Obras. Choosing a quote records a justification and nothing else.
 """
 
-from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import func, or_
 from sqlmodel import Session, select
 
 from app.api.deps import has_permission
+from app.core import clock
 from app.core.exceptions import (
     PurchaseAccessForbiddenError,
     PurchaseQuoteFrozenError,
@@ -51,9 +51,7 @@ class PurchaseService:
     @staticmethod
     def _assert_can_view(current_user: User, session: Session, permission: str) -> None:
         if not has_permission(current_user, session, permission):
-            raise PurchaseAccessForbiddenError(
-                "Acesso às cotações de compra negado."
-            )
+            raise PurchaseAccessForbiddenError("Acesso às cotações de compra negado.")
 
     @staticmethod
     def _assert_can_decide(
@@ -77,9 +75,7 @@ class PurchaseService:
         if has_permission(current_user, session, "purchases:decide"):
             return
         if not has_permission(current_user, session, "purchases:update"):
-            raise PurchaseAccessForbiddenError(
-                "Acesso às cotações de compra negado."
-            )
+            raise PurchaseAccessForbiddenError("Acesso às cotações de compra negado.")
         if purchase_request.requested_by_id != current_user.id:
             raise PurchaseAccessForbiddenError(
                 "Gerentes só podem alterar os pedidos que criaram."
@@ -97,9 +93,7 @@ class PurchaseService:
         if has_permission(current_user, session, "purchases:decide"):
             return
         if not has_permission(current_user, session, "purchases:quote_update"):
-            raise PurchaseAccessForbiddenError(
-                "Acesso às cotações de compra negado."
-            )
+            raise PurchaseAccessForbiddenError("Acesso às cotações de compra negado.")
         if quote.created_by_id != current_user.id:
             raise PurchaseAccessForbiddenError(
                 "Gerentes só podem alterar os orçamentos que registraram."
@@ -136,9 +130,7 @@ class PurchaseService:
             raise PurchaseQuoteFrozenError
 
     @staticmethod
-    def _resolve_user_names(
-        session: Session, user_ids: set[UUID]
-    ) -> dict[UUID, str]:
+    def _resolve_user_names(session: Session, user_ids: set[UUID]) -> dict[UUID, str]:
         if not user_ids:
             return {}
         rows = session.exec(select(User).where(User.id.in_(user_ids))).all()
@@ -162,9 +154,7 @@ class PurchaseService:
         totals = [_quote_total(q) for q in quotes]
         selected_quote = None
         if current is not None:
-            selected_quote = next(
-                (q for q in quotes if q.id == current.quote_id), None
-            )
+            selected_quote = next((q for q in quotes if q.id == current.quote_id), None)
         return PurchaseRequestRead(
             id=purchase_request.id,
             title=purchase_request.title,
@@ -204,8 +194,7 @@ class PurchaseService:
             extra_fields=quote.extra_fields or [],
             created_by_id=quote.created_by_id,
             created_by_name=user_names.get(quote.created_by_id),
-            is_selected=selected_quote_id is not None
-            and selected_quote_id == quote.id,
+            is_selected=selected_quote_id is not None and selected_quote_id == quote.id,
             is_lowest_price=lowest_total is not None and total == lowest_total,
             created_at=quote.created_at,
             updated_at=quote.updated_at,
@@ -225,7 +214,7 @@ class PurchaseService:
                 "Apenas Administradores, Diretores e Gerentes podem abrir pedidos."
             )
 
-        now = datetime.now(UTC)
+        now = clock.db_now()
         purchase_request = PurchaseRequest(
             **request_in.model_dump(),
             status=PurchaseRequestStatus.OPEN,
@@ -352,9 +341,9 @@ class PurchaseService:
                 PurchaseQuoteDecision.purchase_request_id.in_(request_ids)
             )
         ).all():
-            decisions_by_request.setdefault(
-                decision.purchase_request_id, []
-            ).append(decision)
+            decisions_by_request.setdefault(decision.purchase_request_id, []).append(
+                decision
+            )
 
         total_selected_value = 0.0
         for purchase_request in requests:
@@ -455,7 +444,7 @@ class PurchaseService:
 
         for key, value in request_in.model_dump(exclude_unset=True).items():
             setattr(purchase_request, key, value)
-        purchase_request.updated_at = datetime.now(UTC)
+        purchase_request.updated_at = clock.db_now()
         session.add(purchase_request)
         session.commit()
         session.refresh(purchase_request)
@@ -476,9 +465,7 @@ class PurchaseService:
         )
 
     @staticmethod
-    def delete_request(
-        session: Session, current_user: User, request_id: UUID
-    ) -> None:
+    def delete_request(session: Session, current_user: User, request_id: UUID) -> None:
         """Delete a purchase request and cascade its quotes and decisions."""
         PurchaseService._assert_can_view(current_user, session, "purchases:delete")
         purchase_request = PurchaseService._get_request_or_404(session, request_id)
@@ -503,7 +490,7 @@ class PurchaseService:
             )
 
         purchase_request.status = PurchaseRequestStatus.CANCELLED
-        purchase_request.updated_at = datetime.now(UTC)
+        purchase_request.updated_at = clock.db_now()
         session.add(purchase_request)
         session.commit()
         session.refresh(purchase_request)
@@ -523,13 +510,11 @@ class PurchaseService:
     ) -> PurchaseQuoteRead:
         """Add a supplier quote to an open purchase request."""
         if not has_permission(current_user, session, "purchases:quote_create"):
-            raise PurchaseAccessForbiddenError(
-                "Acesso às cotações de compra negado."
-            )
+            raise PurchaseAccessForbiddenError("Acesso às cotações de compra negado.")
         purchase_request = PurchaseService._get_request_or_404(session, request_id)
         PurchaseService._assert_quotes_unfrozen(purchase_request)
 
-        now = datetime.now(UTC)
+        now = clock.db_now()
         data = quote_in.model_dump()
         extra_fields = data.pop("extra_fields", [])
         quote = PurchaseQuote(
@@ -570,14 +555,12 @@ class PurchaseService:
             update_data.pop("extra_fields")
         for key, value in update_data.items():
             setattr(quote, key, value)
-        quote.updated_at = datetime.now(UTC)
+        quote.updated_at = clock.db_now()
         session.add(quote)
         session.commit()
         session.refresh(quote)
 
-        user_names = PurchaseService._resolve_user_names(
-            session, {quote.created_by_id}
-        )
+        user_names = PurchaseService._resolve_user_names(session, {quote.created_by_id})
         return PurchaseService._build_quote_read(quote, user_names)
 
     @staticmethod
@@ -620,7 +603,7 @@ class PurchaseService:
             session, request_id, decision_in.quote_id
         )
 
-        now = datetime.now(UTC)
+        now = clock.db_now()
         decision = PurchaseQuoteDecision(
             purchase_request_id=purchase_request.id,
             quote_id=quote.id,

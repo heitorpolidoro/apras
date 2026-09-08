@@ -3,14 +3,15 @@
 from typing import Annotated
 from uuid import UUID
 
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlmodel import Session
+
 from app.api import deps as api_deps
 from app.db import get_session
 from app.models.category import Category
 from app.models.user import User
 from app.schemas.category import CategoryCreate, CategoryRead, CategoryUpdate
 from app.services.category_service import CategoryService
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import Session
 
 router = APIRouter()
 
@@ -26,10 +27,10 @@ def _require_category_write_permission(
         )
 
 
-@router.get("/", response_model=list[CategoryRead])
+@router.get("/")
 def list_categories(
     session: Annotated[Session, Depends(get_session)],
-    current_user: Annotated[  # noqa: ARG001
+    current_user: Annotated[  # noqa: ARG001  # FastAPI dependency guard: its only job is the 403
         User, Depends(api_deps.require_permission("categories:read"))
     ],
 ) -> list[CategoryRead]:
@@ -43,7 +44,7 @@ def list_categories(
     return CategoryService.get_categories(session=session)
 
 
-@router.post("/", response_model=CategoryRead, status_code=status.HTTP_201_CREATED)
+@router.post("/", status_code=status.HTTP_201_CREATED)
 def create_category(
     category_in: CategoryCreate,
     session: Annotated[Session, Depends(get_session)],
@@ -54,7 +55,7 @@ def create_category(
     return CategoryService.create_category(session=session, category_in=category_in)
 
 
-@router.patch("/{category_id}", response_model=CategoryRead)
+@router.patch("/{category_id}")
 def update_category(
     category_id: UUID,
     category_in: CategoryUpdate,

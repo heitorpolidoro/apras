@@ -35,8 +35,6 @@ def resident_user(session: Session) -> User:
     return user
 
 
-
-
 def test_resident_cannot_access_unlinked_lot_authorizations(
     session: Session, client: TestClient, resident_user: User, admin_user: User
 ):
@@ -47,12 +45,17 @@ def test_resident_cannot_access_unlinked_lot_authorizations(
     LotService.link_user(
         session,
         lot_own.id,
-        UserLotLinkCreate(user_id=resident_user.id, association_type=LotAssociationType.PROPRIETARIO),
+        UserLotLinkCreate(
+            user_id=resident_user.id, association_type=LotAssociationType.PROPRIETARIO
+        ),
     )
 
-    visitor = VisitorService.create_visitor(session, VisitorCreate(full_name="Visitor RBAC"))
+    visitor = VisitorService.create_visitor(
+        session, VisitorCreate(full_name="Visitor RBAC")
+    )
 
     from app.core.security import create_access_token
+
     token = create_access_token(resident_user.id)
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -69,7 +72,9 @@ def test_resident_cannot_access_unlinked_lot_authorizations(
     assert res_create_own.status_code == 201
 
     # Forbidden for unlinked lot_other
-    res_other = client.get(f"/api/v1/lots/{lot_other.id}/authorizations", headers=headers)
+    res_other = client.get(
+        f"/api/v1/lots/{lot_other.id}/authorizations", headers=headers
+    )
     assert res_other.status_code == 403
 
     res_create_other = client.post(
@@ -84,9 +89,12 @@ def test_resident_cannot_execute_check_in_or_check_out(
     session: Session, client: TestClient, resident_user: User
 ):
     lot = LotService.create_lot(session, LotCreate(block="R2", lot_number="201"))
-    visitor = VisitorService.create_visitor(session, VisitorCreate(full_name="CheckIn Tester"))
+    visitor = VisitorService.create_visitor(
+        session, VisitorCreate(full_name="CheckIn Tester")
+    )
 
     from app.core.security import create_access_token
+
     token = create_access_token(resident_user.id)
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -114,10 +122,13 @@ def test_resident_access_logs_restricted_to_linked_lot(
     LotService.link_user(
         session,
         lot_own.id,
-        UserLotLinkCreate(user_id=resident_user.id, association_type=LotAssociationType.PROPRIETARIO),
+        UserLotLinkCreate(
+            user_id=resident_user.id, association_type=LotAssociationType.PROPRIETARIO
+        ),
     )
 
     from app.core.security import create_access_token
+
     token = create_access_token(resident_user.id)
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -126,7 +137,9 @@ def test_resident_access_logs_restricted_to_linked_lot(
     assert res_own.status_code == 200
 
     # Querying other lot logs -> 403
-    res_other = client.get(f"/api/v1/access-logs?lot_id={lot_other.id}", headers=headers)
+    res_other = client.get(
+        f"/api/v1/access-logs?lot_id={lot_other.id}", headers=headers
+    )
     assert res_other.status_code == 403
 
 
@@ -139,32 +152,49 @@ def test_resident_cannot_fetch_or_scan_qr_for_unlinked_lot_authorization(
     LotService.link_user(
         session,
         lot_own.id,
-        UserLotLinkCreate(user_id=resident_user.id, association_type=LotAssociationType.PROPRIETARIO),
+        UserLotLinkCreate(
+            user_id=resident_user.id, association_type=LotAssociationType.PROPRIETARIO
+        ),
     )
 
-    visitor = VisitorService.create_visitor(session, VisitorCreate(full_name="QR RBAC Visitor"))
+    visitor = VisitorService.create_visitor(
+        session, VisitorCreate(full_name="QR RBAC Visitor")
+    )
     auth_other = VisitorService.create_authorization(
-        session, lot_other.id, VisitorAuthorizationCreate(visitor_id=visitor.id), admin_user
+        session,
+        lot_other.id,
+        VisitorAuthorizationCreate(visitor_id=visitor.id),
+        admin_user,
     )
     auth_own = VisitorService.create_authorization(
-        session, lot_own.id, VisitorAuthorizationCreate(visitor_id=visitor.id), admin_user
+        session,
+        lot_own.id,
+        VisitorAuthorizationCreate(visitor_id=visitor.id),
+        admin_user,
     )
 
     from app.core.security import create_access_token
+
     token = create_access_token(resident_user.id)
     headers = {"Authorization": f"Bearer {token}"}
 
     # Forbidden: the authorization belongs to a lot the resident has no relationship to.
-    res_get_other = client.get(f"/api/v1/authorizations/{auth_other.id}", headers=headers)
+    res_get_other = client.get(
+        f"/api/v1/authorizations/{auth_other.id}", headers=headers
+    )
     assert res_get_other.status_code == 403
 
-    res_qr_other = client.get(f"/api/v1/authorizations/{auth_other.id}/qr-code", headers=headers)
+    res_qr_other = client.get(
+        f"/api/v1/authorizations/{auth_other.id}/qr-code", headers=headers
+    )
     assert res_qr_other.status_code == 403
 
     # Allowed: the authorization belongs to the resident's own linked lot.
     res_get_own = client.get(f"/api/v1/authorizations/{auth_own.id}", headers=headers)
     assert res_get_own.status_code == 200
 
-    res_qr_own = client.get(f"/api/v1/authorizations/{auth_own.id}/qr-code", headers=headers)
+    res_qr_own = client.get(
+        f"/api/v1/authorizations/{auth_own.id}/qr-code", headers=headers
+    )
     assert res_qr_own.status_code == 200
     assert res_qr_own.headers["content-type"] == "image/png"

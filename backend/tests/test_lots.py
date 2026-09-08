@@ -65,7 +65,7 @@ def test_update_lot(session: Session):
 
 
 def test_update_lot_duplicate_block_number_raises_error(session: Session):
-    lot1 = LotService.create_lot(session, LotCreate(block="E", lot_number="1"))
+    LotService.create_lot(session, LotCreate(block="E", lot_number="1"))
     lot2 = LotService.create_lot(session, LotCreate(block="E", lot_number="2"))
 
     with pytest.raises(LotAlreadyExistsError):
@@ -81,7 +81,9 @@ def test_soft_delete_lot(session: Session):
 
 
 def test_user_lot_linking_and_auto_status(session: Session, normal_user: User):
-    lot = LotService.create_lot(session, LotCreate(block="G", lot_number="606", status=LotStatus.VACANT))
+    lot = LotService.create_lot(
+        session, LotCreate(block="G", lot_number="606", status=LotStatus.VACANT)
+    )
     assert lot.status == LotStatus.VACANT
 
     link_in = UserLotLinkCreate(
@@ -131,8 +133,12 @@ def test_single_user_linked_to_multiple_lots(session: Session, normal_user: User
     lot1 = LotService.create_lot(session, LotCreate(block="J", lot_number="1"))
     lot2 = LotService.create_lot(session, LotCreate(block="J", lot_number="2"))
 
-    link1 = LotService.link_user(session, lot1.id, UserLotLinkCreate(user_id=normal_user.id))
-    link2 = LotService.link_user(session, lot2.id, UserLotLinkCreate(user_id=normal_user.id))
+    link1 = LotService.link_user(
+        session, lot1.id, UserLotLinkCreate(user_id=normal_user.id)
+    )
+    link2 = LotService.link_user(
+        session, lot2.id, UserLotLinkCreate(user_id=normal_user.id)
+    )
 
     assert link1.lot_id == lot1.id
     assert link2.lot_id == lot2.id
@@ -140,11 +146,18 @@ def test_single_user_linked_to_multiple_lots(session: Session, normal_user: User
 
 # API Endpoint Integration Tests
 def test_api_list_lots(client: TestClient, admin_user: User, session: Session):
-    LotService.create_lot(session, LotCreate(block="K", lot_number="1", status=LotStatus.VACANT))
-    LotService.create_lot(session, LotCreate(block="K", lot_number="2", status=LotStatus.OCCUPIED))
-    LotService.create_lot(session, LotCreate(block="L", lot_number="1", status=LotStatus.VACANT))
+    LotService.create_lot(
+        session, LotCreate(block="K", lot_number="1", status=LotStatus.VACANT)
+    )
+    LotService.create_lot(
+        session, LotCreate(block="K", lot_number="2", status=LotStatus.OCCUPIED)
+    )
+    LotService.create_lot(
+        session, LotCreate(block="L", lot_number="1", status=LotStatus.VACANT)
+    )
 
     from app.core.security import create_access_token
+
     token = create_access_token(admin_user.id)
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -168,6 +181,7 @@ def test_api_list_lots(client: TestClient, admin_user: User, session: Session):
 
 def test_api_create_get_update_delete_lot(client: TestClient, admin_user: User):
     from app.core.security import create_access_token
+
     token = create_access_token(admin_user.id)
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -199,7 +213,9 @@ def test_api_create_get_update_delete_lot(client: TestClient, admin_user: User):
     assert res_get.json()["users"] == []
 
     # Update
-    res_put = client.put(f"/api/v1/lots/{lot_id}", json={"notes": "New notes"}, headers=headers)
+    res_put = client.put(
+        f"/api/v1/lots/{lot_id}", json={"notes": "New notes"}, headers=headers
+    )
     assert res_put.status_code == 200
     assert res_put.json()["notes"] == "New notes"
 
@@ -212,10 +228,13 @@ def test_api_create_get_update_delete_lot(client: TestClient, admin_user: User):
     assert res_get_after.status_code == 404
 
 
-def test_api_link_and_unlink_user(client: TestClient, admin_user: User, normal_user: User, session: Session):
+def test_api_link_and_unlink_user(
+    client: TestClient, admin_user: User, normal_user: User, session: Session
+):
     lot = LotService.create_lot(session, LotCreate(block="N", lot_number="1"))
 
     from app.core.security import create_access_token
+
     token = create_access_token(admin_user.id)
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -225,31 +244,41 @@ def test_api_link_and_unlink_user(client: TestClient, admin_user: User, normal_u
         "association_type": "PROPRIETARIO",
         "is_primary": True,
     }
-    res_link = client.post(f"/api/v1/lots/{lot.id}/users", json=link_payload, headers=headers)
+    res_link = client.post(
+        f"/api/v1/lots/{lot.id}/users", json=link_payload, headers=headers
+    )
     assert res_link.status_code == 201
     link_data = res_link.json()
     assert link_data["user"]["id"] == str(normal_user.id)
     assert link_data["user"]["full_name"] == normal_user.full_name
 
     # Duplicate link
-    res_link_dup = client.post(f"/api/v1/lots/{lot.id}/users", json=link_payload, headers=headers)
+    res_link_dup = client.post(
+        f"/api/v1/lots/{lot.id}/users", json=link_payload, headers=headers
+    )
     assert res_link_dup.status_code == 400
 
     # Unlink user
-    res_unlink = client.delete(f"/api/v1/lots/{lot.id}/users/{normal_user.id}", headers=headers)
+    res_unlink = client.delete(
+        f"/api/v1/lots/{lot.id}/users/{normal_user.id}", headers=headers
+    )
     assert res_unlink.status_code == 204
 
 
-def test_link_non_existent_user_raises_error(session: Session, client: TestClient, admin_user: User):
+def test_link_non_existent_user_raises_error(
+    session: Session, client: TestClient, admin_user: User
+):
     lot = LotService.create_lot(session, LotCreate(block="P", lot_number="1"))
     fake_user_id = uuid.uuid4()
     link_in = UserLotLinkCreate(user_id=fake_user_id)
 
     from app.core.exceptions import DomainError
+
     with pytest.raises(DomainError):
         LotService.link_user(session, lot.id, link_in)
 
     from app.core.security import create_access_token
+
     token = create_access_token(admin_user.id)
     headers = {"Authorization": f"Bearer {token}"}
     res = client.post(
@@ -258,4 +287,3 @@ def test_link_non_existent_user_raises_error(session: Session, client: TestClien
         headers=headers,
     )
     assert res.status_code == 400
-

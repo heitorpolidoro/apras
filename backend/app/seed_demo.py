@@ -5,12 +5,11 @@ Reuses or creates records without duplicates.
 """
 
 import argparse
-import sys
-import uuid
-from datetime import date, datetime, timedelta
+from datetime import timedelta
 
 from sqlmodel import Session, create_engine, select
 
+from app.core import clock
 from app.core.config import settings
 from app.core.security import get_password_hash
 from app.models.announcement import Announcement
@@ -41,10 +40,10 @@ from app.models.user import User
 from app.models.visitor import Visitor, VisitorAuthorization
 from app.services.tenant_service import TenantService
 
-DEMO_PASSWORD = "demo1234"
+DEMO_PASSWORD = "demo1234"  # noqa: S105  # demo seed credential, not a real secret
 
 
-def run_seed(db_url: str | None = None) -> None:
+def run_seed(db_url: str | None = None) -> None:  # noqa: PLR0912, PLR0915  # linear seed script; splitting it would hide the order rows must be created in
     target_url = db_url or settings.database_url
     print("Connecting to database...")
     engine = create_engine(target_url)
@@ -76,7 +75,9 @@ def run_seed(db_url: str | None = None) -> None:
         session.commit()
 
         # Clean legacy "(papel)" suffix from role names if present
-        for role_row in session.exec(select(Role).where(Role.tenant_id == tenant_id)).all():
+        for role_row in session.exec(
+            select(Role).where(Role.tenant_id == tenant_id)
+        ).all():
             if " (papel)" in role_row.name:
                 role_row.name = role_row.name.replace(" (papel)", "").strip()
                 session.add(role_row)
@@ -93,7 +94,9 @@ def run_seed(db_url: str | None = None) -> None:
             select(User).where(User.email == "heitor.polidoro@gmail.com")
         ).first()
         if heitor:
-            admin_role = roles_by_name.get("Administrador") or roles_by_name.get("Administrador (papel)")
+            admin_role = roles_by_name.get("Administrador") or roles_by_name.get(
+                "Administrador (papel)"
+            )
             if admin_role and admin_role not in heitor.roles:
                 heitor.roles.append(admin_role)
                 session.add(heitor)
@@ -141,9 +144,7 @@ def run_seed(db_url: str | None = None) -> None:
 
         users_map: dict[str, User] = {}
         for spec in users_specs:
-            user = session.exec(
-                select(User).where(User.email == spec["email"])
-            ).first()
+            user = session.exec(select(User).where(User.email == spec["email"])).first()
             if not user:
                 user = User(
                     email=spec["email"],
@@ -165,7 +166,9 @@ def run_seed(db_url: str | None = None) -> None:
                 session.refresh(user)
 
             # Link role
-            role_obj = roles_by_name.get(spec["role"]) or roles_by_name.get(f"{spec['role']} (papel)")
+            role_obj = roles_by_name.get(spec["role"]) or roles_by_name.get(
+                f"{spec['role']} (papel)"
+            )
             if role_obj and role_obj not in user.roles:
                 user.roles.append(role_obj)
                 session.add(user)
@@ -179,9 +182,7 @@ def run_seed(db_url: str | None = None) -> None:
                 )
             ).first()
             if not link:
-                session.add(
-                    UserTenantLink(user_id=user.id, tenant_id=tenant_id)
-                )
+                session.add(UserTenantLink(user_id=user.id, tenant_id=tenant_id))
                 session.commit()
 
             users_map[spec["email"]] = user
@@ -275,11 +276,14 @@ def run_seed(db_url: str | None = None) -> None:
         print(f" Loaded {len(cats_map)} task categories.")
 
         # 7. Tasks
-        now = datetime.utcnow()
+        now = clock.db_now()
         tasks_specs = [
             {
                 "title": "Vistoria periódica dos para-raios e laudo SPDA",
-                "description": "Contratar empresa credenciada para medição ôhmica e renovação do laudo técnico de para-raios.",
+                "description": (
+                    "Contratar empresa credenciada para medição ôhmica e renovação do "
+                    "laudo técnico de para-raios."
+                ),
                 "status": TaskStatus.IN_PROGRESS,
                 "priority": TaskPriority.HIGH,
                 "category": "Manutenção Predial",
@@ -288,7 +292,11 @@ def run_seed(db_url: str | None = None) -> None:
             },
             {
                 "title": "Manutenção preventiva das bombas de recalque da caixa d'água",
-                "description": "Verificar rolamentos, vedação mecânica e alternância automática do conjunto motobomba.",
+                "description": (
+                    "Verificar rolamentos, vedação mecânica e alternância automática "
+                    "do "
+                    "conjunto motobomba."
+                ),
                 "status": TaskStatus.PENDING,
                 "priority": TaskPriority.URGENT,
                 "category": "Manutenção Predial",
@@ -297,7 +305,10 @@ def run_seed(db_url: str | None = None) -> None:
             },
             {
                 "title": "Substituição de lâmpadas de emergência nas escadarias",
-                "description": "Testar baterias das luminárias autônomas de emergência nos blocos A e B.",
+                "description": (
+                    "Testar baterias das luminárias autônomas de emergência nos blocos "
+                    "A e B."
+                ),
                 "status": TaskStatus.IN_PROGRESS,
                 "priority": TaskPriority.MEDIUM,
                 "category": "Segurança & Portaria",
@@ -306,7 +317,10 @@ def run_seed(db_url: str | None = None) -> None:
             },
             {
                 "title": "Cotação para modernização do sistema de interfonia",
-                "description": "Solicitar 3 orçamentos para migração do cabeamento analógico para interfonia IP/digital.",
+                "description": (
+                    "Solicitar 3 orçamentos para migração do cabeamento analógico para "
+                    "interfonia IP/digital."
+                ),
                 "status": TaskStatus.PENDING,
                 "priority": TaskPriority.MEDIUM,
                 "category": "Administrativo & Financeiro",
@@ -315,7 +329,11 @@ def run_seed(db_url: str | None = None) -> None:
             },
             {
                 "title": "Dedetização semestral das áreas comuns e garagens",
-                "description": "Aplicação de barreira química contra insetos e roedores no subsolo e lixeiras.",
+                "description": (
+                    "Aplicação de barreira química contra insetos e roedores no "
+                    "subsolo "
+                    "e lixeiras."
+                ),
                 "status": TaskStatus.COMPLETED,
                 "priority": TaskPriority.LOW,
                 "category": "Limpeza & Conservação",
@@ -324,7 +342,10 @@ def run_seed(db_url: str | None = None) -> None:
             },
             {
                 "title": "Pintura e demarcação das vagas de garagem do subsolo",
-                "description": "Refazer faixas amarelas e sinalização de vagas preferenciais e vagas de moto.",
+                "description": (
+                    "Refazer faixas amarelas e sinalização de vagas preferenciais e "
+                    "vagas de moto."
+                ),
                 "status": TaskStatus.PENDING,
                 "priority": TaskPriority.LOW,
                 "category": "Manutenção Predial",
@@ -362,17 +383,37 @@ def run_seed(db_url: str | None = None) -> None:
         announcements_specs = [
             {
                 "title": "Manutenção Preventiva dos Elevadores - Bloco A e B",
-                "content": "Informamos que na próxima terça-feira (10h às 14h) a empresa Atlas realizará a manutenção periódica e lubrificação dos elevadores de passageiros. Durante o período, pedimos que utilizem o elevador de serviço.",
+                "content": (
+                    "Informamos que na próxima terça-feira (10h às 14h) a empresa "
+                    "Atlas "
+                    "realizará a manutenção periódica e lubrificação dos elevadores de "
+                    "passageiros. Durante o período, pedimos que utilizem o elevador "
+                    "de "
+                    "serviço."
+                ),
                 "author_email": "sindico@apras.com",
             },
             {
-                "title": "Campanha de Conscientização: Coleta Seletiva e Descarte de Resíduos",
-                "content": "Pedimos a colaboração de todos os moradores para separar os materiais recicláveis (papel, plástico, vidro e metal) nos coletores identificados no subsolo. Caixas de papelão devem ser dobradas antes do descarte.",
+                "title": (
+                    "Campanha de Conscientização: Coleta Seletiva e Descarte de "
+                    "Resíduos"
+                ),
+                "content": (
+                    "Pedimos a colaboração de todos os moradores para separar os "
+                    "materiais recicláveis (papel, plástico, vidro e metal) nos "
+                    "coletores identificados no subsolo. Caixas de papelão devem ser "
+                    "dobradas antes do descarte."
+                ),
                 "author_email": "sindico@apras.com",
             },
             {
                 "title": "Assembleia Geral Ordinária - Prestação de Contas 2026",
-                "content": "Convocamos todos os condôminos para a AGO no dia 25 do próximo mês às 19h no Salão de Festas, com transmissão online. Pauta: prestação de contas do exercício anterior e votação orçamentária.",
+                "content": (
+                    "Convocamos todos os condôminos para a AGO no dia 25 do próximo "
+                    "mês "
+                    "às 19h no Salão de Festas, com transmissão online. Pauta: "
+                    "prestação de contas do exercício anterior e votação orçamentária."
+                ),
                 "author_email": "sindico@apras.com",
             },
         ]
@@ -385,7 +426,9 @@ def run_seed(db_url: str | None = None) -> None:
                 )
             ).first()
             if not ann:
-                author = users_map.get(a_spec["author_email"]) or users_map.get("admin@apras.com")
+                author = users_map.get(a_spec["author_email"]) or users_map.get(
+                    "admin@apras.com"
+                )
                 ann = Announcement(
                     tenant_id=tenant_id,
                     title=a_spec["title"],
@@ -400,25 +443,37 @@ def run_seed(db_url: str | None = None) -> None:
         spaces_data = [
             {
                 "name": "Salão de Festas Principal",
-                "description": "Espaço climatizado com cozinha completa, mesas, cadeiras e sistema de som.",
+                "description": (
+                    "Espaço climatizado com cozinha completa, mesas, cadeiras e "
+                    "sistema "
+                    "de som."
+                ),
                 "capacity": 80,
                 "requires_approval": True,
             },
             {
                 "name": "Espaço Gourmet & Churrasqueira",
-                "description": "Área coberta com churrasqueira a carvão, bancada em granito e freezer.",
+                "description": (
+                    "Área coberta com churrasqueira a carvão, bancada em granito e "
+                    "freezer."
+                ),
                 "capacity": 30,
                 "requires_approval": False,
             },
             {
                 "name": "Quadra Poliesportiva",
-                "description": "Quadra com iluminação LED para futebol, basquete e vôlei.",
+                "description": (
+                    "Quadra com iluminação LED para futebol, basquete e vôlei."
+                ),
                 "capacity": 20,
                 "requires_approval": False,
             },
             {
                 "name": "Sala de Jogos & Coworking",
-                "description": "Mesa de bilhar, mesa de cartas, bancadas de trabalho e Wi-Fi de alta velocidade.",
+                "description": (
+                    "Mesa de bilhar, mesa de cartas, bancadas de trabalho e Wi-Fi de "
+                    "alta velocidade."
+                ),
                 "capacity": 15,
                 "requires_approval": False,
             },
@@ -450,12 +505,8 @@ def run_seed(db_url: str | None = None) -> None:
         # Space reservation
         salao = spaces_map.get("Salão de Festas Principal")
         if salao and morador_user and lot_101:
-            res_start = (now + timedelta(days=5)).replace(
-                hour=14, minute=0, second=0
-            )
-            res_end = (now + timedelta(days=5)).replace(
-                hour=22, minute=0, second=0
-            )
+            res_start = (now + timedelta(days=5)).replace(hour=14, minute=0, second=0)
+            res_end = (now + timedelta(days=5)).replace(hour=22, minute=0, second=0)
             existing_res = session.exec(
                 select(SpaceReservation).where(
                     SpaceReservation.space_id == salao.id,
@@ -547,7 +598,10 @@ def run_seed(db_url: str | None = None) -> None:
                 "protocol": "OC-2026-001",
                 "category": OccurrenceCategory.MAINTENANCE,
                 "title": "Vazamento na torneira do jardim próximo ao playground",
-                "description": "A torneira externa está gotejando continuamente, acumulando poça de água perto da área infantil.",
+                "description": (
+                    "A torneira externa está gotejando continuamente, acumulando poça "
+                    "de água perto da área infantil."
+                ),
                 "status": OccurrenceStatus.OPEN,
                 "priority": OccurrencePriority.LOW,
                 "lot": ("Bloco A", "101"),
@@ -556,17 +610,25 @@ def run_seed(db_url: str | None = None) -> None:
                 "protocol": "OC-2026-002",
                 "category": OccurrenceCategory.NOISE,
                 "title": "Música alta após o horário de silêncio (22h)",
-                "description": "Música e conversa em tom elevado no Bloco B unidade 202 na noite de sexta-feira.",
+                "description": (
+                    "Música e conversa em tom elevado no Bloco B unidade 202 na noite "
+                    "de sexta-feira."
+                ),
                 "status": OccurrenceStatus.RESOLVED,
                 "priority": OccurrencePriority.MEDIUM,
                 "lot": ("Bloco B", "202"),
-                "resolution_notes": "Portaria entrou em contato com o morador, que prontamente reduziu o volume.",
+                "resolution_notes": (
+                    "Portaria entrou em contato com o morador, que prontamente reduziu "
+                    "o volume."
+                ),
             },
             {
                 "protocol": "OC-2026-003",
                 "category": OccurrenceCategory.PARKING,
                 "title": "Veículo estacionado sobre a faixa de pedestres da garagem",
-                "description": "Carro prata estacionado obstruindo a rampa de acesso do subsolo.",
+                "description": (
+                    "Carro prata estacionado obstruindo a rampa de acesso do subsolo."
+                ),
                 "status": OccurrenceStatus.IN_PROGRESS,
                 "priority": OccurrencePriority.HIGH,
                 "lot": ("Bloco A", "201"),
@@ -594,9 +656,7 @@ def run_seed(db_url: str | None = None) -> None:
                     reporter_user_id=morador_user.id if morador_user else None,
                     resolution_notes=o_spec.get("resolution_notes"),
                     resolved_at=(
-                        now
-                        if o_spec["status"] == OccurrenceStatus.RESOLVED
-                        else None
+                        now if o_spec["status"] == OccurrenceStatus.RESOLVED else None
                     ),
                 )
                 session.add(occ)
@@ -696,16 +756,54 @@ def run_seed(db_url: str | None = None) -> None:
         print(f" Loaded {len(fin_cats_map)} finance categories.")
 
         # Financial Transactions
-        admin_author = users_map.get("sindico@apras.com") or users_map.get("admin@apras.com")
+        admin_author = users_map.get("sindico@apras.com") or users_map.get(
+            "admin@apras.com"
+        )
         if admin_author:
-            today = date.today()
+            today = clock.today_utc()
             transactions_data = [
-                ("Taxa Condominial Ordinária", "Arrecadação de cotas condominiais - Mês corrente", 28500.0, TransactionType.INCOME, today - timedelta(days=5)),
-                ("Fundo de Reserva", "Aporte mensal no fundo de reserva (5%)", 1425.0, TransactionType.INCOME, today - timedelta(days=5)),
-                ("Energia Elétrica (Áreas Comuns)", "Fatura Enel - Áreas comuns e bombas", 3840.50, TransactionType.EXPENSE, today - timedelta(days=8)),
-                ("Água e Esgoto (Sabesp)", "Conta Sabesp hidrômetro coletivo", 2980.20, TransactionType.EXPENSE, today - timedelta(days=10)),
-                ("Manutenção de Elevadores", "Mensalidade contrato de conservação Atlas Schindler", 1450.0, TransactionType.EXPENSE, today - timedelta(days=12)),
-                ("Materiais de Limpeza e Higiene", "Compra mensal de produtos de limpeza e sacos de lixo", 680.0, TransactionType.EXPENSE, today - timedelta(days=14)),
+                (
+                    "Taxa Condominial Ordinária",
+                    "Arrecadação de cotas condominiais - Mês corrente",
+                    28500.0,
+                    TransactionType.INCOME,
+                    today - timedelta(days=5),
+                ),
+                (
+                    "Fundo de Reserva",
+                    "Aporte mensal no fundo de reserva (5%)",
+                    1425.0,
+                    TransactionType.INCOME,
+                    today - timedelta(days=5),
+                ),
+                (
+                    "Energia Elétrica (Áreas Comuns)",
+                    "Fatura Enel - Áreas comuns e bombas",
+                    3840.50,
+                    TransactionType.EXPENSE,
+                    today - timedelta(days=8),
+                ),
+                (
+                    "Água e Esgoto (Sabesp)",
+                    "Conta Sabesp hidrômetro coletivo",
+                    2980.20,
+                    TransactionType.EXPENSE,
+                    today - timedelta(days=10),
+                ),
+                (
+                    "Manutenção de Elevadores",
+                    "Mensalidade contrato de conservação Atlas Schindler",
+                    1450.0,
+                    TransactionType.EXPENSE,
+                    today - timedelta(days=12),
+                ),
+                (
+                    "Materiais de Limpeza e Higiene",
+                    "Compra mensal de produtos de limpeza e sacos de lixo",
+                    680.0,
+                    TransactionType.EXPENSE,
+                    today - timedelta(days=14),
+                ),
             ]
 
             for cat_name, desc, amount, t_type, t_date in transactions_data:
@@ -727,7 +825,9 @@ def run_seed(db_url: str | None = None) -> None:
                         description=desc,
                         amount=amount,
                         transaction_date=t_date,
-                        payment_method="BOLETO" if t_type == TransactionType.EXPENSE else "TRANSFERENCIA",
+                        payment_method="BOLETO"
+                        if t_type == TransactionType.EXPENSE
+                        else "TRANSFERENCIA",
                         created_by_id=admin_author.id,
                     )
                     session.add(tx)
@@ -746,7 +846,10 @@ if __name__ == "__main__":
         "--db-url",
         dest="db_url",
         default=None,
-        help="PostgreSQL connection string (defaults to POSTGRES_URL from environment/settings).",
+        help=(
+            "PostgreSQL connection string (defaults to POSTGRES_URL from "
+            "environment/settings)."
+        ),
     )
     args = parser.parse_args()
     run_seed(args.db_url)

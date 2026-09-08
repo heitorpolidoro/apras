@@ -1,11 +1,12 @@
 """Construction project models for APRAS (T007)."""
 
+import uuid
 from datetime import date, datetime
 from typing import TYPE_CHECKING
-import uuid
 
 from sqlmodel import Field, Relationship, SQLModel
 
+from app.core import clock
 from app.models.enums import MilestoneStatus, ProjectStatus
 from app.models.tenant import tenant_id_field
 
@@ -36,8 +37,8 @@ class ConstructionProject(SQLModel, table=True):
         default=ProjectStatus.PLANNED, nullable=False, index=True
     )
     cover_photo_url: str | None = Field(default=None, nullable=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
-    updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
 
     # Relationships
     milestones: list["ProjectMilestone"] = Relationship(
@@ -76,8 +77,8 @@ class ProjectMilestone(SQLModel, table=True):
     due_date: date | None = Field(default=None, nullable=True)
     completion_date: date | None = Field(default=None, nullable=True)
     display_order: int = Field(default=0, nullable=False)
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
-    updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
 
     # Relationships
     project: ConstructionProject = Relationship(back_populates="milestones")
@@ -105,7 +106,7 @@ class ProjectUpdate(SQLModel, table=True):
     content: str = Field(nullable=False)
     photos_json: str | None = Field(default=None, nullable=True)  # JSON list of urls
     cost_impact: float | None = Field(default=0.0, nullable=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
 
     # Relationships
     project: ConstructionProject = Relationship(back_populates="updates")

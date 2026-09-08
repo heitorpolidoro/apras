@@ -1,12 +1,17 @@
 import uuid
-from typing import Optional
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
 from sqlmodel import Session
 
 from app.api.deps import get_current_active_user, get_db, require_permission
 from app.models.enums import EntityType
 from app.models.user import User
-from app.schemas.media_asset import MediaAssetRead, MediaAssetListResponse, PhotoRejectRequest
+from app.schemas.media_asset import (
+    MediaAssetListResponse,
+    MediaAssetRead,
+    PhotoRejectRequest,
+)
 from app.services.media_service import media_service
 
 router = APIRouter(prefix="/uploads", tags=["Uploads"])
@@ -21,13 +26,16 @@ _require_photo_read = require_permission("uploads:photo_read")
 _require_photo_delete = require_permission("uploads:delete")
 
 
-@router.post("/photo", response_model=MediaAssetRead, status_code=status.HTTP_201_CREATED)
+@router.post("/photo", status_code=status.HTTP_201_CREATED)
 async def upload_photo(
-    file: UploadFile = File(...),
-    entity_type: EntityType = Form(...),
-    entity_id: Optional[uuid.UUID] = Form(None),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(_require_photo_create),
+    file: Annotated[UploadFile, File()],
+    entity_type: Annotated[EntityType, Form()],
+    # Ahead of `entity_id` because `Annotated[..., Depends(...)]` has no
+    # default and cannot follow a parameter that has one. Dependencies are not
+    # OpenAPI parameters, so the multipart body's fields do not move.
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(_require_photo_create)],
+    entity_id: Annotated[uuid.UUID | None, Form()] = None,
 ) -> MediaAssetRead:
     file_bytes = await file.read()
     filename = file.filename or "upload.jpg"
@@ -44,50 +52,57 @@ async def upload_photo(
     )
 
 
-@router.get("/photos/pending", response_model=MediaAssetListResponse)
+@router.get("/photos/pending")
 def get_pending_photos(
-    page: int = Query(1, ge=1),
-    limit: int = Query(20, ge=1, le=100),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    page: Annotated[int, Query(ge=1)] = 1,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> MediaAssetListResponse:
-    return media_service.list_pending_photos(session=db, current_user=current_user, page=page, limit=limit)
+    return media_service.list_pending_photos(
+        session=db, current_user=current_user, page=page, limit=limit
+    )
 
 
-@router.put("/photos/{photo_id}/approve", response_model=MediaAssetRead)
+@router.put("/photos/{photo_id}/approve")
 def approve_photo(
     photo_id: uuid.UUID,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> MediaAssetRead:
-    return media_service.approve_photo(session=db, photo_id=photo_id, admin_user=current_user)
+    return media_service.approve_photo(
+        session=db, photo_id=photo_id, admin_user=current_user
+    )
 
 
-@router.put("/photos/{photo_id}/reject", response_model=MediaAssetRead)
+@router.put("/photos/{photo_id}/reject")
 def reject_photo(
     photo_id: uuid.UUID,
     body: PhotoRejectRequest,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> MediaAssetRead:
     return media_service.reject_photo(
-        session=db, photo_id=photo_id, admin_user=current_user, rejection_reason=body.rejection_reason
+        session=db,
+        photo_id=photo_id,
+        admin_user=current_user,
+        rejection_reason=body.rejection_reason,
     )
 
 
 @router.delete("/photos/{photo_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_photo(
     photo_id: uuid.UUID,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(_require_photo_delete),
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(_require_photo_delete)],
 ) -> None:
     media_service.delete_photo(session=db, photo_id=photo_id, current_user=current_user)
 
 
-@router.get("/photos/{photo_id}", response_model=MediaAssetRead)
+@router.get("/photos/{photo_id}")
 def get_photo_metadata(
     photo_id: uuid.UUID,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(_require_photo_read),
+    db: Annotated[Session, Depends(get_db)],
+    _current_user: Annotated[User, Depends(_require_photo_read)],
 ) -> MediaAssetRead:
     return media_service.get_photo_metadata(session=db, photo_id=photo_id)

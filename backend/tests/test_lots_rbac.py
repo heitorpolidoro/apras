@@ -74,13 +74,23 @@ def test_list_lots_rbac(
     guest_user: User,
 ):
     # Admin
-    assert client.get("/api/v1/lots/", headers=_auth_header(admin_user)).status_code == 200
+    assert (
+        client.get("/api/v1/lots/", headers=_auth_header(admin_user)).status_code == 200
+    )
     # Director
-    assert client.get("/api/v1/lots/", headers=_auth_header(director_user)).status_code == 200
+    assert (
+        client.get("/api/v1/lots/", headers=_auth_header(director_user)).status_code
+        == 200
+    )
     # Manager
-    assert client.get("/api/v1/lots/", headers=_auth_header(manager_user)).status_code == 200
+    assert (
+        client.get("/api/v1/lots/", headers=_auth_header(manager_user)).status_code
+        == 200
+    )
     # Guest -> Forbidden
-    assert client.get("/api/v1/lots/", headers=_auth_header(guest_user)).status_code == 403
+    assert (
+        client.get("/api/v1/lots/", headers=_auth_header(guest_user)).status_code == 403
+    )
 
 
 def test_create_lot_rbac(
@@ -93,21 +103,29 @@ def test_create_lot_rbac(
     payload = {"block": "R1", "lot_number": "1"}
 
     # Admin -> Allowed (201)
-    res_admin = client.post("/api/v1/lots/", json=payload, headers=_auth_header(admin_user))
+    res_admin = client.post(
+        "/api/v1/lots/", json=payload, headers=_auth_header(admin_user)
+    )
     assert res_admin.status_code == 201
 
     # Director -> Allowed (201)
     payload_dir = {"block": "R1", "lot_number": "2"}
-    res_dir = client.post("/api/v1/lots/", json=payload_dir, headers=_auth_header(director_user))
+    res_dir = client.post(
+        "/api/v1/lots/", json=payload_dir, headers=_auth_header(director_user)
+    )
     assert res_dir.status_code == 201
 
     # Manager -> Forbidden (403)
     payload_mgr = {"block": "R1", "lot_number": "3"}
-    res_mgr = client.post("/api/v1/lots/", json=payload_mgr, headers=_auth_header(manager_user))
+    res_mgr = client.post(
+        "/api/v1/lots/", json=payload_mgr, headers=_auth_header(manager_user)
+    )
     assert res_mgr.status_code == 403
 
     # Guest -> Forbidden (403)
-    res_gst = client.post("/api/v1/lots/", json=payload_mgr, headers=_auth_header(guest_user))
+    res_gst = client.post(
+        "/api/v1/lots/", json=payload_mgr, headers=_auth_header(guest_user)
+    )
     assert res_gst.status_code == 403
 
 
@@ -122,12 +140,32 @@ def test_get_lot_detail_rbac(
     lot = LotService.create_lot(session, LotCreate(block="R2", lot_number="1"))
 
     # Admin, Director, Manager -> 200
-    assert client.get(f"/api/v1/lots/{lot.id}", headers=_auth_header(admin_user)).status_code == 200
-    assert client.get(f"/api/v1/lots/{lot.id}", headers=_auth_header(director_user)).status_code == 200
-    assert client.get(f"/api/v1/lots/{lot.id}", headers=_auth_header(manager_user)).status_code == 200
+    assert (
+        client.get(
+            f"/api/v1/lots/{lot.id}", headers=_auth_header(admin_user)
+        ).status_code
+        == 200
+    )
+    assert (
+        client.get(
+            f"/api/v1/lots/{lot.id}", headers=_auth_header(director_user)
+        ).status_code
+        == 200
+    )
+    assert (
+        client.get(
+            f"/api/v1/lots/{lot.id}", headers=_auth_header(manager_user)
+        ).status_code
+        == 200
+    )
 
     # Guest -> 403
-    assert client.get(f"/api/v1/lots/{lot.id}", headers=_auth_header(guest_user)).status_code == 403
+    assert (
+        client.get(
+            f"/api/v1/lots/{lot.id}", headers=_auth_header(guest_user)
+        ).status_code
+        == 403
+    )
 
 
 def test_update_lot_rbac(
@@ -142,13 +180,33 @@ def test_update_lot_rbac(
 
     payload = {"notes": "Updated"}
     # Admin -> 200
-    assert client.put(f"/api/v1/lots/{lot.id}", json=payload, headers=_auth_header(admin_user)).status_code == 200
+    assert (
+        client.put(
+            f"/api/v1/lots/{lot.id}", json=payload, headers=_auth_header(admin_user)
+        ).status_code
+        == 200
+    )
     # Director -> 200
-    assert client.put(f"/api/v1/lots/{lot.id}", json=payload, headers=_auth_header(director_user)).status_code == 200
+    assert (
+        client.put(
+            f"/api/v1/lots/{lot.id}", json=payload, headers=_auth_header(director_user)
+        ).status_code
+        == 200
+    )
     # Manager -> 403
-    assert client.put(f"/api/v1/lots/{lot.id}", json=payload, headers=_auth_header(manager_user)).status_code == 403
+    assert (
+        client.put(
+            f"/api/v1/lots/{lot.id}", json=payload, headers=_auth_header(manager_user)
+        ).status_code
+        == 403
+    )
     # Guest -> 403
-    assert client.put(f"/api/v1/lots/{lot.id}", json=payload, headers=_auth_header(guest_user)).status_code == 403
+    assert (
+        client.put(
+            f"/api/v1/lots/{lot.id}", json=payload, headers=_auth_header(guest_user)
+        ).status_code
+        == 403
+    )
 
 
 def test_delete_lot_rbac_strictly_administrator_only(
@@ -162,11 +220,15 @@ def test_delete_lot_rbac_strictly_administrator_only(
     lot = LotService.create_lot(session, LotCreate(block="R4", lot_number="1"))
 
     # Director -> Forbidden (403)
-    res_dir = client.delete(f"/api/v1/lots/{lot.id}", headers=_auth_header(director_user))
+    res_dir = client.delete(
+        f"/api/v1/lots/{lot.id}", headers=_auth_header(director_user)
+    )
     assert res_dir.status_code == 403
 
     # Manager -> Forbidden (403)
-    res_mgr = client.delete(f"/api/v1/lots/{lot.id}", headers=_auth_header(manager_user))
+    res_mgr = client.delete(
+        f"/api/v1/lots/{lot.id}", headers=_auth_header(manager_user)
+    )
     assert res_mgr.status_code == 403
 
     # Guest -> Forbidden (403)
@@ -192,21 +254,73 @@ def test_user_lot_linking_rbac(
     link_payload = {"user_id": str(manager_user.id), "association_type": "PROPRIETARIO"}
 
     # Manager -> 403
-    assert client.post(f"/api/v1/lots/{lot1.id}/users", json=link_payload, headers=_auth_header(manager_user)).status_code == 403
+    assert (
+        client.post(
+            f"/api/v1/lots/{lot1.id}/users",
+            json=link_payload,
+            headers=_auth_header(manager_user),
+        ).status_code
+        == 403
+    )
     # Guest -> 403
-    assert client.post(f"/api/v1/lots/{lot1.id}/users", json=link_payload, headers=_auth_header(guest_user)).status_code == 403
+    assert (
+        client.post(
+            f"/api/v1/lots/{lot1.id}/users",
+            json=link_payload,
+            headers=_auth_header(guest_user),
+        ).status_code
+        == 403
+    )
 
     # Director -> 201
-    assert client.post(f"/api/v1/lots/{lot1.id}/users", json=link_payload, headers=_auth_header(director_user)).status_code == 201
+    assert (
+        client.post(
+            f"/api/v1/lots/{lot1.id}/users",
+            json=link_payload,
+            headers=_auth_header(director_user),
+        ).status_code
+        == 201
+    )
 
     # Admin -> 201
-    assert client.post(f"/api/v1/lots/{lot2.id}/users", json=link_payload, headers=_auth_header(admin_user)).status_code == 201
+    assert (
+        client.post(
+            f"/api/v1/lots/{lot2.id}/users",
+            json=link_payload,
+            headers=_auth_header(admin_user),
+        ).status_code
+        == 201
+    )
 
     # Unlink: Manager/Guest -> 403
-    assert client.delete(f"/api/v1/lots/{lot1.id}/users/{manager_user.id}", headers=_auth_header(manager_user)).status_code == 403
-    assert client.delete(f"/api/v1/lots/{lot1.id}/users/{manager_user.id}", headers=_auth_header(guest_user)).status_code == 403
+    assert (
+        client.delete(
+            f"/api/v1/lots/{lot1.id}/users/{manager_user.id}",
+            headers=_auth_header(manager_user),
+        ).status_code
+        == 403
+    )
+    assert (
+        client.delete(
+            f"/api/v1/lots/{lot1.id}/users/{manager_user.id}",
+            headers=_auth_header(guest_user),
+        ).status_code
+        == 403
+    )
 
     # Unlink: Director -> 204
-    assert client.delete(f"/api/v1/lots/{lot1.id}/users/{manager_user.id}", headers=_auth_header(director_user)).status_code == 204
+    assert (
+        client.delete(
+            f"/api/v1/lots/{lot1.id}/users/{manager_user.id}",
+            headers=_auth_header(director_user),
+        ).status_code
+        == 204
+    )
     # Unlink: Admin -> 204
-    assert client.delete(f"/api/v1/lots/{lot2.id}/users/{manager_user.id}", headers=_auth_header(admin_user)).status_code == 204
+    assert (
+        client.delete(
+            f"/api/v1/lots/{lot2.id}/users/{manager_user.id}",
+            headers=_auth_header(admin_user),
+        ).status_code
+        == 204
+    )

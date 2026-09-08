@@ -235,9 +235,7 @@ def test_add_member_returns_201_with_the_user_details(
     assert body["linked_at"]
 
 
-def test_add_member_twice_returns_409(
-    client: TestClient, admin: User, resident: User
-):
+def test_add_member_twice_returns_409(client: TestClient, admin: User, resident: User):
     client.post(
         f"/api/v1/tenants/{DEFAULT_TENANT_ID}/members",
         json={"user_id": str(resident.id)},
@@ -373,7 +371,9 @@ def test_remove_member_returns_404_when_the_link_does_not_exist(
     assert response.status_code == 404
 
 
-def test_there_is_no_tenant_delete_route(client: TestClient, admin: User, session: Session):
+def test_there_is_no_tenant_delete_route(
+    client: TestClient, admin: User, session: Session
+):
     """Deactivation is a PATCH; deletion would fail on RESTRICT anyway."""
     session.add(Tenant(name="Sem Delete"))
     session.commit()

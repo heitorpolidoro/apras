@@ -1,38 +1,41 @@
 import io
 import uuid
-from datetime import datetime
-from typing import Tuple, List, Optional
+
 from PIL import Image
-from sqlmodel import Session, select, func
+from sqlmodel import Session, select
 
 from app.api.deps import has_permission
+from app.core import clock
 from app.core.exceptions import (
-    MediaAssetNotFoundError,
-    PhotoFileTooLargeError,
-    InvalidPhotoFormatError,
-    PhotoApprovalPermissionError,
-    PhotoRejectionReasonRequiredError,
     ForbiddenError,
+    InvalidPhotoFormatError,
+    MediaAssetNotFoundError,
+    PhotoApprovalPermissionError,
+    PhotoFileTooLargeError,
+    PhotoRejectionReasonRequiredError,
 )
-from app.models.enums import EntityType, StorageProvider, PhotoApprovalStatus
+from app.models.enums import EntityType, PhotoApprovalStatus, StorageProvider
 from app.models.media_asset import MediaAsset
 from app.models.user import User
-from app.schemas.media_asset import MediaAssetRead, MediaAssetListResponse
-from app.services.storage_service import LocalStorageProvider, BaseStorageProvider
+from app.schemas.media_asset import MediaAssetListResponse, MediaAssetRead
+from app.services.storage_service import BaseStorageProvider, LocalStorageProvider
 
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
 ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
 
 class MediaService:
-    """Service handling photo upload, thumbnail generation, approval workflow, and storage."""
+    """Service handling photo upload, thumbnail generation, approval workflow, and
+    storage."""
 
-    def __init__(self, storage_provider: Optional[BaseStorageProvider] = None) -> None:
+    def __init__(self, storage_provider: BaseStorageProvider | None = None) -> None:
         self.storage_provider = storage_provider or LocalStorageProvider()
 
     def _to_read_schema(self, session: Session, asset: MediaAsset) -> MediaAssetRead:
         uploader = session.get(User, asset.uploaded_by_id)
-        approver = session.get(User, asset.approved_by_id) if asset.approved_by_id else None
+        approver = (
+            session.get(User, asset.approved_by_id) if asset.approved_by_id else None
+        )
 
         return MediaAssetRead(
             id=asset.id,
@@ -65,23 +68,23 @@ class MediaService:
         filename: str,
         mime_type: str,
         entity_type: EntityType,
-        entity_id: Optional[uuid.UUID] = None,
+        entity_id: uuid.UUID | None = None,
     ) -> MediaAssetRead:
         # 1. Size validation
         if len(file_bytes) > MAX_FILE_SIZE:
-            raise PhotoFileTooLargeError()
+            raise PhotoFileTooLargeError
 
         # 2. MIME type validation
         if mime_type not in ALLOWED_MIME_TYPES:
-            raise InvalidPhotoFormatError()
+            raise InvalidPhotoFormatError
 
         # 3. Pillow validation & dimensions extraction
         try:
             img = Image.open(io.BytesIO(file_bytes))
             width, height = img.size
             img_format = img.format
-        except Exception:
-            raise InvalidPhotoFormatError()
+        except Exception as exc:
+            raise InvalidPhotoFormatError from exc
 
         # 4. Generate 150x150 square thumbnail
         try:
@@ -91,24 +94,30 @@ class MediaService:
             top = (height - min_dim) // 2
             cropped = img.crop((left, top, left + min_dim, top + min_dim))
             thumb_img = cropped.resize((150, 150), Image.Resampling.LANCZOS)
-            
+
             thumb_io = io.BytesIO()
-            save_format = img_format if img_format in ("JPEG", "PNG", "WEBP") else "JPEG"
+            save_format = (
+                img_format if img_format in ("JPEG", "PNG", "WEBP") else "JPEG"
+            )
             thumb_img.save(thumb_io, format=save_format)
             thumb_bytes = thumb_io.getvalue()
-        except Exception:
+        except Exception:  # noqa: BLE001  # best-effort side effect; a failure here must not fail the request
             thumb_bytes = file_bytes
 
         # 5. Save files via StorageProvider
-        file_path, url = self.storage_provider.save_file(file_bytes, filename, mime_type)
+        file_path, url = self.storage_provider.save_file(
+            file_bytes, filename, mime_type
+        )
         thumb_filename = f"thumb_{filename}"
-        _, thumbnail_url = self.storage_provider.save_file(thumb_bytes, thumb_filename, mime_type)
+        _, thumbnail_url = self.storage_provider.save_file(
+            thumb_bytes, thumb_filename, mime_type
+        )
 
         # 6. Auto-approval policy
         if has_permission(current_user, session, "uploads:auto_approve"):
             status = PhotoApprovalStatus.APPROVED
             approved_by_id = current_user.id
-            approved_at = datetime.utcnow()
+            approved_at = clock.db_now()
         else:
             status = PhotoApprovalStatus.PENDING_APPROVAL
             approved_by_id = None
@@ -130,8 +139,8 @@ class MediaService:
             uploaded_by_id=current_user.id,
             approved_by_id=approved_by_id,
             approved_at=approved_at,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=clock.db_now(),
+            updated_at=clock.db_now(),
         )
 
         session.add(asset)
@@ -144,9 +153,11 @@ class MediaService:
         self, session: Session, current_user: User, page: int = 1, limit: int = 20
     ) -> MediaAssetListResponse:
         if not has_permission(current_user, session, "uploads:pending_read"):
-            raise PhotoApprovalPermissionError()
+            raise PhotoApprovalPermissionError
 
-        pending_stmt = select(MediaAsset).where(MediaAsset.status == PhotoApprovalStatus.PENDING_APPROVAL)
+        pending_stmt = select(MediaAsset).where(
+            MediaAsset.status == PhotoApprovalStatus.PENDING_APPROVAL
+        )
         total_pending = len(session.exec(pending_stmt).all())
 
         total_stmt = select(MediaAsset)
@@ -170,9 +181,11 @@ class MediaService:
             pending_count=total_pending,
         )
 
-    def approve_photo(self, session: Session, photo_id: uuid.UUID, admin_user: User) -> MediaAssetRead:
+    def approve_photo(
+        self, session: Session, photo_id: uuid.UUID, admin_user: User
+    ) -> MediaAssetRead:
         if not has_permission(admin_user, session, "uploads:approve"):
-            raise PhotoApprovalPermissionError()
+            raise PhotoApprovalPermissionError
 
         asset = session.get(MediaAsset, photo_id)
         if not asset:
@@ -180,9 +193,9 @@ class MediaService:
 
         asset.status = PhotoApprovalStatus.APPROVED
         asset.approved_by_id = admin_user.id
-        asset.approved_at = datetime.utcnow()
+        asset.approved_at = clock.db_now()
         asset.rejection_reason = None
-        asset.updated_at = datetime.utcnow()
+        asset.updated_at = clock.db_now()
 
         session.add(asset)
         session.commit()
@@ -191,13 +204,17 @@ class MediaService:
         return self._to_read_schema(session, asset)
 
     def reject_photo(
-        self, session: Session, photo_id: uuid.UUID, admin_user: User, rejection_reason: str
+        self,
+        session: Session,
+        photo_id: uuid.UUID,
+        admin_user: User,
+        rejection_reason: str,
     ) -> MediaAssetRead:
         if not has_permission(admin_user, session, "uploads:reject"):
-            raise PhotoApprovalPermissionError()
+            raise PhotoApprovalPermissionError
 
         if not rejection_reason or not rejection_reason.strip():
-            raise PhotoRejectionReasonRequiredError()
+            raise PhotoRejectionReasonRequiredError
 
         asset = session.get(MediaAsset, photo_id)
         if not asset:
@@ -206,7 +223,7 @@ class MediaService:
         asset.status = PhotoApprovalStatus.REJECTED
         asset.approved_by_id = admin_user.id
         asset.rejection_reason = rejection_reason.strip()
-        asset.updated_at = datetime.utcnow()
+        asset.updated_at = clock.db_now()
 
         session.add(asset)
         session.commit()
@@ -214,7 +231,9 @@ class MediaService:
 
         return self._to_read_schema(session, asset)
 
-    def delete_photo(self, session: Session, photo_id: uuid.UUID, current_user: User) -> None:
+    def delete_photo(
+        self, session: Session, photo_id: uuid.UUID, current_user: User
+    ) -> None:
         asset = session.get(MediaAsset, photo_id)
         if not asset:
             raise MediaAssetNotFoundError(photo_id)
@@ -232,7 +251,9 @@ class MediaService:
         session.delete(asset)
         session.commit()
 
-    def get_photo_metadata(self, session: Session, photo_id: uuid.UUID) -> MediaAssetRead:
+    def get_photo_metadata(
+        self, session: Session, photo_id: uuid.UUID
+    ) -> MediaAssetRead:
         asset = session.get(MediaAsset, photo_id)
         if not asset:
             raise MediaAssetNotFoundError(photo_id)

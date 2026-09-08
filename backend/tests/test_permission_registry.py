@@ -40,9 +40,7 @@ PERMISSION_RE = re.compile(r"^[a-z][a-z0-9_]*:[a-z][a-z0-9_]*$")
 #: §8.4) none of its four routes mints a catalogue string. The three
 #: superuser-only subscription routes do not add a tag group of their own --
 #: they live on the existing, partly-mapped `tenants` router.
-FULLY_UNGUARDED_TAGS = frozenset(
-    {"auth", "health", "permissions", "plans", "<root>"}
-)
+FULLY_UNGUARDED_TAGS = frozenset({"auth", "health", "permissions", "plans", "<root>"})
 
 
 def _api_routes() -> list[APIRoute]:
@@ -52,8 +50,7 @@ def _api_routes() -> list[APIRoute]:
 def _route_keys(route: APIRoute) -> list[tuple[str, str]]:
     """Every (METHOD, path) key of a route, ignoring the automatic verbs."""
     return [
-        (method, route.path)
-        for method in sorted(route.methods - {"HEAD", "OPTIONS"})
+        (method, route.path) for method in sorted(route.methods - {"HEAD", "OPTIONS"})
     ]
 
 
@@ -96,9 +93,7 @@ def test_no_stale_registry_entries():
     stale_mapped = sorted(set(ROUTE_PERMISSIONS) - live)
     stale_unguarded = sorted(UNGUARDED_ROUTES - live)
     assert not stale_mapped, f"ROUTE_PERMISSIONS names dead routes: {stale_mapped}"
-    assert not stale_unguarded, (
-        f"UNGUARDED_ROUTES names dead routes: {stale_unguarded}"
-    )
+    assert not stale_unguarded, f"UNGUARDED_ROUTES names dead routes: {stale_unguarded}"
 
 
 def test_every_declared_permission_is_in_the_catalogue():

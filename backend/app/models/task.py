@@ -1,11 +1,13 @@
 """Database models for Task, TaskComment and TaskHistory."""
 
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import TYPE_CHECKING, ClassVar, Optional
 from uuid import UUID, uuid4
 
 from sqlalchemy import Column, ForeignKey
 from sqlmodel import Field, Relationship, SQLModel
+
+from app.core import clock
 
 from .enums import TaskPriority, TaskStatus
 from .tenant import tenant_id_field
@@ -28,16 +30,6 @@ class TaskVisibleToLink(SQLModel, table=True):
 
     task_id: UUID = Field(foreign_key="task.id", primary_key=True)
     role_id: UUID = Field(foreign_key="role.id", primary_key=True)
-
-
-def get_utc_now() -> datetime:
-    """
-    Get the current UTC time.
-
-    Returns:
-        datetime: Current datetime in UTC.
-    """
-    return datetime.now(UTC)
 
 
 class Task(SQLModel, table=True):
@@ -69,8 +61,8 @@ class Task(SQLModel, table=True):
     status: TaskStatus = Field(default=TaskStatus.PENDING, index=True)
     priority: TaskPriority = Field(default=TaskPriority.MEDIUM, index=True)
     due_date: datetime | None = None
-    created_at: datetime = Field(default_factory=get_utc_now)
-    updated_at: datetime = Field(default_factory=get_utc_now)
+    created_at: datetime = Field(default_factory=clock.db_now)
+    updated_at: datetime = Field(default_factory=clock.db_now)
     is_deleted: bool = Field(default=False, index=True)
 
     USER_ID_FK: ClassVar[str] = "user.id"
@@ -128,8 +120,8 @@ class TaskComment(SQLModel, table=True):
     )
     created_by_id: UUID = Field(foreign_key=Task.USER_ID_FK, index=True)
     content: str
-    created_at: datetime = Field(default_factory=get_utc_now)
-    updated_at: datetime = Field(default_factory=get_utc_now)
+    created_at: datetime = Field(default_factory=clock.db_now)
+    updated_at: datetime = Field(default_factory=clock.db_now)
 
     # Relationships
     task: "Task" = Relationship(back_populates="comments")
@@ -160,7 +152,7 @@ class TaskHistory(SQLModel, table=True):
     field_name: str
     old_value: str | None = None
     new_value: str | None = None
-    timestamp: datetime = Field(default_factory=get_utc_now)
+    timestamp: datetime = Field(default_factory=clock.db_now)
 
     # Relationships
     task: "Task" = Relationship(back_populates="history")

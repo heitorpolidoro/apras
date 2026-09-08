@@ -36,11 +36,13 @@ from sqlmodel import Session, SQLModel
 
 from app.models.category import Category
 from app.models.lot import Lot
-from app.models.plan import Plan  # noqa: F401  -- registers `plan` in metadata
+from app.models.plan import (
+    Plan,  # noqa: F401  # imported so the model registers; the assertions read the registry
+)
 from app.models.role import Role
-from app.models.subscription import (  # noqa: F401  -- registers both tables
-    SubscriptionChange,
-    TenantSubscription,
+from app.models.subscription import (
+    SubscriptionChange,  # noqa: F401  # imported so the model registers; the assertions read the registry
+    TenantSubscription,  # noqa: F401  # imported so the model registers; the assertions read the registry
 )
 from app.models.tenant import (
     DEFAULT_TENANT_ID,
@@ -184,7 +186,9 @@ def test_scoped_models_default_to_the_default_tenant(session: Session):
     tenant — this is what keeps every pre-existing test and every existing
     endpoint working unchanged."""
     category = Category(name="Manutenção")
-    role = Role(name="Some Type",)
+    role = Role(
+        name="Some Type",
+    )
     lot = Lot(block="A", lot_number="12")
     session.add_all([category, role, lot])
     session.commit()
@@ -269,9 +273,9 @@ def test_inherited_tables_have_no_tenant_id_but_a_not_null_parent_fk():
             if any(fk.column.table.name == parent for fk in column.foreign_keys)
         ]
         assert parent_columns, f"{name} has no FK to {parent}"
-        assert any(
-            column.nullable is False for column in parent_columns
-        ), f"{name}'s FK to {parent} is nullable"
+        assert any(column.nullable is False for column in parent_columns), (
+            f"{name}'s FK to {parent} is nullable"
+        )
 
 
 def test_partition_of_metadata_is_exhaustive(scoped_tables):
@@ -292,7 +296,5 @@ def test_user_stays_global():
     and `cpf` stay globally unique."""
     user_table = SQLModel.metadata.tables["user"]
     assert "tenant_id" not in user_table.columns
-    unique_indexed = {
-        index.name for index in user_table.indexes if index.unique
-    }
+    unique_indexed = {index.name for index in user_table.indexes if index.unique}
     assert {"ix_user_email", "ix_user_cpf"} <= unique_indexed

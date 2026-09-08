@@ -6,6 +6,7 @@ from uuid import UUID
 from sqlmodel import Session, select
 
 from app.api.deps import has_permission
+from app.core import clock
 from app.core.exceptions import (
     ForbiddenError,
     ReservableSpaceNotFoundError,
@@ -40,9 +41,7 @@ class ReservableSpaceService:
         return db_space
 
     @staticmethod
-    def get_spaces(
-        session: Session, only_active: bool = True
-    ) -> list[ReservableSpace]:
+    def get_spaces(session: Session, only_active: bool = True) -> list[ReservableSpace]:
         """List reservable spaces."""
         statement = select(ReservableSpace)
         if only_active:
@@ -116,9 +115,7 @@ class SpaceReservationService:
             .where(SpaceReservation.end_time > start_time)
         )
         if exclude_reservation_id:
-            statement = statement.where(
-                SpaceReservation.id != exclude_reservation_id
-            )
+            statement = statement.where(SpaceReservation.id != exclude_reservation_id)
         return session.exec(statement).first() is not None
 
     @staticmethod
@@ -209,7 +206,7 @@ class SpaceReservationService:
             end_time=reservation_in.end_time,
             status=status_value,
             notes=reservation_in.notes,
-            created_at=datetime.utcnow(),
+            created_at=clock.db_now(),
         )
         session.add(reservation)
         session.commit()
@@ -269,8 +266,7 @@ class SpaceReservationService:
         statement = statement.order_by(SpaceReservation.start_time)
         reservations = session.exec(statement).all()
         return [
-            cls._build_read(session, current_user, r, mask=mask)
-            for r in reservations
+            cls._build_read(session, current_user, r, mask=mask) for r in reservations
         ]
 
     @classmethod
@@ -318,7 +314,7 @@ class SpaceReservationService:
             ReservationStatus.CONFIRMED if approve else ReservationStatus.REJECTED
         )
         reservation.decided_by_id = current_user.id
-        reservation.decided_at = datetime.utcnow()
+        reservation.decided_at = clock.db_now()
 
         session.add(reservation)
         session.commit()
@@ -339,16 +335,14 @@ class SpaceReservationService:
 
         if not is_staff:
             if not is_owner:
-                raise ForbiddenError(
-                    "You can only cancel your own reservations"
-                )
-            if reservation.start_time <= datetime.utcnow():
+                raise ForbiddenError("You can only cancel your own reservations")
+            if reservation.start_time <= clock.db_now():
                 raise ForbiddenError(
                     "Cannot cancel a reservation that has already started"
                 )
 
         reservation.status = ReservationStatus.CANCELLED
-        reservation.cancelled_at = datetime.utcnow()
+        reservation.cancelled_at = clock.db_now()
 
         session.add(reservation)
         session.commit()

@@ -114,9 +114,7 @@ def test_add_member_is_403_for_non_admin(
     assert response.status_code == 403
 
 
-def test_add_member_is_201_for_admin(
-    client: TestClient, session: Session, admin: User
-):
+def test_add_member_is_201_for_admin(client: TestClient, session: Session, admin: User):
     member = _make_user(session, "RESIDENT")
 
     response = client.post(

@@ -1,11 +1,12 @@
 """Security utilities for password hashing and JWT tokens."""
 
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 from typing import Any
 
 import jwt
 from passlib.context import CryptContext
 
+from app.core import clock
 from app.core.config import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -39,7 +40,7 @@ def create_access_token(
     Returns:
         str: Encoded JWT token.
     """
-    now = datetime.now(UTC)
+    now = clock.utc_now()
     if expires_delta:
         expire = now + expires_delta
     else:
@@ -77,9 +78,14 @@ def get_password_hash(password: str) -> str:
 
 def create_password_reset_token(email: str) -> str:
     """Create a short-lived JWT token for password reset."""
-    now = datetime.now(UTC)
+    now = clock.utc_now()
     expire = now + timedelta(minutes=15)
-    to_encode = {"exp": expire, "sub": str(email), "iat": now, "scope": "password-reset"}
+    to_encode = {
+        "exp": expire,
+        "sub": str(email),
+        "iat": now,
+        "scope": "password-reset",
+    }
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 

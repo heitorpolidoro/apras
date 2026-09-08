@@ -49,10 +49,13 @@ def gatekeeper_user(session: Session) -> User:
     return user
 
 
-
-def test_check_in_and_check_out_successful_flow(session: Session, gatekeeper_user: User):
+def test_check_in_and_check_out_successful_flow(
+    session: Session, gatekeeper_user: User
+):
     lot = LotService.create_lot(session, LotCreate(block="G1", lot_number="01"))
-    visitor = VisitorService.create_visitor(session, VisitorCreate(full_name="Bruno Gomes"))
+    visitor = VisitorService.create_visitor(
+        session, VisitorCreate(full_name="Bruno Gomes")
+    )
 
     # Create authorization active for all days and full day shift
     auth = VisitorService.create_authorization(
@@ -61,7 +64,15 @@ def test_check_in_and_check_out_successful_flow(session: Session, gatekeeper_use
         VisitorAuthorizationCreate(
             visitor_id=visitor.id,
             auth_type=AuthorizationType.PERMANENT,
-            allowed_days=[DayOfWeek.MON, DayOfWeek.TUE, DayOfWeek.WED, DayOfWeek.THU, DayOfWeek.FRI, DayOfWeek.SAT, DayOfWeek.SUN],
+            allowed_days=[
+                DayOfWeek.MON,
+                DayOfWeek.TUE,
+                DayOfWeek.WED,
+                DayOfWeek.THU,
+                DayOfWeek.FRI,
+                DayOfWeek.SAT,
+                DayOfWeek.SUN,
+            ],
             allowed_shifts=[ShiftType.FULL_DAY],
         ),
         gatekeeper_user,
@@ -97,7 +108,9 @@ def test_check_in_and_check_out_successful_flow(session: Session, gatekeeper_use
 
 def test_check_in_rejects_duplicate_open_entry(session: Session, gatekeeper_user: User):
     lot = LotService.create_lot(session, LotCreate(block="G2", lot_number="02"))
-    visitor = VisitorService.create_visitor(session, VisitorCreate(full_name="Renata Sorrah"))
+    visitor = VisitorService.create_visitor(
+        session, VisitorCreate(full_name="Renata Sorrah")
+    )
 
     auth = VisitorService.create_authorization(
         session,
@@ -105,7 +118,15 @@ def test_check_in_rejects_duplicate_open_entry(session: Session, gatekeeper_user
         VisitorAuthorizationCreate(
             visitor_id=visitor.id,
             auth_type=AuthorizationType.PERMANENT,
-            allowed_days=[DayOfWeek.MON, DayOfWeek.TUE, DayOfWeek.WED, DayOfWeek.THU, DayOfWeek.FRI, DayOfWeek.SAT, DayOfWeek.SUN],
+            allowed_days=[
+                DayOfWeek.MON,
+                DayOfWeek.TUE,
+                DayOfWeek.WED,
+                DayOfWeek.THU,
+                DayOfWeek.FRI,
+                DayOfWeek.SAT,
+                DayOfWeek.SUN,
+            ],
             allowed_shifts=[ShiftType.FULL_DAY],
         ),
         gatekeeper_user,
@@ -114,7 +135,9 @@ def test_check_in_rejects_duplicate_open_entry(session: Session, gatekeeper_user
     # First check-in
     VisitorService.check_in(
         session,
-        AccessLogCheckIn(visitor_id=visitor.id, lot_id=lot.id, authorization_id=auth.id),
+        AccessLogCheckIn(
+            visitor_id=visitor.id, lot_id=lot.id, authorization_id=auth.id
+        ),
         gatekeeper_user,
     )
 
@@ -122,14 +145,20 @@ def test_check_in_rejects_duplicate_open_entry(session: Session, gatekeeper_user
     with pytest.raises(OpenEntryExistsError, match="already has an active check-in"):
         VisitorService.check_in(
             session,
-            AccessLogCheckIn(visitor_id=visitor.id, lot_id=lot.id, authorization_id=auth.id),
+            AccessLogCheckIn(
+                visitor_id=visitor.id, lot_id=lot.id, authorization_id=auth.id
+            ),
             gatekeeper_user,
         )
 
 
-def test_single_authorization_auto_expires_on_check_in(session: Session, gatekeeper_user: User):
+def test_single_authorization_auto_expires_on_check_in(
+    session: Session, gatekeeper_user: User
+):
     lot = LotService.create_lot(session, LotCreate(block="G3", lot_number="03"))
-    visitor = VisitorService.create_visitor(session, VisitorCreate(full_name="Diego Alves"))
+    visitor = VisitorService.create_visitor(
+        session, VisitorCreate(full_name="Diego Alves")
+    )
 
     auth = VisitorService.create_authorization(
         session,
@@ -137,7 +166,15 @@ def test_single_authorization_auto_expires_on_check_in(session: Session, gatekee
         VisitorAuthorizationCreate(
             visitor_id=visitor.id,
             auth_type=AuthorizationType.SINGLE,
-            allowed_days=[DayOfWeek.MON, DayOfWeek.TUE, DayOfWeek.WED, DayOfWeek.THU, DayOfWeek.FRI, DayOfWeek.SAT, DayOfWeek.SUN],
+            allowed_days=[
+                DayOfWeek.MON,
+                DayOfWeek.TUE,
+                DayOfWeek.WED,
+                DayOfWeek.THU,
+                DayOfWeek.FRI,
+                DayOfWeek.SAT,
+                DayOfWeek.SUN,
+            ],
             allowed_shifts=[ShiftType.FULL_DAY],
         ),
         gatekeeper_user,
@@ -147,7 +184,9 @@ def test_single_authorization_auto_expires_on_check_in(session: Session, gatekee
     # Check In
     VisitorService.check_in(
         session,
-        AccessLogCheckIn(visitor_id=visitor.id, lot_id=lot.id, authorization_id=auth.id),
+        AccessLogCheckIn(
+            visitor_id=visitor.id, lot_id=lot.id, authorization_id=auth.id
+        ),
         gatekeeper_user,
     )
 
@@ -158,9 +197,11 @@ def test_single_authorization_auto_expires_on_check_in(session: Session, gatekee
 
 def test_check_in_validates_revoked_or_expired(session: Session, gatekeeper_user: User):
     lot = LotService.create_lot(session, LotCreate(block="G4", lot_number="04"))
-    visitor = VisitorService.create_visitor(session, VisitorCreate(full_name="Patricia Pillar"))
+    visitor = VisitorService.create_visitor(
+        session, VisitorCreate(full_name="Patricia Pillar")
+    )
 
-    now = datetime(2026, 8, 25, 10, 0, 0)
+    now = datetime(2026, 8, 25, 10, 0, 0)  # noqa: DTZ001  # naive literal matching the naive column
 
     # Expired by valid_until date
     auth_expired = VisitorService.create_authorization(
@@ -177,7 +218,9 @@ def test_check_in_validates_revoked_or_expired(session: Session, gatekeeper_user
     with pytest.raises(AuthorizationExpiredError):
         VisitorService.check_in(
             session,
-            AccessLogCheckIn(visitor_id=visitor.id, lot_id=lot.id, authorization_id=auth_expired.id),
+            AccessLogCheckIn(
+                visitor_id=visitor.id, lot_id=lot.id, authorization_id=auth_expired.id
+            ),
             gatekeeper_user,
             check_time=now,
         )
@@ -194,7 +237,9 @@ def test_check_in_validates_revoked_or_expired(session: Session, gatekeeper_user
     with pytest.raises(AuthorizationRevokedError):
         VisitorService.check_in(
             session,
-            AccessLogCheckIn(visitor_id=visitor.id, lot_id=lot.id, authorization_id=auth_revoked.id),
+            AccessLogCheckIn(
+                visitor_id=visitor.id, lot_id=lot.id, authorization_id=auth_revoked.id
+            ),
             gatekeeper_user,
             check_time=now,
         )
@@ -202,10 +247,12 @@ def test_check_in_validates_revoked_or_expired(session: Session, gatekeeper_user
 
 def test_check_in_validates_day_of_week(session: Session, gatekeeper_user: User):
     lot = LotService.create_lot(session, LotCreate(block="G5", lot_number="05"))
-    visitor = VisitorService.create_visitor(session, VisitorCreate(full_name="Tiago Lacerda"))
+    visitor = VisitorService.create_visitor(
+        session, VisitorCreate(full_name="Tiago Lacerda")
+    )
 
     # Tuesday = 2026-08-25 (weekday 1 = TUE)
-    tuesday_dt = datetime(2026, 8, 25, 10, 0, 0)
+    tuesday_dt = datetime(2026, 8, 25, 10, 0, 0)  # noqa: DTZ001  # naive literal matching the naive column
 
     auth = VisitorService.create_authorization(
         session,
@@ -221,7 +268,9 @@ def test_check_in_validates_day_of_week(session: Session, gatekeeper_user: User)
     with pytest.raises(AuthorizationInvalidDayError, match="day of week not allowed"):
         VisitorService.check_in(
             session,
-            AccessLogCheckIn(visitor_id=visitor.id, lot_id=lot.id, authorization_id=auth.id),
+            AccessLogCheckIn(
+                visitor_id=visitor.id, lot_id=lot.id, authorization_id=auth.id
+            ),
             gatekeeper_user,
             check_time=tuesday_dt,
         )
@@ -229,10 +278,12 @@ def test_check_in_validates_day_of_week(session: Session, gatekeeper_user: User)
 
 def test_check_in_validates_shift(session: Session, gatekeeper_user: User):
     lot = LotService.create_lot(session, LotCreate(block="G6", lot_number="06"))
-    visitor = VisitorService.create_visitor(session, VisitorCreate(full_name="Fabio Assuncao"))
+    visitor = VisitorService.create_visitor(
+        session, VisitorCreate(full_name="Fabio Assuncao")
+    )
 
     # 14:00 (AFTERNOON)
-    afternoon_dt = datetime(2026, 8, 25, 14, 0, 0)
+    afternoon_dt = datetime(2026, 8, 25, 14, 0, 0)  # noqa: DTZ001  # naive literal matching the naive column
 
     auth = VisitorService.create_authorization(
         session,
@@ -245,37 +296,58 @@ def test_check_in_validates_shift(session: Session, gatekeeper_user: User):
         gatekeeper_user,
     )
 
-    with pytest.raises(AuthorizationInvalidShiftError, match="shift window not allowed"):
+    with pytest.raises(
+        AuthorizationInvalidShiftError, match="shift window not allowed"
+    ):
         VisitorService.check_in(
             session,
-            AccessLogCheckIn(visitor_id=visitor.id, lot_id=lot.id, authorization_id=auth.id),
+            AccessLogCheckIn(
+                visitor_id=visitor.id, lot_id=lot.id, authorization_id=auth.id
+            ),
             gatekeeper_user,
             check_time=afternoon_dt,
         )
 
 
-def test_api_check_in_and_check_out(client: TestClient, gatekeeper_user: User, session: Session):
+def test_api_check_in_and_check_out(
+    client: TestClient, gatekeeper_user: User, session: Session
+):
     lot = LotService.create_lot(session, LotCreate(block="G7", lot_number="07"))
-    visitor = VisitorService.create_visitor(session, VisitorCreate(full_name="Claudia Abreu"))
+    visitor = VisitorService.create_visitor(
+        session, VisitorCreate(full_name="Claudia Abreu")
+    )
     auth = VisitorService.create_authorization(
         session,
         lot.id,
         VisitorAuthorizationCreate(
             visitor_id=visitor.id,
-            allowed_days=[DayOfWeek.MON, DayOfWeek.TUE, DayOfWeek.WED, DayOfWeek.THU, DayOfWeek.FRI, DayOfWeek.SAT, DayOfWeek.SUN],
+            allowed_days=[
+                DayOfWeek.MON,
+                DayOfWeek.TUE,
+                DayOfWeek.WED,
+                DayOfWeek.THU,
+                DayOfWeek.FRI,
+                DayOfWeek.SAT,
+                DayOfWeek.SUN,
+            ],
             allowed_shifts=[ShiftType.FULL_DAY],
         ),
         gatekeeper_user,
     )
 
     from app.core.security import create_access_token
+
     token = create_access_token(gatekeeper_user.id)
     headers = {"Authorization": f"Bearer {token}"}
 
     # API Check-In
     res_in = client.post(
         "/api/v1/access-logs/check-in",
-        json={"visitor_id": str(visitor.id), "lot_id": str(lot.id), "authorization_id": str(auth.id)},
+        json={
+            "visitor_id": str(visitor.id),
+            "lot_id": str(lot.id),
+            "authorization_id": str(auth.id),
+        },
         headers=headers,
     )
     assert res_in.status_code == 201

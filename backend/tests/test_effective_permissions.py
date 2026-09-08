@@ -84,9 +84,7 @@ def test_a_user_whose_only_role_is_a_profile_gets_exactly_that_bundle(
 
 def test_role_bundle_permissions_are_added_to_the_legacy_set(session: Session):
     user = _make_user(session, "RESIDENT")
-    role = Role(
-        name="Comissão de Obras", permissions=["assets:create", "votes:close"]
-    )
+    role = Role(name="Comissão de Obras", permissions=["assets:create", "votes:close"])
     session.add(role)
     session.commit()
     user.roles.append(role)
@@ -208,7 +206,7 @@ def test_a_session_with_no_acting_tenant_resolves_to_the_default_tenant(
 def test_a_fresh_tenant_has_no_role_with_permissions(
     client: TestClient, session: Session
 ):
-    """"A fresh tenant's role list comes back empty" == empty of permissions."""
+    """ "A fresh tenant's role list comes back empty" == empty of permissions."""
     admin = _make_user(session, "ADMINISTRATOR")
 
     response = client.post(
@@ -219,9 +217,7 @@ def test_a_fresh_tenant_has_no_role_with_permissions(
     assert response.status_code == 201
     tenant_id = uuid.UUID(response.json()["id"])
 
-    rows = session.exec(
-        select(Role).where(Role.tenant_id == tenant_id)
-    ).all()
+    rows = session.exec(select(Role).where(Role.tenant_id == tenant_id)).all()
 
     # APRAS-42 §7.2 still requires the six role-linked rows for the menu gate.
     assert {row.name for row in rows} == set(PROFILE_ROLE_NAMES.values())
@@ -231,9 +227,7 @@ def test_a_fresh_tenant_has_no_role_with_permissions(
 def test_seed_creates_no_permissions(session: Session, tenant_b: Tenant):
     TenantService.ensure_legacy_roles(session, tenant_b.id)
 
-    rows = session.exec(
-        select(Role).where(Role.tenant_id == tenant_b.id)
-    ).all()
+    rows = session.exec(select(Role).where(Role.tenant_id == tenant_b.id)).all()
 
     assert rows
     assert all(row.permissions == [] for row in rows)
@@ -292,9 +286,7 @@ def test_the_bridge_grants_nothing_in_a_tenant_that_did_not_grant_it(
 ):
     user = _make_user(session, "RESIDENT")
     session.add(
-        UserTenantLink(
-            user_id=user.id, tenant_id=tenant_b.id, is_tenant_admin=True
-        )
+        UserTenantLink(user_id=user.id, tenant_id=tenant_b.id, is_tenant_admin=True)
     )
     session.add(
         UserTenantLink(
@@ -352,9 +344,7 @@ def test_the_strip_bounds_an_acting_tenant_admin(session: Session):
 
     result = deps.get_effective_permissions(user, session)
 
-    assert result == frozenset(
-        p for p in PERMISSIONS if not p.startswith("finance:")
-    )
+    assert result == frozenset(p for p in PERMISSIONS if not p.startswith("finance:"))
 
 
 def test_a_superuser_is_exempt_from_the_strip(session: Session):

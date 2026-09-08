@@ -530,7 +530,11 @@ def test_guest_forbidden_on_every_endpoint(
             },
         ),
         ("get", "/api/v1/finance/balance", None),
-        ("get", "/api/v1/finance/statement?start_date=2026-01-01&end_date=2026-01-31", None),
+        (
+            "get",
+            "/api/v1/finance/statement?start_date=2026-01-01&end_date=2026-01-31",
+            None,
+        ),
         ("get", "/api/v1/finance/budget-vs-actual?fiscal_year=2026", None),
     ]
     for method, url, body in endpoints:

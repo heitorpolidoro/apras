@@ -86,7 +86,9 @@ def make_role_holder(
     so a director reaches the area exactly when the condominium's role row
     carries the two strings.
     """
-    role = Role(name=f"Papel {uuid.uuid4().hex[:8]}", tenant_id=tenant_id, permissions=[])
+    role = Role(
+        name=f"Papel {uuid.uuid4().hex[:8]}", tenant_id=tenant_id, permissions=[]
+    )
     session.add(role)
     session.commit()
     session.refresh(role)
@@ -192,6 +194,10 @@ def module_row(body: dict, module: str) -> dict:
 def subscription_id(session: Session, tenant_id):
     """The id of `tenant_id`'s subscription row, read outside any request."""
     session.expire_all()
-    return session.exec(
-        select(TenantSubscription).where(TenantSubscription.tenant_id == tenant_id)
-    ).first().id
+    return (
+        session.exec(
+            select(TenantSubscription).where(TenantSubscription.tenant_id == tenant_id)
+        )
+        .first()
+        .id
+    )

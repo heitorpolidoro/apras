@@ -226,9 +226,7 @@ def test_a_user_with_tasks_update_any_can_edit_an_other_assigned_task(
 # ---------------------------------------------------------------------------
 
 
-def test_create_defaults_visible_to_for_a_scoped_author_only(
-    client: TestClient, world
-):
+def test_create_defaults_visible_to_for_a_scoped_author_only(client: TestClient, world):
     """A scoped author's untargeted task would be invisible to them."""
     scoped = client.post(
         "/api/v1/tasks/",

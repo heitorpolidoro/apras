@@ -91,15 +91,9 @@ from tests.tools import record_parity_baseline
 
 BACKEND_ROOT = Path(__file__).resolve().parent.parent
 BASELINE_PATH = BACKEND_ROOT / "tests" / "data" / "parity_matrix_baseline.json"
-BASELINE_40_PATH = (
-    BACKEND_ROOT / "tests" / "data" / "parity_matrix_baseline_40.json"
-)
-BASELINE_44_PATH = (
-    BACKEND_ROOT / "tests" / "data" / "parity_matrix_baseline_44.json"
-)
-BASELINE_51_PATH = (
-    BACKEND_ROOT / "tests" / "data" / "parity_matrix_baseline_51.json"
-)
+BASELINE_40_PATH = BACKEND_ROOT / "tests" / "data" / "parity_matrix_baseline_40.json"
+BASELINE_44_PATH = BACKEND_ROOT / "tests" / "data" / "parity_matrix_baseline_44.json"
+BASELINE_51_PATH = BACKEND_ROOT / "tests" / "data" / "parity_matrix_baseline_51.json"
 LEGACY_BUNDLES_PATH = BACKEND_ROOT / "tests" / "data" / "legacy_role_bundles.json"
 HARNESS_PATH = BACKEND_ROOT / "tests" / "matrix_world.py"
 
@@ -119,9 +113,7 @@ F2_MERGE_BASE_SHA = "02c2025abcda4626569921eafb3863dfc540eb9e"
 #: Measured at the APRAS-39 merge base (68cfd1d) with
 #: `shasum -a 256 backend/tests/data/parity_matrix_baseline.json`, and pinned
 #: so "byte-identical" is a machine statement rather than an intention.
-F2_BASELINE_SHA256 = (
-    "3691cea1cddfa13ddcba4cf9b5c1c3e8b7bbac7c295bae4bbd4e3e8c45c016cd"
-)
+F2_BASELINE_SHA256 = "3691cea1cddfa13ddcba4cf9b5c1c3e8b7bbac7c295bae4bbd4e3e8c45c016cd"
 #: `shasum -a 256 backend/tests/data/legacy_role_bundles.json` at the APRAS-44
 #: merge base (a3d1b19), pinned by APRAS-44 §12.4 so "untouched" is a machine
 #: statement rather than an intention.
@@ -468,8 +460,7 @@ def load_union() -> dict[tuple[str, str, str], int]:
             for route, status in by_path.items():
                 key = (role, method, F5_PATH_RENAMES.get(route, route))
                 assert key in merged, (
-                    f"the APRAS-51 baseline overrides a cell that does not "
-                    f"exist: {key}"
+                    f"the APRAS-51 baseline overrides a cell that does not exist: {key}"
                 )
                 merged[key] = status
     return merged
@@ -602,7 +593,9 @@ def test_every_path_parameter_has_a_binding():
 
 def test_every_write_route_has_a_request_body():
     missing = sorted(
-        key for key in ROUTE_PERMISSIONS if key[0] in WRITE_METHODS and key not in REQUEST_BODIES
+        key
+        for key in ROUTE_PERMISSIONS
+        if key[0] in WRITE_METHODS and key not in REQUEST_BODIES
     )
     assert not missing, f"write routes with no declared body: {missing}"
 
@@ -812,9 +805,7 @@ def test_the_apras_44_baseline_declares_its_provenance():
     assert "git worktree add" not in meta["regenerate"]
     assert (BACKEND_ROOT / meta["generator"]).exists()
     assert (BACKEND_ROOT / meta["harness"]).exists()
-    assert meta["merge_base_sha"] != load_apras_40_baseline()["_meta"][
-        "merge_base_sha"
-    ]
+    assert meta["merge_base_sha"] != load_apras_40_baseline()["_meta"]["merge_base_sha"]
     # The scoped invocation names all eighteen routes, so the recipe is
     # executable exactly as written.
     assert meta["regenerate"].count("--routes") == 18
@@ -926,12 +917,8 @@ def test_the_apras_51_baseline_declares_its_provenance():
     assert (BACKEND_ROOT / meta["harness"]).exists()
     # Its own branch point, never a copy of one of the other two.
     assert meta["merge_base_sha"] != F2_MERGE_BASE_SHA
-    assert meta["merge_base_sha"] != load_apras_40_baseline()["_meta"][
-        "merge_base_sha"
-    ]
-    assert meta["merge_base_sha"] != load_apras_44_baseline()["_meta"][
-        "merge_base_sha"
-    ]
+    assert meta["merge_base_sha"] != load_apras_40_baseline()["_meta"]["merge_base_sha"]
+    assert meta["merge_base_sha"] != load_apras_44_baseline()["_meta"]["merge_base_sha"]
     # The scoped invocation names all 25 routes, so the recipe is executable
     # exactly as written.
     assert meta["regenerate"].count("--routes") == 25
@@ -977,9 +964,7 @@ def test_the_apras_51_baseline_differs_from_f2_in_exactly_three_cells():
     assert not missing, f"APRAS-51 cells that are not F2 cells: {missing}"
 
     diff = {
-        key: (f2[key], status)
-        for key, status in fifty_one.items()
-        if f2[key] != status
+        key: (f2[key], status) for key, status in fifty_one.items() if f2[key] != status
     }
     assert diff == APRAS_51_CELL_DELTA
 
@@ -1062,9 +1047,7 @@ def test_the_recorder_refuses_to_write_the_frozen_f2_baseline():
     with pytest.raises(SystemExit) as excinfo:
         record_parity_baseline.refuse_the_frozen_baseline(BASELINE_PATH)
     assert excinfo.value.code == 2
-    assert (
-        record_parity_baseline.refuse_the_frozen_baseline(BASELINE_40_PATH) is None
-    )
+    assert record_parity_baseline.refuse_the_frozen_baseline(BASELINE_40_PATH) is None
     assert record_parity_baseline.FROZEN == "tests/data/parity_matrix_baseline.json"
 
 
@@ -1181,9 +1164,10 @@ def test_recorder_refuses_a_dirty_production_tree():
             run_git=lambda *_args: " M app/api/deps.py\n"
         )
     assert excinfo.value.code == 2
-    assert record_parity_baseline.assert_clean_production_tree(
-        run_git=lambda *_args: ""
-    ) is None
+    assert (
+        record_parity_baseline.assert_clean_production_tree(run_git=lambda *_args: "")
+        is None
+    )
 
 
 def test_the_recorder_has_no_allow_dirty_escape():
@@ -1349,8 +1333,7 @@ def test_cell_matches_the_recorded_baseline(matrix_run, role, method, path):
 def test_the_matrix_has_zero_divergence():
     """The sorted `(role, method, path, expected, actual)` diff, in one place."""
     assert not sorted(_DIVERGENCES), (
-        "the enforcement swap changed behaviour on these cells: "
-        f"{sorted(_DIVERGENCES)}"
+        f"the enforcement swap changed behaviour on these cells: {sorted(_DIVERGENCES)}"
     )
 
 

@@ -165,7 +165,7 @@ def test_unparseable_xml_fails_legibly_rather_than_with_a_traceback(tmp_path, ca
 def test_the_cli_entry_point_exits_non_zero_without_a_traceback():
     """The workflow calls it as a script; `main`'s return value must reach the
     shell as an exit status, and a missing file must not print a traceback."""
-    result = subprocess.run(  # noqa: S603
+    result = subprocess.run(
         [sys.executable, str(SCRIPT), "--missing--.xml"],
         capture_output=True,
         text=True,
@@ -177,7 +177,7 @@ def test_the_cli_entry_point_exits_non_zero_without_a_traceback():
 
 
 def test_the_cli_entry_point_exits_zero_on_a_green_artifact(tmp_path):
-    result = subprocess.run(  # noqa: S603
+    result = subprocess.run(
         [sys.executable, str(SCRIPT), _junit(tmp_path)],
         capture_output=True,
         text=True,

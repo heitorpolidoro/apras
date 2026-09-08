@@ -1,11 +1,12 @@
 """Models for purchase requests, supplier quotes and the justified choice (APRAS-37)."""
 
-from datetime import UTC, datetime
+from datetime import datetime
 from uuid import UUID, uuid4
 
 from sqlalchemy import JSON, Column
 from sqlmodel import Field, Relationship, SQLModel
 
+from app.core import clock
 from app.models.enums import PurchaseRequestStatus
 from app.models.tenant import tenant_id_field
 
@@ -31,11 +32,9 @@ class PurchaseRequest(SQLModel, table=True):
     )
     requested_by_id: UUID = Field(foreign_key="user.id", nullable=False, index=True)
     created_at: datetime = Field(
-        default_factory=lambda: datetime.now(UTC), nullable=False, index=True
+        default_factory=clock.db_now, nullable=False, index=True
     )
-    updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(UTC), nullable=False
-    )
+    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
 
     quotes: list["PurchaseQuote"] = Relationship(
         back_populates="purchase_request",
@@ -80,12 +79,8 @@ class PurchaseQuote(SQLModel, table=True):
         sa_column=Column(JSON, nullable=False, server_default="[]"),
     )
     created_by_id: UUID = Field(foreign_key="user.id", nullable=False, index=True)
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(UTC), nullable=False
-    )
-    updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(UTC), nullable=False
-    )
+    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
 
     purchase_request: PurchaseRequest = Relationship(back_populates="quotes")
 
@@ -111,7 +106,7 @@ class PurchaseQuoteDecision(SQLModel, table=True):
     justification: str = Field(nullable=False)
     decided_by_id: UUID = Field(foreign_key="user.id", nullable=False, index=True)
     decided_at: datetime = Field(
-        default_factory=lambda: datetime.now(UTC), nullable=False, index=True
+        default_factory=clock.db_now, nullable=False, index=True
     )
 
     purchase_request: PurchaseRequest = Relationship(back_populates="decisions")

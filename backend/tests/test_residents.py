@@ -45,7 +45,9 @@ def test_cpf_validation_in_resident_schema():
         )
 
 
-def test_create_resident_and_auto_match_existing_user(session: Session, normal_user: User):
+def test_create_resident_and_auto_match_existing_user(
+    session: Session, normal_user: User
+):
     lot = LotService.create_lot(session, LotCreate(block="A", lot_number="101"))
 
     # Resident created with same CPF as normal_user -> user_id should be auto-linked
@@ -86,11 +88,15 @@ def test_get_resident_by_id_and_not_found(session: Session, admin_user: User):
     )
     resident = ResidentService.create_resident(session, lot.id, res_in)
 
-    found = ResidentService.get_resident_by_id(session, resident.id, current_user=admin_user)
+    found = ResidentService.get_resident_by_id(
+        session, resident.id, current_user=admin_user
+    )
     assert found.id == resident.id
 
     with pytest.raises(ResidentNotFoundError):
-        ResidentService.get_resident_by_id(session, uuid.uuid4(), current_user=admin_user)
+        ResidentService.get_resident_by_id(
+            session, uuid.uuid4(), current_user=admin_user
+        )
 
 
 def test_update_and_deactivate_resident(session: Session, admin_user: User):
@@ -103,7 +109,10 @@ def test_update_and_deactivate_resident(session: Session, admin_user: User):
     resident = ResidentService.create_resident(session, lot.id, res_in)
 
     updated = ResidentService.update_resident(
-        session, resident, ResidentUpdate(full_name="Resident C Updated", phone="11999999999"), current_user=admin_user
+        session,
+        resident,
+        ResidentUpdate(full_name="Resident C Updated", phone="11999999999"),
+        current_user=admin_user,
     )
     assert updated.full_name == "Resident C Updated"
     assert updated.phone == "11999999999"
@@ -146,6 +155,7 @@ def test_auto_link_user_on_signup(session: Session):
 
     # Now create user with matching CPF or email
     from app.core.security import get_password_hash
+
     new_user = make_user(
         session,
         id=uuid.uuid4(),
@@ -163,4 +173,3 @@ def test_auto_link_user_on_signup(session: Session):
 
     session.refresh(resident)
     assert resident.user_id == new_user.id
-

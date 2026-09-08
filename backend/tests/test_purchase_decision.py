@@ -142,7 +142,11 @@ def test_invalid_justification_is_422_and_records_nothing(
     client: TestClient, admin: User, session: Session, scenario: dict, payload: dict
 ) -> None:
     res = _decide(
-        client, admin, scenario["request_id"], quote_id=scenario["cheap"]["id"], **payload
+        client,
+        admin,
+        scenario["request_id"],
+        quote_id=scenario["cheap"]["id"],
+        **payload,
     )
     assert res.status_code == 422, res.text
 

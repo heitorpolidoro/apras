@@ -242,9 +242,7 @@ def test_membership_create_defaults_to_plain_member(
     assert response.json()["is_tenant_admin"] is False
 
 
-def test_grant_is_403_for_a_plain_member(
-    tenant_client: TestClient, plain_member: User
-):
+def test_grant_is_403_for_a_plain_member(tenant_client: TestClient, plain_member: User):
     response = tenant_client.patch(
         _members_url(TENANT_A, plain_member.id),
         headers=_auth(plain_member),
@@ -331,7 +329,7 @@ def test_tenant_admin_passes_every_admin_gated_route_in_their_tenant(
         tenant_client.post(
             "/api/v1/roles/",
             headers=headers,
-            json={"name": "Criado pelo síndico" },
+            json={"name": "Criado pelo síndico"},
         ).status_code
         == 201
     )
@@ -339,7 +337,7 @@ def test_tenant_admin_passes_every_admin_gated_route_in_their_tenant(
         tenant_client.patch(
             f"/api/v1/roles/{a_rows['role']}",
             headers=headers,
-            json={"name": "Zeladoria A2" },
+            json={"name": "Zeladoria A2"},
         ).status_code
         == 200
     )
@@ -384,16 +382,14 @@ def test_tenant_admin_is_403_acting_where_they_hold_no_grant(
         tenant_client.post(
             "/api/v1/roles/",
             headers=headers,
-            json={"name": "Nope" },
+            json={"name": "Nope"},
         ),
         tenant_client.patch(
             f"/api/v1/roles/{b_rows['role']}",
             headers=headers,
-            json={"name": "Nope" },
+            json={"name": "Nope"},
         ),
-        tenant_client.delete(
-            f"/api/v1/roles/{b_rows['role']}", headers=headers
-        ),
+        tenant_client.delete(f"/api/v1/roles/{b_rows['role']}", headers=headers),
         tenant_client.delete(f"/api/v1/tasks/{b_rows['task']}", headers=headers),
         tenant_client.delete(f"/api/v1/lots/{b_rows['lot']}", headers=headers),
     ]
@@ -418,16 +414,14 @@ def test_plain_member_of_a_is_403_on_the_same_routes(
         tenant_client.post(
             "/api/v1/roles/",
             headers=headers,
-            json={"name": "Nope" },
+            json={"name": "Nope"},
         ),
         tenant_client.patch(
             f"/api/v1/roles/{a_rows['role']}",
             headers=headers,
-            json={"name": "Nope" },
+            json={"name": "Nope"},
         ),
-        tenant_client.delete(
-            f"/api/v1/roles/{a_rows['role']}", headers=headers
-        ),
+        tenant_client.delete(f"/api/v1/roles/{a_rows['role']}", headers=headers),
         tenant_client.delete(f"/api/v1/tasks/{a_rows['task']}", headers=headers),
         tenant_client.delete(f"/api/v1/lots/{a_rows['lot']}", headers=headers),
     ]
@@ -451,7 +445,7 @@ def test_tenant_admin_never_reaches_tenant_b_data_while_acting_in_a(
         tenant_client.patch(
             f"/api/v1/roles/{b_rows['role']}",
             headers=headers,
-            json={"name": "Nope" },
+            json={"name": "Nope"},
         ).status_code
         == 404
     )
@@ -476,7 +470,9 @@ def test_tenant_admin_never_reaches_tenant_b_data_while_acting_in_a(
 def test_tenant_admin_is_exempt_from_the_permission_check_in_their_tenant(
     tenant_client: TestClient, tenant_admin: User
 ):
-    response = tenant_client.get("/api/v1/tasks/", headers=_auth(tenant_admin, TENANT_A))
+    response = tenant_client.get(
+        "/api/v1/tasks/", headers=_auth(tenant_admin, TENANT_A)
+    )
     assert response.status_code == 200
 
 
@@ -510,7 +506,9 @@ def test_an_ordinary_role_still_admits_a_member_without_the_capability(
     session.add(plain_member)
     session.commit()
 
-    response = tenant_client.get("/api/v1/tasks/", headers=_auth(plain_member, TENANT_A))
+    response = tenant_client.get(
+        "/api/v1/tasks/", headers=_auth(plain_member, TENANT_A)
+    )
     assert response.status_code == 200
 
 
@@ -556,9 +554,7 @@ def test_the_superuser_guard_stays_available_and_unchanged(
     assert excinfo.value.detail == "The user doesn't have enough privileges"
 
 
-def test_a_superuser_needs_no_capability_anywhere(
-    session: Session, global_admin: User
-):
+def test_a_superuser_needs_no_capability_anywhere(session: Session, global_admin: User):
     """`has_admin_capability` died with its only caller (§4.1).
 
     It existed to let `assert_menu_access` short-circuit for "administrator
@@ -682,9 +678,7 @@ def test_ensure_legacy_roles_inserts_only_the_missing_rows(
     session: Session, tenant_b: Tenant
 ):
     with acting_tenant_scope(session, tenant_b.id):
-        session.add(
-            Role(name="Morador (papel)")
-        )
+        session.add(Role(name="Morador (papel)"))
         session.commit()
 
     TenantService.ensure_legacy_roles(session, tenant_b.id)

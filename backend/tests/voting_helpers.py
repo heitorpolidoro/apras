@@ -5,6 +5,7 @@ from datetime import date, datetime, timedelta
 
 from sqlmodel import Session, select
 
+from app.core import clock
 from app.core.security import get_password_hash
 from app.models.enums import (
     AssemblyStatus,
@@ -163,7 +164,7 @@ def make_vote(
     status: VoteStatus = VoteStatus.OPEN,
 ) -> Vote:
     """Create and persist a vote with its options."""
-    now = datetime.utcnow()
+    now = clock.db_now()
     vote = Vote(
         assembly_id=assembly.id if assembly else None,
         kind=kind,
@@ -195,7 +196,7 @@ def option_id(vote: Vote, label: str) -> uuid.UUID:
     raise AssertionError(f"Option {label!r} not found on vote {vote.id}")
 
 
-def get_token(client, email: str, password: str = "pass") -> str:
+def get_token(client, email: str, password: str = "pass") -> str:  # noqa: S107  # fixture default, not a credential
     """Log in and return the bearer access token."""
     response = client.post(
         "/api/v1/auth/login", data={"username": email, "password": password}

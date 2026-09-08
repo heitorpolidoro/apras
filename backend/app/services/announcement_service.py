@@ -6,6 +6,7 @@ from uuid import UUID
 from sqlmodel import Session, func, select
 
 from app.api.deps import has_permission
+from app.core import clock
 from app.core.exceptions import (
     AnnouncementCommentNotFoundError,
     AnnouncementMediaNotFoundError,
@@ -48,7 +49,7 @@ _storage_provider: BaseStorageProvider = LocalStorageProvider()
 
 def _check_publisher(user: User, session: Session, permission: str) -> None:
     if not has_permission(user, session, permission):
-        raise AnnouncementPermissionError()
+        raise AnnouncementPermissionError
 
 
 def _format_media_read(media: AnnouncementMedia) -> AnnouncementMediaRead:
@@ -64,7 +65,9 @@ def _format_media_read(media: AnnouncementMedia) -> AnnouncementMediaRead:
     )
 
 
-def _format_comment_read(session: Session, comment: AnnouncementComment) -> AnnouncementCommentRead:
+def _format_comment_read(
+    session: Session, comment: AnnouncementComment
+) -> AnnouncementCommentRead:
     author = session.get(User, comment.user_id)
     return AnnouncementCommentRead(
         id=comment.id,
@@ -117,7 +120,7 @@ def _format_announcement_read(
 def list_announcements(
     session: Session, user: User, skip: int = 0, limit: int = 20
 ) -> PaginatedAnnouncementRead:
-    query = select(Announcement).where(Announcement.is_deleted == False)  # noqa: E712
+    query = select(Announcement).where(Announcement.is_deleted == False)  # noqa: E712  # SQLAlchemy column expression; `is True` does not compile to SQL
 
     total = session.exec(select(func.count()).select_from(query.subquery())).one()
 
@@ -129,7 +132,9 @@ def list_announcements(
     return PaginatedAnnouncementRead(items=items, total=total, skip=skip, limit=limit)
 
 
-def get_announcement(session: Session, user: User, announcement_id: UUID) -> AnnouncementDetailRead:
+def get_announcement(
+    session: Session, user: User, announcement_id: UUID
+) -> AnnouncementDetailRead:
     announcement = session.get(Announcement, announcement_id)
     if not announcement or announcement.is_deleted:
         raise AnnouncementNotFoundError(announcement_id)
@@ -147,15 +152,17 @@ def get_announcement(session: Session, user: User, announcement_id: UUID) -> Ann
     )
 
 
-def create_announcement(session: Session, user: User, data: AnnouncementCreate) -> AnnouncementRead:
+def create_announcement(
+    session: Session, user: User, data: AnnouncementCreate
+) -> AnnouncementRead:
     _check_publisher(user, session, "announcements:create")
 
     announcement = Announcement(
         title=data.title,
         content=data.content,
         author_id=user.id,
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
+        created_at=clock.db_now(),
+        updated_at=clock.db_now(),
     )
     session.add(announcement)
     session.commit()
@@ -178,7 +185,7 @@ def update_announcement(
     if data.content is not None:
         announcement.content = data.content
 
-    announcement.updated_at = datetime.utcnow()
+    announcement.updated_at = clock.db_now()
     session.add(announcement)
     session.commit()
     session.refresh(announcement)
@@ -194,7 +201,7 @@ def delete_announcement(session: Session, user: User, announcement_id: UUID) -> 
         raise AnnouncementNotFoundError(announcement_id)
 
     announcement.is_deleted = True
-    announcement.updated_at = datetime.utcnow()
+    announcement.updated_at = clock.db_now()
     session.add(announcement)
     session.commit()
 
@@ -214,11 +221,11 @@ def upload_media(
         raise AnnouncementNotFoundError(announcement_id)
 
     if len(file_bytes) > MAX_MEDIA_FILE_SIZE:
-        raise AnnouncementMediaTooLargeError()
+        raise AnnouncementMediaTooLargeError
 
     media_type = ALLOWED_MEDIA_MIME_TYPES.get(mime_type)
     if media_type is None:
-        raise InvalidAnnouncementMediaFormatError()
+        raise InvalidAnnouncementMediaFormatError
 
     file_path, url = _storage_provider.save_file(file_bytes, filename, mime_type)
 
@@ -237,7 +244,7 @@ def upload_media(
         mime_type=mime_type,
         file_size_bytes=len(file_bytes),
         order_index=next_order,
-        created_at=datetime.utcnow(),
+        created_at=clock.db_now(),
     )
     session.add(media)
     session.commit()
@@ -246,7 +253,9 @@ def upload_media(
     return _format_media_read(media)
 
 
-def delete_media(session: Session, user: User, announcement_id: UUID, media_id: UUID) -> None:
+def delete_media(
+    session: Session, user: User, announcement_id: UUID, media_id: UUID
+) -> None:
     _check_publisher(user, session, "announcements:media_delete")
 
     # Load the scoped parent through the (tenant-filtered) session first:
@@ -268,7 +277,9 @@ def delete_media(session: Session, user: User, announcement_id: UUID, media_id: 
     session.commit()
 
 
-def list_comments(session: Session, announcement_id: UUID) -> list[AnnouncementCommentRead]:
+def list_comments(
+    session: Session, announcement_id: UUID
+) -> list[AnnouncementCommentRead]:
     announcement = session.get(Announcement, announcement_id)
     if not announcement or announcement.is_deleted:
         raise AnnouncementNotFoundError(announcement_id)
@@ -286,7 +297,9 @@ def add_comment(
     session: Session, user: User, announcement_id: UUID, data: AnnouncementCommentCreate
 ) -> AnnouncementCommentRead:
     if not has_permission(user, session, "announcements:comment"):
-        raise AnnouncementPermissionError("Convidados não podem comentar em comunicados.")
+        raise AnnouncementPermissionError(
+            "Convidados não podem comentar em comunicados."
+        )
 
     announcement = session.get(Announcement, announcement_id)
     if not announcement or announcement.is_deleted:
@@ -296,7 +309,7 @@ def add_comment(
         announcement_id=announcement_id,
         user_id=user.id,
         content=data.content,
-        created_at=datetime.utcnow(),
+        created_at=clock.db_now(),
     )
     session.add(comment)
     session.commit()
@@ -345,7 +358,7 @@ def mark_read(session: Session, user: User, announcement_id: UUID) -> datetime:
     receipt = AnnouncementReadReceipt(
         announcement_id=announcement_id,
         user_id=user.id,
-        read_at=datetime.utcnow(),
+        read_at=clock.db_now(),
     )
     session.add(receipt)
     session.commit()

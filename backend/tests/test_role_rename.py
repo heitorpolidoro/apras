@@ -77,9 +77,10 @@ def test_the_catalogue_has_174_permissions_in_28_modules():
 
 def test_the_three_new_tier_permissions_exist_and_are_not_route_mapped():
     """They are in-code object predicates, like `SCOPE_PERMISSIONS` (§3.0)."""
-    assert frozenset(
-        {"tasks:read_all", "tasks:update_any", "occurrences:read_assigned"}
-    ) == TIER_PERMISSIONS
+    assert (
+        frozenset({"tasks:read_all", "tasks:update_any", "occurrences:read_assigned"})
+        == TIER_PERMISSIONS
+    )
     assert TIER_PERMISSIONS <= PERMISSIONS
     assert TIER_PERMISSIONS & set(ROUTE_PERMISSIONS.values()) == frozenset()
 

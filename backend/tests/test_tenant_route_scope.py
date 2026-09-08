@@ -168,6 +168,6 @@ def test_global_auth_routes_resolve_a_scope_explicitly():
             continue
         if keys in ([("GET", "/")], [("GET", "/api/v1/health")]):
             continue  # no session, nothing to resolve
-        assert any(
-            _depends_on(route.dependant, resolver) for resolver in resolvers
-        ), f"{keys} resolves no tenant scope"
+        assert any(_depends_on(route.dependant, resolver) for resolver in resolvers), (
+            f"{keys} resolves no tenant scope"
+        )

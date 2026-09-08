@@ -1,6 +1,12 @@
 """Authentication API endpoints."""
 
+import os
 from typing import Annotated
+
+import httpx
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi.security import OAuth2PasswordRequestForm
+from sqlmodel import Session, select
 
 from app.api import deps as api_deps
 from app.core import security
@@ -9,12 +15,14 @@ from app.core.limiter import limiter
 from app.db import get_session
 from app.models.tenant import DEFAULT_TENANT_ID, UserTenantLink
 from app.models.user import User
-from app.schemas.token import Token
+from app.schemas.token import (
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
+    Token,
+)
 from app.schemas.user import UserCreate, UserMeRead, UserRead
+from app.services.resident_service import ResidentService
 from app.services.tenant_service import TenantService
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from fastapi.security import OAuth2PasswordRequestForm
-from sqlmodel import Session, select
 
 router = APIRouter()
 
@@ -72,11 +80,9 @@ def signup(
     session.add(UserTenantLink(user_id=db_obj.id, tenant_id=DEFAULT_TENANT_ID))
     session.commit()
 
-    from app.services.resident_service import ResidentService
     ResidentService.auto_link_user(session, db_obj)
 
     return db_obj
-
 
 
 # No `response_model=`: FastAPI derives the identical model from the return
@@ -110,7 +116,7 @@ def read_user_me(
 @router.post("/login", response_model=Token)
 @limiter.limit("5/minute")
 def login_access_token(
-    request: Request,  # noqa: ARG001
+    request: Request,  # noqa: ARG001  # slowapi's @limiter.limit requires this parameter by name
     session: Annotated[Session, Depends(get_session)],
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     remember_me: Annotated[bool, Query()] = False,
@@ -172,7 +178,7 @@ def get_dev_users(
             detail="Not found",
         )
     statement = select(User).where(User.is_active)
-    return session.exec(statement).all()  # type: ignore
+    return session.exec(statement).all()  # type: ignore  # noqa: PGH003  # third-party stub gap; no code is reported for it
 
 
 @router.post("/dev-login", response_model=Token)
@@ -225,10 +231,6 @@ def dev_login(
     }
 
 
-from app.schemas.token import ForgotPasswordRequest, ResetPasswordRequest
-import httpx
-import os
-
 @router.post("/forgot-password")
 async def forgot_password(
     request: Request,
@@ -245,11 +247,13 @@ async def forgot_password(
 
     # Always return success response to prevent user enumeration
     if not user:
-        return {"message": "If the email is registered, a password reset link has been sent."}
+        return {
+            "message": "If the email is registered, a password reset link has been sent."
+        }
 
     # Generate password reset token
     token = security.create_password_reset_token(user.email)
-    
+
     # We use the request origin or construct it from headers
     origin = request.headers.get("origin") or "http://localhost:5173"
     reset_url = f"{origin}/reset-password?token={token}"
@@ -265,7 +269,7 @@ async def forgot_password(
                     "html": f"""
                     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
                       <h2 style="color: #059669; margin-top: 0;">APRAS</h2>
-                      <p>Olá, {user.full_name or 'usuário'}!</p>
+                      <p>Olá, {user.full_name or "usuário"}!</p>
                       <p>Recebemos uma solicitação para redefinir sua senha. Clique no botão abaixo para escolher uma nova:</p>
                       <div style="margin: 24px 0;">
                         <a href="{reset_url}" style="background-color: #059669; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Redefinir Senha</a>
@@ -274,15 +278,17 @@ async def forgot_password(
                       <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
                       <p style="color: #9ca3af; font-size: 12px;">Este link irá expirar em 15 minutos.</p>
                     </div>
-                    """
+                    """,
                 }
                 headers = {
                     "Authorization": f"Bearer {resend_api_key}",
                     "Content-Type": "application/json",
                 }
-                response = await client.post("https://api.resend.com/emails", json=email_payload, headers=headers)
+                response = await client.post(
+                    "https://api.resend.com/emails", json=email_payload, headers=headers
+                )
                 response.raise_for_status()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # best-effort side effect; a failure here must not fail the request
             print(f"Failed to send email via Resend: {e}")
             print(f"[AUTH] Password reset requested for user: {user.email}")
             print(f"[AUTH] Reset URL: {reset_url}")
@@ -290,7 +296,9 @@ async def forgot_password(
         print(f"[AUTH] Password reset requested for user: {user.email}")
         print(f"[AUTH] Reset URL: {reset_url}")
 
-    return {"message": "If the email is registered, a password reset link has been sent."}
+    return {
+        "message": "If the email is registered, a password reset link has been sent."
+    }
 
 
 @router.post("/reset-password")

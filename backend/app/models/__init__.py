@@ -117,6 +117,7 @@ __all__ = [
     "AuthorizationType",
     "Ballot",
     "BallotRejection",
+    "BallotRejectionReason",
     "BudgetLine",
     "Category",
     "ConstructionProject",
@@ -198,7 +199,3 @@ __all__ = [
     "VoteStatus",
     "VoteType",
 ]
-
-
-
-

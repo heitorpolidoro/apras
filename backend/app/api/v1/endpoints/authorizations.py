@@ -25,9 +25,7 @@ from app.services.visitor_service import VisitorService
 router = APIRouter()
 
 
-def _assert_not_porteiro(
-    current_user: User, session: Session, permission: str
-) -> None:
+def _assert_not_porteiro(current_user: User, session: Session, permission: str) -> None:
     """Raise 403 unless the caller holds this route's own permission.
 
     Named for the rule it used to spell (PORTEIRO is a gate-only role and
@@ -43,8 +41,16 @@ def _assert_not_porteiro(
 
 
 def _to_authorization_read(auth: VisitorAuthorization) -> VisitorAuthorizationRead:
-    days = [DayOfWeek(d) for d in json.loads(auth.allowed_days_json)] if auth.allowed_days_json else []
-    shifts = [ShiftType(s) for s in json.loads(auth.allowed_shifts_json)] if auth.allowed_shifts_json else []
+    days = (
+        [DayOfWeek(d) for d in json.loads(auth.allowed_days_json)]
+        if auth.allowed_days_json
+        else []
+    )
+    shifts = (
+        [ShiftType(s) for s in json.loads(auth.allowed_shifts_json)]
+        if auth.allowed_shifts_json
+        else []
+    )
     visitor_read = VisitorRead.model_validate(auth.visitor) if auth.visitor else None
     return VisitorAuthorizationRead(
         id=auth.id,
@@ -68,7 +74,6 @@ def _to_authorization_read(auth: VisitorAuthorization) -> VisitorAuthorizationRe
 
 @router.get(
     "/lots/{lot_id}/authorizations",
-    response_model=PaginatedAuthorizationRead,
     status_code=status.HTTP_200_OK,
 )
 def list_lot_authorizations(
@@ -90,7 +95,6 @@ def list_lot_authorizations(
 
 @router.post(
     "/lots/{lot_id}/authorizations",
-    response_model=VisitorAuthorizationRead,
     status_code=status.HTTP_201_CREATED,
 )
 def create_lot_authorization(
@@ -107,14 +111,17 @@ def create_lot_authorization(
 
 @router.put(
     "/authorizations/{auth_id}/revoke",
-    response_model=VisitorAuthorizationRead,
     status_code=status.HTTP_200_OK,
 )
 def revoke_authorization(
     auth_id: UUID,
     session: Annotated[Session, Depends(deps.get_session)],
     current_user: Annotated[User, Depends(deps.get_current_user)],
-    payload: VisitorAuthorizationRevoke | None = None,
+    # Deliberately unread: the route revokes unconditionally and the body is
+    # reserved for a future reason field. NOT renamed to `_payload` --
+    # FastAPI derives the body schema's `title` from the parameter name, so
+    # the underscore would rewrite it to " Payload" in the OpenAPI document.
+    payload: VisitorAuthorizationRevoke | None = None,  # noqa: ARG001  # renaming would move the OpenAPI body title
 ) -> VisitorAuthorizationRead:
     """Revoke an active pre-authorization immediately."""
     _assert_not_porteiro(current_user, session, "authorizations:revoke")
@@ -124,7 +131,6 @@ def revoke_authorization(
 
 @router.get(
     "/authorizations/{authorization_id}",
-    response_model=VisitorAuthorizationRead,
     status_code=status.HTTP_200_OK,
 )
 def get_authorization(
@@ -145,7 +151,9 @@ def get_authorization(
     (`_check_lot_access`) -- otherwise any authenticated resident could pull
     another lot's visitor PII by guessing an authorization UUID.
     """
-    auth = VisitorService.get_authorization_for_user(session, authorization_id, current_user)
+    auth = VisitorService.get_authorization_for_user(
+        session, authorization_id, current_user
+    )
     return _to_authorization_read(auth)
 
 
@@ -167,7 +175,9 @@ def get_authorization_qr_code(
     be fetchable for a lot the requester has no relationship to, but the
     Gatekeeper must still be able to fetch any lot's QR to act on a scan.
     """
-    auth = VisitorService.get_authorization_for_user(session, authorization_id, current_user)
+    auth = VisitorService.get_authorization_for_user(
+        session, authorization_id, current_user
+    )
     image = qrcode.make(str(auth.id))
     buffer = io.BytesIO()
     image.save(buffer, format="PNG")

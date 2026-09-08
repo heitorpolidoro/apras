@@ -86,9 +86,12 @@ def test_a_tenant_admin_reaches_the_area_with_no_special_case(
 
     assert tenant_client.get(SUBSCRIPTION, headers=headers).status_code == 200
     assert tenant_client.get(HISTORY_URL, headers=headers).status_code == 200
-    assert tenant_client.put(
-        MODULES_URL, json={"active_modules": ["documents"]}, headers=headers
-    ).status_code == 200
+    assert (
+        tenant_client.put(
+            MODULES_URL, json={"active_modules": ["documents"]}, headers=headers
+        ).status_code
+        == 200
+    )
 
 
 def test_a_director_reaches_the_area_once_the_role_grants_it(
@@ -100,9 +103,12 @@ def test_a_director_reaches_the_area_once_the_role_grants_it(
 
     assert tenant_client.get(SUBSCRIPTION, headers=headers).status_code == 403
     assert tenant_client.get(HISTORY_URL, headers=headers).status_code == 403
-    assert tenant_client.put(
-        MODULES_URL, json={"active_modules": []}, headers=headers
-    ).status_code == 403
+    assert (
+        tenant_client.put(
+            MODULES_URL, json={"active_modules": []}, headers=headers
+        ).status_code
+        == 403
+    )
 
     role.permissions = list(BILLING)
     session.add(role)
@@ -110,9 +116,12 @@ def test_a_director_reaches_the_area_once_the_role_grants_it(
 
     assert tenant_client.get(SUBSCRIPTION, headers=headers).status_code == 200
     assert tenant_client.get(HISTORY_URL, headers=headers).status_code == 200
-    assert tenant_client.put(
-        MODULES_URL, json={"active_modules": ["documents"]}, headers=headers
-    ).status_code == 200
+    assert (
+        tenant_client.put(
+            MODULES_URL, json={"active_modules": ["documents"]}, headers=headers
+        ).status_code
+        == 200
+    )
 
 
 def test_billing_read_alone_cannot_contract(
@@ -144,9 +153,12 @@ def test_billing_manage_alone_reaches_the_page_and_the_read_refuses(
     headers = auth(manager, TENANT_A)
 
     assert tenant_client.get(SUBSCRIPTION, headers=headers).status_code == 403
-    assert tenant_client.put(
-        MODULES_URL, json={"active_modules": ["documents"]}, headers=headers
-    ).status_code == 200
+    assert (
+        tenant_client.put(
+            MODULES_URL, json={"active_modules": ["documents"]}, headers=headers
+        ).status_code
+        == 200
+    )
 
 
 def test_a_superuser_reaches_everything(
@@ -157,38 +169,60 @@ def test_a_superuser_reaches_everything(
     superuser = make_superuser(session)
     plan = make_plan(session, name="Plano do Superusuário")
 
-    assert tenant_client.get(
-        SUBSCRIPTION, headers=auth(superuser, TENANT_A)
-    ).status_code == 200
-    assert tenant_client.get(
-        HISTORY_URL, headers=auth(superuser, TENANT_A)
-    ).status_code == 200
-    assert tenant_client.put(
-        MODULES_URL,
-        json={"active_modules": ["documents"]},
-        headers=auth(superuser, TENANT_A),
-    ).status_code == 200
+    assert (
+        tenant_client.get(SUBSCRIPTION, headers=auth(superuser, TENANT_A)).status_code
+        == 200
+    )
+    assert (
+        tenant_client.get(HISTORY_URL, headers=auth(superuser, TENANT_A)).status_code
+        == 200
+    )
+    assert (
+        tenant_client.put(
+            MODULES_URL,
+            json={"active_modules": ["documents"]},
+            headers=auth(superuser, TENANT_A),
+        ).status_code
+        == 200
+    )
 
-    assert tenant_client.get("/api/v1/plans/", headers=auth(superuser)).status_code == 200
-    assert tenant_client.post(
-        "/api/v1/plans/", json={"name": "Novo"}, headers=auth(superuser)
-    ).status_code == 201
-    assert tenant_client.get(
-        f"/api/v1/plans/{plan.id}", headers=auth(superuser)
-    ).status_code == 200
-    assert tenant_client.patch(
-        f"/api/v1/plans/{plan.id}",
-        json={"description": "x"},
-        headers=auth(superuser),
-    ).status_code == 200
+    assert (
+        tenant_client.get("/api/v1/plans/", headers=auth(superuser)).status_code == 200
+    )
+    assert (
+        tenant_client.post(
+            "/api/v1/plans/", json={"name": "Novo"}, headers=auth(superuser)
+        ).status_code
+        == 201
+    )
+    assert (
+        tenant_client.get(
+            f"/api/v1/plans/{plan.id}", headers=auth(superuser)
+        ).status_code
+        == 200
+    )
+    assert (
+        tenant_client.patch(
+            f"/api/v1/plans/{plan.id}",
+            json={"description": "x"},
+            headers=auth(superuser),
+        ).status_code
+        == 200
+    )
 
     base = f"/api/v1/tenants/{TENANT_A}/subscription"
     assert tenant_client.get(base, headers=auth(superuser)).status_code == 200
-    assert tenant_client.put(
-        base, json={"plan_id": str(plan.id)}, headers=auth(superuser)
-    ).status_code == 200
-    assert tenant_client.put(
-        f"{base}/courtesy",
-        json={"courtesy_modules": ["finance"]},
-        headers=auth(superuser),
-    ).status_code == 200
+    assert (
+        tenant_client.put(
+            base, json={"plan_id": str(plan.id)}, headers=auth(superuser)
+        ).status_code
+        == 200
+    )
+    assert (
+        tenant_client.put(
+            f"{base}/courtesy",
+            json={"courtesy_modules": ["finance"]},
+            headers=auth(superuser),
+        ).status_code
+        == 200
+    )

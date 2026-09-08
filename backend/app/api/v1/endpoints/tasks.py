@@ -3,23 +3,35 @@
 from typing import Annotated
 from uuid import UUID
 
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import exists, or_
+from sqlalchemy.orm import aliased
+from sqlmodel import Session, select
+
 from app.api import deps as api_deps
 from app.core.exceptions import ForbiddenError, TaskNotFoundError
 from app.db import get_session
+from app.models.category import Category
 from app.models.enums import TaskPriority, TaskStatus
-from app.models.task import Task, TaskComment, TaskHistory
+from app.models.role import Role
+from app.models.task import Task, TaskComment, TaskHistory, TaskVisibleToLink
 from app.models.user import User
-from app.schemas.task import (TaskCommentCreate, TaskCommentRead,
-                              TaskCommentUpdate, TaskCreate, TaskHistoryRead,
-                              TaskRead, TaskUpdate)
+from app.schemas.role import RoleRead
+from app.schemas.task import (
+    TaskCommentCreate,
+    TaskCommentRead,
+    TaskCommentUpdate,
+    TaskCreate,
+    TaskHistoryRead,
+    TaskRead,
+    TaskUpdate,
+)
 from app.services.task_service import TaskService
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlmodel import Session, select
 
 router = APIRouter()
 
 
-@router.post("/", response_model=TaskRead)
+@router.post("/")
 def create_task(
     task_in: TaskCreate,
     session: Annotated[Session, Depends(get_session)],
@@ -37,7 +49,7 @@ def create_task(
     return TaskService.get_task_with_names(session=session, db_task=db_task)
 
 
-@router.get("/", response_model=list[TaskRead])
+@router.get("/")
 def list_tasks(
     session: Annotated[Session, Depends(get_session)],
     current_user: Annotated[User, Depends(api_deps.require_permission("tasks:read"))],
@@ -54,13 +66,6 @@ def list_tasks(
     refusal-shape change of that task -- one parity cell moves, GUEST's
     `GET /api/v1/tasks/`, from 200 to 403.
     """
-    from app.models.category import Category
-    from app.models.task import TaskVisibleToLink
-    from app.models.role import Role
-    from app.schemas.role import RoleRead
-    from sqlalchemy import exists, or_
-    from sqlalchemy.orm import aliased
-
     creator_alias = aliased(User)
     assignee_alias = aliased(User)
 
@@ -124,14 +129,13 @@ def list_tasks(
         task_data["category_name"] = category_name
         task_data["category_color"] = category_color
         task_data["visible_to"] = [
-            RoleRead.model_validate(ut)
-            for ut in visible_to_by_task.get(db_task.id, [])
+            RoleRead.model_validate(ut) for ut in visible_to_by_task.get(db_task.id, [])
         ]
         tasks.append(TaskRead.model_validate(task_data))
     return tasks
 
 
-@router.patch("/{task_id}", response_model=TaskRead)
+@router.patch("/{task_id}")
 def update_task(
     task_id: UUID,
     task_in: TaskUpdate,
@@ -191,7 +195,7 @@ def delete_task(
 # ── Comments ──────────────────────────────────────────────────────────────────
 
 
-@router.get("/{task_id}/comments", response_model=list[TaskCommentRead])
+@router.get("/{task_id}/comments")
 def list_comments(
     task_id: UUID,
     session: Annotated[Session, Depends(get_session)],
@@ -208,7 +212,6 @@ def list_comments(
 
 @router.post(
     "/{task_id}/comments",
-    response_model=TaskCommentRead,
     status_code=status.HTTP_201_CREATED,
 )
 def create_comment(
@@ -233,7 +236,7 @@ def create_comment(
     )
 
 
-@router.patch("/{task_id}/comments/{comment_id}", response_model=TaskCommentRead)
+@router.patch("/{task_id}/comments/{comment_id}")
 def update_comment(
     task_id: UUID,
     comment_id: UUID,

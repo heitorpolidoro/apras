@@ -10,7 +10,9 @@ from tests.conftest import make_user
 
 
 def get_token(client, username, password):
-    response = client.post("/api/v1/auth/login", data={"username": username, "password": password})
+    response = client.post(
+        "/api/v1/auth/login", data={"username": username, "password": password}
+    )
     return response.json()["access_token"]
 
 
@@ -57,7 +59,9 @@ def test_service_get_categories_all(session: Session):
     assert "Inactive" in names
 
 
-def test_service_update_category_name_only(session: Session, default_category: Category):
+def test_service_update_category_name_only(
+    session: Session, default_category: Category
+):
     update_in = CategoryUpdate(name="Renamed")
     updated = CategoryService.update_category(
         session=session, db_category=default_category, category_in=update_in
@@ -67,7 +71,9 @@ def test_service_update_category_name_only(session: Session, default_category: C
     assert updated.color == default_category.color
 
 
-def test_service_update_category_color_only(session: Session, default_category: Category):
+def test_service_update_category_color_only(
+    session: Session, default_category: Category
+):
     update_in = CategoryUpdate(color="#123456")
     updated = CategoryService.update_category(
         session=session, db_category=default_category, category_in=update_in
@@ -77,7 +83,9 @@ def test_service_update_category_color_only(session: Session, default_category: 
     assert updated.name == "General"
 
 
-def test_service_update_category_is_active_only(session: Session, default_category: Category):
+def test_service_update_category_is_active_only(
+    session: Session, default_category: Category
+):
     update_in = CategoryUpdate(is_active=False)
     updated = CategoryService.update_category(
         session=session, db_category=default_category, category_in=update_in
@@ -87,7 +95,9 @@ def test_service_update_category_is_active_only(session: Session, default_catego
     assert updated.name == "General"
 
 
-def test_service_update_category_multiple_fields(session: Session, default_category: Category):
+def test_service_update_category_multiple_fields(
+    session: Session, default_category: Category
+):
     update_in = CategoryUpdate(name="Updated", color="#abcdef", is_active=False)
     updated = CategoryService.update_category(
         session=session, db_category=default_category, category_in=update_in
@@ -98,7 +108,9 @@ def test_service_update_category_multiple_fields(session: Session, default_categ
     assert updated.is_active is False
 
 
-def test_service_delete_category_sets_inactive(session: Session, default_category: Category):
+def test_service_delete_category_sets_inactive(
+    session: Session, default_category: Category
+):
     assert default_category.is_active is True
 
     CategoryService.delete_category(session=session, db_category=default_category)
@@ -116,9 +128,13 @@ def test_service_delete_category_sets_inactive(session: Session, default_categor
 # ---------------------------------------------------------------------------
 
 
-def test_list_categories_authenticated(client: TestClient, session: Session, normal_user, default_category: Category):
+def test_list_categories_authenticated(
+    client: TestClient, session: Session, normal_user, default_category: Category
+):
     token = get_token(client, "user1", "test_user_password")
-    response = client.get("/api/v1/categories/", headers={"Authorization": f"Bearer {token}"})
+    response = client.get(
+        "/api/v1/categories/", headers={"Authorization": f"Bearer {token}"}
+    )
 
     assert response.status_code == 200
     data = response.json()
@@ -132,7 +148,9 @@ def test_list_categories_unauthenticated(client: TestClient):
     assert response.status_code == 401
 
 
-def test_create_category_admin_success(client: TestClient, session: Session, admin_user):
+def test_create_category_admin_success(
+    client: TestClient, session: Session, admin_user
+):
     token = get_token(client, "admin", "test_admin_password")
     response = client.post(
         "/api/v1/categories/",
@@ -148,7 +166,9 @@ def test_create_category_admin_success(client: TestClient, session: Session, adm
     assert "id" in data
 
 
-def test_create_category_non_admin_success(client: TestClient, session: Session, normal_user):
+def test_create_category_non_admin_success(
+    client: TestClient, session: Session, normal_user
+):
     token = get_token(client, "user1", "test_user_password")
     response = client.post(
         "/api/v1/categories/",
@@ -160,11 +180,15 @@ def test_create_category_non_admin_success(client: TestClient, session: Session,
 
 
 def test_create_category_unauthenticated(client: TestClient):
-    response = client.post("/api/v1/categories/", json={"name": "Finance", "color": "#ff5500"})
+    response = client.post(
+        "/api/v1/categories/", json={"name": "Finance", "color": "#ff5500"}
+    )
     assert response.status_code == 401
 
 
-def test_create_category_invalid_color_format(client: TestClient, session: Session, admin_user):
+def test_create_category_invalid_color_format(
+    client: TestClient, session: Session, admin_user
+):
     token = get_token(client, "admin", "test_admin_password")
     response = client.post(
         "/api/v1/categories/",
@@ -175,7 +199,9 @@ def test_create_category_invalid_color_format(client: TestClient, session: Sessi
     assert response.status_code == 422
 
 
-def test_update_category_admin_success(client: TestClient, session: Session, admin_user, default_category: Category):
+def test_update_category_admin_success(
+    client: TestClient, session: Session, admin_user, default_category: Category
+):
     token = get_token(client, "admin", "test_admin_password")
     response = client.patch(
         f"/api/v1/categories/{default_category.id}",
@@ -187,7 +213,9 @@ def test_update_category_admin_success(client: TestClient, session: Session, adm
     assert response.json()["name"] == "Renamed Category"
 
 
-def test_update_category_non_admin_success(client: TestClient, session: Session, normal_user, default_category: Category):
+def test_update_category_non_admin_success(
+    client: TestClient, session: Session, normal_user, default_category: Category
+):
     token = get_token(client, "user1", "test_user_password")
     response = client.patch(
         f"/api/v1/categories/{default_category.id}",
@@ -211,7 +239,9 @@ def test_update_category_not_found(client: TestClient, session: Session, admin_u
     assert "not found" in response.json()["detail"].lower()
 
 
-def test_delete_category_admin_success(client: TestClient, session: Session, admin_user, default_category: Category):
+def test_delete_category_admin_success(
+    client: TestClient, session: Session, admin_user, default_category: Category
+):
     token = get_token(client, "admin", "test_admin_password")
     response = client.delete(
         f"/api/v1/categories/{default_category.id}",
@@ -224,7 +254,9 @@ def test_delete_category_admin_success(client: TestClient, session: Session, adm
     assert default_category.is_active is False
 
 
-def test_delete_category_non_admin_success(client: TestClient, session: Session, normal_user, default_category: Category):
+def test_delete_category_non_admin_success(
+    client: TestClient, session: Session, normal_user, default_category: Category
+):
     token = get_token(client, "user1", "test_user_password")
     response = client.delete(
         f"/api/v1/categories/{default_category.id}",
@@ -246,7 +278,9 @@ def test_delete_category_not_found(client: TestClient, session: Session, admin_u
     assert "not found" in response.json()["detail"].lower()
 
 
-def test_director_can_create_category(client: TestClient, session: Session, normal_user, admin_user):
+def test_director_can_create_category(
+    client: TestClient, session: Session, normal_user, admin_user
+):
     """DIRECTOR can create categories."""
     resp = client.post(
         "/api/v1/auth/login",
@@ -261,11 +295,14 @@ def test_director_can_create_category(client: TestClient, session: Session, norm
     assert resp.status_code == 201
 
 
-def test_manager_cannot_create_category(client: TestClient, session: Session, admin_user):
+def test_manager_cannot_create_category(
+    client: TestClient, session: Session, admin_user
+):
     """MANAGER gets 403 when trying to create a category."""
     import uuid as _uuid
 
     from app.core.security import get_password_hash
+
     manager = make_user(
         session,
         id=_uuid.uuid4(),
@@ -291,11 +328,14 @@ def test_manager_cannot_create_category(client: TestClient, session: Session, ad
     assert resp.status_code == 403
 
 
-def test_manager_cannot_update_category(client: TestClient, session: Session, admin_user):
+def test_manager_cannot_update_category(
+    client: TestClient, session: Session, admin_user
+):
     """MANAGER gets 403 when trying to update a category."""
     import uuid as _uuid
 
     from app.core.security import get_password_hash
+
     manager = make_user(
         session,
         id=_uuid.uuid4(),
@@ -334,7 +374,9 @@ def test_manager_cannot_update_category(client: TestClient, session: Session, ad
     assert resp.status_code == 403
 
 
-def test_list_categories_excludes_deactivated(client: TestClient, session: Session, admin_user, default_category: Category):
+def test_list_categories_excludes_deactivated(
+    client: TestClient, session: Session, admin_user, default_category: Category
+):
     token = get_token(client, "admin", "test_admin_password")
 
     client.delete(
@@ -342,7 +384,9 @@ def test_list_categories_excludes_deactivated(client: TestClient, session: Sessi
         headers={"Authorization": f"Bearer {token}"},
     )
 
-    response = client.get("/api/v1/categories/", headers={"Authorization": f"Bearer {token}"})
+    response = client.get(
+        "/api/v1/categories/", headers={"Authorization": f"Bearer {token}"}
+    )
     assert response.status_code == 200
     ids = [item["id"] for item in response.json()]
     assert str(default_category.id) not in ids

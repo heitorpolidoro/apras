@@ -1,10 +1,11 @@
 """Service layer for the Association Financial Area & Dashboard (APRAS-22)."""
 
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from uuid import UUID
 
 from sqlmodel import Session, func, select
 
+from app.core import clock
 from app.core.exceptions import (
     BudgetLineAlreadyExistsError,
     BudgetLineNotFoundError,
@@ -34,6 +35,9 @@ from app.schemas.finance import (
     MonthlyStatementEntry,
 )
 from app.services.storage_service import BaseStorageProvider, LocalStorageProvider
+
+#: Rolling the month cursor over into January.
+DECEMBER = 12
 
 MAX_INVOICE_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 ALLOWED_INVOICE_MIME_TYPE = "application/pdf"
@@ -69,9 +73,7 @@ class FinanceService:
         category = transaction.category or session.get(
             FinanceCategory, transaction.category_id
         )
-        creator = transaction.created_by or session.get(
-            User, transaction.created_by_id
-        )
+        creator = transaction.created_by or session.get(User, transaction.created_by_id)
         return FinancialTransactionRead(
             id=transaction.id,
             type=transaction.type,
@@ -105,7 +107,7 @@ class FinanceService:
         if type_filter is not None:
             query = query.where(FinanceCategory.type == type_filter)
         if not include_inactive:
-            query = query.where(FinanceCategory.is_active == True)  # noqa: E712
+            query = query.where(FinanceCategory.is_active == True)  # noqa: E712  # SQLAlchemy column expression; `is True` does not compile to SQL
         query = query.order_by(FinanceCategory.name.asc())
         return list(session.exec(query).all())
 
@@ -121,13 +123,13 @@ class FinanceService:
             )
         ).first()
         if existing:
-            raise FinanceCategoryAlreadyExistsError()
+            raise FinanceCategoryAlreadyExistsError
 
         category = FinanceCategory(
             name=category_in.name,
             type=category_in.type,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=clock.db_now(),
+            updated_at=clock.db_now(),
         )
         session.add(category)
         session.commit()
@@ -157,7 +159,7 @@ class FinanceService:
         if category_in.is_active is not None:
             category.is_active = category_in.is_active
 
-        category.updated_at = datetime.utcnow()
+        category.updated_at = clock.db_now()
         session.add(category)
         session.commit()
         session.refresh(category)
@@ -191,15 +193,15 @@ class FinanceService:
             )
         ).first()
         if existing:
-            raise BudgetLineAlreadyExistsError()
+            raise BudgetLineAlreadyExistsError
 
         budget_line = BudgetLine(
             category_id=category.id,
             fiscal_year=budget_in.fiscal_year,
             planned_amount=budget_in.planned_amount,
             notes=budget_in.notes,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=clock.db_now(),
+            updated_at=clock.db_now(),
         )
         session.add(budget_line)
         session.commit()
@@ -229,7 +231,7 @@ class FinanceService:
         if budget_in.notes is not None:
             budget_line.notes = budget_in.notes
 
-        budget_line.updated_at = datetime.utcnow()
+        budget_line.updated_at = clock.db_now()
         session.add(budget_line)
         session.commit()
         session.refresh(budget_line)
@@ -267,9 +269,7 @@ class FinanceService:
         if end_date is not None:
             query = query.where(FinancialTransaction.transaction_date <= end_date)
 
-        total = session.exec(
-            select(func.count()).select_from(query.subquery())
-        ).one()
+        total = session.exec(select(func.count()).select_from(query.subquery())).one()
 
         query = (
             query.order_by(FinancialTransaction.transaction_date.desc())
@@ -289,7 +289,7 @@ class FinanceService:
         """Creates a financial transaction, validating type/category match."""
         category = cls.get_category_by_id(session, transaction_in.category_id)
         if transaction_in.type != category.type:
-            raise FinanceCategoryTypeMismatchError()
+            raise FinanceCategoryTypeMismatchError
 
         transaction = FinancialTransaction(
             type=transaction_in.type,
@@ -299,8 +299,8 @@ class FinanceService:
             transaction_date=transaction_in.transaction_date,
             payment_method=transaction_in.payment_method,
             created_by_id=created_by_id,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=clock.db_now(),
+            updated_at=clock.db_now(),
         )
         session.add(transaction)
         session.commit()
@@ -311,7 +311,9 @@ class FinanceService:
     def get_transaction_by_id(
         session: Session, transaction_id: UUID
     ) -> FinancialTransaction:
-        """Retrieves a transaction entity or raises FinancialTransactionNotFoundError."""
+        """Retrieves a transaction entity or
+        raises
+        FinancialTransactionNotFoundError."""
         transaction = session.get(FinancialTransaction, transaction_id)
         if not transaction:
             raise FinancialTransactionNotFoundError(transaction_id)
@@ -333,12 +335,12 @@ class FinanceService:
         if "type" in update_data or "category_id" in update_data:
             category = cls.get_category_by_id(session, new_category_id)
             if new_type != category.type:
-                raise FinanceCategoryTypeMismatchError()
+                raise FinanceCategoryTypeMismatchError
 
         for key, value in update_data.items():
             setattr(transaction, key, value)
 
-        transaction.updated_at = datetime.utcnow()
+        transaction.updated_at = clock.db_now()
         session.add(transaction)
         session.commit()
         session.refresh(transaction)
@@ -363,9 +365,9 @@ class FinanceService:
     ) -> FinancialTransaction:
         """Attaches (or replaces) a PDF invoice on a transaction."""
         if mime_type != ALLOWED_INVOICE_MIME_TYPE:
-            raise InvalidInvoiceFormatError()
+            raise InvalidInvoiceFormatError
         if len(file_bytes) > MAX_INVOICE_FILE_SIZE:
-            raise InvoiceFileTooLargeError()
+            raise InvoiceFileTooLargeError
 
         if transaction.invoice_file_path:
             _storage_provider.delete_file(transaction.invoice_file_path)
@@ -376,7 +378,7 @@ class FinanceService:
         transaction.invoice_file_url = url
         transaction.invoice_file_size_bytes = len(file_bytes)
         transaction.invoice_mime_type = mime_type
-        transaction.updated_at = datetime.utcnow()
+        transaction.updated_at = clock.db_now()
 
         session.add(transaction)
         session.commit()
@@ -395,7 +397,7 @@ class FinanceService:
         transaction.invoice_file_url = None
         transaction.invoice_file_size_bytes = None
         transaction.invoice_mime_type = None
-        transaction.updated_at = datetime.utcnow()
+        transaction.updated_at = clock.db_now()
 
         session.add(transaction)
         session.commit()
@@ -411,7 +413,7 @@ class FinanceService:
         session: Session, as_of: date | None = None
     ) -> CashBalanceRead:
         """Computes the cash balance from all transactions up to `as_of`."""
-        as_of = as_of or date.today()
+        as_of = as_of or clock.today_utc()
 
         total_income = session.exec(
             select(func.coalesce(func.sum(FinancialTransaction.amount), 0.0)).where(
@@ -454,7 +456,7 @@ class FinanceService:
         end_marker = date(end_date.year, end_date.month, 1)
         while cursor <= end_marker:
             monthly[(cursor.year, cursor.month)] = {"income": 0.0, "expense": 0.0}
-            if cursor.month == 12:
+            if cursor.month == DECEMBER:
                 cursor = date(cursor.year + 1, 1, 1)
             else:
                 cursor = date(cursor.year, cursor.month + 1, 1)
@@ -469,7 +471,7 @@ class FinanceService:
 
         entries: list[MonthlyStatementEntry] = []
         running_balance = opening_balance
-        for (year, month) in sorted(monthly.keys()):
+        for year, month in sorted(monthly.keys()):
             income = monthly[(year, month)]["income"]
             expense = monthly[(year, month)]["expense"]
             net = income - expense
@@ -496,9 +498,7 @@ class FinanceService:
         )
 
     @staticmethod
-    def get_budget_vs_actual(
-        session: Session, fiscal_year: int
-    ) -> BudgetVsActualRead:
+    def get_budget_vs_actual(session: Session, fiscal_year: int) -> BudgetVsActualRead:
         """Builds the budget-vs-actual execution table for a fiscal year."""
         budget_lines = session.exec(
             select(BudgetLine).where(BudgetLine.fiscal_year == fiscal_year)
@@ -581,9 +581,7 @@ class FinanceService:
             FinancialTransaction.transaction_date <= end_of_year,
         )
 
-        total = session.exec(
-            select(func.count()).select_from(query.subquery())
-        ).one()
+        total = session.exec(select(func.count()).select_from(query.subquery())).one()
 
         query = (
             query.order_by(FinancialTransaction.transaction_date.desc())

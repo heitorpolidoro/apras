@@ -1,6 +1,5 @@
 """Category service layer for business logic."""
 
-
 from sqlmodel import Session, select
 
 from app.models.category import Category

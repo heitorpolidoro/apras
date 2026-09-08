@@ -94,8 +94,13 @@ def test_blocked_roles_get_403_on_every_read_and_write(
     for user in blocked_users:
         h = _headers(user)
         assert client.get("/api/v1/purchase-requests", headers=h).status_code == 403
-        assert client.get("/api/v1/purchase-requests/summary", headers=h).status_code == 403
-        assert client.get(f"/api/v1/purchase-requests/{rid}", headers=h).status_code == 403
+        assert (
+            client.get("/api/v1/purchase-requests/summary", headers=h).status_code
+            == 403
+        )
+        assert (
+            client.get(f"/api/v1/purchase-requests/{rid}", headers=h).status_code == 403
+        )
         assert (
             client.post(
                 "/api/v1/purchase-requests", json={"title": "x"}, headers=h
@@ -108,7 +113,10 @@ def test_blocked_roles_get_403_on_every_read_and_write(
             ).status_code
             == 403
         )
-        assert client.delete(f"/api/v1/purchase-requests/{rid}", headers=h).status_code == 403
+        assert (
+            client.delete(f"/api/v1/purchase-requests/{rid}", headers=h).status_code
+            == 403
+        )
         assert (
             client.post(
                 f"/api/v1/purchase-requests/{rid}/quotes",
@@ -140,23 +148,33 @@ def test_blocked_roles_get_403_on_every_read_and_write(
             == 403
         )
         assert (
-            client.post(f"/api/v1/purchase-requests/{rid}/cancel", headers=h).status_code
+            client.post(
+                f"/api/v1/purchase-requests/{rid}/cancel", headers=h
+            ).status_code
             == 403
         )
 
 
-def test_manager_may_read_create_and_quote(
-    client: TestClient, manager: User
-) -> None:
+def test_manager_may_read_create_and_quote(client: TestClient, manager: User) -> None:
     purchase_request = _create_request(client, manager, "Pedido do gerente")
     rid = purchase_request["id"]
 
-    assert client.get("/api/v1/purchase-requests", headers=_headers(manager)).status_code == 200
     assert (
-        client.get("/api/v1/purchase-requests/summary", headers=_headers(manager)).status_code
+        client.get("/api/v1/purchase-requests", headers=_headers(manager)).status_code
         == 200
     )
-    assert client.get(f"/api/v1/purchase-requests/{rid}", headers=_headers(manager)).status_code == 200
+    assert (
+        client.get(
+            "/api/v1/purchase-requests/summary", headers=_headers(manager)
+        ).status_code
+        == 200
+    )
+    assert (
+        client.get(
+            f"/api/v1/purchase-requests/{rid}", headers=_headers(manager)
+        ).status_code
+        == 200
+    )
 
     quote = _add_quote(client, manager, rid)
     assert (
@@ -182,12 +200,15 @@ def test_manager_may_read_create_and_quote(
         ).status_code
         == 204
     )
-    assert client.delete(f"/api/v1/purchase-requests/{rid}", headers=_headers(manager)).status_code == 204
+    assert (
+        client.delete(
+            f"/api/v1/purchase-requests/{rid}", headers=_headers(manager)
+        ).status_code
+        == 204
+    )
 
 
-def test_manager_cannot_decide_or_cancel(
-    client: TestClient, manager: User
-) -> None:
+def test_manager_cannot_decide_or_cancel(client: TestClient, manager: User) -> None:
     purchase_request = _create_request(client, manager)
     rid = purchase_request["id"]
     quote = _add_quote(client, manager, rid)
@@ -195,13 +216,18 @@ def test_manager_cannot_decide_or_cancel(
     assert (
         client.post(
             f"/api/v1/purchase-requests/{rid}/decision",
-            json={"quote_id": quote["id"], "justification": "Justificativa longa o bastante."},
+            json={
+                "quote_id": quote["id"],
+                "justification": "Justificativa longa o bastante.",
+            },
             headers=_headers(manager),
         ).status_code
         == 403
     )
     assert (
-        client.post(f"/api/v1/purchase-requests/{rid}/cancel", headers=_headers(manager)).status_code
+        client.post(
+            f"/api/v1/purchase-requests/{rid}/cancel", headers=_headers(manager)
+        ).status_code
         == 403
     )
 
@@ -215,11 +241,18 @@ def test_manager_cannot_touch_another_managers_request_or_quote(
 
     assert (
         client.put(
-            f"/api/v1/purchase-requests/{rid}", json={"title": "roubado"}, headers=_headers(manager)
+            f"/api/v1/purchase-requests/{rid}",
+            json={"title": "roubado"},
+            headers=_headers(manager),
         ).status_code
         == 403
     )
-    assert client.delete(f"/api/v1/purchase-requests/{rid}", headers=_headers(manager)).status_code == 403
+    assert (
+        client.delete(
+            f"/api/v1/purchase-requests/{rid}", headers=_headers(manager)
+        ).status_code
+        == 403
+    )
     assert (
         client.put(
             f"/api/v1/purchase-requests/{rid}/quotes/{quote['id']}",
@@ -230,7 +263,8 @@ def test_manager_cannot_touch_another_managers_request_or_quote(
     )
     assert (
         client.delete(
-            f"/api/v1/purchase-requests/{rid}/quotes/{quote['id']}", headers=_headers(manager)
+            f"/api/v1/purchase-requests/{rid}/quotes/{quote['id']}",
+            headers=_headers(manager),
         ).status_code
         == 403
     )
@@ -247,7 +281,10 @@ def test_manager_cannot_edit_own_request_after_decision(
     assert (
         client.post(
             f"/api/v1/purchase-requests/{rid}/decision",
-            json={"quote_id": quote["id"], "justification": "Justificativa longa o bastante."},
+            json={
+                "quote_id": quote["id"],
+                "justification": "Justificativa longa o bastante.",
+            },
             headers=_headers(director),
         ).status_code
         == 201
@@ -255,11 +292,18 @@ def test_manager_cannot_edit_own_request_after_decision(
 
     assert (
         client.put(
-            f"/api/v1/purchase-requests/{rid}", json={"title": "novo"}, headers=_headers(manager)
+            f"/api/v1/purchase-requests/{rid}",
+            json={"title": "novo"},
+            headers=_headers(manager),
         ).status_code
         == 403
     )
-    assert client.delete(f"/api/v1/purchase-requests/{rid}", headers=_headers(manager)).status_code == 403
+    assert (
+        client.delete(
+            f"/api/v1/purchase-requests/{rid}", headers=_headers(manager)
+        ).status_code
+        == 403
+    )
     # Quote edits are blocked by the freeze rule (409) before ownership matters.
     assert (
         client.put(
@@ -294,4 +338,9 @@ def test_admin_and_director_may_edit_a_managers_request(
         ).status_code
         == 200
     )
-    assert client.delete(f"/api/v1/purchase-requests/{rid}", headers=_headers(admin)).status_code == 204
+    assert (
+        client.delete(
+            f"/api/v1/purchase-requests/{rid}", headers=_headers(admin)
+        ).status_code
+        == 204
+    )

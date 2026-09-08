@@ -68,7 +68,7 @@ def read_my_permissions(
 
 @router.get("/")
 def read_permission_catalogue(
-    current_user: Annotated[User, Depends(api_deps.get_current_user)],  # noqa: ARG001
+    current_user: Annotated[User, Depends(api_deps.get_current_user)],  # noqa: ARG001  # FastAPI dependency guard: its only job is the 403
 ) -> list[PermissionDescriptorRead]:
     """The whole catalogue, sorted, identical for every caller.
 

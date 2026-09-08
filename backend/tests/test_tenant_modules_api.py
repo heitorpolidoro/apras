@@ -147,9 +147,7 @@ def test_put_disables_and_get_reflects_it(
     assert session.get(Tenant, TENANT_A).disabled_modules == ["finance"]
 
 
-def test_put_is_declarative_and_reenables(
-    tenant_client: TestClient, superuser: User
-):
+def test_put_is_declarative_and_reenables(tenant_client: TestClient, superuser: User):
     """The body is the complete desired state, so `[]` is a full re-enable."""
     tenant_client.put(
         _url(TENANT_A),
@@ -358,9 +356,7 @@ def test_an_ordinary_user_cannot_read_or_write_the_switch(
 
 
 @pytest.mark.parametrize("method", ["get", "put"])
-def test_an_unauthenticated_caller_gets_401(
-    tenant_client: TestClient, method: str
-):
+def test_an_unauthenticated_caller_gets_401(tenant_client: TestClient, method: str):
     call = getattr(tenant_client, method)
     kwargs = {"json": {"disabled_modules": []}} if method == "put" else {}
 
@@ -370,9 +366,7 @@ def test_an_unauthenticated_caller_gets_401(
 
 
 @pytest.mark.parametrize("method", ["get", "put"])
-def test_unknown_tenant_is_404(
-    tenant_client: TestClient, superuser: User, method: str
-):
+def test_unknown_tenant_is_404(tenant_client: TestClient, superuser: User, method: str):
     call = getattr(tenant_client, method)
     kwargs = {"json": {"disabled_modules": []}} if method == "put" else {}
 

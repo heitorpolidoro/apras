@@ -37,7 +37,9 @@ def test_folder_crud_flow(client, admin_headers, session):
         json={
             "name": "Financeiro",
             "description": "Documentos financeiros",
-            "allowed_role_ids": _role_ids(session, "ADMINISTRATOR", "DIRECTOR", "MANAGER", "RESIDENT"),
+            "allowed_role_ids": _role_ids(
+                session, "ADMINISTRATOR", "DIRECTOR", "MANAGER", "RESIDENT"
+            ),
         },
         headers=admin_headers,
     )
@@ -57,7 +59,9 @@ def test_folder_crud_flow(client, admin_headers, session):
             "name": "Balancetes 2026",
             "description": "Balancetes do ano 2026",
             "parent_id": folder_id,
-            "allowed_role_ids": _role_ids(session, "ADMINISTRATOR", "DIRECTOR", "MANAGER"),
+            "allowed_role_ids": _role_ids(
+                session, "ADMINISTRATOR", "DIRECTOR", "MANAGER"
+            ),
         },
         headers=admin_headers,
     )
@@ -94,7 +98,9 @@ def test_folder_crud_flow(client, admin_headers, session):
     assert len(tree) >= 1
 
     # 5. Delete subfolder
-    res_del = client.delete(f"/api/v1/documents/folders/{subfolder['id']}", headers=admin_headers)
+    res_del = client.delete(
+        f"/api/v1/documents/folders/{subfolder['id']}", headers=admin_headers
+    )
     assert res_del.status_code == 204
 
     # Verify deleted
@@ -110,7 +116,8 @@ def test_folder_validation_errors(client, admin_headers):
         "/api/v1/documents/folders",
         json={
             "name": "Orfan Folder",
-            "parent_id": str(uuid.uuid4()), "allowed_role_ids": [],
+            "parent_id": str(uuid.uuid4()),
+            "allowed_role_ids": [],
         },
         headers=admin_headers,
     )
@@ -204,7 +211,9 @@ def test_document_crud_and_search(client, admin_headers):
     doc_id = doc["id"]
 
     # List documents in folder
-    res_list = client.get(f"/api/v1/documents?folder_id={folder_id}", headers=admin_headers)
+    res_list = client.get(
+        f"/api/v1/documents?folder_id={folder_id}", headers=admin_headers
+    )
     assert res_list.status_code == 200
     paged = res_list.json()
     assert paged["total"] == 1
@@ -230,11 +239,15 @@ def test_document_crud_and_search(client, admin_headers):
     assert res_del.status_code == 204
 
     # Delete non-existent document
-    res_nf_doc_del = client.delete(f"/api/v1/documents/{uuid.uuid4()}", headers=admin_headers)
+    res_nf_doc_del = client.delete(
+        f"/api/v1/documents/{uuid.uuid4()}", headers=admin_headers
+    )
     assert res_nf_doc_del.status_code == 404
 
     # Verify deleted
-    res_list2 = client.get(f"/api/v1/documents?folder_id={folder_id}", headers=admin_headers)
+    res_list2 = client.get(
+        f"/api/v1/documents?folder_id={folder_id}", headers=admin_headers
+    )
     assert res_list2.json()["total"] == 0
 
 
@@ -315,11 +328,15 @@ def test_document_download_logging(client, admin_headers):
     assert res_dl.json()["file_url"] == "https://storage.example.com/docs/edital.pdf"
 
     # Download non-existent document
-    res_dl_nf = client.post(f"/api/v1/documents/{uuid.uuid4()}/download", headers=admin_headers)
+    res_dl_nf = client.post(
+        f"/api/v1/documents/{uuid.uuid4()}/download", headers=admin_headers
+    )
     assert res_dl_nf.status_code == 404
 
 
-def test_invalid_json_roles_and_non_existent_folder_query(client, admin_headers, session):
+def test_invalid_json_roles_and_non_existent_folder_query(
+    client, admin_headers, session
+):
     # Insert folder with malformed allowed_role_ids_json manually
     folder = DocumentFolder(
         name="Bad Roles Folder",
@@ -333,5 +350,7 @@ def test_invalid_json_roles_and_non_existent_folder_query(client, admin_headers,
     assert res_tree.status_code == 200
 
     # Query docs with non-existent folder_id
-    res_no_f = client.get(f"/api/v1/documents?folder_id={uuid.uuid4()}", headers=admin_headers)
+    res_no_f = client.get(
+        f"/api/v1/documents?folder_id={uuid.uuid4()}", headers=admin_headers
+    )
     assert res_no_f.status_code == 404

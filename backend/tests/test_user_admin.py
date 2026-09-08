@@ -1,12 +1,13 @@
 import uuid
+
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
+from app.core.security import create_access_token, get_password_hash
 from app.models.role import Role
+from app.models.tenant import DEFAULT_TENANT_ID, UserTenantLink
 from app.models.user import User
 from tests.conftest import make_user
-from app.core.security import create_access_token, get_password_hash
-from app.models.tenant import DEFAULT_TENANT_ID, UserTenantLink
 
 
 def get_token(client, username, password):

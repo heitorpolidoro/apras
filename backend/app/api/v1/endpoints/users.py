@@ -21,11 +21,15 @@ can widen anyone. The global flag has its own superuser-only route below.
 from typing import Annotated
 from uuid import UUID
 
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlmodel import Session, select
+
 from app.api import deps as api_deps
 from app.db import get_session
+from app.models.role import Role
 from app.models.tenant import Tenant
 from app.models.user import User
-from app.models.role import Role
+from app.schemas.role import RoleRead
 from app.schemas.user import (
     SuperuserRead,
     SuperuserUpdate,
@@ -33,11 +37,8 @@ from app.schemas.user import (
     UserRead,
     UserUpdate,
 )
-from app.schemas.role import RoleRead
 from app.services import role_service
 from app.services.user_service import UserService
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import Session, select
 
 router = APIRouter()
 
@@ -58,13 +59,11 @@ def _to_read(user: User, tenant_id: UUID) -> UserRead:
     return read
 
 
-@router.get("/", response_model=list[UserRead])
+@router.get("/")
 def read_users(
     session: Annotated[Session, Depends(get_session)],
     tenant: Annotated[Tenant, Depends(api_deps.get_current_tenant)],
-    current_user: Annotated[  # noqa: ARG001
-        User, Depends(api_deps.require_permission("users:read"))
-    ],
+    current_user: Annotated[User, Depends(api_deps.require_permission("users:read"))],  # noqa: ARG001  # FastAPI dependency guard: its only job is the 403
     is_active: bool | None = None,
 ) -> list[UserRead]:
     """Retrieve the users visible in the acting tenant.
@@ -79,7 +78,7 @@ def read_users(
     return [_to_read(user, tenant.id) for user in session.exec(statement).all()]
 
 
-@router.patch("/{user_id}", response_model=UserRead)
+@router.patch("/{user_id}")
 def update_user(
     *,
     session: Annotated[Session, Depends(get_session)],
@@ -166,9 +165,7 @@ def update_user(
     if "role_ids" in update_data:
         role_ids = update_data.pop("role_ids")
         if role_ids is not None:
-            _assign_roles(
-                session, db_user, role_ids, tenant.id, current_user
-            )
+            _assign_roles(session, db_user, role_ids, tenant.id, current_user)
 
     for key, value in update_data.items():
         setattr(db_user, key, value)
@@ -198,37 +195,30 @@ def _assign_roles(
       cross-tenant write.
     """
     found = session.exec(
-        select(Role).where(
-            Role.id.in_(role_ids), Role.tenant_id == tenant_id
-        )
+        select(Role).where(Role.id.in_(role_ids), Role.tenant_id == tenant_id)
     ).all()
     missing = set(role_ids) - {role.id for role in found}
     if missing:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=(
-                "Unknown role_ids: "
-                + ", ".join(sorted(str(item) for item in missing))
+                "Unknown role_ids: " + ", ".join(sorted(str(item) for item in missing))
             ),
         )
     # The second grant surface (APRAS-46 §9.3): handing an existing
     # over-privileged group to a confederate is the same escalation as
     # creating one.
     role_service.assert_can_assign_roles(session, author, found)
-    keep = [
-        role
-        for role in db_user.roles
-        if role.tenant_id != tenant_id
-    ]
+    keep = [role for role in db_user.roles if role.tenant_id != tenant_id]
     db_user.roles = [*keep, *found]
 
 
-@router.patch("/{user_id}/contact-info", response_model=UserRead)
+@router.patch("/{user_id}/contact-info")
 def update_user_contact_info(
     *,
     session: Annotated[Session, Depends(get_session)],
     tenant: Annotated[Tenant, Depends(api_deps.get_current_tenant)],
-    current_user: Annotated[  # noqa: ARG001
+    current_user: Annotated[  # noqa: ARG001  # FastAPI dependency guard: its only job is the 403
         User, Depends(api_deps.require_permission("users:update_contact"))
     ],
     user_id: UUID,
@@ -261,7 +251,7 @@ def update_user_contact_info(
 def set_superuser(
     *,
     session: Annotated[Session, Depends(get_session)],
-    current_user: Annotated[User, Depends(api_deps.get_current_superuser)],  # noqa: ARG001
+    current_user: Annotated[User, Depends(api_deps.get_current_superuser)],  # noqa: ARG001  # FastAPI dependency guard: its only job is the 403
     user_id: UUID,
     user_in: SuperuserUpdate,
 ) -> User:
@@ -306,8 +296,8 @@ def set_superuser(
     if db_user.is_superuser and not user_in.is_superuser:
         remaining = session.exec(
             select(User).where(
-                User.is_superuser == True,  # noqa: E712
-                User.is_active == True,  # noqa: E712
+                User.is_superuser == True,  # noqa: E712  # SQLAlchemy column expression; `is True` does not compile to SQL
+                User.is_active == True,  # noqa: E712  # SQLAlchemy column expression; `is True` does not compile to SQL
                 User.id != db_user.id,
             )
         ).first()

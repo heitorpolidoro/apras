@@ -1,9 +1,8 @@
 """Protocol number generator service for Occurrences."""
 
-from datetime import datetime
-
 from sqlmodel import Session, select
 
+from app.core import clock
 from app.models.occurrence import Occurrence
 
 
@@ -18,7 +17,7 @@ def generate_occurrence_protocol(session: Session) -> str:
     Returns:
         Formatted protocol string (e.g. 'OCO-2026-000001').
     """
-    year = datetime.utcnow().year
+    year = clock.db_now().year
     prefix = f"OCO-{year}-"
 
     statement = (

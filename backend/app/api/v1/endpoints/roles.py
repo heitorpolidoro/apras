@@ -19,9 +19,7 @@ router = APIRouter()
 @router.get("/", response_model=list[RoleRead])
 def read_roles(
     session: Annotated[Session, Depends(get_session)],
-    current_user: Annotated[  # noqa: ARG001
-        User, Depends(api_deps.require_permission("roles:read"))
-    ],
+    current_user: Annotated[User, Depends(api_deps.require_permission("roles:read"))],  # noqa: ARG001  # FastAPI dependency guard: its only job is the 403
 ) -> list[Role]:
     """Retrieve all roles. Requires `roles:read` (APRAS-51)."""
     return session.exec(select(Role)).all()
@@ -31,9 +29,7 @@ def read_roles(
 def create_role(
     *,
     session: Annotated[Session, Depends(get_session)],
-    current_user: Annotated[
-        User, Depends(api_deps.require_permission("roles:create"))
-    ],
+    current_user: Annotated[User, Depends(api_deps.require_permission("roles:create"))],
     role_in: RoleCreate,
 ) -> Role:
     """Create a new role in the acting tenant.
@@ -41,9 +37,7 @@ def create_role(
     ADMINISTRATOR, or a tenant_admin of the acting tenant (APRAS-43).
     """
     role_service.assert_can_grant(session, current_user, role_in.permissions)
-    existing = session.exec(
-        select(Role).where(Role.name == role_in.name)
-    ).first()
+    existing = session.exec(select(Role).where(Role.name == role_in.name)).first()
     if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -64,9 +58,7 @@ def create_role(
 def update_role(
     *,
     session: Annotated[Session, Depends(get_session)],
-    current_user: Annotated[
-        User, Depends(api_deps.require_permission("roles:update"))
-    ],
+    current_user: Annotated[User, Depends(api_deps.require_permission("roles:update"))],
     role_id: UUID,
     role_in: RoleUpdate,
 ) -> Role:
@@ -81,9 +73,7 @@ def update_role(
             status_code=status.HTTP_404_NOT_FOUND, detail="Role not found"
         )
     if role_in.permissions is not None:
-        role_service.assert_can_grant(
-            session, current_user, role_in.permissions
-        )
+        role_service.assert_can_grant(session, current_user, role_in.permissions)
         db_type.permissions = role_in.permissions
     db_type.name = role_in.name
     # `landing_path` is **only** written when the client actually sent it.
@@ -111,9 +101,7 @@ def update_role(
 def delete_role(
     *,
     session: Annotated[Session, Depends(get_session)],
-    current_user: Annotated[  # noqa: ARG001
-        User, Depends(api_deps.require_permission("roles:delete"))
-    ],
+    current_user: Annotated[User, Depends(api_deps.require_permission("roles:delete"))],  # noqa: ARG001  # FastAPI dependency guard: its only job is the 403
     role_id: UUID,
 ) -> None:
     """Delete a role. Requires `roles:delete` in the acting tenant.

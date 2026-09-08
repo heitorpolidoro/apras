@@ -1,7 +1,7 @@
 """Pydantic schemas for Construction & Capital Improvement Project Tracking (T007)."""
 
-from datetime import date, datetime
 import uuid
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -26,8 +26,6 @@ class ProjectBase(BaseModel):
 
 class ProjectCreate(ProjectBase):
     """Schema for creating a new construction project."""
-
-    pass
 
 
 class ProjectUpdateSchema(BaseModel):
@@ -59,8 +57,6 @@ class MilestoneBase(BaseModel):
 
 class MilestoneCreate(MilestoneBase):
     """Schema for creating a project milestone."""
-
-    pass
 
 
 class MilestoneUpdate(BaseModel):

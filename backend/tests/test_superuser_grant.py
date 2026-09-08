@@ -82,9 +82,7 @@ def _user(
 # ---------------------------------------------------------------------------
 
 
-def test_a_superuser_can_grant_is_superuser(
-    client: TestClient, session: Session
-):
+def test_a_superuser_can_grant_is_superuser(client: TestClient, session: Session):
     root = _user(session, "DIRECTOR", is_superuser=True)
     target = _user(session, "GUEST")
 
@@ -107,9 +105,7 @@ def test_a_superuser_can_grant_is_superuser(
     assert len(me.json()["permissions"]) == 174
 
 
-def test_a_superuser_can_revoke_is_superuser(
-    client: TestClient, session: Session
-):
+def test_a_superuser_can_revoke_is_superuser(client: TestClient, session: Session):
     root = _user(session, "DIRECTOR", is_superuser=True)
     target = _user(session, "MANAGER", is_superuser=True)
 
@@ -134,9 +130,7 @@ def test_a_superuser_can_revoke_is_superuser(
 # ---------------------------------------------------------------------------
 
 
-def test_a_tenant_admin_cannot_call_the_route(
-    client: TestClient, session: Session
-):
+def test_a_tenant_admin_cannot_call_the_route(client: TestClient, session: Session):
     """The capability is per-tenant; the flag is global. F3's detail, verbatim."""
     syndic = _user(session, "RESIDENT", tenant_admin=True)
     target = _user(session, "GUEST")
@@ -151,9 +145,7 @@ def test_a_tenant_admin_cannot_call_the_route(
     assert session.get(User, target.id).is_superuser is False
 
 
-def test_an_ordinary_user_cannot_call_the_route(
-    client: TestClient, session: Session
-):
+def test_an_ordinary_user_cannot_call_the_route(client: TestClient, session: Session):
     ordinary = _user(session, "DIRECTOR")
     target = _user(session, "GUEST")
 
@@ -244,9 +236,7 @@ def test_a_superuser_may_demote_themselves_while_another_active_one_exists(
     assert response.status_code == 200
 
     # And the demotion takes effect immediately: the caller's next call 403s.
-    again = client.patch(
-        _url(first), headers=_auth(first), json={"is_superuser": True}
-    )
+    again = client.patch(_url(first), headers=_auth(first), json={"is_superuser": True})
     assert again.status_code == 403
 
 
@@ -379,6 +369,6 @@ def test_user_read_still_does_not_expose_is_superuser(
 
 @pytest.mark.parametrize("field", ["role", "is_superuser"])
 def test_user_update_has_no_role_and_no_is_superuser_field(field: str):
-    from app.schemas.user import UserUpdate  # noqa: PLC0415
+    from app.schemas.user import UserUpdate
 
     assert field not in UserUpdate.model_fields

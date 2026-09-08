@@ -1,4 +1,6 @@
+from typing import Annotated
 from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlmodel import Session
 
@@ -20,9 +22,7 @@ from app.services import document_service
 router = APIRouter()
 
 
-def _assert_not_porteiro(
-    current_user: User, session: Session, permission: str
-) -> None:
+def _assert_not_porteiro(current_user: User, session: Session, permission: str) -> None:
     """Raise 403 unless the caller holds this route's own permission.
 
     Named for the rule it used to spell (PORTEIRO is a gate-only role and
@@ -37,33 +37,31 @@ def _assert_not_porteiro(
         )
 
 
-@router.get("/folders", response_model=list[DocumentFolderTreeRead])
+@router.get("/folders")
 def list_folder_tree(
-    session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> list[DocumentFolderTreeRead]:
     _assert_not_porteiro(current_user, session, "documents:folder_read")
     return document_service.get_folder_tree(session, current_user)
 
 
-@router.post(
-    "/folders", response_model=DocumentFolderRead, status_code=status.HTTP_201_CREATED
-)
+@router.post("/folders", status_code=status.HTTP_201_CREATED)
 def create_folder(
     folder_in: DocumentFolderCreate,
-    session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> DocumentFolderRead:
     _assert_not_porteiro(current_user, session, "documents:folder_create")
     return document_service.create_folder(session, current_user, folder_in)
 
 
-@router.put("/folders/{id}", response_model=DocumentFolderRead)
+@router.put("/folders/{id}")
 def update_folder(
     id: UUID,
     folder_in: DocumentFolderUpdate,
-    session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> DocumentFolderRead:
     _assert_not_porteiro(current_user, session, "documents:folder_update")
     return document_service.update_folder(session, current_user, id, folder_in)
@@ -72,24 +70,28 @@ def update_folder(
 @router.delete("/folders/{id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_folder(
     id: UUID,
-    session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> None:
     _assert_not_porteiro(current_user, session, "documents:folder_delete")
     document_service.delete_folder(session, current_user, id)
 
 
-@router.get("", response_model=PaginatedDocumentRead)
+@router.get("")
 def list_documents(
+    # The two dependencies lead because `Annotated[..., Depends(...)]` carries
+    # no default, and a parameter without one may not follow parameters that
+    # have one. Neither is an OpenAPI parameter, so the query string's own
+    # order -- and the generated document -- is unaffected.
+    session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[User, Depends(get_current_user)],
     folder_id: UUID | None = None,
     tag: str | None = None,
     year: int | None = None,
     month: int | None = None,
     search: str | None = None,
-    skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100),
-    session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    skip: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> PaginatedDocumentRead:
     _assert_not_porteiro(current_user, session, "documents:read")
     return document_service.get_documents(
@@ -105,13 +107,11 @@ def list_documents(
     )
 
 
-@router.post(
-    "", response_model=AssociationDocumentRead, status_code=status.HTTP_201_CREATED
-)
+@router.post("", status_code=status.HTTP_201_CREATED)
 def create_document(
     doc_in: AssociationDocumentCreate,
-    session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> AssociationDocumentRead:
     _assert_not_porteiro(current_user, session, "documents:create")
     return document_service.create_document(session, current_user, doc_in)
@@ -119,24 +119,25 @@ def create_document(
 
 @router.post(
     "/{id}/versions",
-    response_model=AssociationDocumentRead,
     status_code=status.HTTP_201_CREATED,
 )
 def create_document_version(
     id: UUID,
     version_in: AssociationDocumentVersionCreate,
-    session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> AssociationDocumentRead:
     _assert_not_porteiro(current_user, session, "documents:version_create")
-    return document_service.create_document_version(session, current_user, id, version_in)
+    return document_service.create_document_version(
+        session, current_user, id, version_in
+    )
 
 
 @router.post("/{id}/download")
 def download_document(
     id: UUID,
-    session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> dict[str, str]:
     _assert_not_porteiro(current_user, session, "documents:download")
     file_url = document_service.log_download(session, current_user, id)
@@ -146,8 +147,8 @@ def download_document(
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_document(
     id: UUID,
-    session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> None:
     _assert_not_porteiro(current_user, session, "documents:delete")
     document_service.delete_document(session, current_user, id)

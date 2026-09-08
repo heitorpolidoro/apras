@@ -20,11 +20,11 @@ cannot show:
 
 from __future__ import annotations
 
-from datetime import date
 from typing import TYPE_CHECKING
 
 import pytest
 
+from app.core import clock
 from app.core.permissions import ROUTE_PERMISSIONS, module_of
 from tests.infraction_helpers import (
     LADDER_THREE,
@@ -46,7 +46,8 @@ if TYPE_CHECKING:  # pragma: no cover
 #: The 18 routes of the module, derived from the registry so a route added
 #: without a test is impossible.
 MODULE_ROUTES = sorted(
-    key for key, permission in ROUTE_PERMISSIONS.items()
+    key
+    for key, permission in ROUTE_PERMISSIONS.items()
     if module_of(permission) == "infractions"
 )
 
@@ -101,8 +102,16 @@ RECOMMENDED: dict[str, set[str]] = {
 def test_the_module_has_exactly_eighteen_routes():
     """§1.1's `+18`, measured rather than predicted."""
     assert len(MODULE_ROUTES) == 18
-    assert len({permission for _key, permission in ROUTE_PERMISSIONS.items()
-                if module_of(permission) == "infractions"}) == 13
+    assert (
+        len(
+            {
+                permission
+                for _key, permission in ROUTE_PERMISSIONS.items()
+                if module_of(permission) == "infractions"
+            }
+        )
+        == 13
+    )
 
 
 def test_the_recommended_bundle_covers_the_catalogue_exactly():
@@ -146,7 +155,7 @@ def _request(client: TestClient, actor: User, method: str, path: str, ids: dict)
             "rule_id": ids["rule_id"],
             "lot_id": ids["lot_id"],
             "responsible_resident_id": ids["resident_id"],
-            "occurred_on": date.today().isoformat(),
+            "occurred_on": clock.today_utc().isoformat(),
             "description": "x",
         },
         ("POST", "/api/v1/infractions/from-occurrence/{occurrence_id}"): {
@@ -293,9 +302,7 @@ def test_the_manager_bundle_reaches_the_process_but_not_the_catalogue_writes(
         response = _request(client, manager, method, path, ids)
         assert response.status_code == 403, (method, path, response.status_code)
 
-    closed = _request(
-        client, manager, "POST", "/api/v1/infractions/cycles/close", ids
-    )
+    closed = _request(client, manager, "POST", "/api/v1/infractions/cycles/close", ids)
     assert closed.status_code == 201, closed.text
 
 

@@ -56,8 +56,10 @@ APRAS_40_ERRORS = [
     (InactivePlanError("Plano Retirado"), status.HTTP_400_BAD_REQUEST),
     (CoreModuleNotContractableError(["billing"]), status.HTTP_400_BAD_REQUEST),
     (InvalidModulePriceError(["finance"]), status.HTTP_400_BAD_REQUEST),
-    (InvalidPlanPriceError("The base price cannot be negative"),
-     status.HTTP_400_BAD_REQUEST),
+    (
+        InvalidPlanPriceError("The base price cannot be negative"),
+        status.HTTP_400_BAD_REQUEST,
+    ),
 ]
 
 
@@ -107,9 +109,9 @@ def test_no_apras_40_error_is_listed_twice_in_the_dispatcher():
     The scan is over the AST of the handler, never over source text: the module
     docstrings and the import block name these classes too and must not count.
     """
-    source = pathlib.Path(
-        domain_exception_handler.__code__.co_filename
-    ).read_text(encoding="utf-8")
+    source = pathlib.Path(domain_exception_handler.__code__.co_filename).read_text(
+        encoding="utf-8"
+    )
     handler = next(
         node
         for node in ast.walk(ast.parse(source))
@@ -131,7 +133,11 @@ def test_no_apras_40_error_is_listed_twice_in_the_dispatcher():
     )
     # ...and every APRAS-40 class the chain routes is actually in it exactly
     # once, so a deletion is caught as loudly as a duplication.
-    routed = {"PlanNotFoundError", "SubscriptionNotFoundError", "PlanAlreadyExistsError"}
+    routed = {
+        "PlanNotFoundError",
+        "SubscriptionNotFoundError",
+        "PlanAlreadyExistsError",
+    }
     assert routed <= set(mentioned)
     for name in routed:
         assert mentioned.count(name) == 1, name

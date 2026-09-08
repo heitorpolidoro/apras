@@ -84,11 +84,18 @@ if TYPE_CHECKING:  # pragma: no cover
 BACKEND_ROOT = Path(__file__).resolve().parent.parent
 HARNESS_PATH = BACKEND_ROOT / "tests" / "matrix_world.py"
 
-#: `shasum -a 256 backend/tests/matrix_world.py` at this task's merge base
-#: (f71608f). ER-1 requires it unchanged: this module reuses the harness and
-#: must not edit it, or the 1206-cell star test would stop running against the
-#: world its golden file recorded.
-HARNESS_SHA256 = "fd701faad1d07fcdca156cca28e8db79259113e96acfd132d59db6022380f4c4"
+#: `shasum -a 256 backend/tests/matrix_world.py`. APRAS-51 pinned it so that
+#: *its own* module could not quietly edit the shared harness and leave the
+#: 1206-cell star test running against a world its golden file never recorded.
+#: The guard is against an *unnoticed* edit, not against every edit.
+#:
+#: APRAS-54 moved it deliberately and twice: `ruff format` reflowed the file,
+#: and the private `_now()` at its top was collapsed into `app.core.clock`
+#: along with the other five re-implementations in the tree. The world it
+#: builds is unchanged, and that is proven rather than asserted -- all five
+#: `tests/data/*.json` baselines stay byte-identical, which is exactly the
+#: property this pin exists to protect.
+HARNESS_SHA256 = "57be2567eda5c6a4e6611fba01dd3e34b0176c53f5064f1c860fc6df40e21c0b"
 
 
 # ---------------------------------------------------------------------------
@@ -466,7 +473,7 @@ def test_the_five_forms_are_pairwise_disjoint():
 def test_no_mapped_route_is_unenforced():
     """The allowlist ships empty, and is asserted empty by name."""
     assert not UNENFORCED
-    assert UNENFORCED == frozenset()  # noqa: SIM300 - the literal is the point
+    assert frozenset() == UNENFORCED
 
 
 def test_every_route_level_permission_matches_the_registry():

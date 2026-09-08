@@ -138,7 +138,9 @@ def test_create_device_duplicate_name(client: TestClient, admin_token: str):
     assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
 
-def test_list_devices_manager_allowed(client: TestClient, admin_token: str, manager_token: str):
+def test_list_devices_manager_allowed(
+    client: TestClient, admin_token: str, manager_token: str
+):
     client.post(
         "/api/v1/access-control/devices",
         headers=_admin_headers(admin_token),
@@ -152,7 +154,9 @@ def test_list_devices_manager_allowed(client: TestClient, admin_token: str, mana
     assert resp.json()["total"] >= 1
 
 
-def test_list_devices_forbidden_for_resident(client: TestClient, resident_role_token: str):
+def test_list_devices_forbidden_for_resident(
+    client: TestClient, resident_role_token: str
+):
     resp = client.get(
         "/api/v1/access-control/devices",
         headers={"Authorization": f"Bearer {resident_role_token}"},
@@ -203,7 +207,9 @@ def test_regenerate_device_key(client: TestClient, admin_token: str):
     assert resp.json()["device_key"] != old_key
 
 
-def test_regenerate_device_key_forbidden_for_manager(client: TestClient, admin_token: str, manager_token: str):
+def test_regenerate_device_key_forbidden_for_manager(
+    client: TestClient, admin_token: str, manager_token: str
+):
     create_resp = client.post(
         "/api/v1/access-control/devices",
         headers=_admin_headers(admin_token),
@@ -223,7 +229,9 @@ def test_regenerate_device_key_forbidden_for_manager(client: TestClient, admin_t
 # -----------------------------------------------------------------------------
 
 
-def test_sync_facial_template_no_approved_photo(client: TestClient, admin_token: str, test_resident: Resident):
+def test_sync_facial_template_no_approved_photo(
+    client: TestClient, admin_token: str, test_resident: Resident
+):
     resp = client.post(
         f"/api/v1/access-control/residents/{test_resident.id}/facial-template/sync",
         headers=_admin_headers(admin_token),
@@ -239,7 +247,9 @@ def test_sync_facial_template_resident_not_found(client: TestClient, admin_token
     assert resp.status_code == status.HTTP_404_NOT_FOUND
 
 
-def test_sync_facial_template_success(client: TestClient, admin_token: str, test_resident: Resident):
+def test_sync_facial_template_success(
+    client: TestClient, admin_token: str, test_resident: Resident
+):
     # Admin-uploaded photo auto-approves.
     image_bytes = create_test_image_bytes()
     upload_resp = client.post(
@@ -270,7 +280,9 @@ def test_sync_facial_template_success(client: TestClient, admin_token: str, test
     assert sync_resp_2.json()["id"] == body["id"]
 
 
-def test_get_facial_template_status(client: TestClient, admin_token: str, test_resident: Resident):
+def test_get_facial_template_status(
+    client: TestClient, admin_token: str, test_resident: Resident
+):
     resp = client.get(
         f"/api/v1/access-control/residents/{test_resident.id}/facial-template",
         headers=_admin_headers(admin_token),
@@ -303,7 +315,9 @@ def test_get_facial_template_status(client: TestClient, admin_token: str, test_r
 # -----------------------------------------------------------------------------
 
 
-def _register_device(client: TestClient, admin_token: str, name: str) -> tuple[str, str]:
+def _register_device(
+    client: TestClient, admin_token: str, name: str
+) -> tuple[str, str]:
     resp = client.post(
         "/api/v1/access-control/devices",
         headers=_admin_headers(admin_token),
@@ -313,7 +327,9 @@ def _register_device(client: TestClient, admin_token: str, name: str) -> tuple[s
     return body["id"], body["device_key"]
 
 
-def _sync_template_for_resident(client: TestClient, admin_token: str, resident_id: str) -> None:
+def _sync_template_for_resident(
+    client: TestClient, admin_token: str, resident_id: str
+) -> None:
     image_bytes = create_test_image_bytes()
     client.post(
         "/api/v1/uploads/photo",
@@ -357,7 +373,9 @@ def test_webhook_unmatched_face(client: TestClient, admin_token: str):
     assert body["access_granted"] is False
 
 
-def test_webhook_matched_and_granted(client: TestClient, admin_token: str, test_resident: Resident):
+def test_webhook_matched_and_granted(
+    client: TestClient, admin_token: str, test_resident: Resident
+):
     _, device_key = _register_device(client, admin_token, "Webhook Gate Matched")
     _sync_template_for_resident(client, admin_token, str(test_resident.id))
 
@@ -394,8 +412,12 @@ def test_webhook_matched_but_resident_inactive(
     assert body["access_granted"] is False
 
 
-def test_webhook_updates_device_status_and_last_seen(client: TestClient, admin_token: str):
-    device_id, device_key = _register_device(client, admin_token, "Webhook Gate Heartbeat")
+def test_webhook_updates_device_status_and_last_seen(
+    client: TestClient, admin_token: str
+):
+    device_id, device_key = _register_device(
+        client, admin_token, "Webhook Gate Heartbeat"
+    )
 
     client.post(
         "/api/v1/access-control/webhook/verification",
@@ -403,7 +425,9 @@ def test_webhook_updates_device_status_and_last_seen(client: TestClient, admin_t
         json={"resident_id": None, "confidence_score": None},
     )
 
-    devices_resp = client.get("/api/v1/access-control/devices", headers=_admin_headers(admin_token))
+    devices_resp = client.get(
+        "/api/v1/access-control/devices", headers=_admin_headers(admin_token)
+    )
     device = next(d for d in devices_resp.json()["items"] if d["id"] == device_id)
     assert device["status"] == "ONLINE"
     assert device["last_seen_at"] is not None
@@ -414,7 +438,9 @@ def test_webhook_updates_device_status_and_last_seen(client: TestClient, admin_t
 # -----------------------------------------------------------------------------
 
 
-def test_list_events_pagination_and_filters(client: TestClient, admin_token: str, test_resident: Resident):
+def test_list_events_pagination_and_filters(
+    client: TestClient, admin_token: str, test_resident: Resident
+):
     device_id, device_key = _register_device(client, admin_token, "Webhook Gate Events")
     _sync_template_for_resident(client, admin_token, str(test_resident.id))
 
@@ -444,7 +470,9 @@ def test_list_events_pagination_and_filters(client: TestClient, admin_token: str
     assert resp_by_resident.json()["total"] >= 3
 
 
-def test_list_events_forbidden_for_resident_role(client: TestClient, resident_role_token: str):
+def test_list_events_forbidden_for_resident_role(
+    client: TestClient, resident_role_token: str
+):
     resp = client.get(
         "/api/v1/access-control/events",
         headers={"Authorization": f"Bearer {resident_role_token}"},

@@ -80,7 +80,7 @@ def test_it_is_null_when_no_role_carries_one(client: TestClient, session: Sessio
 def test_a_user_with_two_landing_carrying_roles_gets_the_first_by_name(
     client: TestClient, session: Session
 ):
-    """"First non-null, ordered by role name" is total and deterministic.
+    """ "First non-null, ordered by role name" is total and deterministic.
 
     It is only *identical* to the retired enum switch for users with one
     landing-carrying role. A user holding both `Administrador (papel)` and
@@ -157,17 +157,20 @@ def test_permissions_me_landing_path_follows_the_simulated_roles(
 
 
 def test_the_allowlist_is_the_seven_in_app_paths():
-    assert frozenset(
-        {
-            "/",
-            "/dashboard",
-            "/tasks",
-            "/gate",
-            "/welcome",
-            "/announcements",
-            "/occurrences",
-        }
-    ) == LANDING_PATHS
+    assert (
+        frozenset(
+            {
+                "/",
+                "/dashboard",
+                "/tasks",
+                "/gate",
+                "/welcome",
+                "/announcements",
+                "/occurrences",
+            }
+        )
+        == LANDING_PATHS
+    )
 
 
 @pytest.mark.parametrize(

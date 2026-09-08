@@ -99,9 +99,7 @@ def test_the_invariant_holds_after_every_apras_40_write(
     tenant_client.put(
         _raw_url(TENANT_A),
         json={
-            "disabled_modules": sorted(
-                TOGGLEABLE_MODULES - {"documents", "finance"}
-            )
+            "disabled_modules": sorted(TOGGLEABLE_MODULES - {"documents", "finance"})
         },
         headers=auth(superuser),
     )
@@ -169,9 +167,7 @@ def test_a_module_outside_the_plan_cannot_be_activated_by_a_billing_manage_holde
     """The "DIRECTOR" case: a plain role granted the two strings, nothing more."""
     plan = make_plan(session, included=["documents"])
     subscribe(session, tenant_id=TENANT_A, plan=plan)
-    director, _role = make_role_holder(
-        session, ["billing:read", "billing:manage"]
-    )
+    director, _role = make_role_holder(session, ["billing:read", "billing:manage"])
 
     response = tenant_client.put(
         MODULES_URL,
@@ -203,8 +199,7 @@ def test_a_tenant_side_write_preserves_courtesy_and_override_activations(
         _raw_url(TENANT_A),
         json={
             "disabled_modules": sorted(
-                TOGGLEABLE_MODULES
-                - {"documents", "projects", "assets", "finance"}
+                TOGGLEABLE_MODULES - {"documents", "projects", "assets", "finance"}
             )
         },
         headers=auth(superuser),
@@ -248,9 +243,7 @@ def test_the_superuser_raw_switch_is_not_constrained_by_the_ceiling(
     response = tenant_client.put(
         _raw_url(TENANT_A),
         json={
-            "disabled_modules": sorted(
-                TOGGLEABLE_MODULES - {"documents", "finance"}
-            )
+            "disabled_modules": sorted(TOGGLEABLE_MODULES - {"documents", "finance"})
         },
         headers=auth(superuser),
     )
@@ -272,9 +265,7 @@ def test_the_raw_switch_records_an_override_history_row(
     tenant_client.put(
         _raw_url(TENANT_A),
         json={
-            "disabled_modules": sorted(
-                TOGGLEABLE_MODULES - {"documents", "finance"}
-            )
+            "disabled_modules": sorted(TOGGLEABLE_MODULES - {"documents", "finance"})
         },
         headers=auth(superuser),
     )
@@ -311,9 +302,7 @@ def test_the_raw_switch_and_its_override_row_are_one_transaction(
             session,
             TENANT_A,
             TenantModulesUpdate(
-                disabled_modules=sorted(
-                    TOGGLEABLE_MODULES - {"documents", "finance"}
-                )
+                disabled_modules=sorted(TOGGLEABLE_MODULES - {"documents", "finance"})
             ),
             actor=superuser,
         )
@@ -521,9 +510,7 @@ def test_build_read_derives_everything_from_the_entitlement_result():
     ]
     assert not session_reads, f"build_read touched the session: {session_reads}"
 
-    names = {
-        inner.id for inner in ast.walk(node) if isinstance(inner, ast.Name)
-    }
+    names = {inner.id for inner in ast.walk(node) if isinstance(inner, ast.Name)}
     assert not (names & {"Plan", "TenantSubscription", "SubscriptionChange"})
     assert "select" not in names
 
@@ -572,9 +559,7 @@ def test_entitlement_is_the_only_loader_and_costs_one_query(
     engine = session.get_bind()
     event.listen(engine, "before_cursor_execute", _record)
     try:
-        response = tenant_client.get(
-            SUBSCRIPTION, headers=auth(tenant_admin, TENANT_A)
-        )
+        response = tenant_client.get(SUBSCRIPTION, headers=auth(tenant_admin, TENANT_A))
     finally:
         event.remove(engine, "before_cursor_execute", _record)
 
@@ -666,9 +651,7 @@ def test_entitlement_isolation_between_tenants(
     )
     session.commit()
 
-    in_a = tenant_client.get(
-        "/api/v1/finance/categories", headers=auth(user, TENANT_A)
-    )
+    in_a = tenant_client.get("/api/v1/finance/categories", headers=auth(user, TENANT_A))
     in_b = tenant_client.get(
         "/api/v1/finance/categories", headers=auth(user, tenant_b.id)
     )

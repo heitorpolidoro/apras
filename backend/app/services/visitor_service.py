@@ -1,12 +1,14 @@
 """Service layer for Visitor, Authorization, and AccessLog management."""
 
-from datetime import datetime, timedelta
 import json
 import logging
-from typing import Optional
+from datetime import datetime, timedelta
 from uuid import UUID
 
+from sqlmodel import Session, func, select
+
 from app.api.deps import has_permission
+from app.core import clock
 from app.core.exceptions import (
     AccessLogNotFoundError,
     AuthorizationExpiredError,
@@ -20,7 +22,12 @@ from app.core.exceptions import (
     OpenEntryExistsError,
     VisitorNotFoundError,
 )
-from app.models.enums import AuthorizationStatus, AuthorizationType, DayOfWeek, ShiftType
+from app.models.enums import (
+    AuthorizationStatus,
+    AuthorizationType,
+    DayOfWeek,
+    ShiftType,
+)
 from app.models.lot import Lot, UserLotLink
 from app.models.resident import Resident
 from app.models.user import User
@@ -32,7 +39,6 @@ from app.schemas.visitor import (
     VisitorCreate,
     VisitorUpdate,
 )
-from sqlmodel import Session, func, select
 
 logger = logging.getLogger(__name__)
 
@@ -47,11 +53,18 @@ DAY_MAP = {
 }
 
 
+#: Shift boundaries, in local hours: [06:00, 12:00) morning,
+#: [12:00, 18:00) afternoon, the rest night.
+MORNING_START = 6
+AFTERNOON_START = 12
+NIGHT_START = 18
+
+
 def _get_shift_for_datetime(dt: datetime) -> str:
     hour = dt.hour
-    if 6 <= hour < 12:
+    if MORNING_START <= hour < AFTERNOON_START:
         return ShiftType.MORNING.value
-    elif 12 <= hour < 18:
+    elif AFTERNOON_START <= hour < NIGHT_START:
         return ShiftType.AFTERNOON.value
     else:
         return ShiftType.NIGHT.value
@@ -60,7 +73,8 @@ def _get_shift_for_datetime(dt: datetime) -> str:
 class VisitorService:
     @staticmethod
     def _check_lot_access(session: Session, lot_id: UUID, current_user: User) -> None:
-        """Check if current user is allowed to access or manage authorizations for lot_id."""
+        """Check if current user is allowed to access or manage authorizations for
+        lot_id."""
         if has_permission(current_user, session, "visitors:manage_any_lot"):
             return
 
@@ -83,13 +97,15 @@ class VisitorService:
             select(Resident).where(
                 Resident.user_id == current_user.id,
                 Resident.lot_id == lot_id,
-                Resident.is_active == True,  # noqa: E712
+                Resident.is_active == True,  # noqa: E712  # SQLAlchemy column expression; `is True` does not compile to SQL
             )
         ).first()
         if resident_link:
             return
 
-        raise ForbiddenError("You do not have access to manage authorizations for this lot")
+        raise ForbiddenError(
+            "You do not have access to manage authorizations for this lot"
+        )
 
     @staticmethod
     def get_user_linked_lot_ids(session: Session, current_user: User) -> list[UUID]:
@@ -106,7 +122,8 @@ class VisitorService:
 
         res_links = session.exec(
             select(Resident.lot_id).where(
-                Resident.user_id == current_user.id, Resident.is_active == True  # noqa: E712
+                Resident.user_id == current_user.id,
+                Resident.is_active == True,  # noqa: E712  # SQLAlchemy column expression; `is True` does not compile to SQL
             )
         ).all()
         linked_ids.update(res_links)
@@ -177,7 +194,7 @@ class VisitorService:
         update_data = visitor_in.model_dump(exclude_unset=True)
         for key, value in update_data.items():
             setattr(visitor, key, value)
-        visitor.updated_at = datetime.utcnow()
+        visitor.updated_at = clock.db_now()
         session.add(visitor)
         session.commit()
         session.refresh(visitor)
@@ -204,12 +221,18 @@ class VisitorService:
 
         # Enforce max 1 year validity for PERMANENT type
         if auth_in.auth_type == AuthorizationType.PERMANENT and auth_in.valid_until:
-            start_ref = auth_in.valid_from or datetime.utcnow()
+            start_ref = auth_in.valid_from or clock.db_now()
             if auth_in.valid_until - start_ref > timedelta(days=366):
-                raise DomainError("Permanent authorization cannot exceed 1 year validity")
+                raise DomainError(
+                    "Permanent authorization cannot exceed 1 year validity"
+                )
 
-        days_str_list = [d.value if hasattr(d, "value") else str(d) for d in auth_in.allowed_days]
-        shifts_str_list = [s.value if hasattr(s, "value") else str(s) for s in auth_in.allowed_shifts]
+        days_str_list = [
+            d.value if hasattr(d, "value") else str(d) for d in auth_in.allowed_days
+        ]
+        shifts_str_list = [
+            s.value if hasattr(s, "value") else str(s) for s in auth_in.allowed_shifts
+        ]
 
         authorization = VisitorAuthorization(
             visitor_id=auth_in.visitor_id,
@@ -244,19 +267,25 @@ class VisitorService:
 
         VisitorService._check_lot_access(session, lot_id, current_user)
 
-        query = select(VisitorAuthorization).where(VisitorAuthorization.lot_id == lot_id)
+        query = select(VisitorAuthorization).where(
+            VisitorAuthorization.lot_id == lot_id
+        )
         if status:
             query = query.where(VisitorAuthorization.status == status)
 
         total = session.exec(select(func.count()).select_from(query.subquery())).one()
         auths = session.exec(
-            query.offset(skip).limit(limit).order_by(VisitorAuthorization.created_at.desc())  # type: ignore[attr-defined]
+            query.offset(skip)
+            .limit(limit)
+            .order_by(VisitorAuthorization.created_at.desc())  # type: ignore[attr-defined]
         ).all()
 
         return list(auths), total
 
     @staticmethod
-    def get_authorization_by_id(session: Session, auth_id: UUID) -> VisitorAuthorization:
+    def get_authorization_by_id(
+        session: Session, auth_id: UUID
+    ) -> VisitorAuthorization:
         """Get authorization by ID or raise AuthorizationNotFoundError."""
         auth = session.get(VisitorAuthorization, auth_id)
         if not auth:
@@ -267,7 +296,7 @@ class VisitorService:
     def get_authorization_for_user(
         session: Session, auth_id: UUID, current_user: User
     ) -> VisitorAuthorization:
-        """Get an authorization by ID, enforcing the same lot-scoping rule as the other routes.
+        """Get an authorization by ID, under the other routes' lot-scoping rule.
 
         PORTEIRO (Gatekeeper) bypasses the lot check: like check-in/check-out
         (`_assert_gatekeeper_access` in access_logs.py), the gate operates
@@ -299,7 +328,7 @@ class VisitorService:
             VisitorService._check_lot_access(session, auth.lot_id, current_user)
 
         auth.status = AuthorizationStatus.REVOKED
-        auth.updated_at = datetime.utcnow()
+        auth.updated_at = clock.db_now()
         session.add(auth)
         session.commit()
         session.refresh(auth)
@@ -316,8 +345,9 @@ class VisitorService:
         current_user: User,
         check_time: datetime | None = None,
     ) -> AccessLog:
-        """Register visitor entry at gate after validating pre-authorization constraints."""
-        now = check_time or datetime.utcnow()
+        """Register visitor entry at gate after validating pre-authorization
+        constraints."""
+        now = check_time or clock.db_now()
 
         # Rejects visitors who already have an active open AccessLog
         open_log = session.exec(
@@ -337,14 +367,18 @@ class VisitorService:
                 raise AuthorizationNotFoundError(check_in_in.authorization_id)
         else:
             auth = session.exec(
-                select(VisitorAuthorization).where(
+                select(VisitorAuthorization)
+                .where(
                     VisitorAuthorization.visitor_id == check_in_in.visitor_id,
                     VisitorAuthorization.lot_id == check_in_in.lot_id,
                     VisitorAuthorization.status == AuthorizationStatus.ACTIVE,
-                ).order_by(VisitorAuthorization.created_at.desc())  # type: ignore[attr-defined]
+                )
+                .order_by(VisitorAuthorization.created_at.desc())  # type: ignore[attr-defined]
             ).first()
             if not auth:
-                raise AuthorizationNotFoundError("No active authorization found for visitor")
+                raise AuthorizationNotFoundError(
+                    "No active authorization found for visitor"
+                )
 
         # Validate authorization status
         if auth.status == AuthorizationStatus.REVOKED:
@@ -377,7 +411,9 @@ class VisitorService:
             ShiftType.FULL_DAY.value not in allowed_shifts
             and current_shift_str not in allowed_shifts
         ):
-            raise AuthorizationInvalidShiftError("Entry denied: shift window not allowed")
+            raise AuthorizationInvalidShiftError(
+                "Entry denied: shift window not allowed"
+            )
 
         # Register entry log
         access_log = AccessLog(
@@ -403,7 +439,10 @@ class VisitorService:
         visitor = session.get(Visitor, check_in_in.visitor_id)
         visitor_name = visitor.full_name if visitor else str(check_in_in.visitor_id)
         logger.info(
-            f"[In-App Notification] Visitor '{visitor_name}' checked in at lot {check_in_in.lot_id} (gatekeeper: {current_user.id})"
+            "[In-App Notification] Visitor '%s' checked in at lot %s (gatekeeper: %s)",
+            visitor_name,
+            check_in_in.lot_id,
+            current_user.id,
         )
 
         return access_log
@@ -416,13 +455,15 @@ class VisitorService:
         check_time: datetime | None = None,
     ) -> AccessLog:
         """Register visitor exit at gate."""
-        now = check_time or datetime.utcnow()
+        now = check_time or clock.db_now()
         log: AccessLog | None = None
 
         if check_out_in.access_log_id:
             log = session.get(AccessLog, check_out_in.access_log_id)
             if not log or log.exit_time is not None:
-                raise AccessLogNotFoundError("No active open check-in found for given ID")
+                raise AccessLogNotFoundError(
+                    "No active open check-in found for given ID"
+                )
         elif check_out_in.visitor_id:
             log = session.exec(
                 select(AccessLog).where(
@@ -431,9 +472,13 @@ class VisitorService:
                 )
             ).first()
             if not log:
-                raise AccessLogNotFoundError("No active open check-in found for visitor")
+                raise AccessLogNotFoundError(
+                    "No active open check-in found for visitor"
+                )
         else:
-            raise AccessLogNotFoundError("Must provide access_log_id or visitor_id for check-out")
+            raise AccessLogNotFoundError(
+                "Must provide access_log_id or visitor_id for check-out"
+            )
 
         log.exit_time = now
         log.exit_notes = check_out_in.exit_notes
@@ -457,16 +502,19 @@ class VisitorService:
 
         # RBAC check: non-admin/director/manager restricted to their own linked lots
         if not has_permission(current_user, session, "visitors:manage_any_lot"):
-            linked_lot_ids = VisitorService.get_user_linked_lot_ids(session, current_user)
+            linked_lot_ids = VisitorService.get_user_linked_lot_ids(
+                session, current_user
+            )
             if lot_id:
                 if lot_id not in linked_lot_ids:
-                    raise ForbiddenError("You do not have access to view logs for this lot")
+                    raise ForbiddenError(
+                        "You do not have access to view logs for this lot"
+                    )
                 query = query.where(AccessLog.lot_id == lot_id)
             else:
                 query = query.where(AccessLog.lot_id.in_(linked_lot_ids))  # type: ignore[attr-defined]
-        else:
-            if lot_id:
-                query = query.where(AccessLog.lot_id == lot_id)
+        elif lot_id:
+            query = query.where(AccessLog.lot_id == lot_id)
 
         if visitor_id:
             query = query.where(AccessLog.visitor_id == visitor_id)

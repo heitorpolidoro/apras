@@ -20,6 +20,7 @@ import pytest
 from sqlalchemy import func
 from sqlmodel import select
 
+from app.core import clock
 from app.models.infraction import Infraction, InfractionStage
 from tests.infraction_helpers import (
     LADDER_THREE,
@@ -44,15 +45,15 @@ if TYPE_CHECKING:  # pragma: no cover
 #
 # Every date in this module is an `occurred_on` the test *sends*, so the
 # arithmetic is self-consistent whichever clock produces it -- with two
-# exceptions that are not: `defense_due_on` is computed by the service with
-# `date.today()` (local), so `_local_today()` is the only correct anchor for
-# it. What matters everywhere is that the value is captured **per test** and
-# not at import: a module-level constant makes a 15-minute suite that starts
-# just before midnight compare two different days.
-def _local_today() -> date:
+# exceptions that are not: `applied_on` and `defense_due_on` are computed by
+# the service, so the anchor has to be the service's own clock. Since
+# APRAS-54 that is `app/core/clock.py` for both sides. What matters
+# everywhere is that the value is captured **per test** and not at import: a
+# module-level constant makes a 15-minute suite that starts just before
+# midnight compare two different days.
+def _today() -> date:
     """The date the service computes (`applied_on`, `defense_due_on`)."""
-    return date.today()
-
+    return clock.today_utc()
 
 
 @pytest.fixture(name="staff")
@@ -76,9 +77,7 @@ def _next_step(client: TestClient, staff: User, infraction_id: str) -> dict:
     return response.json()
 
 
-def _advance(
-    client: TestClient, staff: User, infraction_id: str, **body
-) -> object:
+def _advance(client: TestClient, staff: User, infraction_id: str, **body) -> object:
     return client.post(
         f"/api/v1/infractions/{infraction_id}/stages",
         json={"note": "Avanço.", **body},
@@ -109,9 +108,12 @@ def test_first_infraction_suggests_step_one(
     assert suggestion["suggested_action"] == "AVISO"
     assert suggestion["reason"] == "SUGGESTED"
     assert suggestion["is_saturated"] is False
-    assert suggestion["window_start"] == (
-        date.fromisoformat(infraction["occurred_on"]) - timedelta(days=365)
-    ).isoformat()
+    assert (
+        suggestion["window_start"]
+        == (
+            date.fromisoformat(infraction["occurred_on"]) - timedelta(days=365)
+        ).isoformat()
+    )
 
 
 def test_advancing_moves_one_step_within_the_process(
@@ -132,9 +134,7 @@ def test_advancing_moves_one_step_within_the_process(
     assert suggestion["defense_deadline_days"] == 30
 
 
-def test_a_repeat_offender_starts_higher(
-    client: TestClient, staff: User, world: dict
-):
+def test_a_repeat_offender_starts_higher(client: TestClient, staff: User, world: dict):
     """The ladder is not climbed twice from the bottom."""
     create_infraction(
         client,
@@ -142,7 +142,7 @@ def test_a_repeat_offender_starts_higher(
         rule_id=world["rule_id"],
         lot=world["lot"],
         resident=world["resident"],
-        occurred_on=_local_today() - timedelta(days=10),
+        occurred_on=_today() - timedelta(days=10),
     )
     second = create_infraction(
         client,
@@ -150,7 +150,7 @@ def test_a_repeat_offender_starts_higher(
         rule_id=world["rule_id"],
         lot=world["lot"],
         resident=world["resident"],
-        occurred_on=_local_today() - timedelta(days=1),
+        occurred_on=_today() - timedelta(days=1),
     )
     suggestion = _next_step(client, staff, second["id"])
     assert suggestion["recidivism_count"] == 1
@@ -170,7 +170,7 @@ def test_recidivism_is_per_responsible_not_per_lot(
         rule_id=world["rule_id"],
         lot=world["lot"],
         resident=world["resident"],
-        occurred_on=_local_today() - timedelta(days=10),
+        occurred_on=_today() - timedelta(days=10),
     )
     second = create_infraction(
         client,
@@ -178,7 +178,7 @@ def test_recidivism_is_per_responsible_not_per_lot(
         rule_id=world["rule_id"],
         lot=world["lot"],
         resident=other,
-        occurred_on=_local_today() - timedelta(days=1),
+        occurred_on=_today() - timedelta(days=1),
     )
 
     assert _next_step(client, staff, first["id"])["recidivism_count"] == 0
@@ -204,7 +204,7 @@ def test_outside_the_window_does_not_count(
     narrow = create_rule(
         client, staff, article="art. 70", origin="ESTATUTO", window_days=30
     )
-    subject_day = _local_today()
+    subject_day = _today()
     # `window_start = subject_day - 30`. One day *before* it, and one day after.
     create_infraction(
         client,
@@ -245,7 +245,7 @@ def test_same_day_infractions_do_not_count_each_other(
         rule_id=world["rule_id"],
         lot=world["lot"],
         resident=world["resident"],
-        occurred_on=_local_today(),
+        occurred_on=_today(),
     )
     second = create_infraction(
         client,
@@ -253,7 +253,7 @@ def test_same_day_infractions_do_not_count_each_other(
         rule_id=world["rule_id"],
         lot=world["lot"],
         resident=world["resident"],
-        occurred_on=_local_today(),
+        occurred_on=_today(),
     )
     assert _next_step(client, staff, first["id"])["recidivism_count"] == 0
     assert _next_step(client, staff, second["id"])["recidivism_count"] == 0
@@ -269,7 +269,7 @@ def test_an_unadvanced_prior_infraction_still_counts(
         rule_id=world["rule_id"],
         lot=world["lot"],
         resident=world["resident"],
-        occurred_on=_local_today() - timedelta(days=5),
+        occurred_on=_today() - timedelta(days=5),
     )
     assert session.exec(select(func.count()).select_from(InfractionStage)).one() == 0
 
@@ -279,7 +279,7 @@ def test_an_unadvanced_prior_infraction_still_counts(
         rule_id=world["rule_id"],
         lot=world["lot"],
         resident=world["resident"],
-        occurred_on=_local_today(),
+        occurred_on=_today(),
     )
     assert _next_step(client, staff, later["id"])["recidivism_count"] == 1
 
@@ -300,7 +300,7 @@ def test_a_closed_cycle_is_a_cutoff_not_a_deletion(
             rule_id=world["rule_id"],
             lot=world["lot"],
             resident=world["resident"],
-            occurred_on=_local_today() - timedelta(days=offset),
+            occurred_on=_today() - timedelta(days=offset),
         )
     existing = create_infraction(
         client,
@@ -308,7 +308,7 @@ def test_a_closed_cycle_is_a_cutoff_not_a_deletion(
         rule_id=world["rule_id"],
         lot=world["lot"],
         resident=world["resident"],
-        occurred_on=_local_today() - timedelta(days=5),
+        occurred_on=_today() - timedelta(days=5),
     )
     before = _next_step(client, staff, existing["id"])
     assert before["recidivism_count"] == 2
@@ -340,7 +340,7 @@ def test_a_closed_cycle_is_a_cutoff_not_a_deletion(
         rule_id=world["rule_id"],
         lot=world["lot"],
         resident=world["resident"],
-        occurred_on=_local_today(),
+        occurred_on=_today(),
     )
     after = _next_step(client, staff, fresh["id"])
     assert after["recidivism_count"] == 0
@@ -373,7 +373,7 @@ def test_a_cycle_close_ignores_the_lot(
         rule_id=world["rule_id"],
         lot=lot_b,
         resident=resident_b,
-        occurred_on=_local_today() - timedelta(days=10),
+        occurred_on=_today() - timedelta(days=10),
     )
     closed = client.post(
         "/api/v1/infractions/cycles/close",
@@ -394,7 +394,7 @@ def test_a_cycle_close_ignores_the_lot(
         rule_id=world["rule_id"],
         lot=lot_b,
         resident=resident_b,
-        occurred_on=_local_today(),
+        occurred_on=_today(),
     )
     assert _next_step(client, staff, fresh["id"])["recidivism_count"] == 0
 
@@ -488,8 +488,7 @@ def test_accepting_a_suggestion_with_no_policy_is_409(
     assert refused.status_code == 409
     assert refused.json()["detail"] == "Rule has no escalation policy"
     assert (
-        session.exec(select(func.count()).select_from(InfractionStage)).one()
-        == before
+        session.exec(select(func.count()).select_from(InfractionStage)).one() == before
     )
 
 
@@ -561,9 +560,7 @@ def test_two_rules_of_one_tenant_escalate_differently(
     assert _next_step(client, staff, first_b["id"])["suggested_action"] == "AVISO"
 
 
-def test_fixed_and_multiple_fine_values(
-    client: TestClient, staff: User, world: dict
-):
+def test_fixed_and_multiple_fine_values(client: TestClient, staff: User, world: dict):
     """FIXED returns the literal; MULTIPLE returns `multiplier * fee`, 2 places."""
     client.put(
         "/api/v1/infraction-settings",
@@ -609,9 +606,7 @@ def test_fixed_and_multiple_fine_values(
     assert _next_step(client, staff, two["id"])["fine_amount"] == 500.0
 
 
-def test_suggestion_is_stable_across_days(
-    client: TestClient, staff: User, world: dict
-):
+def test_suggestion_is_stable_across_days(client: TestClient, staff: User, world: dict):
     """§6.2 property 2: the window is anchored on `occurred_on`, not on today.
 
     Asserted by *derivation* rather than by freezing the clock: `window_start`
@@ -624,14 +619,12 @@ def test_suggestion_is_stable_across_days(
         rule_id=world["rule_id"],
         lot=world["lot"],
         resident=world["resident"],
-        occurred_on=_local_today() - timedelta(days=100),
+        occurred_on=_today() - timedelta(days=100),
     )
     first = _next_step(client, staff, infraction["id"])
     second = _next_step(client, staff, infraction["id"])
     assert first == second
-    assert first["window_start"] == (
-        _local_today() - timedelta(days=100 + 365)
-    ).isoformat()
+    assert first["window_start"] == (_today() - timedelta(days=100 + 365)).isoformat()
 
 
 def test_explicit_action_records_a_deviation(
@@ -652,7 +645,7 @@ def test_explicit_action_records_a_deviation(
     # The deadline is borrowed from the ladder's own NOTIFICACAO rung, so an
     # off-ladder application is still priced by policy where policy has an
     # answer (the decision the spec left open).
-    assert entry["defense_due_on"] == (_local_today() + timedelta(days=30)).isoformat()
+    assert entry["defense_due_on"] == (_today() + timedelta(days=30)).isoformat()
 
 
 def test_an_off_ladder_action_borrows_the_last_rung_of_its_own_kind(
@@ -732,9 +725,7 @@ def test_an_explicit_deadline_is_recorded_as_an_override(
     assert borrowed.status_code == 201, borrowed.text
     entry = borrowed.json()["timeline"][0]
     # 30 days, taken from the ladder's own NOTIFICACAO rung.
-    assert entry["defense_due_on"] == (
-        _local_today() + timedelta(days=30)
-    ).isoformat()
+    assert entry["defense_due_on"] == (_today() + timedelta(days=30)).isoformat()
     assert entry["defense_deadline_overridden"] is False
 
     typed = _advance(
@@ -746,9 +737,7 @@ def test_an_explicit_deadline_is_recorded_as_an_override(
     )
     assert typed.status_code == 201, typed.text
     entry = typed.json()["timeline"][1]
-    assert entry["defense_due_on"] == (
-        _local_today() + timedelta(days=5)
-    ).isoformat()
+    assert entry["defense_due_on"] == (_today() + timedelta(days=5)).isoformat()
     assert entry["defense_deadline_overridden"] is True
 
 
@@ -783,9 +772,7 @@ def test_an_explicit_multa_on_an_unpriced_multiple_rung_is_still_409(
         client, staff, rule_id=rule_id, lot=world["lot"], resident=world["resident"]
     )
     # The suggestion is the AVISO, so the MULTA below is genuinely off-ladder.
-    assert (
-        _next_step(client, staff, infraction["id"])["suggested_action"] == "AVISO"
-    )
+    assert _next_step(client, staff, infraction["id"])["suggested_action"] == "AVISO"
 
     refused = _advance(client, staff, infraction["id"], action="MULTA")
     assert refused.status_code == 409

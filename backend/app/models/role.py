@@ -26,9 +26,7 @@ class Role(SQLModel, table=True):
     # second index with the `role` column it covered: there is no enum left
     # for a row to be "linked" to, and a role is now an ordinary, editable,
     # deletable row like any other.
-    __table_args__ = (
-        Index("ix_role_tenant_name", "tenant_id", "name", unique=True),
-    )
+    __table_args__ = (Index("ix_role_tenant_name", "tenant_id", "name", unique=True),)
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     # Tenant boundary (APRAS-41). Defaults to DEFAULT_TENANT_ID so ORM
@@ -57,6 +55,4 @@ class Role(SQLModel, table=True):
     # consumes it.
     landing_path: str | None = Field(default=None, nullable=True)
 
-    users: list["User"] = Relationship(
-        back_populates="roles", link_model=UserRoleLink
-    )
+    users: list["User"] = Relationship(back_populates="roles", link_model=UserRoleLink)

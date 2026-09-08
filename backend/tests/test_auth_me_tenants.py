@@ -122,9 +122,7 @@ def test_me_reports_is_tenant_admin_per_membership(
     """The capability is per membership, not per user: True in A, False in B."""
     user = _make_user(session, "me-syndic@test.com")
     session.add(
-        UserTenantLink(
-            user_id=user.id, tenant_id=tenant_alpha.id, is_tenant_admin=True
-        )
+        UserTenantLink(user_id=user.id, tenant_id=tenant_alpha.id, is_tenant_admin=True)
     )
     session.add(UserTenantLink(user_id=user.id, tenant_id=DEFAULT_TENANT_ID))
     session.commit()
@@ -158,9 +156,7 @@ def test_me_keeps_existing_fields(session: Session, client: TestClient):
     role = Role(name="Me Fields Type")
     session.add(role)
     session.commit()
-    user = _make_user(
-        session, "me-fields@test.com", "DIRECTOR", roles=[role]
-    )
+    user = _make_user(session, "me-fields@test.com", "DIRECTOR", roles=[role])
     session.add(UserTenantLink(user_id=user.id, tenant_id=DEFAULT_TENANT_ID))
     session.commit()
 

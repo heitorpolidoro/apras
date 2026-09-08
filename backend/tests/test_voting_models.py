@@ -1,10 +1,11 @@
 """Model/enum level tests for the assembly voting feature (APRAS-33)."""
 
 import uuid
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 
 from sqlmodel import Session, select
 
+from app.core import clock
 from app.core.security import get_password_hash
 from app.models.enums import (
     AssemblyStatus,
@@ -88,7 +89,7 @@ def test_voting_models_persist(session: Session):
         kind=VoteKind.ASSEMBLEIA,
         title="Aprovação do orçamento",
         vote_type=VoteType.SINGLE_CHOICE,
-        closes_at=datetime.utcnow() + timedelta(days=1),
+        closes_at=clock.db_now() + timedelta(days=1),
         created_by_id=user.id,
     )
     session.add(vote)

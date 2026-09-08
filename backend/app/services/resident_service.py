@@ -1,10 +1,12 @@
 """Service layer for Resident management."""
 
-from datetime import datetime
 import logging
 from uuid import UUID
 
+from sqlmodel import Session, func, select
+
 from app.api.deps import has_permission
+from app.core import clock
 from app.core.exceptions import (
     DomainError,
     ForbiddenError,
@@ -17,7 +19,6 @@ from app.models.resident import Resident
 from app.models.user import User
 from app.schemas.resident import ResidentCreate, ResidentUpdate
 from app.services.lot_service import LotService
-from sqlmodel import Session, select, func
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +50,7 @@ class ResidentService:
             select(Resident).where(
                 Resident.user_id == current_user.id,
                 Resident.lot_id == lot_id,
-                Resident.is_active == True,  # noqa: E712
+                Resident.is_active == True,  # noqa: E712  # SQLAlchemy column expression; `is True` does not compile to SQL
             )
         ).first()
 
@@ -71,11 +72,9 @@ class ResidentService:
 
         query = select(Resident).where(
             Resident.lot_id == lot_id,
-            Resident.is_active == True,  # noqa: E712
+            Resident.is_active == True,  # noqa: E712  # SQLAlchemy column expression; `is True` does not compile to SQL
         )
-        total = session.exec(
-            select(func.count()).select_from(query.subquery())
-        ).one()
+        total = session.exec(select(func.count()).select_from(query.subquery())).one()
 
         residents = session.exec(
             query.offset(skip).limit(limit).order_by(Resident.full_name)
@@ -94,7 +93,7 @@ class ResidentService:
             select(Resident).where(
                 Resident.lot_id == lot_id,
                 Resident.cpf == resident_in.cpf,
-                Resident.is_active == True,  # noqa: E712
+                Resident.is_active == True,  # noqa: E712  # SQLAlchemy column expression; `is True` does not compile to SQL
             )
         ).first()
         if existing:
@@ -105,11 +104,7 @@ class ResidentService:
         matched_user = session.exec(
             select(User).where(
                 (User.cpf == resident_in.cpf)
-                | (
-                    (User.email == resident_in.email)
-                    if resident_in.email
-                    else False
-                )
+                | ((User.email == resident_in.email) if resident_in.email else False)
             )
         ).first()
         if matched_user:
@@ -139,7 +134,7 @@ class ResidentService:
         resident = session.exec(
             select(Resident).where(
                 Resident.id == resident_id,
-                Resident.is_active == True,  # noqa: E712
+                Resident.is_active == True,  # noqa: E712  # SQLAlchemy column expression; `is True` does not compile to SQL
             )
         ).first()
         if not resident:
@@ -162,7 +157,7 @@ class ResidentService:
                 select(Resident).where(
                     Resident.lot_id == db_resident.lot_id,
                     Resident.cpf == resident_in.cpf,
-                    Resident.is_active == True,  # noqa: E712
+                    Resident.is_active == True,  # noqa: E712  # SQLAlchemy column expression; `is True` does not compile to SQL
                     Resident.id != db_resident.id,
                 )
             ).first()
@@ -173,7 +168,7 @@ class ResidentService:
         for key, value in update_data.items():
             setattr(db_resident, key, value)
 
-        db_resident.updated_at = datetime.utcnow()
+        db_resident.updated_at = clock.db_now()
         session.add(db_resident)
         session.commit()
         session.refresh(db_resident)
@@ -182,20 +177,18 @@ class ResidentService:
     @staticmethod
     def deactivate_resident(session: Session, db_resident: Resident) -> Resident:
         db_resident.is_active = False
-        db_resident.updated_at = datetime.utcnow()
+        db_resident.updated_at = clock.db_now()
         session.add(db_resident)
         session.commit()
         session.refresh(db_resident)
         return db_resident
 
     @staticmethod
-    def link_user(
-        session: Session, resident_id: UUID, user_id: UUID
-    ) -> Resident:
+    def link_user(session: Session, resident_id: UUID, user_id: UUID) -> Resident:
         resident = session.exec(
             select(Resident).where(
                 Resident.id == resident_id,
-                Resident.is_active == True,  # noqa: E712
+                Resident.is_active == True,  # noqa: E712  # SQLAlchemy column expression; `is True` does not compile to SQL
             )
         ).first()
         if not resident:
@@ -206,10 +199,10 @@ class ResidentService:
             raise DomainError(f"User with ID {user_id} not found")
 
         if resident.user_id == user_id:
-            raise ResidentAlreadyLinkedError()
+            raise ResidentAlreadyLinkedError
 
         resident.user_id = user_id
-        resident.updated_at = datetime.utcnow()
+        resident.updated_at = clock.db_now()
         session.add(resident)
         session.commit()
         session.refresh(resident)
@@ -220,14 +213,14 @@ class ResidentService:
         resident = session.exec(
             select(Resident).where(
                 Resident.id == resident_id,
-                Resident.is_active == True,  # noqa: E712
+                Resident.is_active == True,  # noqa: E712  # SQLAlchemy column expression; `is True` does not compile to SQL
             )
         ).first()
         if not resident:
             raise ResidentNotFoundError(resident_id)
 
         resident.user_id = None
-        resident.updated_at = datetime.utcnow()
+        resident.updated_at = clock.db_now()
         session.add(resident)
         session.commit()
         session.refresh(resident)
@@ -235,28 +228,28 @@ class ResidentService:
 
     @staticmethod
     def auto_link_user(session: Session, new_user: User) -> int:
-        """Find unlinked Resident records matching CPF or Email of new_user and bind user_id."""
+        """Find unlinked Resident records matching CPF or Email of new_user and bind
+        user_id."""
         matching_residents = session.exec(
             select(Resident).where(
                 Resident.user_id.is_(None),  # type: ignore[attr-defined]
-                Resident.is_active == True,  # noqa: E712
+                Resident.is_active == True,  # noqa: E712  # SQLAlchemy column expression; `is True` does not compile to SQL
                 (Resident.cpf == new_user.cpf)
-                | (
-                    (Resident.email == new_user.email)
-                    if new_user.email
-                    else False
-                ),
+                | ((Resident.email == new_user.email) if new_user.email else False),
             )
         ).all()
 
         linked_count = 0
         for resident in matching_residents:
             resident.user_id = new_user.id
-            resident.updated_at = datetime.utcnow()
+            resident.updated_at = clock.db_now()
             session.add(resident)
             linked_count += 1
             logger.info(
-                f"[Audit Log] Auto-linked Resident '{resident.full_name}' ({resident.id}) to new User ({new_user.id})"
+                "[Audit Log] Auto-linked Resident '%s' (%s) to new User (%s)",
+                resident.full_name,
+                resident.id,
+                new_user.id,
             )
 
         if linked_count > 0:

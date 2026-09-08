@@ -94,8 +94,8 @@ SCOPED_REGENERATE = (
 
 
 def _git(*args: str) -> str:
-    return subprocess.run(  # noqa: S603
-        ["git", *args],  # noqa: S607
+    return subprocess.run(
+        ["git", *args],
         capture_output=True,
         text=True,
         check=True,

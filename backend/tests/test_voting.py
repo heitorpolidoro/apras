@@ -6,11 +6,12 @@ complements.
 """
 
 import json
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import pytest
 from sqlmodel import Session, select
 
+from app.core import clock
 from app.core.exceptions import (
     DelinquentLotError,
     NotLotOwnerError,
@@ -271,7 +272,7 @@ def test_lazy_materialisation_closes_vote_after_closes_at(session: Session):
     vote = make_vote(session, board, assembly=assembly)
     _cast(session, owner, vote, "Sim", lot)
 
-    vote.closes_at = datetime.utcnow() - timedelta(minutes=1)
+    vote.closes_at = clock.db_now() - timedelta(minutes=1)
     session.add(vote)
     session.commit()
 

@@ -22,11 +22,11 @@ to: it loads :class:`~app.models.tenant.Tenant` from the session directly.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlmodel import Session, select
 
+from app.core import clock
 from app.core.exceptions import (
     CoreModuleNotContractableError,
     InactivePlanError,
@@ -53,10 +53,6 @@ from app.services.plan_service import PlanService
 
 if TYPE_CHECKING:  # pragma: no cover
     from uuid import UUID
-
-
-def _now() -> datetime:
-    return datetime.utcnow()  # noqa: DTZ003
 
 
 @dataclass(frozen=True)
@@ -88,8 +84,7 @@ class Entitlement:
         # present together. Anything else is a loader bug, not a state.
         if (self.subscription is None) != (self.plan is None):
             raise AssertionError(
-                "Entitlement: subscription and plan must be absent or present "
-                "together"
+                "Entitlement: subscription and plan must be absent or present together"
             )
 
     @property
@@ -150,9 +145,7 @@ class SubscriptionService:
         rather than a try/except, so APRAS-39's status codes cannot move.
         """
         return session.exec(
-            select(TenantSubscription).where(
-                TenantSubscription.tenant_id == tenant_id
-            )
+            select(TenantSubscription).where(TenantSubscription.tenant_id == tenant_id)
         ).first()
 
     @staticmethod
@@ -190,13 +183,9 @@ class SubscriptionService:
                     is_active=is_active,
                     in_plan=in_plan,
                     courtesy=courtesy,
-                    can_contract=(
-                        ent.managed and module in ent.all and not is_core
-                    ),
+                    can_contract=(ent.managed and module in ent.all and not is_core),
                     monthly_price=(
-                        None
-                        if ent.plan is None
-                        else ent.plan.module_prices.get(module)
+                        None if ent.plan is None else ent.plan.module_prices.get(module)
                     ),
                     source=cls._source(
                         is_core=is_core,
@@ -401,7 +390,7 @@ class SubscriptionService:
         removed = sorted(active_before - new_active)
         if added or removed:
             tenant.disabled_modules = sorted(TOGGLEABLE_MODULES - new_active)
-            tenant.updated_at = _now()
+            tenant.updated_at = clock.db_now()
             session.add(tenant)
             cls.record(
                 session=session,
@@ -448,9 +437,7 @@ class SubscriptionService:
         plan = PlanService.get_plan(session=session, plan_id=payload.plan_id)
         subscription = cls.get_subscription(session=session, tenant_id=tenant_id)
 
-        already_on_it = (
-            subscription is not None and subscription.plan_id == plan.id
-        )
+        already_on_it = subscription is not None and subscription.plan_id == plan.id
         if not plan.is_active and not already_on_it:
             raise InactivePlanError(plan.name)
 
@@ -474,7 +461,7 @@ class SubscriptionService:
             subscription.plan_id = plan.id
             subscription.status = payload.status
             subscription.notes = payload.notes
-            subscription.updated_at = _now()
+            subscription.updated_at = clock.db_now()
             session.add(subscription)
         if commercial_change:
             # `flush`, not `commit` (round-2 review N-2): the row has to be
@@ -497,7 +484,7 @@ class SubscriptionService:
         if commercial_change or removed:
             if tenant.disabled_modules != new_disabled:
                 tenant.disabled_modules = new_disabled
-                tenant.updated_at = _now()
+                tenant.updated_at = clock.db_now()
                 session.add(tenant)
             cls.record(
                 session=session,
@@ -551,18 +538,16 @@ class SubscriptionService:
         revoked = sorted(ent.courtesy - toggleable_requested)
 
         subscription.courtesy_modules = sorted(requested)
-        subscription.updated_at = _now()
+        subscription.updated_at = clock.db_now()
         session.add(subscription)
 
         active_before = TOGGLEABLE_MODULES - set(tenant.disabled_modules)
         # Newly granted modules are activated; revoked ones are deactivated
         # unless the plan also covers them, in which case the revoke changes
         # nothing but the label.
-        new_active = (active_before | set(granted)) - (
-            set(revoked) - ent.included
-        )
+        new_active = (active_before | set(granted)) - (set(revoked) - ent.included)
         tenant.disabled_modules = sorted(TOGGLEABLE_MODULES - new_active)
-        tenant.updated_at = _now()
+        tenant.updated_at = clock.db_now()
         session.add(tenant)
 
         if granted:

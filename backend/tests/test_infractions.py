@@ -18,6 +18,7 @@ from fastapi.routing import APIRoute
 from sqlalchemy import event, func
 from sqlmodel import select
 
+from app.core import clock
 from app.core.permissions import ROUTE_PERMISSIONS
 from app.main import app
 from app.models.enums import OccurrenceCategory
@@ -41,34 +42,26 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 # ---------------------------------------------------------------------------
-# Two clocks, and which column each one belongs to (CR1)
+# One clock (APRAS-54; retires APRAS-44's CR1 split)
 # ---------------------------------------------------------------------------
 #
-# This module compares against columns written by **two different clocks**, and
-# collapsing them into one module-level `TODAY = date.today()` is a bug that
-# fires for real:
+# This module used to carry two helpers, because it compared against columns
+# written by two different clocks: `Infraction.created_at` was stamped in UTC
+# while `applied_on` and `defense_due_on` were computed from the **local**
+# date. In any negative-offset zone the two disagree for part of every day --
+# in `America/Sao_Paulo` (UTC-3), 21:00-23:59 -- so a single anchor was a bug
+# that fired for real.
 #
-# * `Infraction.created_at` is `datetime.utcnow()`, so `?date_from=`/`?date_to=`
-#   filter a **UTC** column. A local date is behind the UTC date every evening
-#   in every negative-offset zone -- in `America/Sao_Paulo` (UTC-3) that is
-#   21:00-23:59, *every day* -- and the window then matches nothing.
-# * `applied_on` and `defense_due_on` are computed by the service with
-#   `date.today()`, which is **local**. Asserting a UTC date against those
-#   would fail in the mirror-image window.
-#
-# So there are two helpers, each named for the clock it follows, and **both are
-# computed per call** rather than captured at import: a 15-minute suite that
-# starts at 23:5x would otherwise straddle midnight and fail for a third
-# reason.
-def _utc_today() -> date:
-    """The date the database stamps (`created_at`, `datetime.utcnow()`)."""
-    return datetime.utcnow().date()
-
-
-def _local_today() -> date:
-    """The date the service computes (`applied_on`, `defense_due_on`)."""
-    return date.today()
-
+# `app/core/clock.py` is now the only clock and both columns follow it, so the
+# two helpers returned the same value and have been collapsed into one. What
+# has *not* changed is that the value is computed **per call** and never
+# captured at import: a 15-minute suite that starts at 23:5x would otherwise
+# straddle midnight and fail for a reason that has nothing to do with the
+# assertion.
+def _today() -> date:
+    """Today in UTC -- the one date `created_at`, `applied_on` and
+    `defense_due_on` are all now stamped against."""
+    return clock.today_utc()
 
 
 @pytest.fixture(name="staff")
@@ -101,7 +94,9 @@ def world_fixture(client: TestClient, session: Session, staff: User) -> dict:
     }
 
 
-def _occurrence(session: Session, *, lot_id: uuid.UUID | None, protocol: str) -> Occurrence:
+def _occurrence(
+    session: Session, *, lot_id: uuid.UUID | None, protocol: str
+) -> Occurrence:
     occurrence = Occurrence(
         protocol_number=protocol,
         category=OccurrenceCategory.NOISE,
@@ -165,7 +160,7 @@ def test_register_against_a_deactivated_rule_is_422(
             "rule_id": world["rule_id"],
             "lot_id": str(world["lot"].id),
             "responsible_resident_id": str(world["resident"].id),
-            "occurred_on": _local_today().isoformat(),
+            "occurred_on": _today().isoformat(),
             "description": "Reincidência.",
         },
         headers=headers(staff),
@@ -202,7 +197,7 @@ def test_responsible_must_belong_to_the_lot(
                 "rule_id": world["rule_id"],
                 "lot_id": str(world["lot"].id),
                 "responsible_resident_id": str(resident_id),
-                "occurred_on": _local_today().isoformat(),
+                "occurred_on": _today().isoformat(),
                 "description": "Som alto.",
             },
             headers=headers(staff),
@@ -252,9 +247,7 @@ def test_promote_an_occurrence(
     # The effective lot is the occurrence's.
     assert body["lot"]["id"] == str(world["lot"].id)
 
-    detail = client.get(
-        f"/api/v1/occurrences/{occurrence.id}", headers=headers(staff)
-    )
+    detail = client.get(f"/api/v1/occurrences/{occurrence.id}", headers=headers(staff))
     assert detail.status_code == 200
     assert body["id"] in detail.json()["infraction_ids"]
 
@@ -300,9 +293,7 @@ def test_promote_a_lotless_occurrence_without_a_lot_is_422(
         headers=headers(staff),
     )
     assert refused.status_code == 422
-    assert (
-        refused.json()["detail"] == "The occurrence has no lot; lot_id is required"
-    )
+    assert refused.json()["detail"] == "The occurrence has no lot; lot_id is required"
 
 
 def test_promote_with_a_conflicting_lot_is_422(
@@ -323,9 +314,7 @@ def test_promote_with_a_conflicting_lot_is_422(
         headers=headers(staff),
     )
     assert conflicting.status_code == 422
-    assert (
-        conflicting.json()["detail"] == "lot_id does not match the occurrence's lot"
-    )
+    assert conflicting.json()["detail"] == "lot_id does not match the occurrence's lot"
     assert session.exec(select(func.count()).select_from(Infraction)).one() == before
 
     equal = client.post(
@@ -362,9 +351,7 @@ def test_one_occurrence_promotes_twice(
         assert response.status_code == 201, response.text
         ids.append(response.json()["id"])
 
-    detail = client.get(
-        f"/api/v1/occurrences/{occurrence.id}", headers=headers(staff)
-    )
+    detail = client.get(f"/api/v1/occurrences/{occurrence.id}", headers=headers(staff))
     assert sorted(detail.json()["infraction_ids"]) == sorted(ids)
 
 
@@ -459,10 +446,10 @@ def test_list_filters_by_date_range_and_paginates(
     """Inclusive on both end days over `created_at`; paging is stable.
 
     **Anchored on the UTC date, not the local one**, and captured once inside
-    the test: `created_at` is `datetime.utcnow()`, so a local anchor makes this
-    case fail every evening in every negative-offset timezone (CR1).
+    the test: `created_at` is stamped by `clock.db_now()`, so a local anchor
+    would make this case fail every evening in every negative-offset zone.
     """
-    utc_today = _utc_today()
+    utc_today = _today()
     ids = [
         create_infraction(
             client,
@@ -561,9 +548,7 @@ def test_no_route_edits_or_deletes_a_stage():
     assert not offenders, offenders
 
 
-def test_notificacao_freezes_the_deadline(
-    client: TestClient, staff: User, world: dict
-):
+def test_notificacao_freezes_the_deadline(client: TestClient, staff: User, world: dict):
     """`applied_on + days`, and a later change to the rule does not move it."""
     infraction = create_infraction(
         client,
@@ -583,7 +568,7 @@ def test_notificacao_freezes_the_deadline(
         headers=headers(staff),
     )
     assert notified.status_code == 201, notified.text
-    expected = (_local_today() + timedelta(days=30)).isoformat()
+    expected = (_today() + timedelta(days=30)).isoformat()
     assert notified.json()["defense_due_on"] == expected
 
     # Rewriting the ladder with a different deadline must not move it.
@@ -625,9 +610,7 @@ def _notify(client: TestClient, staff: User, infraction_id: str) -> None:
     )
 
 
-def test_contestation_inside_the_deadline(
-    client: TestClient, staff: User, world: dict
-):
+def test_contestation_inside_the_deadline(client: TestClient, staff: User, world: dict):
     """201 for the notified unit; it appears in the timeline and moves nothing."""
     infraction = create_infraction(
         client,
@@ -666,7 +649,7 @@ def test_contestation_after_the_deadline(
     stage = session.exec(
         select(InfractionStage).where(InfractionStage.action == "NOTIFICACAO")
     ).one()
-    stage.defense_due_on = _local_today() - timedelta(days=1)
+    stage.defense_due_on = _today() - timedelta(days=1)
     session.add(stage)
     session.commit()
 
@@ -727,7 +710,7 @@ def test_contestation_from_an_unlinked_caller_is_403(
     stage = session.exec(
         select(InfractionStage).where(InfractionStage.action == "NOTIFICACAO")
     ).one()
-    stage.defense_due_on = _local_today() - timedelta(days=1)
+    stage.defense_due_on = _today() - timedelta(days=1)
     session.add(stage)
     session.commit()
 
@@ -739,8 +722,7 @@ def test_contestation_from_an_unlinked_caller_is_403(
     # 403 and not 409, even though the deadline has also passed.
     assert refused.status_code == 403
     assert (
-        refused.json()["detail"]
-        == "Only the notified unit may contest this infraction"
+        refused.json()["detail"] == "Only the notified unit may contest this infraction"
     )
     assert (
         session.exec(select(func.count()).select_from(InfractionContestation)).one()
@@ -757,12 +739,8 @@ def test_contestation_by_a_superuser_is_also_object_narrowed(
     resolver and therefore always hold `infractions:contest` -- it is an object
     check, and a contestation is the unit's own act.
     """
-    superuser = make_member(
-        session, profile="GUEST", seed=60, is_superuser=True
-    )
-    admin = make_member(
-        session, profile="GUEST", seed=61, is_tenant_admin=True
-    )
+    superuser = make_member(session, profile="GUEST", seed=60, is_superuser=True)
+    admin = make_member(session, profile="GUEST", seed=61, is_tenant_admin=True)
 
     infraction = create_infraction(
         client,
@@ -968,8 +946,10 @@ def test_infraction_lot_id_is_not_null_while_occurrence_lot_id_is():
     assert Occurrence.__table__.columns["lot_id"].nullable is True
 
 
-def test_created_at_is_a_naive_utc_datetime(client: TestClient, staff: User, world: dict):
-    """The house shape: `datetime.utcnow()`, naive, like every other table."""
+def test_created_at_is_a_naive_utc_datetime(
+    client: TestClient, staff: User, world: dict
+):
+    """The house shape: `clock.db_now()`, naive, like every other table."""
     body = create_infraction(
         client,
         staff,
@@ -1001,7 +981,7 @@ def test_evidence_urls_round_trip_and_a_hand_edited_row_reads_as_empty(
             "rule_id": world["rule_id"],
             "lot_id": str(world["lot"].id),
             "responsible_resident_id": str(world["resident"].id),
-            "occurred_on": _local_today().isoformat(),
+            "occurred_on": _today().isoformat(),
             "description": "Com fotos.",
             "evidence_urls": ["http://null/a.jpg", "http://null/b.jpg"],
         },
@@ -1036,9 +1016,7 @@ def test_evidence_urls_round_trip_and_a_hand_edited_row_reads_as_empty(
     )
 
 
-def test_a_lot_that_does_not_exist_is_422(
-    client: TestClient, staff: User, world: dict
-):
+def test_a_lot_that_does_not_exist_is_422(client: TestClient, staff: User, world: dict):
     """Checked before the responsible, so the message names the first problem."""
     response = client.post(
         "/api/v1/infractions",
@@ -1046,7 +1024,7 @@ def test_a_lot_that_does_not_exist_is_422(
             "rule_id": world["rule_id"],
             "lot_id": str(uuid.uuid4()),
             "responsible_resident_id": str(world["resident"].id),
-            "occurred_on": _local_today().isoformat(),
+            "occurred_on": _today().isoformat(),
             "description": "x",
         },
         headers=headers(staff),

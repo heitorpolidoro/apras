@@ -3,6 +3,9 @@
 from typing import Annotated
 from uuid import UUID
 
+from fastapi import APIRouter, Depends, status
+from sqlmodel import Session
+
 from app.api import deps
 from app.core.exceptions import ForbiddenError
 from app.models.user import User
@@ -16,10 +19,8 @@ from app.schemas.resident import (
     ResidentUpdate,
     ResidentUserSummary,
 )
-from app.services.role_service import role_names_in
 from app.services.resident_service import ResidentService
-from fastapi import APIRouter, Depends, status
-from sqlmodel import Session
+from app.services.role_service import role_names_in
 
 router = APIRouter()
 
@@ -28,7 +29,9 @@ def assert_admin_or_director(
     current_user: User, session: Session, permission: str
 ) -> None:
     if not deps.has_permission(current_user, session, permission):
-        raise ForbiddenError("Only Administrators and Directors can perform this action")
+        raise ForbiddenError(
+            "Only Administrators and Directors can perform this action"
+        )
 
 
 def _to_detail_read(resident) -> ResidentDetailRead:
@@ -71,15 +74,12 @@ def _to_detail_read(resident) -> ResidentDetailRead:
 
 @router.get(
     "/lots/{lot_id}/residents",
-    response_model=PaginatedResidentRead,
     status_code=status.HTTP_200_OK,
 )
 def list_residents_by_lot(
     lot_id: UUID,
     session: Annotated[Session, Depends(deps.get_session)],
-    current_user: Annotated[
-        User, Depends(deps.require_permission("residents:read"))
-    ],
+    current_user: Annotated[User, Depends(deps.require_permission("residents:read"))],
     skip: int = 0,
     limit: int = 100,
 ) -> PaginatedResidentRead:
@@ -92,7 +92,6 @@ def list_residents_by_lot(
 
 @router.post(
     "/lots/{lot_id}/residents",
-    response_model=ResidentRead,
     status_code=status.HTTP_201_CREATED,
 )
 def create_resident(
@@ -108,15 +107,12 @@ def create_resident(
 
 @router.get(
     "/residents/{resident_id}",
-    response_model=ResidentDetailRead,
     status_code=status.HTTP_200_OK,
 )
 def get_resident(
     resident_id: UUID,
     session: Annotated[Session, Depends(deps.get_session)],
-    current_user: Annotated[
-        User, Depends(deps.require_permission("residents:read"))
-    ],
+    current_user: Annotated[User, Depends(deps.require_permission("residents:read"))],
 ) -> ResidentDetailRead:
     resident = ResidentService.get_resident_by_id(session, resident_id, current_user)
     return _to_detail_read(resident)
@@ -124,7 +120,6 @@ def get_resident(
 
 @router.put(
     "/residents/{resident_id}",
-    response_model=ResidentRead,
     status_code=status.HTTP_200_OK,
 )
 def update_resident(
@@ -157,7 +152,6 @@ def delete_resident(
 
 @router.post(
     "/residents/{resident_id}/link-user",
-    response_model=ResidentRead,
     status_code=status.HTTP_200_OK,
 )
 def link_user_account(
@@ -173,7 +167,6 @@ def link_user_account(
 
 @router.post(
     "/residents/{resident_id}/unlink-user",
-    response_model=ResidentRead,
     status_code=status.HTTP_200_OK,
 )
 def unlink_user_account(

@@ -37,7 +37,6 @@ def test_create_task_validation_error(
     assert response.status_code == 422
 
 
-
 def test_update_task_validation_error(
     client: TestClient, session: Session, admin_user, normal_user, default_category
 ):

@@ -39,7 +39,6 @@ def test_signup_duplicate_email(client, session):
     assert "email already exists" in response.json()["detail"]
 
 
-
 def test_dev_users_success(client, session):
     """Test get_dev_users in development environment."""
     with patch("app.api.v1.endpoints.auth.settings") as mock_settings:

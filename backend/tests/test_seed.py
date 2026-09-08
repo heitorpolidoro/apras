@@ -80,7 +80,7 @@ def test_the_demo_bundles_are_the_demos_opinion_not_a_product_default():
     copy of `legacy_role_bundles.json` — which is exactly what F1's no-seeds
     decision forbids anywhere outside this script.
     """
-    from tests.conftest import bundle  # noqa: PLC0415
+    from tests.conftest import bundle
 
     for name, profile in (
         ("Administrador (papel)", "ADMINISTRATOR"),
@@ -153,9 +153,9 @@ def test_the_three_demo_profiles_have_the_recorded_bundles(
 
 def test_the_seed_module_names_no_retired_enum():
     """`app/seed.py` was one of the three paths F2's walker excluded (§11.3)."""
-    import pathlib  # noqa: PLC0415
+    import pathlib
 
-    import app.seed as seed_module  # noqa: PLC0415
+    import app.seed as seed_module
 
     source = pathlib.Path(seed_module.__file__).read_text(encoding="utf-8")
     assert "UserRole" not in source

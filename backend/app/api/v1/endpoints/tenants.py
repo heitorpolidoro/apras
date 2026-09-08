@@ -40,7 +40,7 @@ from app.services.tenant_service import TenantService
 router = APIRouter()
 
 
-@router.get("", response_model=list[TenantRead])
+@router.get("")
 def list_tenants(
     session: Annotated[Session, Depends(get_session)],
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
@@ -50,7 +50,7 @@ def list_tenants(
     return TenantService.list_tenants(session=session, current_user=current_user)
 
 
-@router.post("", response_model=TenantRead, status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED)
 def create_tenant(
     tenant_in: TenantCreate,
     session: Annotated[Session, Depends(get_session)],
@@ -60,7 +60,7 @@ def create_tenant(
     return TenantService.create_tenant(session=session, tenant_in=tenant_in)
 
 
-@router.get("/{tenant_id}", response_model=TenantRead)
+@router.get("/{tenant_id}")
 def get_tenant(
     tenant_id: UUID,
     session: Annotated[Session, Depends(get_session)],
@@ -72,7 +72,7 @@ def get_tenant(
     )
 
 
-@router.patch("/{tenant_id}", response_model=TenantRead)
+@router.patch("/{tenant_id}")
 def update_tenant(
     tenant_id: UUID,
     tenant_in: TenantUpdate,
@@ -226,7 +226,7 @@ def get_tenant_subscription_history(
     )
 
 
-@router.get("/{tenant_id}/members", response_model=list[TenantMemberRead])
+@router.get("/{tenant_id}/members")
 def list_tenant_members(
     tenant_id: UUID,
     session: Annotated[Session, Depends(get_session)],
@@ -240,7 +240,6 @@ def list_tenant_members(
 
 @router.post(
     "/{tenant_id}/members",
-    response_model=TenantMemberRead,
     status_code=status.HTTP_201_CREATED,
 )
 def add_tenant_member(
@@ -263,7 +262,7 @@ def add_tenant_member(
     )
 
 
-@router.patch("/{tenant_id}/members/{user_id}", response_model=TenantMemberRead)
+@router.patch("/{tenant_id}/members/{user_id}")
 def set_tenant_member_admin(
     tenant_id: UUID,
     user_id: UUID,
@@ -287,9 +286,7 @@ def set_tenant_member_admin(
     )
 
 
-@router.delete(
-    "/{tenant_id}/members/{user_id}", status_code=status.HTTP_204_NO_CONTENT
-)
+@router.delete("/{tenant_id}/members/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def remove_tenant_member(
     tenant_id: UUID,
     user_id: UUID,
@@ -297,6 +294,4 @@ def remove_tenant_member(
     _: Annotated[User, Depends(api_deps.get_current_superuser)],
 ) -> None:
     """Unlink a user from a tenant. Superuser only."""
-    TenantService.remove_member(
-        session=session, tenant_id=tenant_id, user_id=user_id
-    )
+    TenantService.remove_member(session=session, tenant_id=tenant_id, user_id=user_id)

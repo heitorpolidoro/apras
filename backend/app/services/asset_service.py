@@ -1,12 +1,12 @@
 """Service layer for Asset and InventoryMovement business logic."""
 
-from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import func, or_
 from sqlmodel import Session, select
 
 from app.api.deps import has_permission
+from app.core import clock
 from app.core.exceptions import (
     AssetAccessForbiddenError,
     AssetNotFoundError,
@@ -49,7 +49,7 @@ class AssetService:
             if existing:
                 raise AssetTagAlreadyExistsError(asset_in.asset_tag)
 
-        now = datetime.now(UTC)
+        now = clock.db_now()
         asset_data = asset_in.model_dump()
         asset = Asset(
             **asset_data,
@@ -239,16 +239,14 @@ class AssetService:
         for key, value in update_data.items():
             setattr(asset, key, value)
 
-        asset.updated_at = datetime.now(UTC)
+        asset.updated_at = clock.db_now()
         session.add(asset)
         session.commit()
         session.refresh(asset)
         return AssetRead.model_validate(asset)
 
     @staticmethod
-    def delete_asset(
-        session: Session, current_user: User, asset_id: UUID
-    ) -> None:
+    def delete_asset(session: Session, current_user: User, asset_id: UUID) -> None:
         """Delete an asset and cascade its movements."""
         if not has_permission(current_user, session, "assets:delete"):
             raise AssetAccessForbiddenError(
@@ -310,7 +308,7 @@ class AssetService:
         else:
             new_quantity = asset.current_quantity
 
-        now = datetime.now(UTC)
+        now = clock.db_now()
         asset.current_quantity = new_quantity
         asset.updated_at = now
         session.add(asset)
@@ -380,11 +378,7 @@ class AssetService:
         count_statement = select(func.count()).select_from(
             select(InventoryMovement.id)
             .where(
-                *(
-                    [InventoryMovement.asset_id == asset_id]
-                    if asset_id
-                    else []
-                ),
+                *([InventoryMovement.asset_id == asset_id] if asset_id else []),
                 *(
                     [InventoryMovement.movement_type == movement_type]
                     if movement_type

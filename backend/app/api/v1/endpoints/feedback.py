@@ -1,5 +1,6 @@
 """API Endpoints for Feedback (Fale Conosco) management."""
 
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
@@ -31,14 +32,14 @@ _require_feedback_read = require_permission("feedback:read")
 _require_feedback_create = require_permission("feedback:create")
 
 
-@router.get("", response_model=PaginatedFeedbackRead)
+@router.get("")
 def list_feedback(
-    db: Session = Depends(get_session),
-    current_user: User = Depends(_require_feedback_read),
-    category: FeedbackCategory | None = Query(default=None),
-    status_filter: FeedbackStatus | None = Query(default=None, alias="status"),
-    skip: int = Query(default=0, ge=0),
-    limit: int = Query(default=50, ge=1, le=100),
+    db: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[User, Depends(_require_feedback_read)],
+    category: Annotated[FeedbackCategory | None, Query()] = None,
+    status_filter: Annotated[FeedbackStatus | None, Query(alias="status")] = None,
+    skip: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> PaginatedFeedbackRead:
     """Lists feedback submissions visible to current user."""
     items, total = FeedbackService.list_feedback(
@@ -52,11 +53,11 @@ def list_feedback(
     return PaginatedFeedbackRead(items=items, total=total, skip=skip, limit=limit)
 
 
-@router.post("", response_model=FeedbackRead, status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED)
 def create_feedback(
     feedback_in: FeedbackCreate,
-    db: Session = Depends(get_session),
-    current_user: User = Depends(_require_feedback_create),
+    db: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[User, Depends(_require_feedback_create)],
 ) -> FeedbackRead:
     """Creates a new feedback submission. Any authenticated user may submit."""
     return FeedbackService.create_feedback(
@@ -64,11 +65,11 @@ def create_feedback(
     )
 
 
-@router.get("/{id}", response_model=FeedbackRead)
+@router.get("/{id}")
 def get_feedback(
     id: UUID,
-    db: Session = Depends(get_session),
-    current_user: User = Depends(_require_feedback_read),
+    db: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[User, Depends(_require_feedback_read)],
 ) -> FeedbackRead:
     """Retrieves a feedback submission by ID; flips the seen flag for the reporter."""
     return FeedbackService.get_feedback(
@@ -76,12 +77,12 @@ def get_feedback(
     )
 
 
-@router.put("/{id}/respond", response_model=FeedbackRead)
+@router.put("/{id}/respond")
 def respond_to_feedback(
     id: UUID,
     response_in: FeedbackRespond,
-    db: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    db: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> FeedbackRead:
     """Records the board's response to a feedback submission."""
     return FeedbackService.respond_to_feedback(

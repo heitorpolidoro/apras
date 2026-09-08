@@ -2,7 +2,7 @@
 
 import io
 import uuid
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import pytest
 import zxingcpp
@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 from PIL import Image
 from sqlmodel import Session
 
+from app.core import clock
 from app.core.exceptions import (
     AuthorizationNotFoundError,
     DomainError,
@@ -29,7 +30,9 @@ from app.services.visitor_service import VisitorService
 
 def test_create_single_authorization_success(session: Session, admin_user: User):
     lot = LotService.create_lot(session, LotCreate(block="A", lot_number="10"))
-    visitor = VisitorService.create_visitor(session, VisitorCreate(full_name="Lucas Moura"))
+    visitor = VisitorService.create_visitor(
+        session, VisitorCreate(full_name="Lucas Moura")
+    )
 
     auth_in = VisitorAuthorizationCreate(
         visitor_id=visitor.id,
@@ -50,11 +53,15 @@ def test_create_single_authorization_success(session: Session, admin_user: User)
     assert "MORNING" in auth.allowed_shifts_json
 
 
-def test_permanent_authorization_exceeding_1_year_raises_error(session: Session, admin_user: User):
+def test_permanent_authorization_exceeding_1_year_raises_error(
+    session: Session, admin_user: User
+):
     lot = LotService.create_lot(session, LotCreate(block="B", lot_number="20"))
-    visitor = VisitorService.create_visitor(session, VisitorCreate(full_name="Fernanda Lima"))
+    visitor = VisitorService.create_visitor(
+        session, VisitorCreate(full_name="Fernanda Lima")
+    )
 
-    now = datetime.utcnow()
+    now = clock.db_now()
     too_far = now + timedelta(days=400)
 
     auth_in = VisitorAuthorizationCreate(
@@ -68,11 +75,15 @@ def test_permanent_authorization_exceeding_1_year_raises_error(session: Session,
         VisitorService.create_authorization(session, lot.id, auth_in, admin_user)
 
 
-def test_permanent_authorization_within_1_year_succeeds(session: Session, admin_user: User):
+def test_permanent_authorization_within_1_year_succeeds(
+    session: Session, admin_user: User
+):
     lot = LotService.create_lot(session, LotCreate(block="B", lot_number="21"))
-    visitor = VisitorService.create_visitor(session, VisitorCreate(full_name="Juliana Paes"))
+    visitor = VisitorService.create_visitor(
+        session, VisitorCreate(full_name="Juliana Paes")
+    )
 
-    now = datetime.utcnow()
+    now = clock.db_now()
     valid_until = now + timedelta(days=360)
 
     auth_in = VisitorAuthorizationCreate(
@@ -88,7 +99,9 @@ def test_permanent_authorization_within_1_year_succeeds(session: Session, admin_
 
 def test_revoke_authorization(session: Session, admin_user: User):
     lot = LotService.create_lot(session, LotCreate(block="C", lot_number="30"))
-    visitor = VisitorService.create_visitor(session, VisitorCreate(full_name="Marcos Vinicius"))
+    visitor = VisitorService.create_visitor(
+        session, VisitorCreate(full_name="Marcos Vinicius")
+    )
 
     auth_in = VisitorAuthorizationCreate(visitor_id=visitor.id)
     auth = VisitorService.create_authorization(session, lot.id, auth_in, admin_user)
@@ -103,11 +116,16 @@ def test_get_authorization_not_found(session: Session):
         VisitorService.get_authorization_by_id(session, uuid.uuid4())
 
 
-def test_api_lot_authorizations_flow(client: TestClient, admin_user: User, session: Session):
+def test_api_lot_authorizations_flow(
+    client: TestClient, admin_user: User, session: Session
+):
     lot = LotService.create_lot(session, LotCreate(block="D", lot_number="40"))
-    visitor = VisitorService.create_visitor(session, VisitorCreate(full_name="Camila Pitanga"))
+    visitor = VisitorService.create_visitor(
+        session, VisitorCreate(full_name="Camila Pitanga")
+    )
 
     from app.core.security import create_access_token
+
     token = create_access_token(admin_user.id)
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -119,7 +137,9 @@ def test_api_lot_authorizations_flow(client: TestClient, admin_user: User, sessi
         "allowed_shifts": ["MORNING", "AFTERNOON"],
         "notes": "Pool cleaning staff",
     }
-    res_create = client.post(f"/api/v1/lots/{lot.id}/authorizations", json=create_payload, headers=headers)
+    res_create = client.post(
+        f"/api/v1/lots/{lot.id}/authorizations", json=create_payload, headers=headers
+    )
     assert res_create.status_code == 201
     auth_data = res_create.json()
     auth_id = auth_data["id"]
@@ -132,14 +152,20 @@ def test_api_lot_authorizations_flow(client: TestClient, admin_user: User, sessi
     assert res_list.json()["total"] == 1
 
     # Revoke Authorization
-    res_revoke = client.put(f"/api/v1/authorizations/{auth_id}/revoke", json={}, headers=headers)
+    res_revoke = client.put(
+        f"/api/v1/authorizations/{auth_id}/revoke", json={}, headers=headers
+    )
     assert res_revoke.status_code == 200
     assert res_revoke.json()["status"] == "REVOKED"
 
 
-def test_get_authorization_by_id_success(client: TestClient, admin_user: User, session: Session):
+def test_get_authorization_by_id_success(
+    client: TestClient, admin_user: User, session: Session
+):
     lot = LotService.create_lot(session, LotCreate(block="E", lot_number="50"))
-    visitor = VisitorService.create_visitor(session, VisitorCreate(full_name="Rafael Souza"))
+    visitor = VisitorService.create_visitor(
+        session, VisitorCreate(full_name="Rafael Souza")
+    )
     auth_in = VisitorAuthorizationCreate(visitor_id=visitor.id)
     auth = VisitorService.create_authorization(session, lot.id, auth_in, admin_user)
 
@@ -166,9 +192,13 @@ def test_get_authorization_by_id_not_found(client: TestClient, admin_user: User)
     assert res.status_code == 404
 
 
-def test_get_authorization_qr_code_success(client: TestClient, admin_user: User, session: Session):
+def test_get_authorization_qr_code_success(
+    client: TestClient, admin_user: User, session: Session
+):
     lot = LotService.create_lot(session, LotCreate(block="F", lot_number="60"))
-    visitor = VisitorService.create_visitor(session, VisitorCreate(full_name="Bianca Torres"))
+    visitor = VisitorService.create_visitor(
+        session, VisitorCreate(full_name="Bianca Torres")
+    )
     auth_in = VisitorAuthorizationCreate(visitor_id=visitor.id)
     auth = VisitorService.create_authorization(session, lot.id, auth_in, admin_user)
 

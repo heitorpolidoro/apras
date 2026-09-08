@@ -7,6 +7,8 @@ from uuid import UUID, uuid4
 from sqlalchemy import UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
+from app.core import clock
+
 from .enums import LotAssociationType, LotStatus
 from .tenant import tenant_id_field
 
@@ -34,7 +36,7 @@ class UserLotLink(SQLModel, table=True):
     is_primary: bool = Field(default=False, nullable=False)
     start_date: datetime | None = Field(default=None)
     end_date: datetime | None = Field(default=None)
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
 
     # Relationships
     user: "User" = Relationship(back_populates="lot_links")
@@ -76,8 +78,8 @@ class Lot(SQLModel, table=True):
     delinquency_updated_by_id: UUID | None = Field(
         default=None, foreign_key="user.id", ondelete="SET NULL", nullable=True
     )
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
-    updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
 
     # Relationships
     user_links: list[UserLotLink] = Relationship(
@@ -86,4 +88,3 @@ class Lot(SQLModel, table=True):
     residents: list["Resident"] = Relationship(
         back_populates="lot", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
-

@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Optional
 
 from sqlmodel import Field, Relationship, SQLModel, UniqueConstraint
 
+from app.core import clock
 from app.models.enums import AnnouncementMediaType
 from app.models.tenant import tenant_id_field
 
@@ -27,8 +28,8 @@ class Announcement(SQLModel, table=True):
     content: str = Field(nullable=False)
     author_id: uuid.UUID = Field(foreign_key="user.id", nullable=False, index=True)
     is_deleted: bool = Field(default=False, nullable=False, index=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
-    updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
 
     author: Optional["User"] = Relationship(
         sa_relationship_kwargs={"foreign_keys": "[Announcement.author_id]"}
@@ -62,7 +63,7 @@ class AnnouncementMedia(SQLModel, table=True):
     mime_type: str = Field(nullable=False)
     file_size_bytes: int = Field(nullable=False)
     order_index: int = Field(default=0, nullable=False)
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
 
     announcement: Announcement = Relationship(back_populates="media")
 
@@ -76,9 +77,11 @@ class AnnouncementComment(SQLModel, table=True):
     announcement_id: uuid.UUID = Field(
         foreign_key="announcement.id", ondelete="CASCADE", nullable=False, index=True
     )
-    user_id: uuid.UUID = Field(foreign_key="user.id", ondelete="CASCADE", nullable=False, index=True)
+    user_id: uuid.UUID = Field(
+        foreign_key="user.id", ondelete="CASCADE", nullable=False, index=True
+    )
     content: str = Field(nullable=False)
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
 
     announcement: Announcement = Relationship(back_populates="comments")
     user: Optional["User"] = Relationship(
@@ -91,15 +94,19 @@ class AnnouncementReadReceipt(SQLModel, table=True):
 
     __tablename__ = "announcement_read_receipt"
     __table_args__ = (
-        UniqueConstraint("announcement_id", "user_id", name="uq_announcement_read_receipt_user"),
+        UniqueConstraint(
+            "announcement_id", "user_id", name="uq_announcement_read_receipt_user"
+        ),
     )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     announcement_id: uuid.UUID = Field(
         foreign_key="announcement.id", ondelete="CASCADE", nullable=False, index=True
     )
-    user_id: uuid.UUID = Field(foreign_key="user.id", ondelete="CASCADE", nullable=False, index=True)
-    read_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    user_id: uuid.UUID = Field(
+        foreign_key="user.id", ondelete="CASCADE", nullable=False, index=True
+    )
+    read_at: datetime = Field(default_factory=clock.db_now, nullable=False)
 
     announcement: Announcement = Relationship(back_populates="read_receipts")
     user: Optional["User"] = Relationship(

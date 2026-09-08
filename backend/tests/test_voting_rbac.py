@@ -4,11 +4,12 @@ Covers the numbered backend tests of `docs/tasks/APRAS-33-spec.md`
 §Testing: 7, 10, 11, 17, 18, 19 and the "Complementares" paragraph.
 """
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
+from app.core import clock
 from app.models.enums import (
     AssemblyStatus,
     LotAssociationType,
@@ -43,9 +44,7 @@ def _cast(session, user, vote, label, lot=None):
 # ---------------------------------------------------------------------------
 
 
-def test_board_creates_assembly_with_agenda_votes(
-    client: TestClient, session: Session
-):
+def test_board_creates_assembly_with_agenda_votes(client: TestClient, session: Session):
     admin = make_user(session, "ADMINISTRATOR")
     headers = auth_headers(client, admin)
 
@@ -67,16 +66,14 @@ def test_board_creates_assembly_with_agenda_votes(
                 "kind": "ASSEMBLEIA",
                 "title": title,
                 "vote_type": "SINGLE_CHOICE",
-                "closes_at": (datetime.utcnow() + timedelta(days=2)).isoformat(),
+                "closes_at": (clock.db_now() + timedelta(days=2)).isoformat(),
                 "options": [{"label": "Sim"}, {"label": "Não"}],
             },
         )
         assert created.status_code == 201, created.text
         assert len(created.json()["options"]) == 2
 
-    listed = client.get(
-        f"/api/v1/votes/?assembly_id={assembly_id}", headers=headers
-    )
+    listed = client.get(f"/api/v1/votes/?assembly_id={assembly_id}", headers=headers)
     assert listed.status_code == 200
     assert len(listed.json()) == 2
 
@@ -88,7 +85,7 @@ def test_manager_may_create_poll_but_not_assembly_vote(
     manager = make_user(session, "MANAGER")
     assembly = make_assembly(session, admin)
     headers = auth_headers(client, manager)
-    closes_at = (datetime.utcnow() + timedelta(days=1)).isoformat()
+    closes_at = (clock.db_now() + timedelta(days=1)).isoformat()
 
     poll = client.post(
         "/api/v1/votes/",
@@ -131,7 +128,7 @@ def test_anonymous_assembly_vote_is_rejected(client: TestClient, session: Sessio
             "title": "Orçamento",
             "vote_type": "SINGLE_CHOICE",
             "is_anonymous": True,
-            "closes_at": (datetime.utcnow() + timedelta(days=1)).isoformat(),
+            "closes_at": (clock.db_now() + timedelta(days=1)).isoformat(),
             "options": [{"label": "Sim"}, {"label": "Não"}],
         },
     )
@@ -144,7 +141,7 @@ def test_assembly_vote_requires_assembly_and_poll_forbids_it(
     admin = make_user(session, "ADMINISTRATOR")
     assembly = make_assembly(session, admin)
     headers = auth_headers(client, admin)
-    closes_at = (datetime.utcnow() + timedelta(days=1)).isoformat()
+    closes_at = (clock.db_now() + timedelta(days=1)).isoformat()
     options = [{"label": "Sim"}, {"label": "Não"}]
 
     orphan = client.post(
@@ -231,9 +228,7 @@ def test_ballot_in_draft_assembly_returns_400(client: TestClient, session: Sessi
     assert response.status_code == 400
 
 
-def test_close_assembly_cascades_over_open_votes(
-    client: TestClient, session: Session
-):
+def test_close_assembly_cascades_over_open_votes(client: TestClient, session: Session):
     admin = make_user(session, "ADMINISTRATOR")
     assembly = make_assembly(session, admin)
     vote = make_vote(session, admin, assembly=assembly)
@@ -415,8 +410,8 @@ def test_listing_votes_does_not_materialise_snapshots(
         session,
         admin,
         assembly=assembly,
-        opens_at=datetime.utcnow() - timedelta(days=2),
-        closes_at=datetime.utcnow() - timedelta(minutes=5),
+        opens_at=clock.db_now() - timedelta(days=2),
+        closes_at=clock.db_now() - timedelta(minutes=5),
     )
     headers = auth_headers(client, admin)
 

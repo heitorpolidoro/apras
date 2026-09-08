@@ -3,6 +3,9 @@
 from typing import Annotated
 from uuid import UUID
 
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlmodel import Session
+
 from app.api import deps as api_deps
 from app.db import get_session
 from app.models.reservation import ReservableSpace
@@ -19,11 +22,10 @@ from app.services.reservation_service import (
     ReservableSpaceService,
     SpaceReservationService,
 )
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import Session
 
 spaces_router = APIRouter()
 reservations_router = APIRouter()
+
 
 def _require_space_write_permission(
     current_user: User, session: Session, permission: str
@@ -36,9 +38,7 @@ def _require_space_write_permission(
         )
 
 
-def _require_non_guest(
-    current_user: User, session: Session, permission: str
-) -> None:
+def _require_non_guest(current_user: User, session: Session, permission: str) -> None:
     """Raise 403 unless the caller holds this route's reservation permission."""
     if not api_deps.has_permission(current_user, session, permission):
         raise HTTPException(
@@ -52,21 +52,17 @@ def _require_non_guest(
 # ---------------------------------------------------------------------------
 
 
-@spaces_router.get("/", response_model=list[ReservableSpaceRead])
+@spaces_router.get("/")
 def list_reservable_spaces(
     session: Annotated[Session, Depends(get_session)],
-    current_user: Annotated[
-        User, Depends(api_deps.require_permission("spaces:read"))
-    ],
+    current_user: Annotated[User, Depends(api_deps.require_permission("spaces:read"))],
 ) -> list[ReservableSpaceRead]:
     """List active reservable spaces. Requires `spaces:read` (APRAS-51)."""
     _ = current_user
     return ReservableSpaceService.get_spaces(session=session)
 
 
-@spaces_router.post(
-    "/", response_model=ReservableSpaceRead, status_code=status.HTTP_201_CREATED
-)
+@spaces_router.post("/", status_code=status.HTTP_201_CREATED)
 def create_reservable_space(
     space_in: ReservableSpaceCreate,
     session: Annotated[Session, Depends(get_session)],
@@ -77,7 +73,7 @@ def create_reservable_space(
     return ReservableSpaceService.create_space(session=session, space_in=space_in)
 
 
-@spaces_router.patch("/{space_id}", response_model=ReservableSpaceRead)
+@spaces_router.patch("/{space_id}")
 def update_reservable_space(
     space_id: UUID,
     space_in: ReservableSpaceUpdate,
@@ -113,9 +109,7 @@ def deactivate_reservable_space(
 # ---------------------------------------------------------------------------
 
 
-@reservations_router.post(
-    "/", response_model=SpaceReservationRead, status_code=status.HTTP_201_CREATED
-)
+@reservations_router.post("/", status_code=status.HTTP_201_CREATED)
 def create_space_reservation(
     reservation_in: SpaceReservationCreate,
     session: Annotated[Session, Depends(get_session)],
@@ -131,7 +125,7 @@ def create_space_reservation(
     )
 
 
-@reservations_router.get("/", response_model=list[SpaceReservationRead])
+@reservations_router.get("/")
 def list_space_reservations(
     session: Annotated[Session, Depends(get_session)],
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
@@ -145,7 +139,7 @@ def list_space_reservations(
     )
 
 
-@reservations_router.get("/{reservation_id}", response_model=SpaceReservationRead)
+@reservations_router.get("/{reservation_id}")
 def get_space_reservation(
     reservation_id: UUID,
     session: Annotated[Session, Depends(get_session)],
@@ -158,9 +152,7 @@ def get_space_reservation(
     )
 
 
-@reservations_router.post(
-    "/{reservation_id}/approve", response_model=SpaceReservationRead
-)
+@reservations_router.post("/{reservation_id}/approve")
 def approve_space_reservation(
     reservation_id: UUID,
     session: Annotated[Session, Depends(get_session)],
@@ -179,9 +171,7 @@ def approve_space_reservation(
     )
 
 
-@reservations_router.post(
-    "/{reservation_id}/reject", response_model=SpaceReservationRead
-)
+@reservations_router.post("/{reservation_id}/reject")
 def reject_space_reservation(
     reservation_id: UUID,
     session: Annotated[Session, Depends(get_session)],
@@ -217,9 +207,7 @@ def reject_space_reservation(
     )
 
 
-@reservations_router.post(
-    "/{reservation_id}/cancel", response_model=SpaceReservationRead
-)
+@reservations_router.post("/{reservation_id}/cancel")
 def cancel_space_reservation(
     reservation_id: UUID,
     session: Annotated[Session, Depends(get_session)],

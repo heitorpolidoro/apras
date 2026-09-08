@@ -13,7 +13,10 @@ def test_task_create_validation():
 
     # Enums válidos
     import uuid
-    task = TaskCreate(title="Valid", priority=TaskPriority.HIGH, category_id=uuid.uuid4())
+
+    task = TaskCreate(
+        title="Valid", priority=TaskPriority.HIGH, category_id=uuid.uuid4()
+    )
     assert task.priority == "HIGH"
 
 

@@ -48,8 +48,8 @@ class TestListComments:
     def test_list_comments_returns_empty_list(
         self,
         client: TestClient,
-        admin_user: User,  # noqa: ARG002
-        normal_user: User,  # noqa: ARG002
+        admin_user: User,
+        normal_user: User,
         task_id: str,
     ):
         """Authenticated user gets an empty list when no comments exist."""
@@ -65,7 +65,7 @@ class TestListComments:
         self,
         client: TestClient,
         session: Session,
-        admin_user: User,  # noqa: ARG002
+        admin_user: User,
         normal_user: User,
         task_id: str,
     ):
@@ -91,7 +91,7 @@ class TestListComments:
     def test_list_comments_404_for_missing_task(
         self,
         client: TestClient,
-        admin_user: User,  # noqa: ARG002
+        admin_user: User,
     ):
         """Returns 404 when the task does not exist."""
         token = _login(client, "admin", "test_admin_password")
@@ -104,7 +104,7 @@ class TestListComments:
     def test_list_comments_requires_auth(
         self,
         client: TestClient,
-        admin_user: User,  # noqa: ARG002
+        admin_user: User,
         task_id: str,
     ):
         """Unauthenticated request is rejected."""
@@ -118,7 +118,7 @@ class TestCreateComment:
     def test_create_comment_succeeds(
         self,
         client: TestClient,
-        admin_user: User,  # noqa: ARG002
+        admin_user: User,
         normal_user: User,
         task_id: str,
     ):
@@ -137,7 +137,7 @@ class TestCreateComment:
     def test_create_comment_404_for_missing_task(
         self,
         client: TestClient,
-        admin_user: User,  # noqa: ARG002
+        admin_user: User,
     ):
         """Returns 404 when the task does not exist."""
         token = _login(client, "admin", "test_admin_password")
@@ -151,7 +151,7 @@ class TestCreateComment:
     def test_create_comment_requires_auth(
         self,
         client: TestClient,
-        admin_user: User,  # noqa: ARG002
+        admin_user: User,
         task_id: str,
     ):
         """Unauthenticated request is rejected."""
@@ -164,8 +164,8 @@ class TestCreateComment:
     def test_create_comment_empty_content_rejected(
         self,
         client: TestClient,
-        admin_user: User,  # noqa: ARG002
-        normal_user: User,  # noqa: ARG002
+        admin_user: User,
+        normal_user: User,
         task_id: str,
     ):
         """Empty content is rejected with a validation error."""
@@ -185,8 +185,8 @@ class TestUpdateComment:
     def comment_id_fixture(
         self,
         client: TestClient,
-        admin_user: User,  # noqa: ARG002
-        normal_user: User,  # noqa: ARG002
+        admin_user: User,
+        normal_user: User,
         task_id: str,
     ) -> str:
         """Create a comment as the director user and return its ID."""
@@ -202,8 +202,8 @@ class TestUpdateComment:
     def test_author_can_edit_comment(
         self,
         client: TestClient,
-        admin_user: User,  # noqa: ARG002
-        normal_user: User,  # noqa: ARG002
+        admin_user: User,
+        normal_user: User,
         task_id: str,
         comment_id: str,
     ):
@@ -220,8 +220,8 @@ class TestUpdateComment:
     def test_non_author_cannot_edit_comment(
         self,
         client: TestClient,
-        admin_user: User,  # noqa: ARG002
-        normal_user: User,  # noqa: ARG002
+        admin_user: User,
+        normal_user: User,
         task_id: str,
         comment_id: str,
     ):
@@ -237,9 +237,9 @@ class TestUpdateComment:
     def test_update_comment_404_for_missing_task(
         self,
         client: TestClient,
-        admin_user: User,  # noqa: ARG002
-        normal_user: User,  # noqa: ARG002
-        task_id: str,  # noqa: ARG002
+        admin_user: User,
+        normal_user: User,
+        task_id: str,
         comment_id: str,
     ):
         """Returns 404 when the task does not exist."""
@@ -254,8 +254,8 @@ class TestUpdateComment:
     def test_update_comment_404_for_missing_comment(
         self,
         client: TestClient,
-        admin_user: User,  # noqa: ARG002
-        normal_user: User,  # noqa: ARG002
+        admin_user: User,
+        normal_user: User,
         task_id: str,
     ):
         """Returns 404 when the comment does not exist."""
@@ -270,8 +270,8 @@ class TestUpdateComment:
     def test_update_comment_requires_auth(
         self,
         client: TestClient,
-        admin_user: User,  # noqa: ARG002
-        normal_user: User,  # noqa: ARG002
+        admin_user: User,
+        normal_user: User,
         task_id: str,
         comment_id: str,
     ):

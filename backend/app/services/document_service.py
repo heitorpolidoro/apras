@@ -1,11 +1,10 @@
 import json
-from datetime import datetime
 from uuid import UUID
 
 from sqlmodel import Session, func, select
 
 from app.api.deps import get_effective_role_ids, has_permission
-from app.core import tenant_context
+from app.core import clock, tenant_context
 from app.core.exceptions import (
     DocumentFolderNotFoundError,
     DocumentNotFoundError,
@@ -153,7 +152,7 @@ def get_folder_tree(session: Session, user: User) -> list[DocumentFolderTreeRead
         )
 
     root_folders: list[DocumentFolderTreeRead] = []
-    for f_id, folder_tree_node in folder_map.items():
+    for folder_tree_node in folder_map.values():
         p_id = folder_tree_node.parent_id
         if p_id and p_id in folder_map:
             folder_map[p_id].children.append(folder_tree_node)
@@ -180,8 +179,8 @@ def create_folder(
         description=folder_in.description,
         parent_id=folder_in.parent_id,
         allowed_role_ids_json=role_ids_json,
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
+        created_at=clock.db_now(),
+        updated_at=clock.db_now(),
     )
     session.add(folder)
     session.commit()
@@ -219,7 +218,9 @@ def update_folder(
         curr_id: UUID | None = folder_in.parent_id
         while curr_id:
             if curr_id == folder_id:
-                raise InvalidFolderHierarchyError("Cannot set descendant as parent folder")
+                raise InvalidFolderHierarchyError(
+                    "Cannot set descendant as parent folder"
+                )
             curr_obj = session.get(DocumentFolder, curr_id)
             curr_id = curr_obj.parent_id if curr_obj else None
 
@@ -233,7 +234,7 @@ def update_folder(
         _assert_role_ids_resolve(session, folder_in.allowed_role_ids)
         folder.allowed_role_ids_json = json.dumps(folder_in.allowed_role_ids)
 
-    folder.updated_at = datetime.utcnow()
+    folder.updated_at = clock.db_now()
     session.add(folder)
     session.commit()
     session.refresh(folder)
@@ -273,7 +274,9 @@ def delete_folder(session: Session, user: User, folder_id: UUID) -> None:
     session.commit()
 
 
-def _format_doc_read(session: Session, doc: AssociationDocument) -> AssociationDocumentRead:
+def _format_doc_read(
+    session: Session, doc: AssociationDocument
+) -> AssociationDocumentRead:
     tags = json.loads(doc.tags_json) if doc.tags_json else []
     folder = session.get(DocumentFolder, doc.folder_id)
     uploader = session.get(User, doc.uploaded_by_id)
@@ -348,9 +351,7 @@ def get_documents(
 
     # Pagination & sorting
     docs = session.exec(
-        query.order_by(AssociationDocument.created_at.desc())
-        .offset(skip)
-        .limit(limit)
+        query.order_by(AssociationDocument.created_at.desc()).offset(skip).limit(limit)
     ).all()
 
     items = [_format_doc_read(session, d) for d in docs]
@@ -380,8 +381,8 @@ def create_document(
         publication_month=doc_in.publication_month,
         tags_json=tags_json,
         uploaded_by_id=user.id,
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
+        created_at=clock.db_now(),
+        updated_at=clock.db_now(),
     )
     session.add(doc)
     session.commit()
@@ -402,9 +403,11 @@ def create_document_version(
     if not prev_doc:
         raise DocumentNotFoundError(doc_id)
 
-    title = version_in.title if version_in.title else prev_doc.title
+    title = version_in.title or prev_doc.title
     description = (
-        version_in.description if version_in.description is not None else prev_doc.description
+        version_in.description
+        if version_in.description is not None
+        else prev_doc.description
     )
     tags = (
         version_in.tags
@@ -426,8 +429,8 @@ def create_document_version(
         publication_month=prev_doc.publication_month,
         tags_json=tags_json,
         uploaded_by_id=user.id,
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
+        created_at=clock.db_now(),
+        updated_at=clock.db_now(),
     )
     session.add(new_doc)
     session.commit()
@@ -448,7 +451,7 @@ def log_download(session: Session, user: User, doc_id: UUID) -> str:
     log_entry = DocumentDownloadLog(
         document_id=doc.id,
         user_id=user.id,
-        downloaded_at=datetime.utcnow(),
+        downloaded_at=clock.db_now(),
     )
     session.add(log_entry)
     session.commit()

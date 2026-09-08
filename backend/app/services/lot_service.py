@@ -1,11 +1,11 @@
 """Service layer for Lot and UserLotLink management."""
 
-from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import func
 from sqlmodel import Session, select
 
+from app.core import clock
 from app.core.exceptions import (
     DomainError,
     LotAlreadyExistsError,
@@ -40,7 +40,7 @@ class LotService:
         limit: int = 100,
     ) -> tuple[list[Lot], int]:
         """List active lots with optional filtering and pagination."""
-        query = select(Lot).where(Lot.is_deleted == False)
+        query = select(Lot).where(Lot.is_deleted == False)  # noqa: E712  # SQLAlchemy column expression; `is True` does not compile to SQL
 
         if block:
             query = query.where(Lot.block == block)
@@ -52,7 +52,9 @@ class LotService:
         total = session.exec(count_query).one()
 
         # Paginated items
-        items_query = query.order_by(Lot.block, Lot.lot_number).offset(skip).limit(limit)
+        items_query = (
+            query.order_by(Lot.block, Lot.lot_number).offset(skip).limit(limit)
+        )
         items = list(session.exec(items_query).all())
 
         return items, total
@@ -64,15 +66,17 @@ class LotService:
             select(Lot).where(
                 Lot.block == lot_in.block,
                 Lot.lot_number == lot_in.lot_number,
-                Lot.is_deleted == False,
+                Lot.is_deleted == False,  # noqa: E712  # SQLAlchemy column expression; `is True` does not compile to SQL
             )
         ).first()
 
         if existing:
-            raise LotAlreadyExistsError(block=lot_in.block, lot_number=lot_in.lot_number)
+            raise LotAlreadyExistsError(
+                block=lot_in.block, lot_number=lot_in.lot_number
+            )
 
         db_lot = Lot.model_validate(lot_in)
-        now = datetime.utcnow()
+        now = clock.db_now()
         db_lot.created_at = now
         db_lot.updated_at = now
 
@@ -85,7 +89,7 @@ class LotService:
     def get_lot_by_id(session: Session, lot_id: UUID) -> Lot:
         """Retrieve an active lot by ID."""
         lot = session.exec(
-            select(Lot).where(Lot.id == lot_id, Lot.is_deleted == False)
+            select(Lot).where(Lot.id == lot_id, Lot.is_deleted == False)  # noqa: E712  # SQLAlchemy column expression; `is True` does not compile to SQL
         ).first()
 
         if not lot:
@@ -146,7 +150,7 @@ class LotService:
                     Lot.block == new_block,
                     Lot.lot_number == new_lot_number,
                     Lot.id != db_lot.id,
-                    Lot.is_deleted == False,
+                    Lot.is_deleted == False,  # noqa: E712  # SQLAlchemy column expression; `is True` does not compile to SQL
                 )
             ).first()
             if existing:
@@ -155,7 +159,7 @@ class LotService:
         for key, value in update_data.items():
             setattr(db_lot, key, value)
 
-        db_lot.updated_at = datetime.utcnow()
+        db_lot.updated_at = clock.db_now()
         session.add(db_lot)
         session.commit()
         session.refresh(db_lot)
@@ -165,14 +169,16 @@ class LotService:
     def delete_lot(session: Session, db_lot: Lot) -> Lot:
         """Soft-delete a lot."""
         db_lot.is_deleted = True
-        db_lot.updated_at = datetime.utcnow()
+        db_lot.updated_at = clock.db_now()
         session.add(db_lot)
         session.commit()
         session.refresh(db_lot)
         return db_lot
 
     @staticmethod
-    def link_user(session: Session, lot_id: UUID, link_in: UserLotLinkCreate) -> UserLotLink:
+    def link_user(
+        session: Session, lot_id: UUID, link_in: UserLotLinkCreate
+    ) -> UserLotLink:
         """Link a user to a lot."""
         db_lot = LotService.get_lot_by_id(session, lot_id)
 
@@ -197,14 +203,14 @@ class LotService:
             is_primary=link_in.is_primary,
             start_date=link_in.start_date,
             end_date=link_in.end_date,
-            created_at=datetime.utcnow(),
+            created_at=clock.db_now(),
         )
         session.add(db_link)
 
         # Auto-update status to OCCUPIED if lot was VACANT
         if db_lot.status == LotStatus.VACANT:
             db_lot.status = LotStatus.OCCUPIED
-            db_lot.updated_at = datetime.utcnow()
+            db_lot.updated_at = clock.db_now()
             session.add(db_lot)
 
         session.commit()
@@ -238,7 +244,7 @@ class LotService:
 
         if remaining_count == 0 and db_lot.status == LotStatus.OCCUPIED:
             db_lot.status = LotStatus.VACANT
-            db_lot.updated_at = datetime.utcnow()
+            db_lot.updated_at = clock.db_now()
             session.add(db_lot)
 
         session.commit()

@@ -141,6 +141,49 @@ jobs:
         cd backend
         uv run python scripts/assert_no_skips.py migration-test-results.xml
 
+  # Its own job, for the same reason `backend-migrations` is: it runs in
+  # parallel, `Backend Tests`'s duration is unchanged by construction, and
+  # "Backend Lint (ruff)" names the failure class before anyone opens a log.
+  # `sonarcloud`'s `needs:` is deliberately not extended -- this job feeds it
+  # no artefact.
+  backend-lint:
+    name: Backend Lint (ruff)
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v6
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v8.1.0
+      with:
+        enable-cache: false
+        pyproject-file: backend/pyproject.toml
+
+    - name: Set up Python 3.13
+      run: uv python install 3.13
+
+    - name: Install dependencies
+      run: |
+        cd backend
+        uv sync --all-groups
+
+    # Two commands, not one: `check` and `format` fail for different reasons
+    # and a reviewer should not have to read a log to tell which.
+    # `--output-format=github` annotates the finding on the diff.
+    # No `--exit-zero`, no `--fix`, no `continue-on-error`: any finding fails
+    # the job. `uv run` uses the version pinned in `pyproject.toml`, so the
+    # local and CI readings agree.
+    - name: ruff check
+      run: |
+        cd backend
+        uv run ruff check . --output-format=github
+
+    - name: ruff format --check
+      run: |
+        cd backend
+        uv run ruff format --check .
+
   frontend:
     name: Frontend Tests
     runs-on: ubuntu-latest

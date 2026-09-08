@@ -1,17 +1,22 @@
 """FastAPI application entry point."""
 
+import json
+from pathlib import Path
+
+from fastapi import FastAPI, Request, status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from slowapi.errors import RateLimitExceeded
+
 from app.api.v1.api import api_router
 from app.core.config import settings
 from app.core.exception_handlers import domain_exception_handler
 from app.core.exceptions import DomainError
 from app.core.limiter import limiter
-from fastapi import FastAPI, Request, status
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from slowapi.errors import RateLimitExceeded
 
 
-def rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:  # noqa: ARG001
+def rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:  # noqa: ARG001  # slowapi's handler signature is fixed; `request` is unused here
     """Handle rate limit exceeded errors."""
     return JSONResponse(
         status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -26,8 +31,6 @@ def get_origins() -> list[str]:
         return []
 
     if isinstance(raw_origins, str):
-        import json
-
         try:
             origins = json.loads(raw_origins)
         except json.JSONDecodeError:
@@ -58,10 +61,6 @@ app.add_middleware(
 
 app.include_router(api_router, prefix="/api/v1")
 
-
-from pathlib import Path
-from fastapi.staticfiles import StaticFiles
-
 uploads_dir = Path("static/uploads")
 try:
     uploads_dir.mkdir(parents=True, exist_ok=True)
@@ -71,7 +70,9 @@ except OSError:
     # must never fail on this — a crash here takes every route down.
     uploads_dir = None
 if uploads_dir is not None:
-    app.mount("/static/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
+    app.mount(
+        "/static/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads"
+    )
 
 
 @app.get("/")

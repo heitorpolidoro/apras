@@ -204,9 +204,7 @@ def test_update_and_delete_unknown_request_returns_404(
         headers=_headers(admin),
     )
     assert res.status_code == 404
-    res = client.delete(
-        f"/api/v1/purchase-requests/{unknown}", headers=_headers(admin)
-    )
+    res = client.delete(f"/api/v1/purchase-requests/{unknown}", headers=_headers(admin))
     assert res.status_code == 404
 
 

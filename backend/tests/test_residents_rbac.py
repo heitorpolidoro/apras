@@ -82,18 +82,45 @@ def test_list_residents_rbac(
     lot2 = LotService.create_lot(session, LotCreate(block="RBAC1", lot_number="2"))
 
     # Link guest_user to lot1 via UserLotLink
-    LotService.link_user(session, lot1.id, UserLotLink(user_id=guest_user.id, lot_id=lot1.id))
+    LotService.link_user(
+        session, lot1.id, UserLotLink(user_id=guest_user.id, lot_id=lot1.id)
+    )
 
     # Admin, Director, Manager -> 200 for any lot
-    assert client.get(f"/api/v1/lots/{lot1.id}/residents", headers=_auth_header(admin_user)).status_code == 200
-    assert client.get(f"/api/v1/lots/{lot1.id}/residents", headers=_auth_header(director_user)).status_code == 200
-    assert client.get(f"/api/v1/lots/{lot1.id}/residents", headers=_auth_header(manager_user)).status_code == 200
+    assert (
+        client.get(
+            f"/api/v1/lots/{lot1.id}/residents", headers=_auth_header(admin_user)
+        ).status_code
+        == 200
+    )
+    assert (
+        client.get(
+            f"/api/v1/lots/{lot1.id}/residents", headers=_auth_header(director_user)
+        ).status_code
+        == 200
+    )
+    assert (
+        client.get(
+            f"/api/v1/lots/{lot1.id}/residents", headers=_auth_header(manager_user)
+        ).status_code
+        == 200
+    )
 
     # User linked to lot1 can view lot1 residents
-    assert client.get(f"/api/v1/lots/{lot1.id}/residents", headers=_auth_header(guest_user)).status_code == 200
+    assert (
+        client.get(
+            f"/api/v1/lots/{lot1.id}/residents", headers=_auth_header(guest_user)
+        ).status_code
+        == 200
+    )
 
     # User linked to lot1 CANNOT view lot2 residents (403)
-    assert client.get(f"/api/v1/lots/{lot2.id}/residents", headers=_auth_header(guest_user)).status_code == 403
+    assert (
+        client.get(
+            f"/api/v1/lots/{lot2.id}/residents", headers=_auth_header(guest_user)
+        ).status_code
+        == 403
+    )
 
 
 def test_create_resident_rbac(
@@ -113,13 +140,31 @@ def test_create_resident_rbac(
     }
 
     # Manager -> Forbidden (403)
-    assert client.post(f"/api/v1/lots/{lot.id}/residents", json=payload, headers=_auth_header(manager_user)).status_code == 403
+    assert (
+        client.post(
+            f"/api/v1/lots/{lot.id}/residents",
+            json=payload,
+            headers=_auth_header(manager_user),
+        ).status_code
+        == 403
+    )
 
     # Guest -> Forbidden (403)
-    assert client.post(f"/api/v1/lots/{lot.id}/residents", json=payload, headers=_auth_header(guest_user)).status_code == 403
+    assert (
+        client.post(
+            f"/api/v1/lots/{lot.id}/residents",
+            json=payload,
+            headers=_auth_header(guest_user),
+        ).status_code
+        == 403
+    )
 
     # Director -> Allowed (201)
-    res_dir = client.post(f"/api/v1/lots/{lot.id}/residents", json=payload, headers=_auth_header(director_user))
+    res_dir = client.post(
+        f"/api/v1/lots/{lot.id}/residents",
+        json=payload,
+        headers=_auth_header(director_user),
+    )
     assert res_dir.status_code == 201
 
     # Admin -> Allowed (201)
@@ -128,7 +173,11 @@ def test_create_resident_rbac(
         "cpf": "11144477735",
         "relationship_type": "CONJUGE",
     }
-    res_adm = client.post(f"/api/v1/lots/{lot.id}/residents", json=payload_adm, headers=_auth_header(admin_user))
+    res_adm = client.post(
+        f"/api/v1/lots/{lot.id}/residents",
+        json=payload_adm,
+        headers=_auth_header(admin_user),
+    )
     assert res_adm.status_code == 201
 
 
@@ -144,16 +193,40 @@ def test_get_resident_detail_rbac(
     resident = ResidentService.create_resident(
         session,
         lot.id,
-        ResidentCreate(full_name="Resident Detail", cpf="52998224725", relationship_type=ResidentRelationship.TITULAR),
+        ResidentCreate(
+            full_name="Resident Detail",
+            cpf="52998224725",
+            relationship_type=ResidentRelationship.TITULAR,
+        ),
     )
 
     # Admin, Director, Manager -> 200
-    assert client.get(f"/api/v1/residents/{resident.id}", headers=_auth_header(admin_user)).status_code == 200
-    assert client.get(f"/api/v1/residents/{resident.id}", headers=_auth_header(director_user)).status_code == 200
-    assert client.get(f"/api/v1/residents/{resident.id}", headers=_auth_header(manager_user)).status_code == 200
+    assert (
+        client.get(
+            f"/api/v1/residents/{resident.id}", headers=_auth_header(admin_user)
+        ).status_code
+        == 200
+    )
+    assert (
+        client.get(
+            f"/api/v1/residents/{resident.id}", headers=_auth_header(director_user)
+        ).status_code
+        == 200
+    )
+    assert (
+        client.get(
+            f"/api/v1/residents/{resident.id}", headers=_auth_header(manager_user)
+        ).status_code
+        == 200
+    )
 
     # Unlinked guest -> 403
-    assert client.get(f"/api/v1/residents/{resident.id}", headers=_auth_header(guest_user)).status_code == 403
+    assert (
+        client.get(
+            f"/api/v1/residents/{resident.id}", headers=_auth_header(guest_user)
+        ).status_code
+        == 403
+    )
 
 
 def test_update_and_delete_resident_rbac(
@@ -168,24 +241,64 @@ def test_update_and_delete_resident_rbac(
     resident = ResidentService.create_resident(
         session,
         lot.id,
-        ResidentCreate(full_name="Resident Update", cpf="52998224725", relationship_type=ResidentRelationship.TITULAR),
+        ResidentCreate(
+            full_name="Resident Update",
+            cpf="52998224725",
+            relationship_type=ResidentRelationship.TITULAR,
+        ),
     )
 
     update_payload = {"full_name": "Resident Updated Name"}
 
     # Manager -> 403
-    assert client.put(f"/api/v1/residents/{resident.id}", json=update_payload, headers=_auth_header(manager_user)).status_code == 403
-    assert client.delete(f"/api/v1/residents/{resident.id}", headers=_auth_header(manager_user)).status_code == 403
+    assert (
+        client.put(
+            f"/api/v1/residents/{resident.id}",
+            json=update_payload,
+            headers=_auth_header(manager_user),
+        ).status_code
+        == 403
+    )
+    assert (
+        client.delete(
+            f"/api/v1/residents/{resident.id}", headers=_auth_header(manager_user)
+        ).status_code
+        == 403
+    )
 
     # Guest -> 403
-    assert client.put(f"/api/v1/residents/{resident.id}", json=update_payload, headers=_auth_header(guest_user)).status_code == 403
-    assert client.delete(f"/api/v1/residents/{resident.id}", headers=_auth_header(guest_user)).status_code == 403
+    assert (
+        client.put(
+            f"/api/v1/residents/{resident.id}",
+            json=update_payload,
+            headers=_auth_header(guest_user),
+        ).status_code
+        == 403
+    )
+    assert (
+        client.delete(
+            f"/api/v1/residents/{resident.id}", headers=_auth_header(guest_user)
+        ).status_code
+        == 403
+    )
 
     # Director -> 200 (update)
-    assert client.put(f"/api/v1/residents/{resident.id}", json=update_payload, headers=_auth_header(director_user)).status_code == 200
+    assert (
+        client.put(
+            f"/api/v1/residents/{resident.id}",
+            json=update_payload,
+            headers=_auth_header(director_user),
+        ).status_code
+        == 200
+    )
 
     # Admin -> 204 (delete)
-    assert client.delete(f"/api/v1/residents/{resident.id}", headers=_auth_header(admin_user)).status_code == 204
+    assert (
+        client.delete(
+            f"/api/v1/residents/{resident.id}", headers=_auth_header(admin_user)
+        ).status_code
+        == 204
+    )
 
 
 def test_link_and_unlink_user_rbac(
@@ -200,17 +313,47 @@ def test_link_and_unlink_user_rbac(
     resident = ResidentService.create_resident(
         session,
         lot.id,
-        ResidentCreate(full_name="Resident Link", cpf="52998224725", relationship_type=ResidentRelationship.TITULAR),
+        ResidentCreate(
+            full_name="Resident Link",
+            cpf="52998224725",
+            relationship_type=ResidentRelationship.TITULAR,
+        ),
     )
 
     link_payload = {"user_id": str(guest_user.id)}
 
     # Manager -> 403
-    assert client.post(f"/api/v1/residents/{resident.id}/link-user", json=link_payload, headers=_auth_header(manager_user)).status_code == 403
-    assert client.post(f"/api/v1/residents/{resident.id}/unlink-user", headers=_auth_header(manager_user)).status_code == 403
+    assert (
+        client.post(
+            f"/api/v1/residents/{resident.id}/link-user",
+            json=link_payload,
+            headers=_auth_header(manager_user),
+        ).status_code
+        == 403
+    )
+    assert (
+        client.post(
+            f"/api/v1/residents/{resident.id}/unlink-user",
+            headers=_auth_header(manager_user),
+        ).status_code
+        == 403
+    )
 
     # Director -> 200 (link)
-    assert client.post(f"/api/v1/residents/{resident.id}/link-user", json=link_payload, headers=_auth_header(director_user)).status_code == 200
+    assert (
+        client.post(
+            f"/api/v1/residents/{resident.id}/link-user",
+            json=link_payload,
+            headers=_auth_header(director_user),
+        ).status_code
+        == 200
+    )
 
     # Admin -> 200 (unlink)
-    assert client.post(f"/api/v1/residents/{resident.id}/unlink-user", headers=_auth_header(admin_user)).status_code == 200
+    assert (
+        client.post(
+            f"/api/v1/residents/{resident.id}/unlink-user",
+            headers=_auth_header(admin_user),
+        ).status_code
+        == 200
+    )

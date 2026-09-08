@@ -61,7 +61,7 @@ def main(argv):
         return 1
 
     try:
-        tree = ET.parse(path)  # noqa: S314
+        tree = ET.parse(path)  # noqa: S314  # our own pytest JUnit output, not untrusted input
     except ET.ParseError as exc:
         print(f"FAIL: {path} could not be parsed as JUnit XML ({exc}).")
         return 1

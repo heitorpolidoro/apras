@@ -12,10 +12,7 @@ from uuid import UUID, uuid4
 from sqlalchemy import JSON, Column
 from sqlmodel import Field, SQLModel
 
-
-def _now() -> datetime:
-    """Naive UTC now, exactly as every other model in this package writes it."""
-    return datetime.utcnow()  # noqa: DTZ003
+from app.core import clock
 
 
 class Plan(SQLModel, table=True):
@@ -63,5 +60,5 @@ class Plan(SQLModel, table=True):
     #: tenant is subscribed to must not vanish, and
     #: `tenant_subscription.plan_id` is ON DELETE RESTRICT.
     is_active: bool = Field(default=True, nullable=False)
-    created_at: datetime = Field(default_factory=_now, nullable=False)
-    updated_at: datetime = Field(default_factory=_now, nullable=False)
+    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)

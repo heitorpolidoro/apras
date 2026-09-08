@@ -37,7 +37,9 @@ class LotAlreadyExistsError(DomainError):
     """Raised when a lot with given block and lot_number already exists."""
 
     def __init__(self, block: str, lot_number: str) -> None:
-        super().__init__(f"Lot with block '{block}' and lot number '{lot_number}' already exists")
+        super().__init__(
+            f"Lot with block '{block}' and lot number '{lot_number}' already exists"
+        )
 
 
 class UserLotLinkAlreadyExistsError(DomainError):
@@ -64,7 +66,9 @@ class ResidentNotFoundError(DomainError):
 class ResidentAlreadyLinkedError(DomainError):
     """Raised when a resident is already linked to a user account."""
 
-    def __init__(self, message: str = "Resident is already linked to a user account") -> None:
+    def __init__(
+        self, message: str = "Resident is already linked to a user account"
+    ) -> None:
         super().__init__(message)
 
 
@@ -221,7 +225,9 @@ class UnknownRoleIdsError(DomainError):
 class InvalidFolderHierarchyError(DomainError):
     """Raised when folder hierarchy is invalid or folder is not empty upon deletion."""
 
-    def __init__(self, message: str = "Invalid folder operation or folder hierarchy") -> None:
+    def __init__(
+        self, message: str = "Invalid folder operation or folder hierarchy"
+    ) -> None:
         super().__init__(message)
 
 
@@ -239,7 +245,9 @@ class MediaAssetNotFoundError(DomainError):
 class PhotoFileTooLargeError(DomainError):
     """Raised when uploaded photo file exceeds 5MB limit."""
 
-    def __init__(self, message: str = "Arquivo excede o limite máximo permitido de 5MB.") -> None:
+    def __init__(
+        self, message: str = "Arquivo excede o limite máximo permitido de 5MB."
+    ) -> None:
         super().__init__(message)
 
 
@@ -249,7 +257,10 @@ ImageSizeExceededError = PhotoFileTooLargeError
 class InvalidPhotoFormatError(DomainError):
     """Raised when uploaded photo file has invalid MIME type or corrupted binary."""
 
-    def __init__(self, message: str = "Formato de imagem inválido. Formatos aceitos: JPEG, PNG, WebP.") -> None:
+    def __init__(
+        self,
+        message: str = "Formato de imagem inválido. Formatos aceitos: JPEG, PNG, WebP.",
+    ) -> None:
         super().__init__(message)
 
 
@@ -259,7 +270,10 @@ InvalidImageFormatError = InvalidPhotoFormatError
 class PhotoApprovalPermissionError(DomainError):
     """Raised when user lacks permission to approve or reject photos."""
 
-    def __init__(self, message: str = "Apenas Administradores e Diretores podem aprovar ou rejeitar fotos.") -> None:
+    def __init__(
+        self,
+        message: str = "Apenas Administradores e Diretores podem aprovar ou rejeitar fotos.",
+    ) -> None:
         super().__init__(message)
 
 
@@ -297,7 +311,9 @@ class DuplicateDeviceNameError(DomainError):
 class InvalidDeviceKeyError(DomainError):
     """Raised when a webhook call presents a missing or unknown device key."""
 
-    def __init__(self, message: str = "Chave de dispositivo inválida ou ausente.") -> None:
+    def __init__(
+        self, message: str = "Chave de dispositivo inválida ou ausente."
+    ) -> None:
         super().__init__(message)
 
 
@@ -315,7 +331,11 @@ class ProjectNotFoundError(DomainError):
     """Raised when a construction project is not found."""
 
     def __init__(self, project_id: UUID | str = "") -> None:
-        msg = f"Projeto de obra {project_id} não encontrado." if project_id else "Projeto de obra não encontrado."
+        msg = (
+            f"Projeto de obra {project_id} não encontrado."
+            if project_id
+            else "Projeto de obra não encontrado."
+        )
         super().__init__(msg)
 
 
@@ -323,7 +343,11 @@ class MilestoneNotFoundError(DomainError):
     """Raised when a milestone is not found."""
 
     def __init__(self, milestone_id: UUID | str = "") -> None:
-        msg = f"Marco da obra {milestone_id} não encontrado." if milestone_id else "Marco da obra não encontrado."
+        msg = (
+            f"Marco da obra {milestone_id} não encontrado."
+            if milestone_id
+            else "Marco da obra não encontrado."
+        )
         super().__init__(msg)
 
 
@@ -331,7 +355,11 @@ class ProjectUpdateNotFoundError(DomainError):
     """Raised when a project update log is not found."""
 
     def __init__(self, update_id: UUID | str = "") -> None:
-        msg = f"Atualização de obra {update_id} não encontrada." if update_id else "Atualização de obra não encontrada."
+        msg = (
+            f"Atualização de obra {update_id} não encontrada."
+            if update_id
+            else "Atualização de obra não encontrada."
+        )
         super().__init__(msg)
 
 
@@ -348,7 +376,10 @@ ProjectPermissionError = ProjectAccessForbiddenError
 class ProjectInvalidProgressError(DomainError):
     """Raised when progress percentage or budget configuration is invalid."""
 
-    def __init__(self, message: str = "Porcentagem de progresso inválida (deve estar entre 0% e 100%).") -> None:
+    def __init__(
+        self,
+        message: str = "Porcentagem de progresso inválida (deve estar entre 0% e 100%).",
+    ) -> None:
         super().__init__(message)
 
 
@@ -369,7 +400,9 @@ class AnnouncementCommentNotFoundError(DomainError):
 
     def __init__(self, comment_id: UUID | str = "") -> None:
         msg = (
-            f"Comentário {comment_id} não encontrado." if comment_id else "Comentário não encontrado."
+            f"Comentário {comment_id} não encontrado."
+            if comment_id
+            else "Comentário não encontrado."
         )
         super().__init__(msg)
 
@@ -378,7 +411,9 @@ class AnnouncementMediaNotFoundError(DomainError):
     """Raised when an announcement media item is not found."""
 
     def __init__(self, media_id: UUID | str = "") -> None:
-        msg = f"Mídia {media_id} não encontrada." if media_id else "Mídia não encontrada."
+        msg = (
+            f"Mídia {media_id} não encontrada." if media_id else "Mídia não encontrada."
+        )
         super().__init__(msg)
 
 
@@ -386,7 +421,8 @@ class AnnouncementPermissionError(DomainError):
     """Raised when a user lacks permission for an announcement action."""
 
     def __init__(
-        self, message: str = "Apenas Administradores e Diretores podem publicar comunicados."
+        self,
+        message: str = "Apenas Administradores e Diretores podem publicar comunicados.",
     ) -> None:
         super().__init__(message)
 
@@ -479,9 +515,7 @@ class FinancialTransactionNotFoundError(DomainError):
 class FinanceAccessForbiddenError(DomainError):
     """Raised when access to a finance module action is forbidden."""
 
-    def __init__(
-        self, message: str = "Acesso ao módulo financeiro negado."
-    ) -> None:
+    def __init__(self, message: str = "Acesso ao módulo financeiro negado.") -> None:
         super().__init__(message)
 
 
@@ -529,14 +563,20 @@ class PackageNotFoundError(DomainError):
     """Raised when a package is not found."""
 
     def __init__(self, package_id: UUID | str = "") -> None:
-        msg = f"Encomenda {package_id} não encontrada." if package_id else "Encomenda não encontrada."
+        msg = (
+            f"Encomenda {package_id} não encontrada."
+            if package_id
+            else "Encomenda não encontrada."
+        )
         super().__init__(msg)
 
 
 class PackageAccessForbiddenError(DomainError):
     """Raised when access to a package or lot's packages is forbidden."""
 
-    def __init__(self, message: str = "Acesso negado às encomendas deste lote.") -> None:
+    def __init__(
+        self, message: str = "Acesso negado às encomendas deste lote."
+    ) -> None:
         super().__init__(message)
 
 
@@ -545,12 +585,6 @@ class PackageAlreadyPickedUpError(DomainError):
 
     def __init__(self, message: str = "Esta encomenda já foi retirada.") -> None:
         super().__init__(message)
-
-
-
-
-
-
 
 
 class AssemblyNotFoundError(DomainError):
@@ -604,7 +638,9 @@ class VoteNotFoundError(DomainError):
 
     def __init__(self, vote_id: UUID | str = "") -> None:
         msg = (
-            f"Votação {vote_id} não encontrada." if vote_id else "Votação não encontrada."
+            f"Votação {vote_id} não encontrada."
+            if vote_id
+            else "Votação não encontrada."
         )
         super().__init__(msg)
 
@@ -691,9 +727,7 @@ class LotAlreadyVotedError(DomainError):
 class NoActiveBallotError(DomainError):
     """Raised when retracting without an active ballot to retract."""
 
-    def __init__(
-        self, message: str = "Não há cédula ativa para retirar."
-    ) -> None:
+    def __init__(self, message: str = "Não há cédula ativa para retirar.") -> None:
         super().__init__(message)
 
 
@@ -701,7 +735,9 @@ class AssetNotFoundError(DomainError):
     """Raised when an asset is not found."""
 
     def __init__(self, asset_id: UUID | str = "") -> None:
-        msg = f"Ativo {asset_id} não encontrado." if asset_id else "Ativo não encontrado."
+        msg = (
+            f"Ativo {asset_id} não encontrado." if asset_id else "Ativo não encontrado."
+        )
         super().__init__(msg)
 
 
@@ -715,7 +751,9 @@ class InsufficientStockError(DomainError):
 class AssetAccessForbiddenError(DomainError):
     """Raised when access to an asset or inventory action is forbidden."""
 
-    def __init__(self, message: str = "Acesso ao ativo ou movimentação negado.") -> None:
+    def __init__(
+        self, message: str = "Acesso ao ativo ou movimentação negado."
+    ) -> None:
         super().__init__(message)
 
 
@@ -723,7 +761,9 @@ class AssetTagAlreadyExistsError(DomainError):
     """Raised when an asset tag is already in use."""
 
     def __init__(self, asset_tag: str) -> None:
-        super().__init__(f"Já existe um ativo com a etiqueta patrimonial '{asset_tag}'.")
+        super().__init__(
+            f"Já existe um ativo com a etiqueta patrimonial '{asset_tag}'."
+        )
 
 
 class PurchaseRequestNotFoundError(DomainError):
@@ -753,18 +793,14 @@ class PurchaseQuoteNotFoundError(DomainError):
 class PurchaseAccessForbiddenError(DomainError):
     """Raised when a role or ownership rule blocks a purchase action."""
 
-    def __init__(
-        self, message: str = "Acesso à cotação de compras negado."
-    ) -> None:
+    def __init__(self, message: str = "Acesso à cotação de compras negado.") -> None:
         super().__init__(message)
 
 
 class PurchaseRequestNotOpenError(DomainError):
     """Raised when an action requires a purchase request that is still open."""
 
-    def __init__(
-        self, message: str = "O pedido de compra não está aberto."
-    ) -> None:
+    def __init__(self, message: str = "O pedido de compra não está aberto.") -> None:
         super().__init__(message)
 
 
@@ -860,9 +896,7 @@ class CrossTenantWriteError(DomainError):
     """
 
     def __init__(self, model_name: str) -> None:
-        super().__init__(
-            f"Cannot write a {model_name} belonging to another tenant"
-        )
+        super().__init__(f"Cannot write a {model_name} belonging to another tenant")
 
 
 class TenantScopeNotResolvedError(RuntimeError):
@@ -877,9 +911,7 @@ class TenantScopeNotResolvedError(RuntimeError):
     """
 
     def __init__(self, model_name: str) -> None:
-        super().__init__(
-            f"Tenant scope was not resolved before querying {model_name}"
-        )
+        super().__init__(f"Tenant scope was not resolved before querying {model_name}")
 
 
 # ---------------------------------------------------------------------------
@@ -960,8 +992,7 @@ class InvalidModulePriceError(DomainError):
 
     def __init__(self, modules: list[str]) -> None:
         super().__init__(
-            "Priced modules must be included in the plan: "
-            + ", ".join(sorted(modules))
+            "Priced modules must be included in the plan: " + ", ".join(sorted(modules))
         )
 
 

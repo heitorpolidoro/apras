@@ -31,7 +31,9 @@ router = APIRouter()
 def list_purchase_requests(
     session: Annotated[Session, Depends(deps.get_session)],
     current_user: Annotated[User, Depends(deps.get_current_user)],
-    status_filter: Annotated[PurchaseRequestStatus | None, Query(alias="status")] = None,
+    status_filter: Annotated[
+        PurchaseRequestStatus | None, Query(alias="status")
+    ] = None,
     requested_by_id: Annotated[UUID | None, Query()] = None,
     search: Annotated[str | None, Query()] = None,
     skip: Annotated[int, Query(ge=0)] = 0,

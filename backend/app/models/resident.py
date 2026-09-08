@@ -6,6 +6,7 @@ from uuid import UUID, uuid4
 
 from sqlmodel import Field, Relationship, SQLModel
 
+from app.core import clock
 
 from .enums import ResidentRelationship
 from .tenant import tenant_id_field
@@ -27,7 +28,11 @@ class Resident(SQLModel, table=True):
         foreign_key="lot.id", ondelete="CASCADE", nullable=False, index=True
     )
     user_id: UUID | None = Field(
-        default=None, foreign_key="user.id", ondelete="SET NULL", nullable=True, index=True
+        default=None,
+        foreign_key="user.id",
+        ondelete="SET NULL",
+        nullable=True,
+        index=True,
     )
     full_name: str = Field(nullable=False)
     cpf: str = Field(index=True, nullable=False)
@@ -40,10 +45,9 @@ class Resident(SQLModel, table=True):
     )
     is_active: bool = Field(default=True, nullable=False)
     notes: str | None = Field(default=None)
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
-    updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
 
     # Relationships
     lot: "Lot" = Relationship(back_populates="residents")
     user: Optional["User"] = Relationship(back_populates="residents")
-

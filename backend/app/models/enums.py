@@ -227,11 +227,6 @@ class PackageStatus(StrEnum):
     PICKED_UP = "PICKED_UP"
 
 
-
-
-
-
-
 class AssemblyType(StrEnum):
     """Enumeration for assembly type."""
 

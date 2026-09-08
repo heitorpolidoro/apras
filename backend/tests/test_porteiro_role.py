@@ -75,9 +75,14 @@ def test_porteiro_can_read_lots_but_not_write(
     lot = LotService.create_lot(session, LotCreate(block="P1", lot_number="01"))
 
     # PORTEIRO can list and read lot detail (required for GatekeeperDashboard).
-    assert client.get("/api/v1/lots/", headers=_auth_header(porteiro_user)).status_code == 200
     assert (
-        client.get(f"/api/v1/lots/{lot.id}", headers=_auth_header(porteiro_user)).status_code
+        client.get("/api/v1/lots/", headers=_auth_header(porteiro_user)).status_code
+        == 200
+    )
+    assert (
+        client.get(
+            f"/api/v1/lots/{lot.id}", headers=_auth_header(porteiro_user)
+        ).status_code
         == 200
     )
 
@@ -99,12 +104,16 @@ def test_porteiro_can_read_lots_but_not_write(
         == 403
     )
     assert (
-        client.delete(f"/api/v1/lots/{lot.id}", headers=_auth_header(porteiro_user)).status_code
+        client.delete(
+            f"/api/v1/lots/{lot.id}", headers=_auth_header(porteiro_user)
+        ).status_code
         == 403
     )
 
     # Regression: ADMINISTRATOR keeps full read+write access.
-    assert client.get("/api/v1/lots/", headers=_auth_header(admin_user)).status_code == 200
+    assert (
+        client.get("/api/v1/lots/", headers=_auth_header(admin_user)).status_code == 200
+    )
     assert (
         client.post(
             "/api/v1/lots/",
@@ -124,7 +133,9 @@ def test_porteiro_can_check_in_and_check_out(
     client: TestClient, session: Session, porteiro_user: User, admin_user: User
 ):
     lot = LotService.create_lot(session, LotCreate(block="P2", lot_number="01"))
-    visitor = VisitorService.create_visitor(session, VisitorCreate(full_name="Visitante Porteiro"))
+    visitor = VisitorService.create_visitor(
+        session, VisitorCreate(full_name="Visitante Porteiro")
+    )
     auth = VisitorService.create_authorization(
         session,
         lot.id,
@@ -139,7 +150,11 @@ def test_porteiro_can_check_in_and_check_out(
 
     res_in = client.post(
         "/api/v1/access-logs/check-in",
-        json={"visitor_id": str(visitor.id), "lot_id": str(lot.id), "authorization_id": str(auth.id)},
+        json={
+            "visitor_id": str(visitor.id),
+            "lot_id": str(lot.id),
+            "authorization_id": str(auth.id),
+        },
         headers=_auth_header(porteiro_user),
     )
     assert res_in.status_code == 201
@@ -153,7 +168,9 @@ def test_porteiro_can_check_in_and_check_out(
     assert res_out.status_code == 200
 
     # Regression: ADMINISTRATOR/DIRECTOR/MANAGER retain unchanged access.
-    visitor2 = VisitorService.create_visitor(session, VisitorCreate(full_name="Visitante Admin"))
+    visitor2 = VisitorService.create_visitor(
+        session, VisitorCreate(full_name="Visitante Admin")
+    )
     auth2 = VisitorService.create_authorization(
         session,
         lot.id,
@@ -207,12 +224,17 @@ def test_porteiro_forbidden_on_all_occurrence_handlers(
     }
 
     # Regression: normal_user (DIRECTOR) can still create/list/get/update/note.
-    create_res = client.post("/api/v1/occurrences", json=payload, headers=headers_normal)
+    create_res = client.post(
+        "/api/v1/occurrences", json=payload, headers=headers_normal
+    )
     assert create_res.status_code == 201
     occ_id = create_res.json()["id"]
 
     assert client.get("/api/v1/occurrences", headers=headers_normal).status_code == 200
-    assert client.get(f"/api/v1/occurrences/{occ_id}", headers=headers_normal).status_code == 200
+    assert (
+        client.get(f"/api/v1/occurrences/{occ_id}", headers=headers_normal).status_code
+        == 200
+    )
     assert (
         client.put(
             f"/api/v1/occurrences/{occ_id}/status",
@@ -231,9 +253,21 @@ def test_porteiro_forbidden_on_all_occurrence_handlers(
     )
 
     # PORTEIRO forbidden on every handler.
-    assert client.get("/api/v1/occurrences", headers=headers_porteiro).status_code == 403
-    assert client.post("/api/v1/occurrences", json=payload, headers=headers_porteiro).status_code == 403
-    assert client.get(f"/api/v1/occurrences/{occ_id}", headers=headers_porteiro).status_code == 403
+    assert (
+        client.get("/api/v1/occurrences", headers=headers_porteiro).status_code == 403
+    )
+    assert (
+        client.post(
+            "/api/v1/occurrences", json=payload, headers=headers_porteiro
+        ).status_code
+        == 403
+    )
+    assert (
+        client.get(
+            f"/api/v1/occurrences/{occ_id}", headers=headers_porteiro
+        ).status_code
+        == 403
+    )
     assert (
         client.put(
             f"/api/v1/occurrences/{occ_id}/status",
@@ -265,12 +299,17 @@ def test_porteiro_forbidden_on_all_document_handlers(
 
     # Regression: admin_user (ADMINISTRATOR) can still do everything.
     folder_res = client.post(
-        "/api/v1/documents/folders", json={"name": "Pasta Regressao", "allowed_role_ids": []}, headers=headers_admin
+        "/api/v1/documents/folders",
+        json={"name": "Pasta Regressao", "allowed_role_ids": []},
+        headers=headers_admin,
     )
     assert folder_res.status_code == 201
     folder_id = folder_res.json()["id"]
 
-    assert client.get("/api/v1/documents/folders", headers=headers_admin).status_code == 200
+    assert (
+        client.get("/api/v1/documents/folders", headers=headers_admin).status_code
+        == 200
+    )
     assert (
         client.put(
             f"/api/v1/documents/folders/{folder_id}",
@@ -296,24 +335,36 @@ def test_porteiro_forbidden_on_all_document_handlers(
     assert client.get("/api/v1/documents", headers=headers_admin).status_code == 200
     version_res = client.post(
         f"/api/v1/documents/{doc_id}/versions",
-        json={"file_url": "https://storage.example.com/docs/reg_v2.pdf", "file_size_bytes": 120},
+        json={
+            "file_url": "https://storage.example.com/docs/reg_v2.pdf",
+            "file_size_bytes": 120,
+        },
         headers=headers_admin,
     )
     assert version_res.status_code == 201
     assert (
-        client.post(f"/api/v1/documents/{doc_id}/download", headers=headers_admin).status_code
+        client.post(
+            f"/api/v1/documents/{doc_id}/download", headers=headers_admin
+        ).status_code
         == 200
     )
-    assert client.delete(f"/api/v1/documents/{doc_id}", headers=headers_admin).status_code == 204
     assert (
-        client.delete(f"/api/v1/documents/folders/{folder_id}", headers=headers_admin).status_code
+        client.delete(f"/api/v1/documents/{doc_id}", headers=headers_admin).status_code
+        == 204
+    )
+    assert (
+        client.delete(
+            f"/api/v1/documents/folders/{folder_id}", headers=headers_admin
+        ).status_code
         == 204
     )
 
     # PORTEIRO forbidden on every handler. Build a fresh folder/document
     # (as admin) so each PORTEIRO call exercises the real guard, not a 404.
     folder2 = client.post(
-        "/api/v1/documents/folders", json={"name": "Pasta Porteiro", "allowed_role_ids": []}, headers=headers_admin
+        "/api/v1/documents/folders",
+        json={"name": "Pasta Porteiro", "allowed_role_ids": []},
+        headers=headers_admin,
     ).json()
     doc2 = client.post(
         "/api/v1/documents",
@@ -326,10 +377,15 @@ def test_porteiro_forbidden_on_all_document_handlers(
         headers=headers_admin,
     ).json()
 
-    assert client.get("/api/v1/documents/folders", headers=headers_porteiro).status_code == 403
+    assert (
+        client.get("/api/v1/documents/folders", headers=headers_porteiro).status_code
+        == 403
+    )
     assert (
         client.post(
-            "/api/v1/documents/folders", json={"name": "X", "allowed_role_ids": []}, headers=headers_porteiro
+            "/api/v1/documents/folders",
+            json={"name": "X", "allowed_role_ids": []},
+            headers=headers_porteiro,
         ).status_code
         == 403
     )
@@ -358,17 +414,25 @@ def test_porteiro_forbidden_on_all_document_handlers(
     assert (
         client.post(
             f"/api/v1/documents/{doc2['id']}/versions",
-            json={"file_url": "https://storage.example.com/docs/x2.pdf", "file_size_bytes": 10},
+            json={
+                "file_url": "https://storage.example.com/docs/x2.pdf",
+                "file_size_bytes": 10,
+            },
             headers=headers_porteiro,
         ).status_code
         == 403
     )
     assert (
-        client.post(f"/api/v1/documents/{doc2['id']}/download", headers=headers_porteiro).status_code
+        client.post(
+            f"/api/v1/documents/{doc2['id']}/download", headers=headers_porteiro
+        ).status_code
         == 403
     )
     assert (
-        client.delete(f"/api/v1/documents/{doc2['id']}", headers=headers_porteiro).status_code == 403
+        client.delete(
+            f"/api/v1/documents/{doc2['id']}", headers=headers_porteiro
+        ).status_code
+        == 403
     )
     assert (
         client.delete(
@@ -400,7 +464,10 @@ def test_porteiro_forbidden_on_all_announcement_handlers(
     ann_id = created.json()["id"]
 
     assert client.get("/api/v1/announcements", headers=headers_admin).status_code == 200
-    assert client.get(f"/api/v1/announcements/{ann_id}", headers=headers_admin).status_code == 200
+    assert (
+        client.get(f"/api/v1/announcements/{ann_id}", headers=headers_admin).status_code
+        == 200
+    )
     assert (
         client.put(
             f"/api/v1/announcements/{ann_id}",
@@ -422,7 +489,12 @@ def test_porteiro_forbidden_on_all_announcement_handlers(
         ).status_code
         == 204
     )
-    assert client.get(f"/api/v1/announcements/{ann_id}/comments", headers=headers_admin).status_code == 200
+    assert (
+        client.get(
+            f"/api/v1/announcements/{ann_id}/comments", headers=headers_admin
+        ).status_code
+        == 200
+    )
     comment = client.post(
         f"/api/v1/announcements/{ann_id}/comments",
         json={"content": "Comentario"},
@@ -436,12 +508,24 @@ def test_porteiro_forbidden_on_all_announcement_handlers(
         ).status_code
         == 204
     )
-    assert client.post(f"/api/v1/announcements/{ann_id}/read", headers=headers_admin).status_code == 200
     assert (
-        client.get(f"/api/v1/announcements/{ann_id}/read-receipts", headers=headers_admin).status_code
+        client.post(
+            f"/api/v1/announcements/{ann_id}/read", headers=headers_admin
+        ).status_code
         == 200
     )
-    assert client.delete(f"/api/v1/announcements/{ann_id}", headers=headers_admin).status_code == 204
+    assert (
+        client.get(
+            f"/api/v1/announcements/{ann_id}/read-receipts", headers=headers_admin
+        ).status_code
+        == 200
+    )
+    assert (
+        client.delete(
+            f"/api/v1/announcements/{ann_id}", headers=headers_admin
+        ).status_code
+        == 204
+    )
 
     # PORTEIRO forbidden on every handler. Use a fresh announcement/comment
     # (as admin) so each PORTEIRO call exercises the guard, not a 404.
@@ -456,7 +540,9 @@ def test_porteiro_forbidden_on_all_announcement_handlers(
         headers=headers_admin,
     ).json()
 
-    assert client.get("/api/v1/announcements", headers=headers_porteiro).status_code == 403
+    assert (
+        client.get("/api/v1/announcements", headers=headers_porteiro).status_code == 403
+    )
     assert (
         client.post(
             "/api/v1/announcements",
@@ -465,7 +551,12 @@ def test_porteiro_forbidden_on_all_announcement_handlers(
         ).status_code
         == 403
     )
-    assert client.get(f"/api/v1/announcements/{ann2['id']}", headers=headers_porteiro).status_code == 403
+    assert (
+        client.get(
+            f"/api/v1/announcements/{ann2['id']}", headers=headers_porteiro
+        ).status_code
+        == 403
+    )
     assert (
         client.put(
             f"/api/v1/announcements/{ann2['id']}",
@@ -475,7 +566,9 @@ def test_porteiro_forbidden_on_all_announcement_handlers(
         == 403
     )
     assert (
-        client.delete(f"/api/v1/announcements/{ann2['id']}", headers=headers_porteiro).status_code
+        client.delete(
+            f"/api/v1/announcements/{ann2['id']}", headers=headers_porteiro
+        ).status_code
         == 403
     )
     assert (
@@ -488,12 +581,15 @@ def test_porteiro_forbidden_on_all_announcement_handlers(
     )
     assert (
         client.delete(
-            f"/api/v1/announcements/{ann2['id']}/media/{uuid.uuid4()}", headers=headers_porteiro
+            f"/api/v1/announcements/{ann2['id']}/media/{uuid.uuid4()}",
+            headers=headers_porteiro,
         ).status_code
         == 403
     )
     assert (
-        client.get(f"/api/v1/announcements/{ann2['id']}/comments", headers=headers_porteiro).status_code
+        client.get(
+            f"/api/v1/announcements/{ann2['id']}/comments", headers=headers_porteiro
+        ).status_code
         == 403
     )
     assert (
@@ -511,12 +607,15 @@ def test_porteiro_forbidden_on_all_announcement_handlers(
         == 403
     )
     assert (
-        client.post(f"/api/v1/announcements/{ann2['id']}/read", headers=headers_porteiro).status_code
+        client.post(
+            f"/api/v1/announcements/{ann2['id']}/read", headers=headers_porteiro
+        ).status_code
         == 403
     )
     assert (
         client.get(
-            f"/api/v1/announcements/{ann2['id']}/read-receipts", headers=headers_porteiro
+            f"/api/v1/announcements/{ann2['id']}/read-receipts",
+            headers=headers_porteiro,
         ).status_code
         == 403
     )
@@ -531,14 +630,18 @@ def test_porteiro_forbidden_on_all_authorization_handlers(
     client: TestClient, session: Session, porteiro_user: User, admin_user: User
 ):
     lot = LotService.create_lot(session, LotCreate(block="P3", lot_number="01"))
-    visitor = VisitorService.create_visitor(session, VisitorCreate(full_name="Visitante Auth"))
+    visitor = VisitorService.create_visitor(
+        session, VisitorCreate(full_name="Visitante Auth")
+    )
 
     headers_porteiro = _auth_header(porteiro_user)
     headers_admin = _auth_header(admin_user)
 
     # Regression: admin_user can still list/create/revoke.
     assert (
-        client.get(f"/api/v1/lots/{lot.id}/authorizations", headers=headers_admin).status_code
+        client.get(
+            f"/api/v1/lots/{lot.id}/authorizations", headers=headers_admin
+        ).status_code
         == 200
     )
     created = client.post(
@@ -557,7 +660,9 @@ def test_porteiro_forbidden_on_all_authorization_handlers(
 
     # PORTEIRO forbidden on every handler.
     assert (
-        client.get(f"/api/v1/lots/{lot.id}/authorizations", headers=headers_porteiro).status_code
+        client.get(
+            f"/api/v1/lots/{lot.id}/authorizations", headers=headers_porteiro
+        ).status_code
         == 403
     )
     assert (
@@ -581,7 +686,9 @@ def test_porteiro_can_fetch_authorization_and_qr_for_any_lot(
 ):
     """PORTEIRO has no lot link at all, but the QR-scan flow must still work for any lot."""
     lot = LotService.create_lot(session, LotCreate(block="P4", lot_number="01"))
-    visitor = VisitorService.create_visitor(session, VisitorCreate(full_name="Visitante QR"))
+    visitor = VisitorService.create_visitor(
+        session, VisitorCreate(full_name="Visitante QR")
+    )
     auth = VisitorService.create_authorization(
         session, lot.id, VisitorAuthorizationCreate(visitor_id=visitor.id), admin_user
     )
@@ -592,6 +699,8 @@ def test_porteiro_can_fetch_authorization_and_qr_for_any_lot(
     assert res_get.status_code == 200
     assert res_get.json()["id"] == str(auth.id)
 
-    res_qr = client.get(f"/api/v1/authorizations/{auth.id}/qr-code", headers=headers_porteiro)
+    res_qr = client.get(
+        f"/api/v1/authorizations/{auth.id}/qr-code", headers=headers_porteiro
+    )
     assert res_qr.status_code == 200
     assert res_qr.headers["content-type"] == "image/png"

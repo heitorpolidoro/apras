@@ -61,7 +61,9 @@ def _user(session: Session, name: str, roles: list[Role]) -> User:
 
 @pytest.fixture(name="world")
 def world_fixture(session: Session):
-    reader = Role(name="Leitura", permissions=["documents:read", "documents:folder_read"])
+    reader = Role(
+        name="Leitura", permissions=["documents:read", "documents:folder_read"]
+    )
     other = Role(name="Outro", permissions=["documents:read", "documents:folder_read"])
     author = Role(
         name="Autoria",
@@ -163,9 +165,7 @@ def test_allowed_role_ids_is_required_on_create(client: TestClient, world):
     assert _folder_names(client, world["member"]) == {"Escopada", "Com ACL declarada"}
 
 
-def test_an_unresolvable_allowed_role_id_is_a_422_on_create(
-    client: TestClient, world
-):
+def test_an_unresolvable_allowed_role_id_is_a_422_on_create(client: TestClient, world):
     """The mistake the required-field decision worries about, caught early.
 
     Now that the ACL's content type is an id rather than a name, a typo, a
@@ -241,9 +241,7 @@ def test_a_role_of_another_tenant_cannot_be_named_in_an_acl(
     assert str(foreign.id) in response.json()["detail"]
 
 
-def test_an_unresolvable_allowed_role_id_is_a_422_on_update(
-    client: TestClient, world
-):
+def test_an_unresolvable_allowed_role_id_is_a_422_on_update(client: TestClient, world):
     """And the stored ACL survives the refusal untouched."""
     unknown = str(uuid.uuid4())
     response = client.put(
@@ -315,9 +313,7 @@ def test_a_malformed_acl_denies_rather_than_raises(
     client: TestClient, session: Session, world
 ):
     """A hand-edited row must not take the endpoint down."""
-    session.add(
-        DocumentFolder(name="Corrompida", allowed_role_ids_json="NOT JSON")
-    )
+    session.add(DocumentFolder(name="Corrompida", allowed_role_ids_json="NOT JSON"))
     session.commit()
 
     assert "Corrompida" not in _folder_names(client, world["member"])

@@ -128,7 +128,9 @@ def test_registry_excludes_the_membership_table():
 # ---------------------------------------------------------------------------
 
 
-def _seed_two_categories(session: Session, tenant_b: Tenant) -> tuple[Category, Category]:
+def _seed_two_categories(
+    session: Session, tenant_b: Tenant
+) -> tuple[Category, Category]:
     a = Category(name="A-only", color="#111111")
     b = Category(name="B-only", color="#222222", tenant_id=tenant_b.id)
     session.add_all([a, b])
@@ -165,9 +167,7 @@ def test_count_is_filtered(session: Session, tenant_b: Tenant, fresh_session: Se
     set_acting_tenant(fresh_session, DEFAULT_TENANT_ID)
 
     assert fresh_session.exec(select(func.count(Category.id))).one() == 1
-    assert (
-        fresh_session.exec(select(func.count()).select_from(Category)).one() == 1
-    )
+    assert fresh_session.exec(select(func.count()).select_from(Category)).one() == 1
 
 
 def test_count_over_a_subquery_is_filtered(
@@ -179,7 +179,10 @@ def test_count_over_a_subquery_is_filtered(
     set_acting_tenant(fresh_session, DEFAULT_TENANT_ID)
 
     inner = select(Category)
-    assert fresh_session.exec(select(func.count()).select_from(inner.subquery())).one() == 1
+    assert (
+        fresh_session.exec(select(func.count()).select_from(inner.subquery())).one()
+        == 1
+    )
 
 
 def test_session_get_is_filtered_on_a_fresh_session(

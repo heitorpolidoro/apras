@@ -44,7 +44,7 @@ Time
 ----
 
 Every datetime written into the world or into a request body is an offset
-from ``datetime.utcnow()`` computed at build time. No absolute date is
+from ``clock.db_now()`` computed at build time. No absolute date is
 hard-coded anywhere in this module: the baseline is a committed golden file,
 and at least one production path branches on wall-clock time
 (``reservation_service`` compares ``start_time`` to now), so an absolute date
@@ -78,6 +78,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import Engine, event
 from sqlmodel import Session, SQLModel, create_engine
 
+from app.core import clock
 from app.core.permissions import ROUTE_PERMISSIONS
 from app.core.security import create_access_token
 from app.core.tenant_context import REQUEST_SCOPED_KEY
@@ -179,11 +180,6 @@ CELLS: list[tuple[str, str, str]] = [
 # ---------------------------------------------------------------------------
 
 
-def _now() -> datetime:
-    """Naive UTC now, exactly as production writes it."""
-    return datetime.utcnow()  # noqa: DTZ003
-
-
 def _cpf(seed: int) -> str:
     """A check-digit-valid CPF derived from `seed`, so no literal is needed.
 
@@ -214,10 +210,10 @@ class _NullStorage(BaseStorageProvider):
     disposable" is spelled in this codebase.
     """
 
-    def save_file(self, file_bytes, filename, content_type):  # noqa: ARG002
+    def save_file(self, file_bytes, filename, content_type):
         return f"/dev/null/{filename}", f"http://null/{filename}"
 
-    def delete_file(self, file_path):  # noqa: ARG002
+    def delete_file(self, file_path):
         return True
 
 
@@ -226,17 +222,17 @@ def neutralised_storage() -> Iterator[None]:
     """Point every module-level storage provider at :class:`_NullStorage`."""
     stub = _NullStorage()
     original_media = media_service.storage_provider
-    original_announcement = announcement_service._storage_provider  # noqa: SLF001
-    original_finance = finance_service._storage_provider  # noqa: SLF001
+    original_announcement = announcement_service._storage_provider
+    original_finance = finance_service._storage_provider
     media_service.storage_provider = stub
-    announcement_service._storage_provider = stub  # noqa: SLF001  # type: ignore[assignment]
-    finance_service._storage_provider = stub  # noqa: SLF001  # type: ignore[assignment]
+    announcement_service._storage_provider = stub  # type: ignore[assignment]
+    finance_service._storage_provider = stub  # type: ignore[assignment]
     try:
         yield
     finally:
         media_service.storage_provider = original_media
-        announcement_service._storage_provider = original_announcement  # noqa: SLF001
-        finance_service._storage_provider = original_finance  # noqa: SLF001
+        announcement_service._storage_provider = original_announcement
+        finance_service._storage_provider = original_finance
 
 
 # ---------------------------------------------------------------------------
@@ -297,10 +293,10 @@ class MatrixWorld:
     # the contestation cell measures authorization and not state.
     infraction_rule_id: uuid.UUID
     infraction_id: uuid.UUID
-    built_at: datetime = field(default_factory=_now)
+    built_at: datetime = field(default_factory=clock.db_now)
 
 
-def build_world(session: Session) -> MatrixWorld:  # noqa: PLR0915
+def build_world(session: Session) -> MatrixWorld:  # noqa: PLR0915  # linear script; splitting it would hide the order rows must be created in
     """Seed one row of every object the matrix touches, and commit it.
 
     Called **once** per matrix run, on a plain (non request-scoped) session,
@@ -308,7 +304,7 @@ def build_world(session: Session) -> MatrixWorld:  # noqa: PLR0915
     `tenant_id` to `DEFAULT_TENANT_ID`, so the world lands in the default
     tenant without the request-time filter being involved.
     """
-    now = _now()
+    now = clock.db_now()
 
     if session.get(Tenant, DEFAULT_TENANT_ID) is None:
         session.add(Tenant(id=DEFAULT_TENANT_ID, name=DEFAULT_TENANT_NAME))
@@ -396,7 +392,9 @@ def build_world(session: Session) -> MatrixWorld:  # noqa: PLR0915
     # Open-ended dates are what make `_is_link_active` true *now*, and an
     # active `Resident` row is what the per-lot narrowings read.
     for index, (role_value, user) in enumerate(users.items()):
-        session.add(UserLotLink(user_id=user.id, lot_id=lot.id, start_date=None, end_date=None))
+        session.add(
+            UserLotLink(user_id=user.id, lot_id=lot.id, start_date=None, end_date=None)
+        )
         session.add(
             Resident(
                 lot_id=lot.id,
@@ -407,7 +405,9 @@ def build_world(session: Session) -> MatrixWorld:  # noqa: PLR0915
             )
         )
     session.add(
-        UserLotLink(user_id=target_user.id, lot_id=lot.id, start_date=None, end_date=None)
+        UserLotLink(
+            user_id=target_user.id, lot_id=lot.id, start_date=None, end_date=None
+        )
     )
     # `{resident_id}` binds to a resident with **no** linked user, so
     # `POST /residents/{id}/link-user` has something to do.
@@ -637,7 +637,9 @@ def build_world(session: Session) -> MatrixWorld:  # noqa: PLR0915
     project = ConstructionProject(title="Matrix Project")
     session.add(project)
 
-    finance_category = FinanceCategory(name="Matrix Finance", type=TransactionType.EXPENSE)
+    finance_category = FinanceCategory(
+        name="Matrix Finance", type=TransactionType.EXPENSE
+    )
     session.add(finance_category)
     session.commit()
     session.refresh(vote_option)
@@ -930,20 +932,20 @@ PATH_PARAMS: dict[tuple[str, str], Binder] = _path_params()
 #: `422` for every role, which is request-shape validation and would mask the
 #: authorization answer (§6.4's `PERMITTED_422` rule). Same discipline as
 #: `PATH_PARAMS`: every value is either a `MatrixWorld` id or an offset from
-#: `datetime.utcnow()`, never a literal date.
+#: `clock.db_now()`, never a literal date.
 QUERY_PARAMS: dict[tuple[str, str], Callable[[MatrixWorld], dict[str, str]]] = {
     ("GET", "/api/v1/finance/budget-lines"): lambda _w: {
-        "fiscal_year": str(_now().year)
+        "fiscal_year": str(clock.db_now().year)
     },
     ("GET", "/api/v1/finance/budget-vs-actual"): lambda _w: {
-        "fiscal_year": str(_now().year)
+        "fiscal_year": str(clock.db_now().year)
     },
     ("GET", "/api/v1/finance/budget-vs-actual/{category_id}/transactions"): lambda _w: {
-        "fiscal_year": str(_now().year)
+        "fiscal_year": str(clock.db_now().year)
     },
     ("GET", "/api/v1/finance/statement"): lambda _w: {
-        "start_date": (_now() - timedelta(days=30)).date().isoformat(),
-        "end_date": (_now() + timedelta(days=30)).date().isoformat(),
+        "start_date": (clock.db_now() - timedelta(days=30)).date().isoformat(),
+        "end_date": (clock.db_now() + timedelta(days=30)).date().isoformat(),
     },
     ("GET", "/api/v1/packages"): lambda w: {"lot_id": str(w.lot_id)},
 }
@@ -989,11 +991,11 @@ def _static(payload: Any) -> BodySpec:
 
 
 def _future(days: int = 0, hours: int = 0) -> str:
-    return (_now() + timedelta(days=days, hours=hours)).isoformat()
+    return (clock.db_now() + timedelta(days=days, hours=hours)).isoformat()
 
 
 def _today() -> str:
-    return _now().date().isoformat()
+    return clock.db_now().date().isoformat()
 
 
 #: `(METHOD, path) -> body spec`, for exactly the 99 POST/PUT/PATCH routes
@@ -1014,17 +1016,17 @@ REQUEST_BODIES: dict[tuple[str, str], BodySpec] = {
     ("PATCH", "/api/v1/categories/{category_id}"): _static({"name": "Matrix renamed"}),
     # --- users -------------------------------------------------------------
     ("PATCH", "/api/v1/users/{user_id}"): _static({"full_name": "Matrix Renamed"}),
-    ("PATCH", "/api/v1/users/{user_id}/contact-info"): _static({"phone": "11999990000"}),
+    ("PATCH", "/api/v1/users/{user_id}/contact-info"): _static(
+        {"phone": "11999990000"}
+    ),
     # --- roles --------------------------------------------------------
-    ("POST", "/api/v1/roles/"): _static(
-        {"name": "Matrix new type"}
-    ),
-    ("PATCH", "/api/v1/roles/{role_id}"): _static(
-        {"name": "Matrix renamed type"}
-    ),
+    ("POST", "/api/v1/roles/"): _static({"name": "Matrix new type"}),
+    ("PATCH", "/api/v1/roles/{role_id}"): _static({"name": "Matrix renamed type"}),
     # --- tenants -----------------------------------------------------------
     ("POST", "/api/v1/tenants"): _static({"name": "Matrix new tenant"}),
-    ("PATCH", "/api/v1/tenants/{tenant_id}"): _static({"name": "Matrix renamed tenant"}),
+    ("PATCH", "/api/v1/tenants/{tenant_id}"): _static(
+        {"name": "Matrix renamed tenant"}
+    ),
     ("POST", "/api/v1/tenants/{tenant_id}/members"): lambda w: {
         "user_id": str(w.outsider_user_id)
     },
@@ -1095,7 +1097,9 @@ REQUEST_BODIES: dict[tuple[str, str], BodySpec] = {
         # `allowed_role_ids` is required on create since IAM F5 (§6).
         {"name": "Matrix New Folder", "allowed_role_ids": []}
     ),
-    ("PUT", "/api/v1/documents/folders/{id}"): _static({"name": "Matrix Renamed Folder"}),
+    ("PUT", "/api/v1/documents/folders/{id}"): _static(
+        {"name": "Matrix Renamed Folder"}
+    ),
     # --- assemblies --------------------------------------------------------
     ("POST", "/api/v1/assemblies/"): lambda _w: {
         "title": "Matrix new assembly",
@@ -1133,7 +1137,7 @@ REQUEST_BODIES: dict[tuple[str, str], BodySpec] = {
     ),
     ("POST", "/api/v1/finance/budget-lines"): lambda w: {
         "category_id": str(w.finance_category_id),
-        "fiscal_year": _now().year,
+        "fiscal_year": clock.db_now().year,
         "planned_amount": 500.0,
     },
     ("PUT", "/api/v1/finance/budget-lines/{id}"): _static({"planned_amount": 750.0}),
@@ -1334,7 +1338,9 @@ def resolve_path(world: MatrixWorld, path: str) -> str:
     return url
 
 
-def run_cell(client: TestClient, world: MatrixWorld, role: str, method: str, path: str) -> int:
+def run_cell(
+    client: TestClient, world: MatrixWorld, role: str, method: str, path: str
+) -> int:
     """Issue one real HTTP request for a cell and return its status code."""
     url = resolve_path(world, path)
     headers = {
@@ -1349,7 +1355,11 @@ def run_cell(client: TestClient, world: MatrixWorld, role: str, method: str, pat
         payload = spec if isinstance(spec, _NoBody) else spec(world)
         if isinstance(payload, Upload):
             kwargs["files"] = {
-                payload.field_name: (payload.filename, _FILE_BYTES, payload.content_type)
+                payload.field_name: (
+                    payload.filename,
+                    _FILE_BYTES,
+                    payload.content_type,
+                )
             }
             if payload.form:
                 kwargs["data"] = payload.form

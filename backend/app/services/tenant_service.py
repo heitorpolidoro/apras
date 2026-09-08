@@ -1,10 +1,10 @@
 """Tenant service layer for business logic (APRAS-41)."""
 
-from datetime import datetime
 from uuid import UUID
 
 from sqlmodel import Session, select
 
+from app.core import clock
 from app.core.exceptions import (
     CoreModuleCannotBeDisabledError,
     TenantAlreadyExistsError,
@@ -34,19 +34,6 @@ from app.services.role_service import role_names_in
 # goes this way and never the other -- `subscription_service.py` must not
 # import `TenantService`, and does not need to: it loads `Tenant` directly.
 from app.services.subscription_service import SubscriptionService
-
-
-def _now() -> datetime:
-    """The naive-UTC clock every ``tenant.updated_at`` write in this module uses.
-
-    One call site, so the two writers cannot drift apart and the naive/aware
-    choice is stated once. It is deliberately naive: ``tenant.updated_at`` is
-    ``TIMESTAMP WITHOUT TIME ZONE`` and every other writer in the codebase
-    fills it the same way, so an aware value here would be the only one of
-    its kind in the table.
-    """
-    return datetime.utcnow()  # noqa: DTZ003
-
 
 #: The six historically-named ``Role`` rows every tenant gets: the five
 #: migration ``0018`` seeded into the default tenant plus ``Porteiro
@@ -142,9 +129,7 @@ class TenantService:
         with acting_tenant_scope(session, tenant_id):
             existing = {role.name for role in session.exec(select(Role)).all()}
             missing = [
-                Role(name=name)
-                for name in LEGACY_ROLE_NAMES
-                if name not in existing
+                Role(name=name) for name in LEGACY_ROLE_NAMES if name not in existing
             ]
             if missing:
                 session.add_all(missing)
@@ -171,9 +156,7 @@ class TenantService:
         return list(session.exec(statement).all())
 
     @staticmethod
-    def list_memberships(
-        session: Session, user: User
-    ) -> list[TenantMembershipSummary]:
+    def list_memberships(session: Session, user: User) -> list[TenantMembershipSummary]:
         """List the *caller's own* memberships, ordered by tenant name.
 
         Unlike :meth:`list_tenants`, this never widens for a superuser: it
@@ -241,7 +224,7 @@ class TenantService:
 
         for key, value in update_data.items():
             setattr(tenant, key, value)
-        tenant.updated_at = _now()
+        tenant.updated_at = clock.db_now()
 
         session.add(tenant)
         session.commit()
@@ -306,7 +289,7 @@ class TenantService:
 
         before = set(tenant.disabled_modules)  # APRAS-40, before the assignment
         tenant.disabled_modules = sorted(requested)
-        tenant.updated_at = _now()
+        tenant.updated_at = clock.db_now()
         session.add(tenant)
         after = set(tenant.disabled_modules)
         # APRAS-40 §4.5: the column is NEGATIVE, so a module that LEFT

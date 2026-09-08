@@ -44,9 +44,7 @@ def superuser_fixture(session: Session):
     return make_superuser(session)
 
 
-def test_superuser_creates_and_lists_a_plan(
-    tenant_client: TestClient, superuser
-):
+def test_superuser_creates_and_lists_a_plan(tenant_client: TestClient, superuser):
     """`included_modules` and `module_prices` come back sorted, so a `GET`
     after a `POST` is byte-stable."""
     created = tenant_client.post(
@@ -72,9 +70,7 @@ def test_superuser_creates_and_lists_a_plan(
     assert listed.status_code == 200
     assert [plan["name"] for plan in listed.json()] == ["Plano Completo"]
 
-    one = tenant_client.get(
-        f"/api/v1/plans/{body['id']}", headers=auth(superuser)
-    )
+    one = tenant_client.get(f"/api/v1/plans/{body['id']}", headers=auth(superuser))
     assert one.status_code == 200
     assert one.json() == body
 
@@ -186,9 +182,10 @@ def test_patch_deactivates_a_plan_and_there_is_no_delete_route(
     assert patched.json()["description"] == "Descontinuado"
     # Deactivation is the operation that replaces a delete, so the deactivated
     # plan is still listed -- an operator has to be able to see and undo it.
-    assert [plan["name"] for plan in tenant_client.get(
-        PLANS, headers=auth(superuser)
-    ).json()] == ["Plano Antigo"]
+    assert [
+        plan["name"]
+        for plan in tenant_client.get(PLANS, headers=auth(superuser)).json()
+    ] == ["Plano Antigo"]
 
     live = {
         (method, route.path)
@@ -329,19 +326,21 @@ def test_a_tenant_admin_and_an_ordinary_user_get_403_on_every_plan_route(
         PLANS, json={"name": "Plano Fechado"}, headers=auth(superuser)
     ).json()
     tenant_admin = make_tenant_admin(session)
-    director, _role = make_role_holder(
-        session, ["billing:read", "billing:manage"]
-    )
+    director, _role = make_role_holder(session, ["billing:read", "billing:manage"])
 
     for actor in (tenant_admin, director):
         headers = auth(actor, TENANT_A)
         assert tenant_client.get(PLANS, headers=headers).status_code == 403
-        assert tenant_client.post(
-            PLANS, json={"name": "x"}, headers=headers
-        ).status_code == 403
-        assert tenant_client.get(
-            f"/api/v1/plans/{plan['id']}", headers=headers
-        ).status_code == 403
+        assert (
+            tenant_client.post(PLANS, json={"name": "x"}, headers=headers).status_code
+            == 403
+        )
+        assert (
+            tenant_client.get(
+                f"/api/v1/plans/{plan['id']}", headers=headers
+            ).status_code
+            == 403
+        )
         response = tenant_client.patch(
             f"/api/v1/plans/{plan['id']}", json={"name": "y"}, headers=headers
         )
@@ -361,9 +360,12 @@ def test_unknown_plan_is_404(tenant_client: TestClient, superuser):
 
     assert response.status_code == 404
     assert response.json()["detail"] == f"Plan not found: {missing}"
-    assert tenant_client.patch(
-        f"/api/v1/plans/{missing}", json={"name": "x"}, headers=auth(superuser)
-    ).status_code == 404
+    assert (
+        tenant_client.patch(
+            f"/api/v1/plans/{missing}", json={"name": "x"}, headers=auth(superuser)
+        ).status_code
+        == 404
+    )
 
 
 def test_the_four_plan_routes_are_unguarded_and_carry_no_permission():

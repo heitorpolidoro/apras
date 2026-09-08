@@ -2,18 +2,33 @@ from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-_PSYCOPG2_VALID_PARAMS = frozenset({
-    "sslmode", "sslcert", "sslkey", "sslrootcert", "sslcrl",
-    "application_name", "connect_timeout", "options",
-    "keepalives", "keepalives_idle", "keepalives_interval", "keepalives_count",
-})
+_PSYCOPG2_VALID_PARAMS = frozenset(
+    {
+        "sslmode",
+        "sslcert",
+        "sslkey",
+        "sslrootcert",
+        "sslcrl",
+        "application_name",
+        "connect_timeout",
+        "options",
+        "keepalives",
+        "keepalives_idle",
+        "keepalives_interval",
+        "keepalives_count",
+    }
+)
 
 
 def _clean_db_url(url: str) -> str:
     if not url.startswith(("postgres://", "postgresql://")):
         return url
     parsed = urlparse(url.replace("postgres://", "postgresql://", 1))
-    kept = {k: v[0] for k, v in parse_qs(parsed.query).items() if k in _PSYCOPG2_VALID_PARAMS}
+    kept = {
+        k: v[0]
+        for k, v in parse_qs(parsed.query).items()
+        if k in _PSYCOPG2_VALID_PARAMS
+    }
     return urlunparse(parsed._replace(query=urlencode(kept)))
 
 

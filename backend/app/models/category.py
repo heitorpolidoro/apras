@@ -26,7 +26,9 @@ class Category(SQLModel, table=True):
     # `name` is unique *within a tenant*, not globally (APRAS-41): two
     # condominiums may both have a "Manutenção" category. The plain
     # `ix_category_name` index survives for lookups by name.
-    __table_args__ = (Index("ix_category_tenant_name", "tenant_id", "name", unique=True),)
+    __table_args__ = (
+        Index("ix_category_tenant_name", "tenant_id", "name", unique=True),
+    )
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     # Tenant boundary (APRAS-41). Defaults to DEFAULT_TENANT_ID so ORM

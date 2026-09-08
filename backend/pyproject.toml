@@ -27,6 +27,11 @@ dev = [
     "httpx>=0.28.1",
     "pytest>=9.0.3",
     "pytest-cov>=7.1.0",
+    # Exact, never `>=`: ruff's rule set and its formatter both move between
+    # minor releases, and the one thing the `backend-lint` gate must not do is
+    # fail on a change that did not cause it. Bumping ruff is a deliberate
+    # one-line PR that re-runs the same harness (APRAS-54 §4.1).
+    "ruff==0.16.5",
     "zxing-cpp>=3.1.1",
 ]
 
@@ -66,7 +71,23 @@ ignore = [
     "S105",    # Hardcoded passwords em testes
     "S106",    # Hardcoded passwords em testes
     "ARG001",  # Unused arguments em fixtures/testes (frequente)
+    "ARG002",  # idem, na forma de método (stubs de serviço, fixtures de classe)
     "E501",    # Line too long em testes
+    # A test that imports a model or a service inside the test function is
+    # controlling import order relative to its fixtures and to `app.main`'s
+    # import-time side effects. Hoisting all 90 is a real risk taken for a
+    # cosmetic gain. Precedent: `app/services/task_service.py` below.
+    "PLC0415",
+    # A test asserting on `TaskService._resolve_user` is testing the unit it
+    # means to test. Seven per-line `noqa`s used to say this one file at a
+    # time; this entry replaces them.
+    "SLF001",
+    # `tests/test_migrations_postgres.py` shells out to `alembic` on purpose
+    # and the argv is a literal. `S607` reports nothing today; it is `S603`'s
+    # companion on that same call, and the pair is stated together so a
+    # partial-path invocation does not have to re-litigate it.
+    "S603",
+    "S607",
 ]
 # CI helpers, deliberately outside `tests/` (`testpaths = tests` must not
 # collect them) and outside any package, so they have no `__init__.py`.
@@ -79,12 +100,36 @@ ignore = [
 ]
 "app/services/task_service.py" = ["PLC0415", "INP001"]
 "app/api/**" = ["INP001", "E501"]
+# All 36 are path parameters. FastAPI derives `/{id}` from the parameter
+# *name*, so renaming `id` would change the URL and the OpenAPI path
+# template -- a public API break. Shadowing the builtin is the price of the
+# route contract, and it is paid deliberately.
+"app/api/v1/endpoints/**" = ["A002"]
 "app/core/**" = ["INP001", "E501"]
 "app/models/**" = ["INP001"]
 "app/schemas/**" = ["INP001"]
 "app/main.py" = ["INP001"]
 "app/db.py" = ["INP001"]
 "app/seed.py" = ["INP001", "T201"]
+# Migrations are frozen history. `alembic upgrade` replays them verbatim
+# against production; a reformat or an import-sort of a file that already ran
+# buys nothing and puts 28 files of pure noise in front of a reviewer. This
+# entry is what makes a stray `ruff --fix` over them structurally impossible
+# rather than a habit.
+"alembic/versions/**" = [
+    "UP007", "UP045", "UP006", "UP035",   # PEP 604/585 rewrites of settled code
+    "Q000", "Q003",                       # quote style of generated stubs
+    "I001",                               # import order of generated stubs
+    "F401",                               # `sqlmodel` imported for its side effect
+    "PLR2004", "PIE790", "COM819",
+    "RUF100",                             # a stale noqa here is also history
+]
+
+[tool.ruff.format]
+# Same reason. The linter still reads these files (the ignores above are
+# narrow and a genuinely new problem still fails the gate); the formatter is
+# simply never allowed to rewrite them.
+exclude = ["alembic/versions/*.py"]
 
 [tool.coverage.run]
 omit = [

@@ -64,10 +64,25 @@ def resident_token2(resident_user2: User) -> str:
 def test_unauthenticated_requests_rejected(client: TestClient):
     """Test unauthenticated endpoints return 401 Unauthorized."""
     fake_id = uuid.uuid4()
-    assert client.get("/api/v1/uploads/photos/pending").status_code == status.HTTP_401_UNAUTHORIZED
-    assert client.put(f"/api/v1/uploads/photos/{fake_id}/approve").status_code == status.HTTP_401_UNAUTHORIZED
-    assert client.put(f"/api/v1/uploads/photos/{fake_id}/reject", json={"rejection_reason": "test"}).status_code == status.HTTP_401_UNAUTHORIZED
-    assert client.delete(f"/api/v1/uploads/photos/{fake_id}").status_code == status.HTTP_401_UNAUTHORIZED
+    assert (
+        client.get("/api/v1/uploads/photos/pending").status_code
+        == status.HTTP_401_UNAUTHORIZED
+    )
+    assert (
+        client.put(f"/api/v1/uploads/photos/{fake_id}/approve").status_code
+        == status.HTTP_401_UNAUTHORIZED
+    )
+    assert (
+        client.put(
+            f"/api/v1/uploads/photos/{fake_id}/reject",
+            json={"rejection_reason": "test"},
+        ).status_code
+        == status.HTTP_401_UNAUTHORIZED
+    )
+    assert (
+        client.delete(f"/api/v1/uploads/photos/{fake_id}").status_code
+        == status.HTTP_401_UNAUTHORIZED
+    )
 
 
 def test_resident_cannot_access_pending_queue(client: TestClient, resident_token1: str):
@@ -77,7 +92,9 @@ def test_resident_cannot_access_pending_queue(client: TestClient, resident_token
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
-def test_resident_cannot_approve_or_reject_photo(client: TestClient, resident_token1: str, resident_token2: str):
+def test_resident_cannot_approve_or_reject_photo(
+    client: TestClient, resident_token1: str, resident_token2: str
+):
     """Test RESIDENT user cannot approve or reject photos."""
     headers1 = {"Authorization": f"Bearer {resident_token1}"}
     headers2 = {"Authorization": f"Bearer {resident_token2}"}
@@ -85,17 +102,27 @@ def test_resident_cannot_approve_or_reject_photo(client: TestClient, resident_to
     image_bytes = create_test_image_bytes()
     files = {"file": ("test.jpg", image_bytes, "image/jpeg")}
     data = {"entity_type": "RESIDENT"}
-    upload_res = client.post("/api/v1/uploads/photo", headers=headers1, files=files, data=data)
+    upload_res = client.post(
+        "/api/v1/uploads/photo", headers=headers1, files=files, data=data
+    )
     photo_id = upload_res.json()["id"]
 
-    approve_res = client.put(f"/api/v1/uploads/photos/{photo_id}/approve", headers=headers2)
+    approve_res = client.put(
+        f"/api/v1/uploads/photos/{photo_id}/approve", headers=headers2
+    )
     assert approve_res.status_code == status.HTTP_403_FORBIDDEN
 
-    reject_res = client.put(f"/api/v1/uploads/photos/{photo_id}/reject", headers=headers2, json={"rejection_reason": "Not allowed"})
+    reject_res = client.put(
+        f"/api/v1/uploads/photos/{photo_id}/reject",
+        headers=headers2,
+        json={"rejection_reason": "Not allowed"},
+    )
     assert reject_res.status_code == status.HTTP_403_FORBIDDEN
 
 
-def test_resident_cannot_delete_other_user_photo(client: TestClient, resident_token1: str, resident_token2: str):
+def test_resident_cannot_delete_other_user_photo(
+    client: TestClient, resident_token1: str, resident_token2: str
+):
     """Test RESIDENT user cannot delete photo uploaded by another user."""
     headers1 = {"Authorization": f"Bearer {resident_token1}"}
     headers2 = {"Authorization": f"Bearer {resident_token2}"}
@@ -103,7 +130,9 @@ def test_resident_cannot_delete_other_user_photo(client: TestClient, resident_to
     image_bytes = create_test_image_bytes()
     files = {"file": ("user1.jpg", image_bytes, "image/jpeg")}
     data = {"entity_type": "RESIDENT"}
-    upload_res = client.post("/api/v1/uploads/photo", headers=headers1, files=files, data=data)
+    upload_res = client.post(
+        "/api/v1/uploads/photo", headers=headers1, files=files, data=data
+    )
     photo_id = upload_res.json()["id"]
 
     del_res = client.delete(f"/api/v1/uploads/photos/{photo_id}", headers=headers2)

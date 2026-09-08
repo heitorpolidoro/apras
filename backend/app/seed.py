@@ -1,18 +1,20 @@
 import random
 import uuid
-from datetime import datetime, timedelta
+from datetime import timedelta
 
+from sqlalchemy import text
+from sqlmodel import Session, create_engine, select
+
+from app.core import clock
 from app.core.config import settings
 from app.core.security import get_password_hash
 from app.models.category import Category
 from app.models.enums import TaskPriority, TaskStatus
+from app.models.role import Role
 from app.models.task import Task
 from app.models.tenant import DEFAULT_TENANT_ID, Tenant, UserTenantLink
 from app.models.user import User
-from app.models.role import Role
 from app.services.tenant_service import TenantService
-from sqlalchemy import text
-from sqlmodel import Session, create_engine, select
 
 #: The three demo profiles' bundles (APRAS-49 §9.1, ER-4).
 #:
@@ -24,33 +26,58 @@ from sqlmodel import Session, create_engine, select
 #: than a reproduction of the retired enum's 155/144/83 strings.
 DEMO_BUNDLES: dict[str, list[str]] = {
     "Administrador (papel)": [
-        "roles:read", "roles:create", "roles:update", "roles:delete",
-        "users:read", "users:update", "users:update_contact",
-        "tasks:read", "tasks:read_all", "tasks:create", "tasks:update",
-        "tasks:update_any", "tasks:delete", "tasks:comment",
-        "categories:read", "categories:create", "categories:update",
+        "roles:read",
+        "roles:create",
+        "roles:update",
+        "roles:delete",
+        "users:read",
+        "users:update",
+        "users:update_contact",
+        "tasks:read",
+        "tasks:read_all",
+        "tasks:create",
+        "tasks:update",
+        "tasks:update_any",
+        "tasks:delete",
+        "tasks:comment",
+        "categories:read",
+        "categories:create",
+        "categories:update",
         "categories:delete",
     ],
     "Diretor (papel)": [
-        "roles:read", "users:read",
-        "tasks:read", "tasks:read_all", "tasks:create", "tasks:update",
-        "tasks:update_any", "tasks:comment",
-        "categories:read", "categories:create", "categories:update",
-        "announcements:read", "announcements:create",
+        "roles:read",
+        "users:read",
+        "tasks:read",
+        "tasks:read_all",
+        "tasks:create",
+        "tasks:update",
+        "tasks:update_any",
+        "tasks:comment",
+        "categories:read",
+        "categories:create",
+        "categories:update",
+        "announcements:read",
+        "announcements:create",
     ],
     "Gerente (papel)": [
-        "roles:read", "users:read",
+        "roles:read",
+        "users:read",
         # Deliberately **no** `tasks:read_all` / `tasks:update_any`: that
         # absence *is* the legacy MANAGER tier, now stored as data instead of
         # compiled into an `if` (APRAS-49 §3.0).
-        "tasks:read", "tasks:create", "tasks:update", "tasks:comment",
+        "tasks:read",
+        "tasks:create",
+        "tasks:update",
+        "tasks:comment",
         "categories:read",
-        "occurrences:read", "occurrences:read_assigned",
+        "occurrences:read",
+        "occurrences:read_assigned",
     ],
 }
 
 
-def seed_db() -> None:  # noqa: PLR0915
+def seed_db() -> None:  # noqa: PLR0915  # linear seed script; splitting it would hide the order rows must be created in
     engine = create_engine(settings.database_url)
     with Session(engine) as session:
         print("🌱 Iniciando seed de desenvolvimento...")
@@ -190,9 +217,7 @@ def seed_db() -> None:  # noqa: PLR0915
         # still lands in the default tenant through the model default.
         for seeded_user in [admin, *diretores, manager]:
             session.add(
-                UserTenantLink(
-                    user_id=seeded_user.id, tenant_id=DEFAULT_TENANT_ID
-                )
+                UserTenantLink(user_id=seeded_user.id, tenant_id=DEFAULT_TENANT_ID)
             )
         session.commit()
         print(f"✅ {1 + len(diretores) + 1} usuários criados.")
@@ -204,11 +229,13 @@ def seed_db() -> None:  # noqa: PLR0915
             print(f"   • {seeded_user.email}: {names or '(sem papéis)'}{flag}")
 
         # 5. Tarefas
-        now = datetime.now()
+        now = clock.db_now()
         tasks_data = [
             {
                 "title": "Migração de Servidor",
-                "description": "Realizar a migração dos dados para o novo servidor PostgreSQL 16.",
+                "description": (
+                    "Realizar a migração dos dados para o novo servidor PostgreSQL 16."
+                ),
                 "status": TaskStatus.IN_PROGRESS,
                 "priority": TaskPriority.HIGH,
                 "assigned_to_id": diretores[0].id,
@@ -217,7 +244,9 @@ def seed_db() -> None:  # noqa: PLR0915
             },
             {
                 "title": "Relatório Trimestral",
-                "description": "Consolidar os gastos do primeiro trimestre para a diretoria.",
+                "description": (
+                    "Consolidar os gastos do primeiro trimestre para a diretoria."
+                ),
                 "status": TaskStatus.PENDING,
                 "priority": TaskPriority.MEDIUM,
                 "assigned_to_id": diretores[1].id,
@@ -244,7 +273,9 @@ def seed_db() -> None:  # noqa: PLR0915
             },
             {
                 "title": "Implementação do Kanban",
-                "description": "Finalizar a visualização em colunas no dashboard do frontend.",
+                "description": (
+                    "Finalizar a visualização em colunas no dashboard do frontend."
+                ),
                 "status": TaskStatus.COMPLETED,
                 "priority": TaskPriority.HIGH,
                 "assigned_to_id": diretores[0].id,
@@ -253,7 +284,9 @@ def seed_db() -> None:  # noqa: PLR0915
             },
             {
                 "title": "Ajuste de Budget",
-                "description": "Redefinir as metas orçamentárias para o próximo semestre.",
+                "description": (
+                    "Redefinir as metas orçamentárias para o próximo semestre."
+                ),
                 "status": TaskStatus.CANCELED,
                 "priority": TaskPriority.LOW,
                 "assigned_to_id": diretores[1].id,
@@ -262,7 +295,9 @@ def seed_db() -> None:  # noqa: PLR0915
             },
             {
                 "title": "Dependência de Terceiros",
-                "description": "Aguardando liberação da API do parceiro para continuar integração.",
+                "description": (
+                    "Aguardando liberação da API do parceiro para continuar integração."
+                ),
                 "status": TaskStatus.BLOCKED,
                 "priority": TaskPriority.HIGH,
                 "assigned_to_id": diretores[0].id,
@@ -271,7 +306,9 @@ def seed_db() -> None:  # noqa: PLR0915
             },
             {
                 "title": "Revisão de Contrato",
-                "description": "Verificar cláusulas de rescisão do contrato de aluguel.",
+                "description": (
+                    "Verificar cláusulas de rescisão do contrato de aluguel."
+                ),
                 "status": TaskStatus.PENDING,
                 "priority": TaskPriority.HIGH,
                 "assigned_to_id": diretores[1].id,
@@ -292,7 +329,9 @@ def seed_db() -> None:  # noqa: PLR0915
         tasks_data += [
             {
                 "title": "Controle de Estoque",
-                "description": "Atualizar planilha de controle de materiais do almoxarifado.",
+                "description": (
+                    "Atualizar planilha de controle de materiais do almoxarifado."
+                ),
                 "status": TaskStatus.PENDING,
                 "priority": TaskPriority.MEDIUM,
                 "assigned_to_id": manager.id,
@@ -317,7 +356,7 @@ def seed_db() -> None:  # noqa: PLR0915
                 status=t_data["status"],
                 priority=t_data["priority"],
                 assigned_to_id=t_data["assigned_to_id"],
-                created_by_id=random.choice(diretores).id,
+                created_by_id=random.choice(diretores).id,  # noqa: S311  # demo seed data, not a security decision
                 due_date=t_data["due_date"],
                 category_id=t_data.get("category_id"),
             )

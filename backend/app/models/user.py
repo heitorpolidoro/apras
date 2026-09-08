@@ -1,6 +1,6 @@
 """Database model for User."""
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from sqlalchemy import text
@@ -50,9 +50,7 @@ class User(SQLModel, table=True):
         back_populates="assignee",
         sa_relationship_kwargs={"foreign_keys": "Task.assigned_to_id"},
     )
-    roles: list[Role] = Relationship(
-        back_populates="users", link_model=UserRoleLink
-    )
+    roles: list[Role] = Relationship(back_populates="users", link_model=UserRoleLink)
     lot_links: list["UserLotLink"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
@@ -60,5 +58,3 @@ class User(SQLModel, table=True):
     residents: list["Resident"] = Relationship(
         back_populates="user",
     )
-
-

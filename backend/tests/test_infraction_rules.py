@@ -5,7 +5,6 @@ Eight cases. §7.7's two create-time validations live in
 ``POST /infractions``, not of the catalogue's own routes.
 """
 
-
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select

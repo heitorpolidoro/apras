@@ -51,7 +51,9 @@ def _headers(user: User) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-def test_guest_forbidden_on_create(session: Session, client: TestClient, guest_user: User):
+def test_guest_forbidden_on_create(
+    session: Session, client: TestClient, guest_user: User
+):
     lot = LotService.create_lot(session, LotCreate(block="G", lot_number="1"))
     res = client.post(
         "/api/v1/packages", json={"lot_id": str(lot.id)}, headers=_headers(guest_user)
@@ -66,7 +68,9 @@ def test_guest_forbidden_on_get_packages_for_lot_even_when_linked_via_user_lot_l
     LotService.link_user(
         session,
         lot.id,
-        UserLotLinkCreate(user_id=guest_user.id, association_type=LotAssociationType.PROPRIETARIO),
+        UserLotLinkCreate(
+            user_id=guest_user.id, association_type=LotAssociationType.PROPRIETARIO
+        ),
     )
     res = client.get(f"/api/v1/packages?lot_id={lot.id}", headers=_headers(guest_user))
     assert res.status_code == 403
@@ -90,7 +94,9 @@ def test_guest_forbidden_on_get_packages_for_lot_even_when_linked_via_resident_r
     assert res.status_code == 403
 
 
-def test_guest_forbidden_on_queue(session: Session, client: TestClient, guest_user: User):
+def test_guest_forbidden_on_queue(
+    session: Session, client: TestClient, guest_user: User
+):
     res = client.get("/api/v1/packages/queue", headers=_headers(guest_user))
     assert res.status_code == 403
 
@@ -102,7 +108,9 @@ def test_guest_forbidden_on_my_lots_even_when_linked(
     LotService.link_user(
         session,
         lot.id,
-        UserLotLinkCreate(user_id=guest_user.id, association_type=LotAssociationType.PROPRIETARIO),
+        UserLotLinkCreate(
+            user_id=guest_user.id, association_type=LotAssociationType.PROPRIETARIO
+        ),
     )
     res = client.get("/api/v1/packages/my-lots", headers=_headers(guest_user))
     assert res.status_code == 403
@@ -112,11 +120,15 @@ def test_guest_forbidden_on_get_package_by_id_even_when_linked(
     session: Session, client: TestClient, guest_user: User, normal_user: User
 ):
     lot = LotService.create_lot(session, LotCreate(block="G", lot_number="5"))
-    created = PackageService.create_package(session, normal_user, PackageCreate(lot_id=lot.id))
+    created = PackageService.create_package(
+        session, normal_user, PackageCreate(lot_id=lot.id)
+    )
     LotService.link_user(
         session,
         lot.id,
-        UserLotLinkCreate(user_id=guest_user.id, association_type=LotAssociationType.PROPRIETARIO),
+        UserLotLinkCreate(
+            user_id=guest_user.id, association_type=LotAssociationType.PROPRIETARIO
+        ),
     )
 
     res = client.get(f"/api/v1/packages/{created.id}", headers=_headers(guest_user))
@@ -127,11 +139,15 @@ def test_guest_forbidden_on_pickup_even_when_linked(
     session: Session, client: TestClient, guest_user: User, normal_user: User
 ):
     lot = LotService.create_lot(session, LotCreate(block="G", lot_number="6"))
-    created = PackageService.create_package(session, normal_user, PackageCreate(lot_id=lot.id))
+    created = PackageService.create_package(
+        session, normal_user, PackageCreate(lot_id=lot.id)
+    )
     LotService.link_user(
         session,
         lot.id,
-        UserLotLinkCreate(user_id=guest_user.id, association_type=LotAssociationType.PROPRIETARIO),
+        UserLotLinkCreate(
+            user_id=guest_user.id, association_type=LotAssociationType.PROPRIETARIO
+        ),
     )
 
     res = client.post(
@@ -147,7 +163,9 @@ def test_resident_full_flow_via_api(
     LotService.link_user(
         session,
         lot.id,
-        UserLotLinkCreate(user_id=resident_user.id, association_type=LotAssociationType.PROPRIETARIO),
+        UserLotLinkCreate(
+            user_id=resident_user.id, association_type=LotAssociationType.PROPRIETARIO
+        ),
     )
 
     created_res = client.post(
@@ -158,11 +176,15 @@ def test_resident_full_flow_via_api(
     assert created_res.status_code == 201
     package_id = created_res.json()["id"]
 
-    list_res = client.get(f"/api/v1/packages?lot_id={lot.id}", headers=_headers(resident_user))
+    list_res = client.get(
+        f"/api/v1/packages?lot_id={lot.id}", headers=_headers(resident_user)
+    )
     assert list_res.status_code == 200
     assert list_res.json()["total"] == 1
 
-    my_lots_res = client.get("/api/v1/packages/my-lots", headers=_headers(resident_user))
+    my_lots_res = client.get(
+        "/api/v1/packages/my-lots", headers=_headers(resident_user)
+    )
     assert my_lots_res.status_code == 200
     assert len(my_lots_res.json()) == 1
     assert my_lots_res.json()[0]["id"] == str(lot.id)
@@ -178,7 +200,9 @@ def test_resident_full_flow_via_api(
 
     # Double pickup rejected
     conflict_res = client.post(
-        f"/api/v1/packages/{package_id}/pickup", json={}, headers=_headers(resident_user)
+        f"/api/v1/packages/{package_id}/pickup",
+        json={},
+        headers=_headers(resident_user),
     )
     assert conflict_res.status_code == 409
 
@@ -191,7 +215,9 @@ def test_resident_cannot_access_other_lot_via_api(
     LotService.link_user(
         session,
         lot_own.id,
-        UserLotLinkCreate(user_id=resident_user.id, association_type=LotAssociationType.PROPRIETARIO),
+        UserLotLinkCreate(
+            user_id=resident_user.id, association_type=LotAssociationType.PROPRIETARIO
+        ),
     )
     created_res = client.post(
         "/api/v1/packages",
@@ -200,14 +226,18 @@ def test_resident_cannot_access_other_lot_via_api(
     )
     package_id = created_res.json()["id"]
 
-    res = client.get(f"/api/v1/packages?lot_id={lot_other.id}", headers=_headers(resident_user))
+    res = client.get(
+        f"/api/v1/packages?lot_id={lot_other.id}", headers=_headers(resident_user)
+    )
     assert res.status_code == 403
 
     res2 = client.get(f"/api/v1/packages/{package_id}", headers=_headers(resident_user))
     assert res2.status_code == 403
 
     res3 = client.post(
-        f"/api/v1/packages/{package_id}/pickup", json={}, headers=_headers(resident_user)
+        f"/api/v1/packages/{package_id}/pickup",
+        json={},
+        headers=_headers(resident_user),
     )
     assert res3.status_code == 403
 
@@ -240,7 +270,9 @@ def test_resident_forbidden_on_create_and_queue(
 ):
     lot = LotService.create_lot(session, LotCreate(block="G", lot_number="11"))
     res = client.post(
-        "/api/v1/packages", json={"lot_id": str(lot.id)}, headers=_headers(resident_user)
+        "/api/v1/packages",
+        json={"lot_id": str(lot.id)},
+        headers=_headers(resident_user),
     )
     assert res.status_code == 403
 
@@ -252,11 +284,15 @@ def test_nonexistent_lot_returns_404_on_create(
     session: Session, client: TestClient, admin_user: User
 ):
     res = client.post(
-        "/api/v1/packages", json={"lot_id": str(uuid.uuid4())}, headers=_headers(admin_user)
+        "/api/v1/packages",
+        json={"lot_id": str(uuid.uuid4())},
+        headers=_headers(admin_user),
     )
     assert res.status_code == 404
 
 
-def test_nonexistent_package_returns_404(session: Session, client: TestClient, admin_user: User):
+def test_nonexistent_package_returns_404(
+    session: Session, client: TestClient, admin_user: User
+):
     res = client.get(f"/api/v1/packages/{uuid.uuid4()}", headers=_headers(admin_user))
     assert res.status_code == 404

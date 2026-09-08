@@ -32,6 +32,7 @@ from app.services.finance_service import FinanceService
 
 router = APIRouter()
 
+
 def _require_read_permission(
     current_user: User, session: Session, permission: str
 ) -> None:
@@ -80,12 +81,12 @@ def _require_transaction_edit_permission(
 # -----------------------------------------------------------------------------
 
 
-@router.get("/categories", response_model=list[FinanceCategoryRead])
+@router.get("/categories")
 def list_categories(
     session: Annotated[Session, Depends(get_session)],
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
-    type: TransactionType | None = Query(default=None),  # noqa: A002
-    include_inactive: bool = Query(default=False),
+    type: Annotated[TransactionType | None, Query()] = None,
+    include_inactive: Annotated[bool, Query()] = False,
 ) -> list[FinanceCategoryRead]:
     """Lists finance categories (inactive list restricted to admin roles)."""
     _require_read_permission(current_user, session, "finance:read")
@@ -98,7 +99,8 @@ def list_categories(
 
 
 @router.post(
-    "/categories", response_model=FinanceCategoryRead, status_code=status.HTTP_201_CREATED
+    "/categories",
+    status_code=status.HTTP_201_CREATED,
 )
 def create_category(
     category_in: FinanceCategoryCreate,
@@ -111,7 +113,7 @@ def create_category(
     return FinanceCategoryRead.model_validate(category)
 
 
-@router.put("/categories/{id}", response_model=FinanceCategoryRead)
+@router.put("/categories/{id}")
 def update_category(
     id: UUID,
     category_in: FinanceCategoryUpdate,
@@ -129,11 +131,11 @@ def update_category(
 # -----------------------------------------------------------------------------
 
 
-@router.get("/budget-lines", response_model=list[BudgetLineRead])
+@router.get("/budget-lines")
 def list_budget_lines(
     session: Annotated[Session, Depends(get_session)],
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
-    fiscal_year: int = Query(...),
+    fiscal_year: Annotated[int, Query()],
 ) -> list[BudgetLineRead]:
     """Lists budget lines for a fiscal year."""
     _require_read_permission(current_user, session, "finance:read")
@@ -141,9 +143,7 @@ def list_budget_lines(
     return [FinanceService.format_budget_line_read(bl) for bl in budget_lines]
 
 
-@router.post(
-    "/budget-lines", response_model=BudgetLineRead, status_code=status.HTTP_201_CREATED
-)
+@router.post("/budget-lines", status_code=status.HTTP_201_CREATED)
 def create_budget_line(
     budget_in: BudgetLineCreate,
     session: Annotated[Session, Depends(get_session)],
@@ -155,7 +155,7 @@ def create_budget_line(
     return FinanceService.format_budget_line_read(budget_line)
 
 
-@router.put("/budget-lines/{id}", response_model=BudgetLineRead)
+@router.put("/budget-lines/{id}")
 def update_budget_line(
     id: UUID,
     budget_in: BudgetLineUpdate,
@@ -184,16 +184,16 @@ def delete_budget_line(
 # -----------------------------------------------------------------------------
 
 
-@router.get("/transactions", response_model=PaginatedTransactions)
+@router.get("/transactions")
 def list_transactions(
     session: Annotated[Session, Depends(get_session)],
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
-    type: TransactionType | None = Query(default=None),  # noqa: A002
-    category_id: UUID | None = Query(default=None),
-    start_date: date | None = Query(default=None),
-    end_date: date | None = Query(default=None),
-    skip: int = Query(default=0, ge=0),
-    limit: int = Query(default=50, ge=1, le=100),
+    type: Annotated[TransactionType | None, Query()] = None,
+    category_id: Annotated[UUID | None, Query()] = None,
+    start_date: Annotated[date | None, Query()] = None,
+    end_date: Annotated[date | None, Query()] = None,
+    skip: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> PaginatedTransactions:
     """Lists financial transactions with optional filters and pagination."""
     _require_read_permission(current_user, session, "finance:read")
@@ -216,7 +216,6 @@ def list_transactions(
 
 @router.post(
     "/transactions",
-    response_model=FinancialTransactionRead,
     status_code=status.HTTP_201_CREATED,
 )
 def create_transaction(
@@ -232,7 +231,7 @@ def create_transaction(
     return FinanceService.format_transaction_read(session, transaction)
 
 
-@router.get("/transactions/{id}", response_model=FinancialTransactionRead)
+@router.get("/transactions/{id}")
 def get_transaction(
     id: UUID,
     session: Annotated[Session, Depends(get_session)],
@@ -244,7 +243,7 @@ def get_transaction(
     return FinanceService.format_transaction_read(session, transaction)
 
 
-@router.put("/transactions/{id}", response_model=FinancialTransactionRead)
+@router.put("/transactions/{id}")
 def update_transaction(
     id: UUID,
     transaction_in: FinancialTransactionUpdate,
@@ -271,12 +270,12 @@ def delete_transaction(
     FinanceService.delete_transaction(session, transaction)
 
 
-@router.post("/transactions/{id}/invoice", response_model=FinancialTransactionRead)
+@router.post("/transactions/{id}/invoice")
 async def upload_invoice(
     id: UUID,
     session: Annotated[Session, Depends(get_session)],
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
-    file: UploadFile = File(...),
+    file: Annotated[UploadFile, File()],
 ) -> FinancialTransactionRead:
     """Uploads/replaces the PDF invoice on a transaction (write roles + ownership)."""
     _require_write_permission(current_user, session, "finance:invoice_upload")
@@ -315,34 +314,34 @@ def delete_invoice(
 # -----------------------------------------------------------------------------
 
 
-@router.get("/balance", response_model=CashBalanceRead)
+@router.get("/balance")
 def get_balance(
     session: Annotated[Session, Depends(get_session)],
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
-    as_of: date | None = Query(default=None),
+    as_of: Annotated[date | None, Query()] = None,
 ) -> CashBalanceRead:
     """Returns the cash balance as of a given date (defaults to today)."""
     _require_read_permission(current_user, session, "finance:read")
     return FinanceService.get_cash_balance(session, as_of)
 
 
-@router.get("/statement", response_model=FinancialStatementRead)
+@router.get("/statement")
 def get_statement(
     session: Annotated[Session, Depends(get_session)],
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
-    start_date: date = Query(...),
-    end_date: date = Query(...),
+    start_date: Annotated[date, Query()],
+    end_date: Annotated[date, Query()],
 ) -> FinancialStatementRead:
     """Returns the monthly cash inflows/outflows statement for a date range."""
     _require_read_permission(current_user, session, "finance:read")
     return FinanceService.get_statement(session, start_date, end_date)
 
 
-@router.get("/budget-vs-actual", response_model=BudgetVsActualRead)
+@router.get("/budget-vs-actual")
 def get_budget_vs_actual(
     session: Annotated[Session, Depends(get_session)],
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
-    fiscal_year: int = Query(...),
+    fiscal_year: Annotated[int, Query()],
 ) -> BudgetVsActualRead:
     """Returns the budget-vs-actual execution table for a fiscal year."""
     _require_read_permission(current_user, session, "finance:read")
@@ -351,15 +350,14 @@ def get_budget_vs_actual(
 
 @router.get(
     "/budget-vs-actual/{category_id}/transactions",
-    response_model=PaginatedTransactions,
 )
 def get_category_transactions(
     category_id: UUID,
     session: Annotated[Session, Depends(get_session)],
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
-    fiscal_year: int = Query(...),
-    skip: int = Query(default=0, ge=0),
-    limit: int = Query(default=50, ge=1, le=100),
+    fiscal_year: Annotated[int, Query()],
+    skip: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> PaginatedTransactions:
     """Returns the paginated drill-down transaction list for a category/year."""
     _require_read_permission(current_user, session, "finance:read")

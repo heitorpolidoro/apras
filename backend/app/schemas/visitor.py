@@ -1,27 +1,36 @@
 """Pydantic schemas for Visitor, VisitorAuthorization, and AccessLog management."""
 
-import json
-from datetime import datetime
 import re
-from typing import List, Optional
+from datetime import datetime
 from uuid import UUID
 
-from app.models.enums import AuthorizationStatus, AuthorizationType, DayOfWeek, ShiftType
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from app.models.enums import (
+    AuthorizationStatus,
+    AuthorizationType,
+    DayOfWeek,
+    ShiftType,
+)
+
+#: A CPF is 11 digits: 9 base digits plus the two check digits.
+CPF_DIGITS = 11
+#: The check-digit algorithm maps a remainder below this to 0.
+CPF_CHECK_REMAINDER_FLOOR = 2
 
 
 def _validate_cpf_digits(cpf_digits: str) -> bool:
     """Return True if the 11-digit CPF string passes the check-digit algorithm."""
-    if len(cpf_digits) != 11 or not cpf_digits.isdigit():
+    if len(cpf_digits) != CPF_DIGITS or not cpf_digits.isdigit():
         return False
     if len(set(cpf_digits)) == 1:
         return False
     total = sum(int(cpf_digits[i]) * (10 - i) for i in range(9))
-    d1 = 0 if (total % 11) < 2 else 11 - (total % 11)
+    d1 = 0 if (total % 11) < CPF_CHECK_REMAINDER_FLOOR else 11 - (total % 11)
     if d1 != int(cpf_digits[9]):
         return False
     total = sum(int(cpf_digits[i]) * (11 - i) for i in range(10))
-    d2 = 0 if (total % 11) < 2 else 11 - (total % 11)
+    d2 = 0 if (total % 11) < CPF_CHECK_REMAINDER_FLOOR else 11 - (total % 11)
     return d2 == int(cpf_digits[10])
 
 
@@ -43,7 +52,7 @@ class VisitorBase(BaseModel):
         digits = re.sub(r"\D", "", v)
         if not digits:
             return None
-        if len(digits) != 11:
+        if len(digits) != CPF_DIGITS:
             raise ValueError("CPF must have exactly 11 digits")
         if not _validate_cpf_digits(digits):
             raise ValueError("Invalid CPF")
@@ -72,7 +81,7 @@ class VisitorUpdate(BaseModel):
         digits = re.sub(r"\D", "", v)
         if not digits:
             return None
-        if len(digits) != 11:
+        if len(digits) != CPF_DIGITS:
             raise ValueError("CPF must have exactly 11 digits")
         if not _validate_cpf_digits(digits):
             raise ValueError("Invalid CPF")

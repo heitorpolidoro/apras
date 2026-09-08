@@ -62,7 +62,9 @@ def guest(session: Session) -> User:
     return _make_user(session, "GUEST", "guest_rbac@test.com", "66666666666")
 
 
-def test_director_full_crud_and_movements(session: Session, client: TestClient, director: User):
+def test_director_full_crud_and_movements(
+    session: Session, client: TestClient, director: User
+):
     # Create
     create_res = client.post(
         "/api/v1/assets",
@@ -89,7 +91,11 @@ def test_director_full_crud_and_movements(session: Session, client: TestClient, 
     # Adjustment
     adj_res = client.post(
         f"/api/v1/assets/{asset_id}/movements",
-        json={"movement_type": "AJUSTE_INVENTARIO", "quantity": 2, "reason": "Correção"},
+        json={
+            "movement_type": "AJUSTE_INVENTARIO",
+            "quantity": 2,
+            "reason": "Correção",
+        },
         headers=_headers(director),
     )
     assert adj_res.status_code == 201
@@ -99,7 +105,9 @@ def test_director_full_crud_and_movements(session: Session, client: TestClient, 
     assert del_res.status_code == 204
 
 
-def test_manager_permissions(session: Session, client: TestClient, admin: User, manager: User):
+def test_manager_permissions(
+    session: Session, client: TestClient, admin: User, manager: User
+):
     # Create an asset as admin
     create_res = client.post(
         "/api/v1/assets",
@@ -187,7 +195,11 @@ def test_manager_permissions(session: Session, client: TestClient, admin: User, 
 
 @pytest.mark.parametrize("blocked_role_fixture", ["resident", "porteiro", "guest"])
 def test_blocked_roles_cannot_access_any_asset_endpoints(
-    session: Session, client: TestClient, admin: User, request: pytest.FixtureRequest, blocked_role_fixture: str
+    session: Session,
+    client: TestClient,
+    admin: User,
+    request: pytest.FixtureRequest,
+    blocked_role_fixture: str,
 ):
     blocked_user: User = request.getfixturevalue(blocked_role_fixture)
 
@@ -231,7 +243,9 @@ def test_blocked_roles_cannot_access_any_asset_endpoints(
         ).status_code
         == 403
     )
-    assert client.delete(f"/api/v1/assets/{asset_id}", headers=headers).status_code == 403
+    assert (
+        client.delete(f"/api/v1/assets/{asset_id}", headers=headers).status_code == 403
+    )
     assert (
         client.post(
             f"/api/v1/assets/{asset_id}/movements",

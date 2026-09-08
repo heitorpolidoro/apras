@@ -1,5 +1,6 @@
 """API Endpoints for Occurrence management."""
 
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -23,9 +24,7 @@ from app.services.occurrence_service import OccurrenceService
 router = APIRouter()
 
 
-def _assert_not_porteiro(
-    current_user: User, session: Session, permission: str
-) -> None:
+def _assert_not_porteiro(current_user: User, session: Session, permission: str) -> None:
     """Raise 403 unless the caller holds this route's own permission.
 
     Named for the rule it used to spell (PORTEIRO is a gate-only role and
@@ -40,16 +39,16 @@ def _assert_not_porteiro(
         )
 
 
-@router.get("", response_model=PaginatedOccurrenceRead)
+@router.get("")
 def list_occurrences(
-    db: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
-    category: OccurrenceCategory | None = Query(default=None),
-    status_filter: OccurrenceStatus | None = Query(default=None, alias="status"),
-    is_public: bool | None = Query(default=None),
-    search: str | None = Query(default=None),
-    skip: int = Query(default=0, ge=0),
-    limit: int = Query(default=50, ge=1, le=100),
+    db: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    category: Annotated[OccurrenceCategory | None, Query()] = None,
+    status_filter: Annotated[OccurrenceStatus | None, Query(alias="status")] = None,
+    is_public: Annotated[bool | None, Query()] = None,
+    search: Annotated[str | None, Query()] = None,
+    skip: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> PaginatedOccurrenceRead:
     """Lists occurrences visible to current user."""
     _assert_not_porteiro(current_user, db, "occurrences:read")
@@ -66,11 +65,11 @@ def list_occurrences(
     return PaginatedOccurrenceRead(items=items, total=total, skip=skip, limit=limit)
 
 
-@router.post("", response_model=OccurrenceRead, status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED)
 def create_occurrence(
     occurrence_in: OccurrenceCreate,
-    db: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    db: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> OccurrenceRead:
     """Creates a new occurrence ticket."""
     _assert_not_porteiro(current_user, db, "occurrences:create")
@@ -79,11 +78,11 @@ def create_occurrence(
     )
 
 
-@router.get("/{id}", response_model=OccurrenceDetailRead)
+@router.get("/{id}")
 def get_occurrence(
     id: UUID,
-    db: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    db: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> OccurrenceDetailRead:
     """Retrieves full details and timeline history of an occurrence ticket."""
     _assert_not_porteiro(current_user, db, "occurrences:read")
@@ -92,12 +91,12 @@ def get_occurrence(
     )
 
 
-@router.put("/{id}/status", response_model=OccurrenceRead)
+@router.put("/{id}/status")
 def update_occurrence_status(
     id: UUID,
     update_in: OccurrenceStatusUpdate,
-    db: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    db: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> OccurrenceRead:
     """Updates status, priority, assignment, or resolution notes of a ticket."""
     _assert_not_porteiro(current_user, db, "occurrences:update_status")
@@ -108,14 +107,13 @@ def update_occurrence_status(
 
 @router.post(
     "/{id}/timeline",
-    response_model=OccurrenceTimelineRead,
     status_code=status.HTTP_201_CREATED,
 )
 def add_timeline_note(
     id: UUID,
     note_in: TimelineNoteCreate,
-    db: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    db: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> OccurrenceTimelineRead:
     """Appends a timeline note or status transition entry to an occurrence."""
     _assert_not_porteiro(current_user, db, "occurrences:add_note")

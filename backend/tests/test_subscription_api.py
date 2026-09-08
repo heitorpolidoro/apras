@@ -302,12 +302,9 @@ def test_the_three_tenant_routes_are_route_mapped():
     verbatim (a 307 would drop `X-Tenant-Id`).
     """
     assert ROUTE_PERMISSIONS[("GET", "/api/v1/subscription")] == "billing:read"
+    assert ROUTE_PERMISSIONS[("GET", "/api/v1/subscription/history")] == "billing:read"
     assert (
-        ROUTE_PERMISSIONS[("GET", "/api/v1/subscription/history")] == "billing:read"
-    )
-    assert (
-        ROUTE_PERMISSIONS[("PUT", "/api/v1/subscription/modules")]
-        == "billing:manage"
+        ROUTE_PERMISSIONS[("PUT", "/api/v1/subscription/modules")] == "billing:manage"
     )
 
 

@@ -15,7 +15,7 @@ from sqlmodel import Session, select
 
 from app.core import tenant_context
 from app.core.config import settings
-from app.core.exceptions import ForbiddenError
+from app.core.exceptions import ForbiddenError, TaskNotFoundError
 from app.core.permissions import CORE_MODULES, PERMISSIONS, filter_by_modules
 from app.db import get_session
 from app.models.role import Role
@@ -274,9 +274,7 @@ def _resolve_permissions(user: User, session: Session) -> frozenset[str]:
     effective_ids = get_effective_role_ids(user, session)
     granted: set[str] = set()
     if effective_ids:
-        roles = session.exec(
-            select(Role).where(Role.id.in_(effective_ids))
-        ).all()
+        roles = session.exec(select(Role).where(Role.id.in_(effective_ids))).all()
         for role in roles:
             granted.update(role.permissions)
     # Administrator-level power inside one tenant (APRAS-43): every
@@ -380,7 +378,9 @@ def has_permission(user: User, session: Session, permission: str) -> bool:
     return permission in get_effective_permissions(user, session)
 
 
-def assert_manager_can_see_task(current_user: User, task: Task, session: Session) -> None:
+def assert_manager_can_see_task(
+    current_user: User, task: Task, session: Session
+) -> None:
     """Raise TaskNotFoundError for tasks the user is not allowed to see.
 
     A caller **without** `tasks:read_all` is scoped by `Task.visible_to`:
@@ -403,16 +403,16 @@ def assert_manager_can_see_task(current_user: User, task: Task, session: Session
     Raises:
         TaskNotFoundError: If the task is not visible to the user.
     """
-    from app.core.exceptions import TaskNotFoundError
-
     if not has_permission(current_user, session, "tasks:read"):
         raise TaskNotFoundError(task.id)
-    if not has_permission(current_user, session, "tasks:read_all"):
-        if task.visible_to and not (
+    if not has_permission(current_user, session, "tasks:read_all") and (
+        task.visible_to
+        and not (
             {vt.id for vt in task.visible_to}
             & get_effective_role_ids(current_user, session)
-        ):
-            raise TaskNotFoundError(task.id)
+        )
+    ):
+        raise TaskNotFoundError(task.id)
 
 
 def assert_can_edit_task(
@@ -451,11 +451,12 @@ def assert_can_edit_task(
     session = session if session is not None else object_session(task)
     if not has_permission(current_user, session, "tasks:update"):
         raise ForbiddenError("Guests cannot edit tasks")
-    if not has_permission(current_user, session, "tasks:update_any"):
-        if task.assigned_to_id is not None and task.assigned_to_id != current_user.id:
-            raise ForbiddenError(
-                "Managers can only edit unassigned or self-assigned tasks"
-            )
+    if (
+        not has_permission(current_user, session, "tasks:update_any")
+        and task.assigned_to_id is not None
+        and task.assigned_to_id != current_user.id
+    ):
+        raise ForbiddenError("Managers can only edit unassigned or self-assigned tasks")
 
 
 # ---------------------------------------------------------------------------

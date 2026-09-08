@@ -22,6 +22,7 @@ from uuid import UUID
 from sqlmodel import Session, select
 
 from app.api.deps import has_permission
+from app.core import clock
 from app.core.exceptions import (
     AnonymousAssemblyError,
     AssemblyNotClosedError,
@@ -145,7 +146,7 @@ def _is_link_active(link: UserLotLink, now: datetime) -> bool:
 
 def _active_lot_ids(session: Session, user: User) -> set[UUID]:
     """Lot ids the user is currently linked to, whatever the association."""
-    now = datetime.utcnow()
+    now = clock.db_now()
     # `.join(Lot)` puts a scoped entity in a statement that is otherwise
     # keyed only on `user_id` — a user who is a member of two tenants would
     # otherwise see both tenants' links (APRAS-42 §6.2).
@@ -162,10 +163,8 @@ def get_lot_eligible_user_ids(session: Session, lot: Lot) -> set[UUID]:
     co-ownership: nothing limits a lot to a single owner) with the manually
     curated `LotVoterEligibility` rows.
     """
-    now = datetime.utcnow()
-    links = session.exec(
-        select(UserLotLink).where(UserLotLink.lot_id == lot.id)
-    ).all()
+    now = clock.db_now()
+    links = session.exec(select(UserLotLink).where(UserLotLink.lot_id == lot.id)).all()
     eligible = {
         link.user_id
         for link in links
@@ -181,7 +180,7 @@ def get_lot_eligible_user_ids(session: Session, lot: Lot) -> set[UUID]:
 
 def get_user_eligible_lot_ids(session: Session, user: User) -> set[UUID]:
     """Non-deleted lots the user may cast an assembly ballot for."""
-    now = datetime.utcnow()
+    now = clock.db_now()
     links = session.exec(
         select(UserLotLink).join(Lot).where(UserLotLink.user_id == user.id)
     ).all()
@@ -211,7 +210,7 @@ def _co_resident_user_ids(session: Session, user: User) -> set[UUID]:
     lot_ids = _active_lot_ids(session, user)
     if not lot_ids:
         return {user.id}
-    now = datetime.utcnow()
+    now = clock.db_now()
     links = session.exec(
         select(UserLotLink).join(Lot).where(UserLotLink.lot_id.in_(lot_ids))
     ).all()
@@ -235,18 +234,14 @@ def _latest_ballot_for_key(
 ) -> Ballot | None:
     """Last appended row for `voter_key`, retraction or not."""
     rows = session.exec(
-        select(Ballot).where(
-            Ballot.vote_id == vote.id, Ballot.voter_key == voter_key
-        )
+        select(Ballot).where(Ballot.vote_id == vote.id, Ballot.voter_key == voter_key)
     ).all()
     if not rows:
         return None
     return max(rows, key=_ballot_sort_key)
 
 
-def get_active_ballot_holder(
-    session: Session, vote: Vote, lot_id: UUID
-) -> UUID | None:
+def get_active_ballot_holder(session: Session, vote: Vote, lot_id: UUID) -> UUID | None:
     """Who currently holds the lot's ballot, or `None` if the lot is free.
 
     Single source of truth for both the per-lot lock (a second eligible
@@ -308,15 +303,13 @@ def _record_rejection(
 ) -> None:
     """Persist the refusal (own commit) so it survives the aborted request."""
     session.add(
-        BallotRejection(
-            vote_id=vote.id, user_id=user.id, lot_id=lot_id, reason=reason
-        )
+        BallotRejection(vote_id=vote.id, user_id=user.id, lot_id=lot_id, reason=reason)
     )
     session.commit()
 
 
 def _assert_window_open(session: Session, vote: Vote, user: User, lot_id) -> None:
-    now = datetime.utcnow()
+    now = clock.db_now()
     open_window = (
         vote.status == VoteStatus.OPEN and vote.opens_at <= now < vote.closes_at
     )
@@ -382,9 +375,7 @@ def _assert_can_cast_assembly(
         raise LotNotFoundError(lot_id)
 
     if lot.is_deleted or user.id not in get_lot_eligible_user_ids(session, lot):
-        _record_rejection(
-            session, vote, user, lot_id, BallotRejectionReason.NOT_OWNER
-        )
+        _record_rejection(session, vote, user, lot_id, BallotRejectionReason.NOT_OWNER)
         raise NotLotOwnerError
 
     if lot.is_delinquent:
@@ -436,11 +427,14 @@ def _assert_can_retract_poll(session: Session, user: User, vote: Vote) -> None:
 def _next_cast_at(session: Session, vote: Vote, voter_key: str) -> datetime:
     """Timestamp strictly greater than the voter's previous row.
 
-    `datetime.utcnow()` can repeat inside one request; forcing a strictly
-    increasing `cast_at` per `voter_key` keeps "the last row" unambiguous
-    without relying on the random-UUID tie-break.
+    A single reading of the clock can repeat inside one request; forcing a
+    strictly increasing `cast_at` per `voter_key` keeps "the last row"
+    unambiguous without relying on the random-UUID tie-break.
+
+    Both sides of the comparison below are naive, and stay naive:
+    `clock.db_now()` returns the same shape `cast_at` is loaded in.
     """
-    now = datetime.utcnow()
+    now = clock.db_now()
     latest = _latest_ballot_for_key(session, vote, voter_key)
     if latest is not None and latest.cast_at >= now:
         return latest.cast_at + timedelta(microseconds=1)
@@ -505,7 +499,7 @@ def _lot_label(lot: Lot | None) -> str | None:
 
 def count_active_lots(session: Session) -> int:
     """Assembly denominator: every lot that has not been soft-deleted."""
-    return len(session.exec(select(Lot).where(Lot.is_deleted == False)).all())  # noqa: E712
+    return len(session.exec(select(Lot).where(Lot.is_deleted == False)).all())  # noqa: E712  # SQLAlchemy column expression; `is True` does not compile to SQL
 
 
 def compute_tally(session: Session, vote: Vote) -> dict:
@@ -582,8 +576,8 @@ def materialize_snapshot(session: Session, vote: Vote) -> Vote:
         vote.tally_snapshot_json = json.dumps(compute_tally(session, vote))
     if vote.status != VoteStatus.CLOSED:
         vote.status = VoteStatus.CLOSED
-        vote.closed_at = vote.closed_at or datetime.utcnow()
-    vote.updated_at = datetime.utcnow()
+        vote.closed_at = vote.closed_at or clock.db_now()
+    vote.updated_at = clock.db_now()
     session.add(vote)
     session.commit()
     session.refresh(vote)
@@ -596,7 +590,7 @@ def materialize_if_due(session: Session, vote: Vote) -> Vote:
     Deliberately not wired into the list endpoint, so one listing request
     cannot write N snapshots.
     """
-    if vote.status == VoteStatus.OPEN and datetime.utcnow() >= vote.closes_at:
+    if vote.status == VoteStatus.OPEN and clock.db_now() >= vote.closes_at:
         return materialize_snapshot(session, vote)
     return vote
 
@@ -633,9 +627,7 @@ def get_tally(session: Session, user: User, vote: Vote) -> TallyRead:
     if vote.status == VoteStatus.CLOSED:
         if vote.tally_snapshot_json is None:
             materialize_snapshot(session, vote)
-        return _tally_from_data(
-            vote, json.loads(vote.tally_snapshot_json), closed=True
-        )
+        return _tally_from_data(vote, json.loads(vote.tally_snapshot_json), closed=True)
     return _tally_from_data(vote, compute_tally(session, vote), closed=False)
 
 
@@ -650,9 +642,7 @@ def _to_my_ballot(
     can_edit = ballot.voter_user_id == user.id
     anonymous = vote.kind == VoteKind.ENQUETE and vote.is_anonymous
     lot = session.get(Lot, ballot.lot_id) if ballot.lot_id else None
-    voter = (
-        session.get(User, ballot.voter_user_id) if ballot.voter_user_id else None
-    )
+    voter = session.get(User, ballot.voter_user_id) if ballot.voter_user_id else None
     return MyBallotRead(
         id=ballot.id,
         vote_id=ballot.vote_id,
@@ -676,8 +666,7 @@ def get_eligible_lots(session: Session, user: User, vote: Vote) -> list[Lot]:
     if vote.kind != VoteKind.ASSEMBLEIA:
         return []
     lots = [
-        session.get(Lot, lot_id)
-        for lot_id in get_user_eligible_lot_ids(session, user)
+        session.get(Lot, lot_id) for lot_id in get_user_eligible_lot_ids(session, user)
     ]
     return sorted(
         (lot for lot in lots if lot is not None),
@@ -746,9 +735,7 @@ def create_assembly(
 
 
 def list_assemblies(session: Session) -> list[Assembly]:
-    return list(
-        session.exec(select(Assembly).order_by(Assembly.held_on.desc())).all()
-    )
+    return list(session.exec(select(Assembly).order_by(Assembly.held_on.desc())).all())
 
 
 def update_assembly(
@@ -765,7 +752,7 @@ def update_assembly(
 
     for field, value in assembly_in.model_dump(exclude_unset=True).items():
         setattr(assembly, field, value)
-    assembly.updated_at = datetime.utcnow()
+    assembly.updated_at = clock.db_now()
     session.add(assembly)
     session.commit()
     session.refresh(assembly)
@@ -785,7 +772,7 @@ def close_assembly(session: Session, user: User, assembly: Assembly) -> Assembly
         materialize_snapshot(session, vote)
 
     assembly.status = AssemblyStatus.CLOSED
-    assembly.closed_at = datetime.utcnow()
+    assembly.closed_at = clock.db_now()
     assembly.updated_at = assembly.closed_at
     session.add(assembly)
     session.commit()
@@ -820,7 +807,7 @@ def create_vote(session: Session, user: User, vote_in: VoteCreate) -> Vote:
         description=vote_in.description,
         vote_type=vote_in.vote_type,
         is_anonymous=vote_in.is_anonymous,
-        opens_at=vote_in.opens_at or datetime.utcnow(),
+        opens_at=vote_in.opens_at or clock.db_now(),
         closes_at=vote_in.closes_at,
         created_by_id=user.id,
     )
@@ -864,9 +851,7 @@ def has_ballots(session: Session, vote: Vote) -> bool:
     return first is not None
 
 
-def update_vote(
-    session: Session, user: User, vote: Vote, vote_in: VoteUpdate
-) -> Vote:
+def update_vote(session: Session, user: User, vote: Vote, vote_in: VoteUpdate) -> Vote:
     """Edit a vote — only while it has not received a single ballot."""
     _assert_can_create_vote(user, vote.kind, session, "votes:update")
     if vote.status == VoteStatus.CLOSED:
@@ -881,7 +866,7 @@ def update_vote(
 
     for field, value in payload.items():
         setattr(vote, field, value)
-    vote.updated_at = datetime.utcnow()
+    vote.updated_at = clock.db_now()
     session.add(vote)
 
     if options is not None:
@@ -988,7 +973,7 @@ def set_lot_delinquency(
     """Flip the manual delinquency flag that suspends the lot's voting right."""
     _assert_board(user, session, "lots:set_delinquency")
     lot.is_delinquent = is_delinquent
-    lot.delinquency_updated_at = datetime.utcnow()
+    lot.delinquency_updated_at = clock.db_now()
     lot.delinquency_updated_by_id = user.id
     lot.updated_at = lot.delinquency_updated_at
     session.add(lot)
@@ -1042,8 +1027,7 @@ def _render_vote_section(session: Session, vote: Vote, index: int) -> str:
         materialize_snapshot(session, vote)
     data = json.loads(vote.tally_snapshot_json)
     rows = "".join(
-        f"<tr><td>{html.escape(row['label'])}</td>"
-        f"<td>{row['count']}</td></tr>"
+        f"<tr><td>{html.escape(row['label'])}</td><td>{row['count']}</td></tr>"
         for row in data["results"]
     )
     attributions = data.get("attributions") or []
@@ -1098,8 +1082,10 @@ def render_minutes_html(session: Session, assembly: Assembly) -> str:
         if barred
         else "<p>Nenhum lote foi impedido de votar por inadimplência.</p>"
     )
-    type_label = "Assembleia Geral Ordinária (AGO)" if assembly.type == "AGO" else (
-        "Assembleia Geral Extraordinária (AGE)"
+    type_label = (
+        "Assembleia Geral Ordinária (AGO)"
+        if assembly.type == "AGO"
+        else ("Assembleia Geral Extraordinária (AGE)")
     )
 
     return (
@@ -1141,7 +1127,7 @@ def _find_or_create_minutes_folder(session: Session, user: User) -> UUID:
     folder = session.exec(
         select(DocumentFolder).where(
             DocumentFolder.name == MINUTES_FOLDER_NAME,
-            DocumentFolder.parent_id == None,  # noqa: E711
+            DocumentFolder.parent_id == None,  # noqa: E711  # SQLAlchemy column expression; `is None` does not compile to SQL
         )
     ).first()
     if folder is not None:

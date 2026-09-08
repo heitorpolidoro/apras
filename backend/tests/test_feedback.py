@@ -105,9 +105,7 @@ def test_list_feedback_staff_sees_all_others_see_own(
     assert b_items[0].id == fb_b.id
 
 
-def test_list_feedback_category_and_status_filters(
-    session: Session, admin_user: User
-):
+def test_list_feedback_category_and_status_filters(session: Session, admin_user: User):
     resident = _make_user(session, "GUEST", "resident_filter@example.com")
 
     FeedbackService.create_feedback(

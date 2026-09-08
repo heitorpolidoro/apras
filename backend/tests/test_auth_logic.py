@@ -28,9 +28,9 @@ def test_password_reset_tokens():
     payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
     assert payload["sub"] == email
     assert payload["scope"] == "password-reset"
-    
+
     verified_email = security.verify_password_reset_token(token)
     assert verified_email == email
-    
+
     invalid_verified = security.verify_password_reset_token("invalid_token")
     assert invalid_verified is None

@@ -40,7 +40,9 @@ def manager_user_local(session: Session) -> User:
     return _make_user(session, "MANAGER", "manager_asset@test.com", "98765432100")
 
 
-def test_create_fixed_asset_success(session: Session, client: TestClient, admin_user_local: User):
+def test_create_fixed_asset_success(
+    session: Session, client: TestClient, admin_user_local: User
+):
     payload = {
         "name": "Cortador de Grama Gasolina",
         "category": "FERRAMENTAS",
@@ -55,7 +57,9 @@ def test_create_fixed_asset_success(session: Session, client: TestClient, admin_
         "unit_of_measure": "un",
         "notes": "Motor 4 tempos",
     }
-    response = client.post("/api/v1/assets", json=payload, headers=_headers(admin_user_local))
+    response = client.post(
+        "/api/v1/assets", json=payload, headers=_headers(admin_user_local)
+    )
     assert response.status_code == 201
     data = response.json()
     assert data["name"] == "Cortador de Grama Gasolina"
@@ -68,7 +72,9 @@ def test_create_fixed_asset_success(session: Session, client: TestClient, admin_
     asset_id = data["id"]
 
     # Verify initial movement was recorded
-    detail_res = client.get(f"/api/v1/assets/{asset_id}", headers=_headers(admin_user_local))
+    detail_res = client.get(
+        f"/api/v1/assets/{asset_id}", headers=_headers(admin_user_local)
+    )
     assert detail_res.status_code == 200
     detail_data = detail_res.json()
     assert len(detail_data["movements"]) == 1
@@ -77,7 +83,9 @@ def test_create_fixed_asset_success(session: Session, client: TestClient, admin_
     assert detail_data["movements"][0]["new_quantity"] == 1
 
 
-def test_create_consumable_asset_with_min_quantity(session: Session, client: TestClient, admin_user_local: User):
+def test_create_consumable_asset_with_min_quantity(
+    session: Session, client: TestClient, admin_user_local: User
+):
     payload = {
         "name": "Lâmpada LED Tubular 18W",
         "category": "MANUTENCAO",
@@ -88,7 +96,9 @@ def test_create_consumable_asset_with_min_quantity(session: Session, client: Tes
         "min_quantity": 10,
         "unit_of_measure": "un",
     }
-    response = client.post("/api/v1/assets", json=payload, headers=_headers(admin_user_local))
+    response = client.post(
+        "/api/v1/assets", json=payload, headers=_headers(admin_user_local)
+    )
     assert response.status_code == 201
     data = response.json()
     assert data["is_consumable"] is True
@@ -97,7 +107,9 @@ def test_create_consumable_asset_with_min_quantity(session: Session, client: Tes
     assert data["is_low_stock"] is True
 
 
-def test_create_asset_duplicate_tag_returns_409(session: Session, client: TestClient, admin_user_local: User):
+def test_create_asset_duplicate_tag_returns_409(
+    session: Session, client: TestClient, admin_user_local: User
+):
     payload = {
         "name": "Câmera Bullet IP",
         "category": "SEGURANCA",
@@ -106,15 +118,21 @@ def test_create_asset_duplicate_tag_returns_409(session: Session, client: TestCl
         "is_consumable": False,
         "current_quantity": 1,
     }
-    res1 = client.post("/api/v1/assets", json=payload, headers=_headers(admin_user_local))
+    res1 = client.post(
+        "/api/v1/assets", json=payload, headers=_headers(admin_user_local)
+    )
     assert res1.status_code == 201
 
-    res2 = client.post("/api/v1/assets", json=payload, headers=_headers(admin_user_local))
+    res2 = client.post(
+        "/api/v1/assets", json=payload, headers=_headers(admin_user_local)
+    )
     assert res2.status_code == 409
     assert "Já existe um ativo com a etiqueta patrimonial" in res2.json()["detail"]
 
 
-def test_get_asset_by_id_and_not_found(session: Session, client: TestClient, admin_user_local: User):
+def test_get_asset_by_id_and_not_found(
+    session: Session, client: TestClient, admin_user_local: User
+):
     # Nonexistent ID
     fake_id = uuid.uuid4()
     res = client.get(f"/api/v1/assets/{fake_id}", headers=_headers(admin_user_local))
@@ -134,12 +152,16 @@ def test_get_asset_by_id_and_not_found(session: Session, client: TestClient, adm
     )
     asset_id = create_res.json()["id"]
 
-    get_res = client.get(f"/api/v1/assets/{asset_id}", headers=_headers(admin_user_local))
+    get_res = client.get(
+        f"/api/v1/assets/{asset_id}", headers=_headers(admin_user_local)
+    )
     assert get_res.status_code == 200
     assert get_res.json()["name"] == "Furadeira de Impacto"
 
 
-def test_update_asset_metadata(session: Session, client: TestClient, admin_user_local: User):
+def test_update_asset_metadata(
+    session: Session, client: TestClient, admin_user_local: User
+):
     create_res = client.post(
         "/api/v1/assets",
         json={
@@ -192,7 +214,9 @@ def test_update_asset_metadata(session: Session, client: TestClient, admin_user_
     assert not_found_res.status_code == 404
 
 
-def test_delete_asset_cascades(session: Session, client: TestClient, admin_user_local: User):
+def test_delete_asset_cascades(
+    session: Session, client: TestClient, admin_user_local: User
+):
     create_res = client.post(
         "/api/v1/assets",
         json={
@@ -206,19 +230,27 @@ def test_delete_asset_cascades(session: Session, client: TestClient, admin_user_
     )
     asset_id = create_res.json()["id"]
 
-    del_res = client.delete(f"/api/v1/assets/{asset_id}", headers=_headers(admin_user_local))
+    del_res = client.delete(
+        f"/api/v1/assets/{asset_id}", headers=_headers(admin_user_local)
+    )
     assert del_res.status_code == 204
 
     # Verify deleted
-    get_res = client.get(f"/api/v1/assets/{asset_id}", headers=_headers(admin_user_local))
+    get_res = client.get(
+        f"/api/v1/assets/{asset_id}", headers=_headers(admin_user_local)
+    )
     assert get_res.status_code == 404
 
     # Delete nonexistent asset
-    del_404 = client.delete(f"/api/v1/assets/{uuid.uuid4()}", headers=_headers(admin_user_local))
+    del_404 = client.delete(
+        f"/api/v1/assets/{uuid.uuid4()}", headers=_headers(admin_user_local)
+    )
     assert del_404.status_code == 404
 
 
-def test_list_assets_and_filters(session: Session, client: TestClient, admin_user_local: User):
+def test_list_assets_and_filters(
+    session: Session, client: TestClient, admin_user_local: User
+):
     # Seed various assets
     client.post(
         "/api/v1/assets",
@@ -259,39 +291,53 @@ def test_list_assets_and_filters(session: Session, client: TestClient, admin_use
     )
 
     # 1. Filter by category
-    res_cat = client.get("/api/v1/assets?category=LIMPEZA", headers=_headers(admin_user_local))
+    res_cat = client.get(
+        "/api/v1/assets?category=LIMPEZA", headers=_headers(admin_user_local)
+    )
     assert res_cat.status_code == 200
     assert res_cat.json()["total"] == 2
 
     # 2. Filter by consumable
-    res_cons = client.get("/api/v1/assets?is_consumable=true", headers=_headers(admin_user_local))
+    res_cons = client.get(
+        "/api/v1/assets?is_consumable=true", headers=_headers(admin_user_local)
+    )
     assert res_cons.status_code == 200
     assert res_cons.json()["total"] == 2
 
     # 3. Filter by low_stock_only
-    res_low = client.get("/api/v1/assets?low_stock_only=true", headers=_headers(admin_user_local))
+    res_low = client.get(
+        "/api/v1/assets?low_stock_only=true", headers=_headers(admin_user_local)
+    )
     assert res_low.status_code == 200
     assert res_low.json()["total"] == 1
     assert res_low.json()["items"][0]["name"] == "Detergente Neutro 5L"
 
     # 4. Search query
-    res_search = client.get("/api/v1/assets?search=Bosch", headers=_headers(admin_user_local))
+    res_search = client.get(
+        "/api/v1/assets?search=Bosch", headers=_headers(admin_user_local)
+    )
     assert res_search.status_code == 200
     assert res_search.json()["total"] == 1
     assert res_search.json()["items"][0]["name"] == "Furadeira Bosch GSB 13"
 
     # 5. Filter by condition
-    res_cond = client.get("/api/v1/assets?condition=BOM", headers=_headers(admin_user_local))
+    res_cond = client.get(
+        "/api/v1/assets?condition=BOM", headers=_headers(admin_user_local)
+    )
     assert res_cond.status_code == 200
     assert res_cond.json()["total"] >= 1
 
     # 6. Filter by location
-    res_loc = client.get("/api/v1/assets?location=Oficina", headers=_headers(admin_user_local))
+    res_loc = client.get(
+        "/api/v1/assets?location=Oficina", headers=_headers(admin_user_local)
+    )
     assert res_loc.status_code == 200
     assert res_loc.json()["total"] == 1
 
 
-def test_asset_summary_metrics(session: Session, client: TestClient, admin_user_local: User):
+def test_asset_summary_metrics(
+    session: Session, client: TestClient, admin_user_local: User
+):
     client.post(
         "/api/v1/assets",
         json={
@@ -318,7 +364,9 @@ def test_asset_summary_metrics(session: Session, client: TestClient, admin_user_
         headers=_headers(admin_user_local),
     )
 
-    summary_res = client.get("/api/v1/assets/summary", headers=_headers(admin_user_local))
+    summary_res = client.get(
+        "/api/v1/assets/summary", headers=_headers(admin_user_local)
+    )
     assert summary_res.status_code == 200
     data = summary_res.json()
     assert data["total_assets"] >= 1
@@ -328,7 +376,10 @@ def test_asset_summary_metrics(session: Session, client: TestClient, admin_user_
 
 
 def test_record_movements_entrada_saida_ajuste_baixa(
-    session: Session, client: TestClient, admin_user_local: User, manager_user_local: User
+    session: Session,
+    client: TestClient,
+    admin_user_local: User,
+    manager_user_local: User,
 ):
     create_res = client.post(
         "/api/v1/assets",
@@ -429,12 +480,16 @@ def test_record_movements_entrada_saida_ajuste_baixa(
     assert baixa_res.json()["new_quantity"] == 0
 
     # Verify asset condition changed to BAIXADO
-    cam_detail = client.get(f"/api/v1/assets/{camera_id}", headers=_headers(admin_user_local))
+    cam_detail = client.get(
+        f"/api/v1/assets/{camera_id}", headers=_headers(admin_user_local)
+    )
     assert cam_detail.json()["condition"] == "BAIXADO"
     assert cam_detail.json()["current_quantity"] == 0
 
 
-def test_global_inventory_movements_audit_log(session: Session, client: TestClient, admin_user_local: User):
+def test_global_inventory_movements_audit_log(
+    session: Session, client: TestClient, admin_user_local: User
+):
     create_res = client.post(
         "/api/v1/assets",
         json={
@@ -472,7 +527,9 @@ def test_global_inventory_movements_audit_log(session: Session, client: TestClie
     assert res_type.json()["total"] == 2
 
 
-def test_movement_on_nonexistent_asset_returns_404(session: Session, client: TestClient, admin_user_local: User):
+def test_movement_on_nonexistent_asset_returns_404(
+    session: Session, client: TestClient, admin_user_local: User
+):
     res = client.post(
         f"/api/v1/assets/{uuid.uuid4()}/movements",
         json={"movement_type": "ENTRADA", "quantity": 5, "reason": "Teste"},
@@ -481,7 +538,9 @@ def test_movement_on_nonexistent_asset_returns_404(session: Session, client: Tes
     assert res.status_code == 404
 
 
-def test_movement_invalid_quantities(session: Session, client: TestClient, admin_user_local: User):
+def test_movement_invalid_quantities(
+    session: Session, client: TestClient, admin_user_local: User
+):
     create_res = client.post(
         "/api/v1/assets",
         json={
@@ -514,7 +573,11 @@ def test_movement_invalid_quantities(session: Session, client: TestClient, admin
     # Negative quantity for AJUSTE_INVENTARIO
     res_adj_neg = client.post(
         f"/api/v1/assets/{asset_id}/movements",
-        json={"movement_type": "AJUSTE_INVENTARIO", "quantity": -1, "reason": "Negativo"},
+        json={
+            "movement_type": "AJUSTE_INVENTARIO",
+            "quantity": -1,
+            "reason": "Negativo",
+        },
         headers=_headers(admin_user_local),
     )
     assert res_adj_neg.status_code == 422
@@ -522,9 +585,12 @@ def test_movement_invalid_quantities(session: Session, client: TestClient, admin
     # Zero quantity for AJUSTE_INVENTARIO is allowed (means 0 balance)
     res_adj_zero = client.post(
         f"/api/v1/assets/{asset_id}/movements",
-        json={"movement_type": "AJUSTE_INVENTARIO", "quantity": 0, "reason": "Zerou estoque"},
+        json={
+            "movement_type": "AJUSTE_INVENTARIO",
+            "quantity": 0,
+            "reason": "Zerou estoque",
+        },
         headers=_headers(admin_user_local),
     )
     assert res_adj_zero.status_code == 201
     assert res_adj_zero.json()["new_quantity"] == 0
-

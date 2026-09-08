@@ -158,9 +158,7 @@ def test_get_project_detail_allowed_roles(
     sample_project: ConstructionProject,
 ):
     for token in [admin_token, director_token, manager_token, resident_token]:
-        resp = client.get(
-            f"/api/v1/projects/{sample_project.id}", headers=_auth(token)
-        )
+        resp = client.get(f"/api/v1/projects/{sample_project.id}", headers=_auth(token))
         assert resp.status_code == status.HTTP_200_OK
 
     resp_guest = client.get(
@@ -184,12 +182,32 @@ def test_create_project_rbac(
     payload = {"title": "Reforma Salão de Festas", "total_budget": 20000.0}
 
     # Admin & Director: 201 Created
-    assert client.post("/api/v1/projects", headers=_auth(admin_token), json=payload).status_code == status.HTTP_201_CREATED
-    assert client.post("/api/v1/projects", headers=_auth(director_token), json=payload).status_code == status.HTTP_201_CREATED
+    assert (
+        client.post(
+            "/api/v1/projects", headers=_auth(admin_token), json=payload
+        ).status_code
+        == status.HTTP_201_CREATED
+    )
+    assert (
+        client.post(
+            "/api/v1/projects", headers=_auth(director_token), json=payload
+        ).status_code
+        == status.HTTP_201_CREATED
+    )
 
     # Manager & Resident: 403 Forbidden
-    assert client.post("/api/v1/projects", headers=_auth(manager_token), json=payload).status_code == status.HTTP_403_FORBIDDEN
-    assert client.post("/api/v1/projects", headers=_auth(resident_token), json=payload).status_code == status.HTTP_403_FORBIDDEN
+    assert (
+        client.post(
+            "/api/v1/projects", headers=_auth(manager_token), json=payload
+        ).status_code
+        == status.HTTP_403_FORBIDDEN
+    )
+    assert (
+        client.post(
+            "/api/v1/projects", headers=_auth(resident_token), json=payload
+        ).status_code
+        == status.HTTP_403_FORBIDDEN
+    )
 
 
 def test_update_and_delete_project_rbac(
@@ -201,18 +219,54 @@ def test_update_and_delete_project_rbac(
     sample_project: ConstructionProject,
 ):
     # Manager & Resident cannot update
-    assert client.put(f"/api/v1/projects/{sample_project.id}", headers=_auth(manager_token), json={"title": "Test"}).status_code == status.HTTP_403_FORBIDDEN
-    assert client.put(f"/api/v1/projects/{sample_project.id}", headers=_auth(resident_token), json={"title": "Test"}).status_code == status.HTTP_403_FORBIDDEN
+    assert (
+        client.put(
+            f"/api/v1/projects/{sample_project.id}",
+            headers=_auth(manager_token),
+            json={"title": "Test"},
+        ).status_code
+        == status.HTTP_403_FORBIDDEN
+    )
+    assert (
+        client.put(
+            f"/api/v1/projects/{sample_project.id}",
+            headers=_auth(resident_token),
+            json={"title": "Test"},
+        ).status_code
+        == status.HTTP_403_FORBIDDEN
+    )
 
     # Director can update
-    assert client.put(f"/api/v1/projects/{sample_project.id}", headers=_auth(director_token), json={"title": "Updated"}).status_code == status.HTTP_200_OK
+    assert (
+        client.put(
+            f"/api/v1/projects/{sample_project.id}",
+            headers=_auth(director_token),
+            json={"title": "Updated"},
+        ).status_code
+        == status.HTTP_200_OK
+    )
 
     # Manager & Resident cannot delete
-    assert client.delete(f"/api/v1/projects/{sample_project.id}", headers=_auth(manager_token)).status_code == status.HTTP_403_FORBIDDEN
-    assert client.delete(f"/api/v1/projects/{sample_project.id}", headers=_auth(resident_token)).status_code == status.HTTP_403_FORBIDDEN
+    assert (
+        client.delete(
+            f"/api/v1/projects/{sample_project.id}", headers=_auth(manager_token)
+        ).status_code
+        == status.HTTP_403_FORBIDDEN
+    )
+    assert (
+        client.delete(
+            f"/api/v1/projects/{sample_project.id}", headers=_auth(resident_token)
+        ).status_code
+        == status.HTTP_403_FORBIDDEN
+    )
 
     # Admin can delete
-    assert client.delete(f"/api/v1/projects/{sample_project.id}", headers=_auth(admin_token)).status_code == status.HTTP_204_NO_CONTENT
+    assert (
+        client.delete(
+            f"/api/v1/projects/{sample_project.id}", headers=_auth(admin_token)
+        ).status_code
+        == status.HTTP_204_NO_CONTENT
+    )
 
 
 def test_milestone_mutations_rbac(
@@ -226,20 +280,57 @@ def test_milestone_mutations_rbac(
     m_payload = {"title": "Fase 1", "status": "IN_PROGRESS"}
 
     # Manager & Resident cannot add milestone
-    assert client.post(f"/api/v1/projects/{sample_project.id}/milestones", headers=_auth(manager_token), json=m_payload).status_code == status.HTTP_403_FORBIDDEN
-    assert client.post(f"/api/v1/projects/{sample_project.id}/milestones", headers=_auth(resident_token), json=m_payload).status_code == status.HTTP_403_FORBIDDEN
+    assert (
+        client.post(
+            f"/api/v1/projects/{sample_project.id}/milestones",
+            headers=_auth(manager_token),
+            json=m_payload,
+        ).status_code
+        == status.HTTP_403_FORBIDDEN
+    )
+    assert (
+        client.post(
+            f"/api/v1/projects/{sample_project.id}/milestones",
+            headers=_auth(resident_token),
+            json=m_payload,
+        ).status_code
+        == status.HTTP_403_FORBIDDEN
+    )
 
     # Director can add milestone
-    resp = client.post(f"/api/v1/projects/{sample_project.id}/milestones", headers=_auth(director_token), json=m_payload)
+    resp = client.post(
+        f"/api/v1/projects/{sample_project.id}/milestones",
+        headers=_auth(director_token),
+        json=m_payload,
+    )
     assert resp.status_code == status.HTTP_201_CREATED
     m_id = resp.json()["id"]
 
     # Manager & Resident cannot update or delete milestone
-    assert client.put(f"/api/v1/projects/{sample_project.id}/milestones/{m_id}", headers=_auth(manager_token), json={"status": "DONE"}).status_code == status.HTTP_403_FORBIDDEN
-    assert client.delete(f"/api/v1/projects/{sample_project.id}/milestones/{m_id}", headers=_auth(resident_token)).status_code == status.HTTP_403_FORBIDDEN
+    assert (
+        client.put(
+            f"/api/v1/projects/{sample_project.id}/milestones/{m_id}",
+            headers=_auth(manager_token),
+            json={"status": "DONE"},
+        ).status_code
+        == status.HTTP_403_FORBIDDEN
+    )
+    assert (
+        client.delete(
+            f"/api/v1/projects/{sample_project.id}/milestones/{m_id}",
+            headers=_auth(resident_token),
+        ).status_code
+        == status.HTTP_403_FORBIDDEN
+    )
 
     # Admin can delete milestone
-    assert client.delete(f"/api/v1/projects/{sample_project.id}/milestones/{m_id}", headers=_auth(admin_token)).status_code == status.HTTP_204_NO_CONTENT
+    assert (
+        client.delete(
+            f"/api/v1/projects/{sample_project.id}/milestones/{m_id}",
+            headers=_auth(admin_token),
+        ).status_code
+        == status.HTTP_204_NO_CONTENT
+    )
 
 
 # -----------------------------------------------------------------------------
@@ -258,15 +349,38 @@ def test_project_update_rbac(
     u_payload = {"title": "Visita Técnica", "content": "Fiscalização realizada"}
 
     # Resident cannot create update
-    assert client.post(f"/api/v1/projects/{sample_project.id}/updates", headers=_auth(resident_token), json=u_payload).status_code == status.HTTP_403_FORBIDDEN
+    assert (
+        client.post(
+            f"/api/v1/projects/{sample_project.id}/updates",
+            headers=_auth(resident_token),
+            json=u_payload,
+        ).status_code
+        == status.HTTP_403_FORBIDDEN
+    )
 
     # Manager can create update
-    resp_mgr = client.post(f"/api/v1/projects/{sample_project.id}/updates", headers=_auth(manager_token), json=u_payload)
+    resp_mgr = client.post(
+        f"/api/v1/projects/{sample_project.id}/updates",
+        headers=_auth(manager_token),
+        json=u_payload,
+    )
     assert resp_mgr.status_code == status.HTTP_201_CREATED
     u_id = resp_mgr.json()["id"]
 
     # Manager cannot delete update
-    assert client.delete(f"/api/v1/projects/{sample_project.id}/updates/{u_id}", headers=_auth(manager_token)).status_code == status.HTTP_403_FORBIDDEN
+    assert (
+        client.delete(
+            f"/api/v1/projects/{sample_project.id}/updates/{u_id}",
+            headers=_auth(manager_token),
+        ).status_code
+        == status.HTTP_403_FORBIDDEN
+    )
 
     # Director can delete update
-    assert client.delete(f"/api/v1/projects/{sample_project.id}/updates/{u_id}", headers=_auth(director_token)).status_code == status.HTTP_204_NO_CONTENT
+    assert (
+        client.delete(
+            f"/api/v1/projects/{sample_project.id}/updates/{u_id}",
+            headers=_auth(director_token),
+        ).status_code
+        == status.HTTP_204_NO_CONTENT
+    )

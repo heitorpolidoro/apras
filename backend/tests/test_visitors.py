@@ -78,11 +78,17 @@ def test_get_visitor_not_found_raises_error(session: Session):
 def test_search_visitors(session: Session):
     VisitorService.create_visitor(
         session,
-        VisitorCreate(full_name="Roberto Santos", cpf="52998224725", company_name="Alfa Plumbing"),
+        VisitorCreate(
+            full_name="Roberto Santos", cpf="52998224725", company_name="Alfa Plumbing"
+        ),
     )
     VisitorService.create_visitor(
         session,
-        VisitorCreate(full_name="Ana Oliveira", vehicle_plate="XYZ-9876", company_name="Beta Construction"),
+        VisitorCreate(
+            full_name="Ana Oliveira",
+            vehicle_plate="XYZ-9876",
+            company_name="Beta Construction",
+        ),
     )
 
     results, total = VisitorService.search_visitors(session, q="Santos")
@@ -100,6 +106,7 @@ def test_search_visitors(session: Session):
 
 def test_api_visitor_crud(client: TestClient, admin_user: User):
     from app.core.security import create_access_token
+
     token = create_access_token(admin_user.id)
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -127,6 +134,8 @@ def test_api_visitor_crud(client: TestClient, admin_user: User):
     assert res_get.json()["full_name"] == "Pedro Lima"
 
     # Update
-    res_put = client.put(f"/api/v1/visitors/{v_id}", json={"notes": "Vip guest"}, headers=headers)
+    res_put = client.put(
+        f"/api/v1/visitors/{v_id}", json={"notes": "Vip guest"}, headers=headers
+    )
     assert res_put.status_code == 200
     assert res_put.json()["notes"] == "Vip guest"

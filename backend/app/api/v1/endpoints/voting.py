@@ -7,6 +7,10 @@ Two routers in one module, following the `reservations.py` precedent of
 from typing import Annotated
 from uuid import UUID
 
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import HTMLResponse
+from sqlmodel import Session
+
 from app.api import deps as api_deps
 from app.db import get_session
 from app.models.enums import VoteKind, VoteStatus, VoteType
@@ -29,12 +33,10 @@ from app.schemas.voting import (
     VoteUpdate,
 )
 from app.services import voting_service
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from fastapi.responses import HTMLResponse
-from sqlmodel import Session
 
 assemblies_router = APIRouter()
 votes_router = APIRouter()
+
 
 def _require_voting_access(
     current_user: User, session: Session, permission: str
@@ -116,9 +118,7 @@ def _validate_retract_body(vote: Vote, payload: BallotRetract) -> None:
 # ---------------------------------------------------------------------------
 
 
-@assemblies_router.post(
-    "/", response_model=AssemblyRead, status_code=status.HTTP_201_CREATED
-)
+@assemblies_router.post("/", status_code=status.HTTP_201_CREATED)
 def create_assembly(
     assembly_in: AssemblyCreate,
     session: Annotated[Session, Depends(get_session)],
@@ -130,7 +130,7 @@ def create_assembly(
     return AssemblyRead.model_validate(assembly)
 
 
-@assemblies_router.get("/", response_model=list[AssemblyRead])
+@assemblies_router.get("/")
 def list_assemblies(
     session: Annotated[Session, Depends(get_session)],
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
@@ -143,7 +143,7 @@ def list_assemblies(
     ]
 
 
-@assemblies_router.get("/{assembly_id}", response_model=AssemblyRead)
+@assemblies_router.get("/{assembly_id}")
 def get_assembly(
     assembly_id: UUID,
     session: Annotated[Session, Depends(get_session)],
@@ -156,7 +156,7 @@ def get_assembly(
     )
 
 
-@assemblies_router.patch("/{assembly_id}", response_model=AssemblyRead)
+@assemblies_router.patch("/{assembly_id}")
 def update_assembly(
     assembly_id: UUID,
     assembly_in: AssemblyUpdate,
@@ -171,7 +171,7 @@ def update_assembly(
     )
 
 
-@assemblies_router.post("/{assembly_id}/close", response_model=AssemblyRead)
+@assemblies_router.post("/{assembly_id}/close")
 def close_assembly(
     assembly_id: UUID,
     session: Annotated[Session, Depends(get_session)],
@@ -201,7 +201,6 @@ def get_assembly_minutes(
 
 @assemblies_router.post(
     "/{assembly_id}/minutes/save",
-    response_model=AssociationDocumentRead,
     status_code=status.HTTP_201_CREATED,
 )
 def save_assembly_minutes(
@@ -220,7 +219,7 @@ def save_assembly_minutes(
 # ---------------------------------------------------------------------------
 
 
-@votes_router.post("/", response_model=VoteRead, status_code=status.HTTP_201_CREATED)
+@votes_router.post("/", status_code=status.HTTP_201_CREATED)
 def create_vote(
     vote_in: VoteCreate,
     session: Annotated[Session, Depends(get_session)],
@@ -233,13 +232,13 @@ def create_vote(
     )
 
 
-@votes_router.get("/", response_model=list[VoteRead])
+@votes_router.get("/")
 def list_votes(
     session: Annotated[Session, Depends(get_session)],
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
-    kind: VoteKind | None = Query(default=None),
-    status_filter: VoteStatus | None = Query(default=None, alias="status"),
-    assembly_id: UUID | None = Query(default=None),
+    kind: Annotated[VoteKind | None, Query()] = None,
+    status_filter: Annotated[VoteStatus | None, Query(alias="status")] = None,
+    assembly_id: Annotated[UUID | None, Query()] = None,
 ) -> list[VoteRead]:
     """List votes. Never materialises snapshots (see the lazy-close rule)."""
     _require_voting_access(current_user, session, "votes:read")
@@ -249,7 +248,7 @@ def list_votes(
     return [VoteRead.model_validate(vote) for vote in votes]
 
 
-@votes_router.get("/{vote_id}", response_model=VoteRead)
+@votes_router.get("/{vote_id}")
 def get_vote(
     vote_id: UUID,
     session: Annotated[Session, Depends(get_session)],
@@ -262,7 +261,7 @@ def get_vote(
     return VoteRead.model_validate(vote)
 
 
-@votes_router.patch("/{vote_id}", response_model=VoteRead)
+@votes_router.patch("/{vote_id}")
 def update_vote(
     vote_id: UUID,
     vote_in: VoteUpdate,
@@ -277,7 +276,7 @@ def update_vote(
     )
 
 
-@votes_router.post("/{vote_id}/close", response_model=VoteRead)
+@votes_router.post("/{vote_id}/close")
 def close_vote(
     vote_id: UUID,
     session: Annotated[Session, Depends(get_session)],
@@ -291,9 +290,7 @@ def close_vote(
     )
 
 
-@votes_router.post(
-    "/{vote_id}/ballots", response_model=BallotRead, status_code=status.HTTP_201_CREATED
-)
+@votes_router.post("/{vote_id}/ballots", status_code=status.HTTP_201_CREATED)
 def cast_ballot(
     vote_id: UUID,
     ballot_in: BallotCreate,
@@ -319,7 +316,6 @@ def cast_ballot(
 
 @votes_router.post(
     "/{vote_id}/ballots/retract",
-    response_model=BallotRead,
     status_code=status.HTTP_201_CREATED,
 )
 def retract_ballot(
@@ -341,7 +337,7 @@ def retract_ballot(
     return _to_ballot_read(session, ballot)
 
 
-@votes_router.get("/{vote_id}/my-ballot", response_model=list[MyBallotRead])
+@votes_router.get("/{vote_id}/my-ballot")
 def get_my_ballot(
     vote_id: UUID,
     session: Annotated[Session, Depends(get_session)],
@@ -353,7 +349,7 @@ def get_my_ballot(
     return voting_service.get_my_ballots(session, current_user, vote)
 
 
-@votes_router.get("/{vote_id}/eligible-lots", response_model=list[EligibleLotRead])
+@votes_router.get("/{vote_id}/eligible-lots")
 def list_eligible_lots(
     vote_id: UUID,
     session: Annotated[Session, Depends(get_session)],
@@ -368,9 +364,7 @@ def list_eligible_lots(
     ]
 
 
-@votes_router.get(
-    "/{vote_id}/tally", response_model=TallyRead, response_model_exclude_none=True
-)
+@votes_router.get("/{vote_id}/tally", response_model_exclude_none=True)
 def get_tally(
     vote_id: UUID,
     session: Annotated[Session, Depends(get_session)],

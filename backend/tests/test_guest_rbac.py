@@ -35,7 +35,9 @@ def guest_data_fixture(session: Session):
     # per APRAS-8) since these tests exercise GUEST being blocked. The
     # helper director, however, needs standing "tasks" access so it can set
     # up tasks for the guest-focused assertions below.
-    director_type = Role(name="Director Guest RBAC Type",)
+    director_type = Role(
+        name="Director Guest RBAC Type",
+    )
     session.add(director_type)
     session.commit()
 
@@ -202,9 +204,7 @@ def test_a_holder_of_tasks_comment_still_comments(
     assert resp.status_code == 201
 
 
-def test_guest_cannot_create_category(
-    client: TestClient, session: Session, guest_data
-):
+def test_guest_cannot_create_category(client: TestClient, session: Session, guest_data):
     """GUEST gets 403 when trying to create a category."""
     token = get_token(client, "guest_rbac", "pass")
     resp = client.post(

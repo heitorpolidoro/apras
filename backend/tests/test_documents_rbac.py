@@ -90,13 +90,17 @@ def guest_headers(guest_user: User):
     return {"Authorization": f"Bearer {token}"}
 
 
-def test_folder_visibility_filtering(client, admin_headers, resident_headers, manager_headers, guest_headers, session):
+def test_folder_visibility_filtering(
+    client, admin_headers, resident_headers, manager_headers, guest_headers, session
+):
     # Admin creates 2 folders: one for Manager only, one for Resident & Manager
     res_m = client.post(
         "/api/v1/documents/folders",
         json={
             "name": "Gestão Interna",
-            "allowed_role_ids": _role_ids(session, "ADMINISTRATOR", "DIRECTOR", "MANAGER"),
+            "allowed_role_ids": _role_ids(
+                session, "ADMINISTRATOR", "DIRECTOR", "MANAGER"
+            ),
         },
         headers=admin_headers,
     )
@@ -107,7 +111,9 @@ def test_folder_visibility_filtering(client, admin_headers, resident_headers, ma
         "/api/v1/documents/folders",
         json={
             "name": "Transparência Geral",
-            "allowed_role_ids": _role_ids(session, "ADMINISTRATOR", "DIRECTOR", "MANAGER", "RESIDENT"),
+            "allowed_role_ids": _role_ids(
+                session, "ADMINISTRATOR", "DIRECTOR", "MANAGER", "RESIDENT"
+            ),
         },
         headers=admin_headers,
     )
@@ -168,7 +174,9 @@ def test_non_admin_cannot_mutate_folders_or_documents(
     assert res_up.status_code == 403
 
     # Resident tries to delete folder
-    res_del = client.delete(f"/api/v1/documents/folders/{folder_id}", headers=resident_headers)
+    res_del = client.delete(
+        f"/api/v1/documents/folders/{folder_id}", headers=resident_headers
+    )
     assert res_del.status_code == 403
 
     # Resident tries to upload document
@@ -193,7 +201,9 @@ def test_document_access_denied_for_forbidden_folder(
         "/api/v1/documents/folders",
         json={
             "name": "Manager Secret",
-            "allowed_role_ids": _role_ids(session, "ADMINISTRATOR", "DIRECTOR", "MANAGER"),
+            "allowed_role_ids": _role_ids(
+                session, "ADMINISTRATOR", "DIRECTOR", "MANAGER"
+            ),
         },
         headers=admin_headers,
     )
@@ -228,9 +238,13 @@ def test_document_access_denied_for_forbidden_folder(
     assert res_del.status_code == 403
 
     # Resident tries to list docs in that folder directly
-    res_list = client.get(f"/api/v1/documents?folder_id={folder_id}", headers=resident_headers)
+    res_list = client.get(
+        f"/api/v1/documents?folder_id={folder_id}", headers=resident_headers
+    )
     assert res_list.status_code == 403
 
     # Resident tries to download document
-    res_dl = client.post(f"/api/v1/documents/{doc_id}/download", headers=resident_headers)
+    res_dl = client.post(
+        f"/api/v1/documents/{doc_id}/download", headers=resident_headers
+    )
     assert res_dl.status_code == 403

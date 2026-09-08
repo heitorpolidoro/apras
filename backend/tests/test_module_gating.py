@@ -29,9 +29,7 @@ from tests.conftest import make_user
 
 TENANT_A = DEFAULT_TENANT_ID
 
-FINANCE_PERMISSIONS = frozenset(
-    p for p in PERMISSIONS if module_of(p) == "finance"
-)
+FINANCE_PERMISSIONS = frozenset(p for p in PERMISSIONS if module_of(p) == "finance")
 
 _cpf_counter = itertools.count(1)
 
@@ -235,7 +233,7 @@ def test_permissions_me_reports_an_empty_list_by_default(
 def test_a_tenant_admin_is_bounded_by_the_tenants_modules(
     session: Session, tenant_client: TestClient
 ):
-    """"Everything *this tenant* has", never more than the tenant has."""
+    """ "Everything *this tenant* has", never more than the tenant has."""
     user = _make_user(session, "RESIDENT", is_superuser=False)
     session.add(
         UserTenantLink(user_id=user.id, tenant_id=TENANT_A, is_tenant_admin=True)
@@ -330,9 +328,7 @@ def test_module_isolation_between_tenants(
     the acting tenant comes from `session.info` (APRAS-42).
     """
     user = _make_user(session, "RESIDENT", is_superuser=False)
-    role_b = Role(
-        name="Morador B", tenant_id=tenant_b.id, permissions=["finance:read"]
-    )
+    role_b = Role(name="Morador B", tenant_id=tenant_b.id, permissions=["finance:read"])
     session.add(role_b)
     session.commit()
     user.roles.append(role_b)
@@ -346,9 +342,7 @@ def test_module_isolation_between_tenants(
         "/api/v1/finance/transactions", headers=_auth(user, TENANT_A)
     )
     assert in_a.status_code == 403
-    me_in_a = tenant_client.get(
-        "/api/v1/permissions/me", headers=_auth(user, TENANT_A)
-    )
+    me_in_a = tenant_client.get("/api/v1/permissions/me", headers=_auth(user, TENANT_A))
     assert "finance:read" not in me_in_a.json()["permissions"]
 
     in_b = tenant_client.get(

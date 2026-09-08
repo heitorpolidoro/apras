@@ -280,6 +280,11 @@
 - Unica ocorrencia em prosa que a guarda textual vai pegar: docstring de _next_cast_at em voting_service.py:437.
 - 7: a generalizacao do refresh e mais ampla que a evidencia (asset_service.py:313/331, purchase_service.py:623/636 - conclusao vale porque os bodies nao leem o timestamp nao-refrescado).
 - 5.0: tabela por slice sem coluna para as quatro cercas de diff do 5.5.
+- (code review) re-wraps manuais de E501 que partem frases de docstring/comentario (finance_service.py:314-316, package_service.py:1-2 e :89-90 com `# not` sozinho, visitor_service.py:86-87) - so estilo.
+- (code review) app/seed_demo.py deveria entrar em [tool.coverage.run].omit ao lado de app/seed.py (pre-existente, explica a base 96.3 % vs 98.6 %).
+- (QA) a afirmacao do 4.4 sobre o psycopg2 estava errada: o Postgres converte o valor aware para o TimeZone da sessao antes do cast para TIMESTAMP WITHOUT TIME ZONE (sessao nao-UTC gravava 10:13 onde UTC grava 13:13); db_now() e o lado correto (inconsistencia pre-existente corrigida) - spec e docstring do clock.py corrigidos pelo orquestrador no fechamento.
+- (QA) ARG002 em tests/** e um quinto codigo alem dos quatro enumerados no ER-1 (27 ocorrencias, irmao do ARG001 existente, justificado em comentario) - e por isso NOQA_CAP fechou em 68 e nao 95.
+- (QA) backend/.venv_qa/ untracked e fora do .gitignore (pre-existente).
 
 ## [APRAS-55] Reorganizar navegação com menu lateral colapsável agrupado por áreas funcionais — 2026-09-07
 

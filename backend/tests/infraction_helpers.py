@@ -18,6 +18,7 @@ import uuid
 from datetime import date, timedelta
 from typing import TYPE_CHECKING
 
+from app.core import clock
 from app.core.security import create_access_token
 from app.models.lot import Lot, UserLotLink
 from app.models.resident import Resident
@@ -131,9 +132,7 @@ def make_resident(
     session.add(resident)
     if user is not None:
         session.add(
-            UserLotLink(
-                user_id=user.id, lot_id=lot.id, start_date=None, end_date=None
-            )
+            UserLotLink(user_id=user.id, lot_id=lot.id, start_date=None, end_date=None)
         )
     session.commit()
     session.refresh(resident)
@@ -205,7 +204,9 @@ def create_infraction(
             "rule_id": rule_id,
             "lot_id": str(lot.id),
             "responsible_resident_id": str(resident.id),
-            "occurred_on": (occurred_on or date.today() - timedelta(days=1)).isoformat(),
+            "occurred_on": (
+                occurred_on or clock.today_utc() - timedelta(days=1)
+            ).isoformat(),
             "description": description,
         },
         headers=headers(actor, tenant_id),

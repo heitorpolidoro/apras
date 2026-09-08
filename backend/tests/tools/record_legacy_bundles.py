@@ -72,7 +72,7 @@ def build() -> dict:
     """The recorded payload: `_meta` plus six sorted bundles."""
     # Imported here, not at module scope, so `--help` works on a tree where
     # the map has already been deleted (and fails loudly when it is used).
-    from app.core.permissions import LEGACY_ROLE_PERMISSIONS  # noqa: PLC0415
+    from app.core.permissions import LEGACY_ROLE_PERMISSIONS
 
     return {
         "_meta": {
@@ -94,8 +94,7 @@ def build() -> dict:
         },
         "bundles": {
             role.value: sorted(
-                RENAMED_BY_F5.get(permission, permission)
-                for permission in permissions
+                RENAMED_BY_F5.get(permission, permission) for permission in permissions
             )
             for role, permissions in sorted(
                 LEGACY_ROLE_PERMISSIONS.items(), key=lambda item: item[0].value

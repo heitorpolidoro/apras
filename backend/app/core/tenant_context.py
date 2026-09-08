@@ -39,7 +39,7 @@ from sqlmodel import Session, SQLModel
 # the scoped-model discovery below exhaustive no matter who imports this
 # module first. No model imports `app.db` or `app.core`, so there is no
 # import cycle.
-import app.models  # noqa: F401
+import app.models  # noqa: F401  # every model must be imported before the registry is walked
 from app.core.exceptions import CrossTenantWriteError, TenantScopeNotResolvedError
 from app.models.tenant import UserTenantLink
 
@@ -62,7 +62,7 @@ def _discover_scoped_models() -> tuple[type[SQLModel], ...]:
     """
     return tuple(
         mapper.class_
-        for mapper in SQLModel._sa_registry.mappers  # noqa: SLF001
+        for mapper in SQLModel._sa_registry.mappers  # noqa: SLF001  # SQLModel exposes its mapper registry no other way
         if "tenant_id" in mapper.local_table.c and mapper.class_ is not UserTenantLink
     )
 

@@ -3,8 +3,9 @@
 from datetime import datetime
 from uuid import UUID
 
-from app.models.enums import LotAssociationType, LotStatus
 from pydantic import BaseModel, ConfigDict, Field
+
+from app.models.enums import LotAssociationType, LotStatus
 
 
 class UserSummaryRead(BaseModel):

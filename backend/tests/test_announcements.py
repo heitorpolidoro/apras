@@ -94,7 +94,9 @@ def _create_announcement(client: TestClient, headers: dict) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def test_create_announcement_publisher_only(client: TestClient, admin_headers, resident_headers):
+def test_create_announcement_publisher_only(
+    client: TestClient, admin_headers, resident_headers
+):
     created = _create_announcement(client, admin_headers)
     assert created["title"] == "Assembleia Geral"
     assert created["media"] == []
@@ -116,7 +118,9 @@ def test_update_and_delete_announcement_publisher_only(
     ann_id = created["id"]
 
     res_forbidden = client.put(
-        f"/api/v1/announcements/{ann_id}", json={"title": "Hacked"}, headers=resident_headers
+        f"/api/v1/announcements/{ann_id}",
+        json={"title": "Hacked"},
+        headers=resident_headers,
     )
     assert res_forbidden.status_code == status.HTTP_403_FORBIDDEN
 
@@ -129,7 +133,9 @@ def test_update_and_delete_announcement_publisher_only(
     assert res_update.json()["title"] == "Assembleia Geral - Atualizado"
     assert res_update.json()["content"] == "Novo conteúdo"
 
-    res_del_forbidden = client.delete(f"/api/v1/announcements/{ann_id}", headers=resident_headers)
+    res_del_forbidden = client.delete(
+        f"/api/v1/announcements/{ann_id}", headers=resident_headers
+    )
     assert res_del_forbidden.status_code == status.HTTP_403_FORBIDDEN
 
     res_del = client.delete(f"/api/v1/announcements/{ann_id}", headers=admin_headers)
@@ -186,7 +192,9 @@ def test_upload_media_image_and_pdf(client: TestClient, admin_headers):
     assert len(detail["media"]) == 2
 
 
-def test_upload_media_rejects_invalid_mime_and_oversized(client: TestClient, admin_headers):
+def test_upload_media_rejects_invalid_mime_and_oversized(
+    client: TestClient, admin_headers
+):
     created = _create_announcement(client, admin_headers)
     ann_id = created["id"]
 
@@ -205,7 +213,9 @@ def test_upload_media_rejects_invalid_mime_and_oversized(client: TestClient, adm
     assert oversized.status_code == status.HTTP_400_BAD_REQUEST
 
 
-def test_upload_media_publisher_only(client: TestClient, admin_headers, resident_headers):
+def test_upload_media_publisher_only(
+    client: TestClient, admin_headers, resident_headers
+):
     created = _create_announcement(client, admin_headers)
     ann_id = created["id"]
 
@@ -231,7 +241,9 @@ def test_delete_media(client: TestClient, admin_headers, resident_headers):
     )
     assert forbidden.status_code == status.HTTP_403_FORBIDDEN
 
-    ok = client.delete(f"/api/v1/announcements/{ann_id}/media/{media['id']}", headers=admin_headers)
+    ok = client.delete(
+        f"/api/v1/announcements/{ann_id}/media/{media['id']}", headers=admin_headers
+    )
     assert ok.status_code == status.HTTP_204_NO_CONTENT
 
     missing = client.delete(
@@ -267,7 +279,9 @@ def test_comment_flow_and_guest_forbidden(
     comment = resident_res.json()
     assert comment["author_name"] == resident_user.full_name
 
-    list_res = client.get(f"/api/v1/announcements/{ann_id}/comments", headers=admin_headers)
+    list_res = client.get(
+        f"/api/v1/announcements/{ann_id}/comments", headers=admin_headers
+    )
     assert list_res.status_code == status.HTTP_200_OK
     assert len(list_res.json()) == 1
 
@@ -286,17 +300,25 @@ def test_delete_comment_author_or_publisher_only(
         headers=resident_headers,
     ).json()
 
-    forbidden = client.delete(f"/api/v1/announcements/comments/{comment['id']}", headers=guest_headers)
+    forbidden = client.delete(
+        f"/api/v1/announcements/comments/{comment['id']}", headers=guest_headers
+    )
     assert forbidden.status_code == status.HTTP_403_FORBIDDEN
 
-    ok = client.delete(f"/api/v1/announcements/comments/{comment['id']}", headers=resident_headers)
+    ok = client.delete(
+        f"/api/v1/announcements/comments/{comment['id']}", headers=resident_headers
+    )
     assert ok.status_code == status.HTTP_204_NO_CONTENT
 
-    missing = client.delete(f"/api/v1/announcements/comments/{comment['id']}", headers=admin_headers)
+    missing = client.delete(
+        f"/api/v1/announcements/comments/{comment['id']}", headers=admin_headers
+    )
     assert missing.status_code == status.HTTP_404_NOT_FOUND
 
 
-def test_publisher_can_delete_others_comment(client: TestClient, admin_headers, resident_headers):
+def test_publisher_can_delete_others_comment(
+    client: TestClient, admin_headers, resident_headers
+):
     created = _create_announcement(client, admin_headers)
     ann_id = created["id"]
     comment = client.post(
@@ -305,7 +327,9 @@ def test_publisher_can_delete_others_comment(client: TestClient, admin_headers, 
         headers=resident_headers,
     ).json()
 
-    res = client.delete(f"/api/v1/announcements/comments/{comment['id']}", headers=admin_headers)
+    res = client.delete(
+        f"/api/v1/announcements/comments/{comment['id']}", headers=admin_headers
+    )
     assert res.status_code == status.HTTP_204_NO_CONTENT
 
 
@@ -320,9 +344,13 @@ def test_mark_read_is_idempotent(
     created = _create_announcement(client, admin_headers)
     ann_id = created["id"]
 
-    first = client.post(f"/api/v1/announcements/{ann_id}/read", headers=resident_headers)
+    first = client.post(
+        f"/api/v1/announcements/{ann_id}/read", headers=resident_headers
+    )
     assert first.status_code == status.HTTP_200_OK
-    second = client.post(f"/api/v1/announcements/{ann_id}/read", headers=resident_headers)
+    second = client.post(
+        f"/api/v1/announcements/{ann_id}/read", headers=resident_headers
+    )
     assert second.status_code == status.HTTP_200_OK
     assert first.json()["read_at"] == second.json()["read_at"]
 
@@ -342,15 +370,21 @@ def test_mark_read_is_idempotent(
     assert item["is_read"] is True
 
 
-def test_read_receipts_list_publisher_only(client: TestClient, admin_headers, resident_headers):
+def test_read_receipts_list_publisher_only(
+    client: TestClient, admin_headers, resident_headers
+):
     created = _create_announcement(client, admin_headers)
     ann_id = created["id"]
     client.post(f"/api/v1/announcements/{ann_id}/read", headers=resident_headers)
 
-    forbidden = client.get(f"/api/v1/announcements/{ann_id}/read-receipts", headers=resident_headers)
+    forbidden = client.get(
+        f"/api/v1/announcements/{ann_id}/read-receipts", headers=resident_headers
+    )
     assert forbidden.status_code == status.HTTP_403_FORBIDDEN
 
-    ok = client.get(f"/api/v1/announcements/{ann_id}/read-receipts", headers=admin_headers)
+    ok = client.get(
+        f"/api/v1/announcements/{ann_id}/read-receipts", headers=admin_headers
+    )
     assert ok.status_code == status.HTTP_200_OK
     assert len(ok.json()) == 1
 
@@ -360,21 +394,40 @@ def test_read_receipts_list_publisher_only(client: TestClient, admin_headers, re
 # ---------------------------------------------------------------------------
 
 
-def test_operations_on_missing_announcement_return_404(client: TestClient, admin_headers):
+def test_operations_on_missing_announcement_return_404(
+    client: TestClient, admin_headers
+):
     missing_id = str(uuid.uuid4())
-    assert client.get(f"/api/v1/announcements/{missing_id}", headers=admin_headers).status_code == 404
     assert (
-        client.put(
-            f"/api/v1/announcements/{missing_id}", json={"title": "X"}, headers=admin_headers
+        client.get(
+            f"/api/v1/announcements/{missing_id}", headers=admin_headers
         ).status_code
         == 404
     )
-    assert client.delete(f"/api/v1/announcements/{missing_id}", headers=admin_headers).status_code == 404
     assert (
-        client.post(f"/api/v1/announcements/{missing_id}/read", headers=admin_headers).status_code == 404
+        client.put(
+            f"/api/v1/announcements/{missing_id}",
+            json={"title": "X"},
+            headers=admin_headers,
+        ).status_code
+        == 404
     )
     assert (
-        client.get(f"/api/v1/announcements/{missing_id}/comments", headers=admin_headers).status_code
+        client.delete(
+            f"/api/v1/announcements/{missing_id}", headers=admin_headers
+        ).status_code
+        == 404
+    )
+    assert (
+        client.post(
+            f"/api/v1/announcements/{missing_id}/read", headers=admin_headers
+        ).status_code
+        == 404
+    )
+    assert (
+        client.get(
+            f"/api/v1/announcements/{missing_id}/comments", headers=admin_headers
+        ).status_code
         == 404
     )
     assert (
@@ -394,12 +447,16 @@ def test_operations_on_missing_announcement_return_404(client: TestClient, admin
         == 404
     )
     assert (
-        client.get(f"/api/v1/announcements/{missing_id}/read-receipts", headers=admin_headers).status_code
+        client.get(
+            f"/api/v1/announcements/{missing_id}/read-receipts", headers=admin_headers
+        ).status_code
         == 404
     )
 
 
-def test_service_layer_direct_calls(session: Session, admin_user: User, normal_user: User):
+def test_service_layer_direct_calls(
+    session: Session, admin_user: User, normal_user: User
+):
     """Exercise service functions directly to cover edge branches."""
     from app.schemas.announcement import AnnouncementCreate
 

@@ -24,7 +24,9 @@ def setup_data_fixture(session: Session):
     # DIRECTOR is subject to the tasks menu gate (assert_menu_access,
     # APRAS-8); grant director1 standing access since these tests exercise
     # pre-existing task visibility/filter behavior, not the menu gate.
-    director_type = Role(name="Director Cov Type",)
+    director_type = Role(
+        name="Director Cov Type",
+    )
     session.add(director_type)
     session.commit()
 
@@ -56,11 +58,7 @@ def setup_data_fixture(session: Session):
         profile="DIRECTOR",
         cpf="07491723040",
     )
-    category = Category(
-        id=uuid.uuid4(),
-        name="Category Cov",
-        color="#000000"
-    )
+    category = Category(id=uuid.uuid4(), name="Category Cov", color="#000000")
     session.add_all([admin, director1, director2, category])
     session.commit()
 

@@ -143,6 +143,42 @@ deleted.
 - **Database**: PostgreSQL 16 (Vercel Postgres in production; local via Docker at port `5436`).
 - **Migrations**: Alembic with `env.py` wired to a non-pooling connection URL for safe DDL.
 
+### Lint: the gate, and the four rules around it
+
+`ruff check` and `ruff format --check` over `backend/` both report **zero**
+findings, and `ci.yml`'s `backend-lint` job keeps them there. Before
+committing anything under `backend/`:
+
+```bash
+# check
+cd backend && uv run ruff check . && uv run ruff format --check .
+# or, to apply
+cd backend && uv run ruff format . && uv run ruff check . --fix
+```
+
+1. **Every `# noqa` carries its codes and a reason** —
+   `# noqa: CODE[, CODE]  # why the finding is correct as written`. The count
+   under `backend/app/` + `backend/tests/` is capped by `NOQA_CAP` in
+   `backend/tests/test_lint_hygiene.py`, which also asserts the spelling. The
+   cap may fall freely; raising it belongs in a task's spec, not in a diff.
+2. **`alembic/versions/**` is never reformatted and its migrations are never
+   edited.** They are frozen history that `alembic upgrade` replays verbatim
+   against production. The formatter is excluded from them by
+   `[tool.ruff.format] exclude`, and a narrow `per-file-ignores` entry covers
+   the cosmetic rules — the linter still reads them, so a genuinely new
+   problem still fails the gate.
+3. **`app/core/clock.py` is the only clock.** `utc_now()` for a value that
+   never reaches a column (JWT `iat`/`exp`), `db_now()` for one that does, and
+   `today_utc()` for a date. Every dated column in this database is naive
+   (`timezone=True` appears in none of the migrations), so a writer must be
+   naive too or every `loaded < now` comparison becomes a `TypeError`.
+   `test_lint_hygiene.py` asserts by text scan that no other module under
+   `app/` contains `datetime.utcnow`, `date.today(` or `datetime.now(` — the
+   last with *any* argument, `datetime.now(UTC)` included.
+4. **`ruff --select RUF100 --fix` is never run on its own.** With only
+   `RUF100` selected, every `# noqa` for an unselected rule looks unused and
+   is deleted. Let the full `ruff check . --fix` report it.
+
 ### Running the Postgres migration tests locally
 
 `backend/tests/test_migrations_postgres.py` needs a real Postgres it is
@@ -190,6 +226,11 @@ as the source of truth.
 ## CI/CD
 
 - **GitHub Actions** — `ci.yml` runs backend tests (pytest, 90% coverage gate) and frontend tests (Vitest, 75% coverage gate) on every push/PR.
+- **Lint** — `ci.yml`'s `backend-lint` job runs `ruff check` and
+  `ruff format --check` over `backend/` and fails on **any** finding (no
+  `--exit-zero`, no `continue-on-error`). `ruff` is pinned **exactly** in
+  `backend/pyproject.toml`'s dev group, so the local and CI readings agree and
+  a ruff release cannot turn an unrelated PR red.
 - **Migration tests** — `ci.yml`'s `backend-migrations` job runs
   `backend/tests/test_migrations_postgres.py` against a throwaway
   **Postgres 16 (UTF-8)** service container. The module self-skips wherever
@@ -223,7 +264,7 @@ as the source of truth.
 | Rate Limiting         | slowapi                                            |
 | ASGI Server           | Uvicorn                                            |
 | Package Manager       | uv                                                 |
-| Linting               | Ruff (all rules selected; line-length 88)          |
+| Linting               | Ruff 0.16.5 (all rules selected; line-length 88; **CI gate**) |
 | Testing               | pytest + pytest-cov, httpx (async test client)     |
 
 ## Frontend

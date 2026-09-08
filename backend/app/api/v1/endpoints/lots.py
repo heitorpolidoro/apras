@@ -3,6 +3,9 @@
 from typing import Annotated
 from uuid import UUID
 
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlmodel import Session
+
 from app.api import deps as api_deps
 from app.db import get_session
 from app.models.enums import LotStatus
@@ -20,12 +23,11 @@ from app.schemas.lot import (
 )
 from app.schemas.voting import LotVoterEligibilityCreate, LotVoterEligibilityRead
 from app.services import voting_service
-from app.services.role_service import role_names_here
 from app.services.lot_service import LotService
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlmodel import Session
+from app.services.role_service import role_names_here
 
 router = APIRouter()
+
 
 def _require_lot_read_permission(
     current_user: User, session: Session, permission: str
@@ -49,14 +51,14 @@ def _require_lot_write_permission(
         )
 
 
-@router.get("/", response_model=PaginatedLotRead)
+@router.get("/")
 def list_lots(
     session: Annotated[Session, Depends(get_session)],
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
-    block: str | None = Query(default=None),
-    status_filter: LotStatus | None = Query(default=None, alias="status"),
-    skip: int = Query(default=0, ge=0),
-    limit: int = Query(default=100, ge=1, le=100),
+    block: Annotated[str | None, Query()] = None,
+    status_filter: Annotated[LotStatus | None, Query(alias="status")] = None,
+    skip: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = 100,
 ) -> PaginatedLotRead:
     """List lots with optional filtering by block and status."""
     _require_lot_read_permission(current_user, session, "lots:read")
@@ -71,7 +73,7 @@ def list_lots(
     return PaginatedLotRead(items=items_read, total=total, skip=skip, limit=limit)
 
 
-@router.post("/", response_model=LotRead, status_code=status.HTTP_201_CREATED)
+@router.post("/", status_code=status.HTTP_201_CREATED)
 def create_lot(
     lot_in: LotCreate,
     session: Annotated[Session, Depends(get_session)],
@@ -83,7 +85,7 @@ def create_lot(
     return LotRead.model_validate(db_lot)
 
 
-@router.get("/{lot_id}", response_model=LotDetailRead)
+@router.get("/{lot_id}")
 def get_lot(
     lot_id: UUID,
     session: Annotated[Session, Depends(get_session)],
@@ -94,7 +96,7 @@ def get_lot(
     return LotService.get_lot_detail(session=session, lot_id=lot_id)
 
 
-@router.put("/{lot_id}", response_model=LotRead)
+@router.put("/{lot_id}")
 def update_lot(
     lot_id: UUID,
     lot_in: LotUpdate,
@@ -104,9 +106,7 @@ def update_lot(
     """Update a lot. ADMINISTRATOR and DIRECTOR only."""
     _require_lot_write_permission(current_user, session, "lots:update")
     db_lot = LotService.get_lot_by_id(session=session, lot_id=lot_id)
-    updated_lot = LotService.update_lot(
-        session=session, db_lot=db_lot, lot_in=lot_in
-    )
+    updated_lot = LotService.update_lot(session=session, db_lot=db_lot, lot_in=lot_in)
     return LotRead.model_validate(updated_lot)
 
 
@@ -114,7 +114,7 @@ def update_lot(
 def delete_lot(
     lot_id: UUID,
     session: Annotated[Session, Depends(get_session)],
-    current_user: Annotated[User, Depends(api_deps.require_permission("lots:delete"))],
+    _current_user: Annotated[User, Depends(api_deps.require_permission("lots:delete"))],
 ) -> None:
     """Soft delete a lot. ADMINISTRATOR or a tenant_admin of the acting tenant."""
     db_lot = LotService.get_lot_by_id(session=session, lot_id=lot_id)
@@ -123,7 +123,6 @@ def delete_lot(
 
 @router.post(
     "/{lot_id}/users",
-    response_model=UserLotLinkRead,
     status_code=status.HTTP_201_CREATED,
 )
 def link_user_to_lot(
@@ -168,7 +167,7 @@ def unlink_user_from_lot(
     LotService.unlink_user(session=session, lot_id=lot_id, user_id=user_id)
 
 
-@router.patch("/{lot_id}/delinquency", response_model=LotRead)
+@router.patch("/{lot_id}/delinquency")
 def update_lot_delinquency(
     lot_id: UUID,
     delinquency_in: LotDelinquencyUpdate,
@@ -187,9 +186,7 @@ def update_lot_delinquency(
     return LotRead.model_validate(updated)
 
 
-def _to_eligibility_read(
-    session: Session, eligibility
-) -> LotVoterEligibilityRead:
+def _to_eligibility_read(session: Session, eligibility) -> LotVoterEligibilityRead:
     """Serialise a LotVoterEligibility row with the voter's display name."""
     user = session.get(User, eligibility.user_id)
     return LotVoterEligibilityRead(
@@ -202,9 +199,7 @@ def _to_eligibility_read(
     )
 
 
-@router.get(
-    "/{lot_id}/voter-eligibility", response_model=list[LotVoterEligibilityRead]
-)
+@router.get("/{lot_id}/voter-eligibility")
 def list_lot_voter_eligibility(
     lot_id: UUID,
     session: Annotated[Session, Depends(get_session)],
@@ -217,7 +212,6 @@ def list_lot_voter_eligibility(
 
 @router.post(
     "/{lot_id}/voter-eligibility",
-    response_model=LotVoterEligibilityRead,
     status_code=status.HTTP_201_CREATED,
 )
 def add_lot_voter_eligibility(
@@ -243,6 +237,4 @@ def remove_lot_voter_eligibility(
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
 ) -> None:
     """Remove an extra assembly voter from a lot. ADMIN/DIRECTOR/MANAGER."""
-    voting_service.remove_lot_voter_eligibility(
-        session, current_user, lot_id, user_id
-    )
+    voting_service.remove_lot_voter_eligibility(session, current_user, lot_id, user_id)

@@ -6,6 +6,8 @@ from uuid import UUID, uuid4
 
 from sqlmodel import Field, Relationship, SQLModel
 
+from app.core import clock
+
 from .enums import PackageStatus
 from .tenant import tenant_id_field
 
@@ -32,7 +34,7 @@ class Package(SQLModel, table=True):
     )
     description: str | None = Field(default=None)
     carrier: str | None = Field(default=None)
-    received_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    received_at: datetime = Field(default_factory=clock.db_now, nullable=False)
     status: PackageStatus = Field(
         default=PackageStatus.AWAITING_PICKUP, nullable=False, index=True
     )

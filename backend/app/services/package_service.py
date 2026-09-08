@@ -1,11 +1,12 @@
-"""Package (encomendas) service layer handling business logic and authorization checks."""
+"""Package (encomendas) service layer handling
+business logic and authorization checks."""
 
-from datetime import datetime
 from uuid import UUID
 
 from sqlmodel import Session, func, select
 
 from app.api.deps import has_permission
+from app.core import clock
 from app.core.exceptions import (
     LotNotFoundError,
     PackageAccessForbiddenError,
@@ -73,7 +74,8 @@ class PackageService:
         """Raise unless current_user holds the calling route's permission."""
         if not has_permission(current_user, session, permission):
             raise PackageAccessForbiddenError(
-                "Apenas administradores, diretores, gerentes e porteiros podem registrar encomendas."
+                "Apenas administradores, diretores, gerentes e porteiros podem "
+                "registrar encomendas."
             )
 
     @staticmethod
@@ -84,7 +86,8 @@ class PackageService:
         if has_permission(current_user, session, "packages:queue_read"):
             return
         if not has_permission(current_user, session, permission):
-            # Explicit reject before the linked-lots lookup below: GUEST accounts are not
+            # Explicit reject before the linked-lots lookup below: GUEST accounts are
+            # not
             # barred from having a UserLotLink/Resident row at the data-model level (see
             # backend/app/services/visitor_service.py and
             # backend/app/services/lot_service.py's link_user — neither prevents a
@@ -92,10 +95,10 @@ class PackageService:
             # get_user_linked_lot_ids alone would silently grant a linked GUEST access.
             # GUEST must never see or act on package data regardless of any lot linkage
             # it happens to have.
-            raise PackageAccessForbiddenError()
+            raise PackageAccessForbiddenError
         linked_lot_ids = VisitorService.get_user_linked_lot_ids(session, current_user)
         if lot_id not in linked_lot_ids:
-            raise PackageAccessForbiddenError()
+            raise PackageAccessForbiddenError
 
     @classmethod
     def create_package(
@@ -111,7 +114,7 @@ class PackageService:
             received_by_id=current_user.id,
             description=package_in.description,
             carrier=package_in.carrier,
-            received_at=datetime.utcnow(),
+            received_at=clock.db_now(),
             status=PackageStatus.AWAITING_PICKUP,
         )
         session.add(package)
@@ -187,9 +190,9 @@ class PackageService:
             raise PackageNotFoundError(package_id)
         cls._assert_lot_access(session, package.lot_id, current_user, "packages:pickup")
         if package.status == PackageStatus.PICKED_UP:
-            raise PackageAlreadyPickedUpError()
+            raise PackageAlreadyPickedUpError
         package.status = PackageStatus.PICKED_UP
-        package.picked_up_at = datetime.utcnow()
+        package.picked_up_at = clock.db_now()
         package.picked_up_by_id = current_user.id
         package.picked_up_by_notes = pickup_in.picked_up_by_notes
         session.add(package)
@@ -205,7 +208,7 @@ class PackageService:
                 "Use /packages/queue para ver encomendas de todos os lotes."
             )
         if not has_permission(current_user, session, "packages:my_lots_read"):
-            raise PackageAccessForbiddenError()
+            raise PackageAccessForbiddenError
         lot_ids = VisitorService.get_user_linked_lot_ids(session, current_user)
         if not lot_ids:
             return []

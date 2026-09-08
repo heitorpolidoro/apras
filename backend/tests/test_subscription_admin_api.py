@@ -223,9 +223,7 @@ def test_a_repeat_assignment_repairs_an_override_and_records_it(
     tenant_client.put(
         f"/api/v1/tenants/{TENANT_A}/modules",
         json={
-            "disabled_modules": sorted(
-                TOGGLEABLE_MODULES - {"documents", "finance"}
-            )
+            "disabled_modules": sorted(TOGGLEABLE_MODULES - {"documents", "finance"})
         },
         headers=auth(superuser),
     )
@@ -310,7 +308,7 @@ def test_the_plan_change_row_does_not_borrow_the_subscription_notes(
 def test_courtesy_grant_activates_a_module_outside_the_plan(
     session: Session, tenant_client: TestClient, superuser
 ):
-    """"O ADMINISTRATOR global continua podendo ativar um módulo à revelia do
+    """ "O ADMINISTRATOR global continua podendo ativar um módulo à revelia do
     plano" is **one call**."""
     plan = make_plan(session, included=["documents"], base_price=100.0)
     subscription = subscribe(session, tenant_id=TENANT_A, plan=plan)
@@ -461,9 +459,12 @@ def test_a_tenant_admin_gets_403_on_all_four_routes_including_own_tenant(
     headers = auth(tenant_admin, TENANT_A)
 
     assert tenant_client.get(_url(TENANT_A), headers=headers).status_code == 403
-    assert tenant_client.put(
-        _url(TENANT_A), json={"plan_id": str(plan.id)}, headers=headers
-    ).status_code == 403
+    assert (
+        tenant_client.put(
+            _url(TENANT_A), json={"plan_id": str(plan.id)}, headers=headers
+        ).status_code
+        == 403
+    )
     refused = tenant_client.put(
         _courtesy_url(TENANT_A), json={"courtesy_modules": []}, headers=headers
     )
@@ -477,9 +478,12 @@ def test_a_tenant_admin_gets_403_on_all_four_routes_including_own_tenant(
 
 def test_unauthenticated_is_401(tenant_client: TestClient):
     assert tenant_client.get(_url(TENANT_A)).status_code == 401
-    assert tenant_client.put(
-        _url(TENANT_A), json={"plan_id": str(uuid.uuid4())}
-    ).status_code == 401
+    assert (
+        tenant_client.put(
+            _url(TENANT_A), json={"plan_id": str(uuid.uuid4())}
+        ).status_code
+        == 401
+    )
     assert tenant_client.get(_history_url(TENANT_A)).status_code == 401
 
 
@@ -489,12 +493,13 @@ def test_unknown_tenant_is_404_and_a_missing_subscription_is_404_on_courtesy(
     missing = uuid.uuid4()
     plan = make_plan(session, included=["documents"])
 
-    assert tenant_client.get(
-        _url(missing), headers=auth(superuser)
-    ).status_code == 404
-    assert tenant_client.put(
-        _url(missing), json={"plan_id": str(plan.id)}, headers=auth(superuser)
-    ).status_code == 404
+    assert tenant_client.get(_url(missing), headers=auth(superuser)).status_code == 404
+    assert (
+        tenant_client.put(
+            _url(missing), json={"plan_id": str(plan.id)}, headers=auth(superuser)
+        ).status_code
+        == 404
+    )
 
     unknown_plan = tenant_client.put(
         _url(TENANT_A),

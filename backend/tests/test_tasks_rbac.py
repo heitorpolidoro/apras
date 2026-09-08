@@ -207,7 +207,10 @@ def manager_type_fixture(session: Session):
     new menu gate (APRAS-8).
     """
     from app.models.role import Role
-    ut = Role(name="Test Manager Type",)
+
+    ut = Role(
+        name="Test Manager Type",
+    )
     session.add(ut)
     session.commit()
     return ut
@@ -222,7 +225,9 @@ def other_type_fixture(session: Session):
     `visible_to` only ever contains ids resolved to real Role rows)."""
     from app.models.role import Role
 
-    ut = Role(name="Other RBAC Type",)
+    ut = Role(
+        name="Other RBAC Type",
+    )
     session.add(ut)
     session.commit()
     return ut
@@ -467,9 +472,7 @@ def test_manager_create_task_defaults_visible_to_explicit_role(
     assert visible_to_ids == {str(role.id) for role in manager_user.roles}
 
 
-def test_admin_create_task_defaults_to_empty_visible_to(
-    client: TestClient, test_data
-):
+def test_admin_create_task_defaults_to_empty_visible_to(client: TestClient, test_data):
     """Tasks created by ADMIN must have an empty `visible_to` by default."""
     token = get_token(client, "admin_rbac", "pass")
     response = client.post(
@@ -611,7 +614,12 @@ def test_manager_gets_404_for_invisible_task_comments(
 
 
 def test_admin_can_set_visible_to_ids(
-    client: TestClient, session: Session, test_data, manager_user, manager_type, other_type
+    client: TestClient,
+    session: Session,
+    test_data,
+    manager_user,
+    manager_type,
+    other_type,
 ):
     """ADMIN can set visible_to_ids on a task, making it visible to MANAGER."""
     from app.models.task import Task

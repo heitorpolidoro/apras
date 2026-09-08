@@ -1,11 +1,11 @@
 """Feedback service layer handling business logic and authorization checks."""
 
-from datetime import datetime
 from uuid import UUID
 
 from sqlmodel import Session, func, select
 
 from app.api.deps import has_permission
+from app.core import clock
 from app.core.exceptions import FeedbackAccessForbiddenError, FeedbackNotFoundError
 from app.models.enums import FeedbackCategory, FeedbackStatus
 from app.models.feedback import Feedback
@@ -21,9 +21,7 @@ class FeedbackService:
         session: Session, current_user: User, feedback: Feedback
     ) -> FeedbackRead:
         """Helper to convert Feedback model into sanitized FeedbackRead schema."""
-        is_admin_or_director = has_permission(
-            current_user, session, "feedback:respond"
-        )
+        is_admin_or_director = has_permission(current_user, session, "feedback:respond")
 
         reporter_user_id = feedback.reporter_user_id
         reporter_name = None
@@ -67,7 +65,7 @@ class FeedbackService:
             category=feedback_in.category,
             message=feedback_in.message,
             status=FeedbackStatus.PENDING,
-            created_at=datetime.utcnow(),
+            created_at=clock.db_now(),
         )
 
         session.add(feedback)
@@ -126,9 +124,7 @@ class FeedbackService:
         if not feedback:
             raise FeedbackNotFoundError(feedback_id)
 
-        is_admin_or_director = has_permission(
-            current_user, session, "feedback:respond"
-        )
+        is_admin_or_director = has_permission(current_user, session, "feedback:respond")
 
         if not is_admin_or_director and feedback.reporter_user_id != current_user.id:
             raise FeedbackAccessForbiddenError
@@ -165,7 +161,7 @@ class FeedbackService:
 
         feedback.board_response = response_in.board_response
         feedback.responded_by_id = current_user.id
-        feedback.responded_at = datetime.utcnow()
+        feedback.responded_at = clock.db_now()
         feedback.status = FeedbackStatus.ANSWERED
         feedback.response_seen_by_reporter = False
 

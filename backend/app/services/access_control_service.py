@@ -1,13 +1,12 @@
 """Service layer for AccessDevice, FacialTemplate, and FacialAccessEvent management."""
 
 import secrets
-from datetime import datetime
 from uuid import UUID
 
 from sqlmodel import Session, func, select
 
 from app.api.deps import has_permission
-from app.core import tenant_context
+from app.core import clock, tenant_context
 from app.core.exceptions import (
     AccessDeviceNotFoundError,
     DuplicateDeviceNameError,
@@ -37,14 +36,18 @@ def _assert_admin_or_director(
     current_user: User, session: Session, permission: str
 ) -> None:
     if not has_permission(current_user, session, permission):
-        raise ForbiddenError("Only Administrators and Directors can manage access control devices")
+        raise ForbiddenError(
+            "Only Administrators and Directors can manage access control devices"
+        )
 
 
 def _assert_admin_director_or_manager(
     current_user: User, session: Session, permission: str
 ) -> None:
     if not has_permission(current_user, session, permission):
-        raise ForbiddenError("Only Administrators, Directors, and Managers can view access control data")
+        raise ForbiddenError(
+            "Only Administrators, Directors, and Managers can view access control data"
+        )
 
 
 class AccessControlService:
@@ -109,7 +112,7 @@ class AccessControlService:
         )
         device = AccessControlService.get_device_by_id(session, device_id)
         device.status = status_in.status
-        device.updated_at = datetime.utcnow()
+        device.updated_at = clock.db_now()
         session.add(device)
         session.commit()
         session.refresh(device)
@@ -125,7 +128,7 @@ class AccessControlService:
         )
         device = AccessControlService.get_device_by_id(session, device_id)
         device.device_key = secrets.token_urlsafe(32)
-        device.updated_at = datetime.utcnow()
+        device.updated_at = clock.db_now()
         session.add(device)
         session.commit()
         session.refresh(device)
@@ -164,7 +167,7 @@ class AccessControlService:
             select(FacialTemplate).where(FacialTemplate.resident_id == resident_id)
         ).first()
 
-        now = datetime.utcnow()
+        now = clock.db_now()
         if template:
             template.media_asset_id = approved_photo.id
             template.sync_status = FacialTemplateSyncStatus.SYNCED
@@ -229,7 +232,7 @@ class AccessControlService:
             raise InvalidDeviceKeyError
         tenant_context.set_acting_tenant(session, device.tenant_id)
 
-        now = datetime.utcnow()
+        now = clock.db_now()
         device.status = AccessDeviceStatus.ONLINE
         device.last_seen_at = now
         session.add(device)
@@ -297,7 +300,9 @@ class AccessControlService:
 
         total = session.exec(select(func.count()).select_from(query.subquery())).one()
         events = session.exec(
-            query.offset(skip).limit(limit).order_by(FacialAccessEvent.event_time.desc())  # type: ignore[attr-defined]
+            query.offset(skip)
+            .limit(limit)
+            .order_by(FacialAccessEvent.event_time.desc())  # type: ignore[attr-defined]
         ).all()
 
         return list(events), total

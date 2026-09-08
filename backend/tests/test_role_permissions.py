@@ -265,9 +265,7 @@ def test_a_task_targeted_elsewhere_is_hidden_from_a_scoped_member(
 # ---------------------------------------------------------------------------
 
 
-def test_a_historically_named_role_can_be_deleted(
-    client: TestClient, session: Session
-):
+def test_a_historically_named_role_can_be_deleted(client: TestClient, session: Session):
     """The inversion: `DELETE /roles/{id}` on `Morador (papel)` is 204.
 
     It was a 403 while `role` identified a "role-linked type that cannot be

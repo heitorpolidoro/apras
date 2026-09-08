@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 from sqlalchemy import Index
 from sqlmodel import Field, Relationship, SQLModel
 
+from app.core import clock
 from app.models.enums import OccurrenceCategory, OccurrencePriority, OccurrenceStatus
 from app.models.tenant import tenant_id_field
 
@@ -34,10 +35,18 @@ class Occurrence(SQLModel, table=True):
     tenant_id: UUID = tenant_id_field()
     protocol_number: str = Field(index=True, nullable=False)
     lot_id: UUID | None = Field(
-        default=None, foreign_key="lot.id", ondelete="SET NULL", nullable=True, index=True
+        default=None,
+        foreign_key="lot.id",
+        ondelete="SET NULL",
+        nullable=True,
+        index=True,
     )
     reporter_user_id: UUID | None = Field(
-        default=None, foreign_key="user.id", ondelete="SET NULL", nullable=True, index=True
+        default=None,
+        foreign_key="user.id",
+        ondelete="SET NULL",
+        nullable=True,
+        index=True,
     )
     is_anonymous: bool = Field(default=False, nullable=False)
     is_public: bool = Field(default=False, nullable=False)
@@ -52,11 +61,15 @@ class Occurrence(SQLModel, table=True):
         default=OccurrencePriority.MEDIUM, nullable=False, index=True
     )
     assigned_to_id: UUID | None = Field(
-        default=None, foreign_key="user.id", ondelete="SET NULL", nullable=True, index=True
+        default=None,
+        foreign_key="user.id",
+        ondelete="SET NULL",
+        nullable=True,
+        index=True,
     )
     resolution_notes: str | None = Field(default=None, nullable=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
-    updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
     resolved_at: datetime | None = Field(default=None, nullable=True)
 
     # Relationships
@@ -87,7 +100,7 @@ class OccurrenceTimeline(SQLModel, table=True):
     status_to: OccurrenceStatus | None = Field(default=None, nullable=True)
     note: str = Field(nullable=False)
     is_internal_only: bool = Field(default=False, nullable=False)
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
 
     # Relationships
     occurrence: "Occurrence" = Relationship(back_populates="timeline_entries")

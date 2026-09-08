@@ -10,7 +10,8 @@ def test_user_model_creation():
     user = User(
         email="testuser@test.com",
         hashed_password="hash",
-        full_name="Test User",        cpf="98715891000",
+        full_name="Test User",
+        cpf="98715891000",
     )
     assert user.username == "testuser"
     # IAM F5 (APRAS-49): the enum column and its `DIRECTOR` default are
@@ -24,7 +25,8 @@ def test_user_model_profile_fields_default_to_none():
     user = User(
         email="noprofile@test.com",
         hashed_password="hash",
-        full_name="No Profile",        cpf="98715891000",
+        full_name="No Profile",
+        cpf="98715891000",
     )
     assert user.phone is None
     assert user.address is None
@@ -35,7 +37,8 @@ def test_user_model_profile_fields_accept_strings():
     user = User(
         email="withprofile@test.com",
         hashed_password="hash",
-        full_name="With Profile",        cpf="11144477735",
+        full_name="With Profile",
+        cpf="11144477735",
         phone="+55 11 91234-5678",
         address="Rua das Flores, 123",
     )

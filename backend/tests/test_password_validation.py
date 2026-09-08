@@ -23,15 +23,21 @@ def test_password_complexity_invalid():
 
     # No numbers
     with pytest.raises(ValidationError) as excinfo:
-        UserCreate(email="t@e.com", full_name="T", password="Password!", cpf="52998224725")
+        UserCreate(
+            email="t@e.com", full_name="T", password="Password!", cpf="52998224725"
+        )
     assert "at least one number" in str(excinfo.value)
 
     # No letters
     with pytest.raises(ValidationError) as excinfo:
-        UserCreate(email="t@e.com", full_name="T", password="1234567!", cpf="52998224725")
+        UserCreate(
+            email="t@e.com", full_name="T", password="1234567!", cpf="52998224725"
+        )
     assert "at least one letter" in str(excinfo.value)
 
     # No symbols
     with pytest.raises(ValidationError) as excinfo:
-        UserCreate(email="t@e.com", full_name="T", password="Password123", cpf="52998224725")
+        UserCreate(
+            email="t@e.com", full_name="T", password="Password123", cpf="52998224725"
+        )
     assert "at least one symbol" in str(excinfo.value)

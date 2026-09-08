@@ -39,6 +39,7 @@ from sqlalchemy import exists
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, col, func, select
 
+from app.core import clock
 from app.core.exceptions import (
     InfractionContestationForbiddenError,
     InfractionNotFoundError,
@@ -232,12 +233,10 @@ class InfractionService:
         origin = data.get("origin", rule.origin)
         article = data.get("article", rule.article)
         if (origin, article) != (rule.origin, rule.article):
-            cls._assert_article_is_free(
-                session, origin, article, exclude_id=rule.id
-            )
+            cls._assert_article_is_free(session, origin, article, exclude_id=rule.id)
         for field, value in data.items():
             setattr(rule, field, value)
-        rule.updated_at = datetime.utcnow()
+        rule.updated_at = clock.db_now()
         session.add(rule)
         session.commit()
         session.refresh(rule)
@@ -254,7 +253,7 @@ class InfractionService:
         """
         rule = cls._get_rule(session, rule_id)
         rule.is_active = False
-        rule.updated_at = datetime.utcnow()
+        rule.updated_at = clock.db_now()
         session.add(rule)
         session.commit()
 
@@ -361,7 +360,7 @@ class InfractionService:
                     note=step.note,
                 )
             )
-        rule.updated_at = datetime.utcnow()
+        rule.updated_at = clock.db_now()
         session.add(rule)
         session.commit()
         session.refresh(rule)
@@ -417,7 +416,7 @@ class InfractionService:
             row = InfractionSettings()
         row.condo_fee_amount = settings_in.condo_fee_amount
         row.updated_by_id = current_user.id
-        row.updated_at = datetime.utcnow()
+        row.updated_at = clock.db_now()
         session.add(row)
         session.commit()
         session.refresh(row)
@@ -458,14 +457,10 @@ class InfractionService:
         rather than making this helper defensive about a case its own callers
         cannot produce.
         """
-        return InfractionActorRead(
-            id=user.id, full_name=user.full_name or user.email
-        )
+        return InfractionActorRead(id=user.id, full_name=user.full_name or user.email)
 
     @classmethod
-    def _timeline(
-        cls, infraction: Infraction
-    ) -> list[InfractionTimelineEntryRead]:
+    def _timeline(cls, infraction: Infraction) -> list[InfractionTimelineEntryRead]:
         """Stages and contestations, merged and ordered by ``at``.
 
         One flat, discriminated list, so the frontend renders the history with
@@ -548,9 +543,7 @@ class InfractionService:
             if protocols is not None:
                 protocol = protocols.get(infraction.source_occurrence_id)
             else:
-                occurrence = session.get(
-                    Occurrence, infraction.source_occurrence_id
-                )
+                occurrence = session.get(Occurrence, infraction.source_occurrence_id)
                 if occurrence is not None:
                     protocol = occurrence.protocol_number
         return InfractionRead(
@@ -578,9 +571,7 @@ class InfractionService:
         return infraction
 
     @classmethod
-    def get_infraction(
-        cls, session: Session, infraction_id: UUID
-    ) -> InfractionRead:
+    def get_infraction(cls, session: Session, infraction_id: UUID) -> InfractionRead:
         return cls._infraction_read(
             session, cls._get_infraction(session, infraction_id)
         )
@@ -723,9 +714,7 @@ class InfractionService:
         rows = session.exec(
             select(Infraction)
             .where(col(Infraction.lot_id).in_(lot_ids))
-            .order_by(
-                col(Infraction.created_at).desc(), col(Infraction.id).desc()
-            )
+            .order_by(col(Infraction.created_at).desc(), col(Infraction.id).desc())
             .options(*cls._EAGER_RELATIONS)
         ).all()
         protocols = cls._source_protocols(session, rows)
@@ -787,9 +776,7 @@ class InfractionService:
         return cls._infraction_read(session, infraction)
 
     @staticmethod
-    def _effective_lot_id(
-        occurrence: Occurrence, body_lot_id: UUID | None
-    ) -> UUID:
+    def _effective_lot_id(occurrence: Occurrence, body_lot_id: UUID | None) -> UUID:
         """§7.4's five-row table, as three branches.
 
         Both mismatches are **422 and not a silent override**: the promotion
@@ -859,7 +846,7 @@ class InfractionService:
                 is_internal_only=False,
             )
         )
-        occurrence.updated_at = datetime.utcnow()
+        occurrence.updated_at = clock.db_now()
         session.add(occurrence)
         session.commit()
         session.refresh(infraction)
@@ -923,13 +910,17 @@ class InfractionService:
         own process advanced -- requiring it to have reached some stage would
         make the count depend on staff diligence rather than on facts.
         """
-        statement = select(func.count()).select_from(Infraction).where(
-            Infraction.rule_id == infraction.rule_id,
-            Infraction.responsible_resident_id
-            == infraction.responsible_resident_id,
-            Infraction.id != infraction.id,
-            Infraction.occurred_on >= window_start,
-            Infraction.occurred_on < infraction.occurred_on,
+        statement = (
+            select(func.count())
+            .select_from(Infraction)
+            .where(
+                Infraction.rule_id == infraction.rule_id,
+                Infraction.responsible_resident_id
+                == infraction.responsible_resident_id,
+                Infraction.id != infraction.id,
+                Infraction.occurred_on >= window_start,
+                Infraction.occurred_on < infraction.occurred_on,
+            )
         )
         if cycle_closed_at is not None:
             statement = statement.where(Infraction.created_at > cycle_closed_at)
@@ -1008,9 +999,7 @@ class InfractionService:
             # `ladder_index == n`: the last step *is* the suggestion --
             # saturated, but nothing was truncated.
             reason=(
-                NextStepReason.CLAMPED
-                if ladder_index > n
-                else NextStepReason.SUGGESTED
+                NextStepReason.CLAMPED if ladder_index > n else NextStepReason.SUGGESTED
             ),
             defense_deadline_days=step.defense_deadline_days,
             fine_amount=fine_amount,
@@ -1019,9 +1008,7 @@ class InfractionService:
         )
 
     @classmethod
-    def next_step(
-        cls, session: Session, infraction_id: UUID
-    ) -> NextStepReadSchema:
+    def next_step(cls, session: Session, infraction_id: UUID) -> NextStepReadSchema:
         return cls.suggest_next_step(
             session, cls._get_infraction(session, infraction_id)
         )
@@ -1103,7 +1090,7 @@ class InfractionService:
                 else cls._step_for_explicit_action(infraction.rule, action)
             )
 
-        applied_on = date.today()
+        applied_on = clock.today_utc()
         fine_amount = None
         overridden = False
         if action is InfractionStepAction.MULTA:
@@ -1146,7 +1133,7 @@ class InfractionService:
                 evidence_urls_json=_dump_urls(stage_in.evidence_urls),
             )
         )
-        infraction.updated_at = datetime.utcnow()
+        infraction.updated_at = clock.db_now()
         session.add(infraction)
         session.commit()
         session.refresh(infraction)
@@ -1185,7 +1172,7 @@ class InfractionService:
         )
         if notification is None or notification.defense_due_on is None:
             raise InfractionStateError("No open defense deadline")
-        if date.today() > notification.defense_due_on:
+        if clock.today_utc() > notification.defense_due_on:
             raise InfractionStateError("The defense deadline has passed")
 
         session.add(

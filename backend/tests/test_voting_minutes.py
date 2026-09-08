@@ -37,7 +37,7 @@ class FakeStorageProvider(BaseStorageProvider):
         self.saved.append((file_bytes, filename, content_type))
         return f"memory://{filename}", f"/static/uploads/{filename}"
 
-    def delete_file(self, file_path):  # noqa: ARG002
+    def delete_file(self, file_path):
         return True
 
 
@@ -95,7 +95,7 @@ def test_minutes_endpoint_before_closing_returns_400(
 def test_minutes_contain_results_attribution_denominator_and_barred_lots(
     session: Session,
 ):
-    admin, assembly = _closed_assembly_with_delinquent_lot(session)
+    _admin, assembly = _closed_assembly_with_delinquent_lot(session)
 
     minutes = voting_service.render_minutes_html(session, assembly)
 
@@ -177,14 +177,10 @@ def test_minutes_endpoints_end_to_end(
     client: TestClient, session: Session, monkeypatch
 ):
     admin, assembly = _closed_assembly_with_delinquent_lot(session)
-    monkeypatch.setattr(
-        voting_service, "LocalStorageProvider", FakeStorageProvider
-    )
+    monkeypatch.setattr(voting_service, "LocalStorageProvider", FakeStorageProvider)
     headers = auth_headers(client, admin)
 
-    rendered = client.get(
-        f"/api/v1/assemblies/{assembly.id}/minutes", headers=headers
-    )
+    rendered = client.get(f"/api/v1/assemblies/{assembly.id}/minutes", headers=headers)
     assert rendered.status_code == 200
     assert rendered.headers["content-type"].startswith("text/html")
     assert "<li>B/12</li>" in rendered.text

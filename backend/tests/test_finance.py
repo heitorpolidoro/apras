@@ -134,9 +134,7 @@ def test_list_categories_type_filter(
     income_category: FinanceCategory,
     expense_category: FinanceCategory,
 ):
-    resp = client.get(
-        "/api/v1/finance/categories?type=INCOME", headers=admin_headers
-    )
+    resp = client.get("/api/v1/finance/categories?type=INCOME", headers=admin_headers)
     assert resp.status_code == status.HTTP_200_OK
     types = {c["type"] for c in resp.json()}
     assert types == {"INCOME"}
@@ -224,7 +222,10 @@ def test_create_budget_line_category_not_found(client: TestClient, admin_headers
 
 
 def test_list_budget_lines_by_fiscal_year(
-    client: TestClient, admin_headers: dict, expense_category: FinanceCategory, session: Session
+    client: TestClient,
+    admin_headers: dict,
+    expense_category: FinanceCategory,
+    session: Session,
 ):
     bl_2026 = BudgetLine(
         category_id=expense_category.id, fiscal_year=2026, planned_amount=500.0
@@ -245,7 +246,10 @@ def test_list_budget_lines_by_fiscal_year(
 
 
 def test_update_and_delete_budget_line(
-    client: TestClient, admin_headers: dict, expense_category: FinanceCategory, session: Session
+    client: TestClient,
+    admin_headers: dict,
+    expense_category: FinanceCategory,
+    session: Session,
 ):
     bl = BudgetLine(
         category_id=expense_category.id, fiscal_year=2026, planned_amount=100.0
@@ -270,7 +274,9 @@ def test_update_and_delete_budget_line(
     assert session.get(BudgetLine, bl.id) is None
 
 
-def test_budget_line_update_and_delete_not_found(client: TestClient, admin_headers: dict):
+def test_budget_line_update_and_delete_not_found(
+    client: TestClient, admin_headers: dict
+):
     fake_id = uuid.uuid4()
     resp = client.put(
         f"/api/v1/finance/budget-lines/{fake_id}",
@@ -291,7 +297,10 @@ def test_budget_line_update_and_delete_not_found(client: TestClient, admin_heade
 
 
 def test_create_transaction_success(
-    client: TestClient, admin_headers: dict, admin_user: User, expense_category: FinanceCategory
+    client: TestClient,
+    admin_headers: dict,
+    admin_user: User,
+    expense_category: FinanceCategory,
 ):
     resp = client.post(
         "/api/v1/finance/transactions",
@@ -366,9 +375,7 @@ def test_get_transaction_success(
     session.commit()
     session.refresh(txn)
 
-    resp = client.get(
-        f"/api/v1/finance/transactions/{txn.id}", headers=admin_headers
-    )
+    resp = client.get(f"/api/v1/finance/transactions/{txn.id}", headers=admin_headers)
     assert resp.status_code == status.HTTP_200_OK
     assert resp.json()["id"] == str(txn.id)
     assert resp.json()["description"] == "Buscar por id"
@@ -583,7 +590,11 @@ def test_delete_transaction_not_found(client: TestClient, admin_headers: dict):
 
 
 def test_upload_invoice_success_and_reachable_via_static_url(
-    client: TestClient, admin_headers: dict, admin_user: User, expense_category: FinanceCategory, session: Session
+    client: TestClient,
+    admin_headers: dict,
+    admin_user: User,
+    expense_category: FinanceCategory,
+    session: Session,
 ):
     txn = FinancialTransaction(
         type=TransactionType.EXPENSE,
@@ -615,7 +626,11 @@ def test_upload_invoice_success_and_reachable_via_static_url(
 
 
 def test_upload_invoice_rejects_non_pdf(
-    client: TestClient, admin_headers: dict, admin_user: User, expense_category: FinanceCategory, session: Session
+    client: TestClient,
+    admin_headers: dict,
+    admin_user: User,
+    expense_category: FinanceCategory,
+    session: Session,
 ):
     txn = FinancialTransaction(
         type=TransactionType.EXPENSE,
@@ -638,7 +653,11 @@ def test_upload_invoice_rejects_non_pdf(
 
 
 def test_upload_invoice_rejects_oversized_file(
-    client: TestClient, admin_headers: dict, admin_user: User, expense_category: FinanceCategory, session: Session
+    client: TestClient,
+    admin_headers: dict,
+    admin_user: User,
+    expense_category: FinanceCategory,
+    session: Session,
 ):
     txn = FinancialTransaction(
         type=TransactionType.EXPENSE,
@@ -662,7 +681,11 @@ def test_upload_invoice_rejects_oversized_file(
 
 
 def test_upload_invoice_replaces_existing_file(
-    client: TestClient, admin_headers: dict, admin_user: User, expense_category: FinanceCategory, session: Session
+    client: TestClient,
+    admin_headers: dict,
+    admin_user: User,
+    expense_category: FinanceCategory,
+    session: Session,
 ):
     txn = FinancialTransaction(
         type=TransactionType.EXPENSE,
@@ -678,7 +701,7 @@ def test_upload_invoice_replaces_existing_file(
 
     from pathlib import Path
 
-    first = client.post(
+    client.post(
         f"/api/v1/finance/transactions/{txn.id}/invoice",
         headers=admin_headers,
         files={"file": ("nota1.pdf", _make_pdf_bytes(), "application/pdf")},
@@ -699,7 +722,11 @@ def test_upload_invoice_replaces_existing_file(
 
 
 def test_delete_invoice_clears_fields_and_removes_file(
-    client: TestClient, admin_headers: dict, admin_user: User, expense_category: FinanceCategory, session: Session
+    client: TestClient,
+    admin_headers: dict,
+    admin_user: User,
+    expense_category: FinanceCategory,
+    session: Session,
 ):
     txn = FinancialTransaction(
         type=TransactionType.EXPENSE,
@@ -781,9 +808,7 @@ def test_cash_balance_computation(
     )
     session.commit()
 
-    resp = client.get(
-        "/api/v1/finance/balance?as_of=2026-01-31", headers=admin_headers
-    )
+    resp = client.get("/api/v1/finance/balance?as_of=2026-01-31", headers=admin_headers)
     assert resp.status_code == status.HTTP_200_OK
     data = resp.json()
     assert data["as_of_date"] == "2026-01-31"

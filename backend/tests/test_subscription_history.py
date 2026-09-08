@@ -170,9 +170,7 @@ def test_plan_change_records_both_plan_ids(
         _sub_url(TENANT_A), json={"plan_id": str(second.id)}, headers=auth(superuser)
     )
 
-    rows = tenant_client.get(
-        HISTORY_URL, headers=auth(tenant_admin, TENANT_A)
-    ).json()
+    rows = tenant_client.get(HISTORY_URL, headers=auth(tenant_admin, TENANT_A)).json()
 
     assert rows[0]["kind"] == "PLAN_CHANGE"
     assert rows[0]["from_plan_name"] == "Primeiro"
@@ -216,8 +214,10 @@ def test_the_history_is_never_updated_or_deleted():
         for method in route.methods
     }
     assert not [
-        key for key in live if "subscription-change" in key[1] or ("history" in key[1]
-        and key[0] in {"PATCH", "PUT", "DELETE"})
+        key
+        for key in live
+        if "subscription-change" in key[1]
+        or ("history" in key[1] and key[0] in {"PATCH", "PUT", "DELETE"})
     ]
 
     offenders: list[str] = []
@@ -235,8 +235,7 @@ def test_the_history_is_never_updated_or_deleted():
                 isinstance(node, ast.Call)
                 and getattr(node.func, "attr", None) == "delete"
                 and any(
-                    isinstance(inner, ast.Name)
-                    and inner.id == "SubscriptionChange"
+                    isinstance(inner, ast.Name) and inner.id == "SubscriptionChange"
                     for argument in node.args
                     for inner in ast.walk(argument)
                 )
@@ -377,9 +376,9 @@ def test_the_history_order_is_deterministic_for_rows_sharing_a_timestamp(
     plan = make_plan(session, included=["documents"])
     subscription = subscribe(session, tenant_id=TENANT_A, plan=plan)
     # Naive on purpose: `subscription_change.changed_at` is written from
-    # `datetime.utcnow()` and stored without a timezone, so a tz-aware literal
+    # `clock.db_now()` and stored without a timezone, so a tz-aware literal
     # would not compare with what the service reads back.
-    shared = datetime(2026, 3, 1, 12, 0, 0)  # noqa: DTZ001
+    shared = datetime(2026, 3, 1, 12, 0, 0)  # noqa: DTZ001  # naive literal matching the naive column
     low_id = UUID("00000000-0000-4000-8000-0000000000a1")
     high_id = UUID("ffffffff-ffff-4fff-bfff-ffffffffffa2")
     for row_id, reason in ((low_id, "primeira"), (high_id, "segunda")):

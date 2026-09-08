@@ -58,7 +58,7 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 
-@rules_router.get("", response_model=list[InfractionRuleRead])
+@rules_router.get("")
 def list_infraction_rules(
     session: Annotated[Session, Depends(deps.get_session)],
     _guard: Annotated[User, Depends(deps.require_permission("infractions:rule_read"))],
@@ -73,7 +73,7 @@ def list_infraction_rules(
     return InfractionService.list_rules(session)
 
 
-@rules_router.get("/{rule_id}", response_model=InfractionRuleRead)
+@rules_router.get("/{rule_id}")
 def get_infraction_rule(
     rule_id: UUID,
     session: Annotated[Session, Depends(deps.get_session)],
@@ -83,9 +83,7 @@ def get_infraction_rule(
     return InfractionService.get_rule(session, rule_id)
 
 
-@rules_router.post(
-    "", response_model=InfractionRuleRead, status_code=status.HTTP_201_CREATED
-)
+@rules_router.post("", status_code=status.HTTP_201_CREATED)
 def create_infraction_rule(
     rule_in: InfractionRuleCreate,
     session: Annotated[Session, Depends(deps.get_session)],
@@ -97,7 +95,7 @@ def create_infraction_rule(
     return InfractionService.create_rule(session, rule_in)
 
 
-@rules_router.put("/{rule_id}", response_model=InfractionRuleRead)
+@rules_router.put("/{rule_id}")
 def update_infraction_rule(
     rule_id: UUID,
     rule_in: InfractionRuleUpdate,
@@ -123,7 +121,7 @@ def deactivate_infraction_rule(
     InfractionService.deactivate_rule(session, rule_id)
 
 
-@rules_router.put("/{rule_id}/policy", response_model=InfractionRuleRead)
+@rules_router.put("/{rule_id}/policy")
 def write_infraction_policy(
     rule_id: UUID,
     policy_in: InfractionPolicyWrite,
@@ -141,7 +139,7 @@ def write_infraction_policy(
 # ---------------------------------------------------------------------------
 
 
-@settings_router.get("", response_model=InfractionSettingsRead)
+@settings_router.get("")
 def read_infraction_settings(
     session: Annotated[Session, Depends(deps.get_session)],
     _guard: Annotated[User, Depends(deps.require_permission("infractions:rule_read"))],
@@ -150,7 +148,7 @@ def read_infraction_settings(
     return InfractionService.read_settings(session)
 
 
-@settings_router.put("", response_model=InfractionSettingsRead)
+@settings_router.put("")
 def write_infraction_settings(
     settings_in: InfractionSettingsWrite,
     session: Annotated[Session, Depends(deps.get_session)],
@@ -169,7 +167,7 @@ def write_infraction_settings(
 # The four literal-segment routes come first. See the module docstring.
 
 
-@router.get("/my-lots", response_model=list[InfractionRead])
+@router.get("/my-lots")
 def list_my_lots_infractions(
     session: Annotated[Session, Depends(deps.get_session)],
     current_user: Annotated[
@@ -181,7 +179,7 @@ def list_my_lots_infractions(
     return InfractionService.list_my_lots_infractions(session, current_user)
 
 
-@router.get("/cycles", response_model=list[CycleCloseRead])
+@router.get("/cycles")
 def list_cycle_closes(
     session: Annotated[Session, Depends(deps.get_session)],
     _guard: Annotated[User, Depends(deps.require_permission("infractions:read"))],
@@ -192,7 +190,6 @@ def list_cycle_closes(
 
 @router.post(
     "/cycles/close",
-    response_model=CycleCloseRead,
     status_code=status.HTTP_201_CREATED,
 )
 def close_cycle(
@@ -208,7 +205,6 @@ def close_cycle(
 
 @router.post(
     "/from-occurrence/{occurrence_id}",
-    response_model=InfractionRead,
     status_code=status.HTTP_201_CREATED,
 )
 def promote_occurrence(
@@ -225,18 +221,18 @@ def promote_occurrence(
     )
 
 
-@router.get("", response_model=PaginatedInfractionRead)
+@router.get("")
 def list_infractions(
     session: Annotated[Session, Depends(deps.get_session)],
     _guard: Annotated[User, Depends(deps.require_permission("infractions:read"))],
-    rule_id: UUID | None = Query(default=None),
-    lot_id: UUID | None = Query(default=None),
-    responsible_id: UUID | None = Query(default=None),
-    stage: InfractionStageFilter | None = Query(default=None),
-    date_from: date | None = Query(default=None),
-    date_to: date | None = Query(default=None),
-    skip: int = Query(default=0, ge=0),
-    limit: int = Query(default=50, ge=1, le=100),
+    rule_id: Annotated[UUID | None, Query()] = None,
+    lot_id: Annotated[UUID | None, Query()] = None,
+    responsible_id: Annotated[UUID | None, Query()] = None,
+    stage: Annotated[InfractionStageFilter | None, Query()] = None,
+    date_from: Annotated[date | None, Query()] = None,
+    date_to: Annotated[date | None, Query()] = None,
+    skip: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> PaginatedInfractionRead:
     """The management list. Every parameter is optional; `stage` reads the
     **derived** current stage through a correlated subquery (§4.5)."""
@@ -254,9 +250,7 @@ def list_infractions(
     return PaginatedInfractionRead(items=items, total=total, skip=skip, limit=limit)
 
 
-@router.post(
-    "", response_model=InfractionRead, status_code=status.HTTP_201_CREATED
-)
+@router.post("", status_code=status.HTTP_201_CREATED)
 def create_infraction(
     infraction_in: InfractionCreate,
     session: Annotated[Session, Depends(deps.get_session)],
@@ -268,7 +262,7 @@ def create_infraction(
     return InfractionService.create_infraction(session, current_user, infraction_in)
 
 
-@router.get("/{infraction_id}", response_model=InfractionRead)
+@router.get("/{infraction_id}")
 def get_infraction(
     infraction_id: UUID,
     session: Annotated[Session, Depends(deps.get_session)],
@@ -278,7 +272,7 @@ def get_infraction(
     return InfractionService.get_infraction(session, infraction_id)
 
 
-@router.get("/{infraction_id}/next-step", response_model=NextStepRead)
+@router.get("/{infraction_id}/next-step")
 def get_next_step(
     infraction_id: UUID,
     session: Annotated[Session, Depends(deps.get_session)],
@@ -291,7 +285,6 @@ def get_next_step(
 
 @router.post(
     "/{infraction_id}/stages",
-    response_model=InfractionRead,
     status_code=status.HTTP_201_CREATED,
 )
 def add_stage(
@@ -304,14 +297,11 @@ def add_stage(
 ) -> InfractionRead:
     """Append one stage. `action = null` applies the suggestion; an explicit
     `action` is always accepted and records the deviation."""
-    return InfractionService.add_stage(
-        session, current_user, infraction_id, stage_in
-    )
+    return InfractionService.add_stage(session, current_user, infraction_id, stage_in)
 
 
 @router.post(
     "/{infraction_id}/contestation",
-    response_model=InfractionRead,
     status_code=status.HTTP_201_CREATED,
 )
 def add_contestation(

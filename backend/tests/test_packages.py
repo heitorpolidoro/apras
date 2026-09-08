@@ -96,7 +96,9 @@ def test_create_package_forbidden_for_guest(session: Session, guest_user: User):
         PackageService.create_package(session, guest_user, PackageCreate(lot_id=lot.id))
 
 
-def test_get_packages_for_lot_gatekeeper_any_lot(session: Session, admin_user: User, normal_user: User):
+def test_get_packages_for_lot_gatekeeper_any_lot(
+    session: Session, admin_user: User, normal_user: User
+):
     lot = LotService.create_lot(session, LotCreate(block="Q", lot_number="1"))
     PackageService.create_package(session, normal_user, PackageCreate(lot_id=lot.id))
 
@@ -113,10 +115,12 @@ def test_get_packages_for_lot_resident_linked_via_user_lot_link(
     LotService.link_user(
         session,
         lot.id,
-        UserLotLinkCreate(user_id=resident_user.id, association_type=LotAssociationType.PROPRIETARIO),
+        UserLotLinkCreate(
+            user_id=resident_user.id, association_type=LotAssociationType.PROPRIETARIO
+        ),
     )
 
-    items, total = PackageService.get_packages_for_lot(session, resident_user, lot.id)
+    _items, total = PackageService.get_packages_for_lot(session, resident_user, lot.id)
     assert total == 1
 
 
@@ -135,7 +139,7 @@ def test_get_packages_for_lot_resident_linked_via_active_resident_row(
     session.add(resident_row)
     session.commit()
 
-    items, total = PackageService.get_packages_for_lot(session, resident_user, lot.id)
+    _items, total = PackageService.get_packages_for_lot(session, resident_user, lot.id)
     assert total == 1
 
 
@@ -144,11 +148,15 @@ def test_get_packages_for_lot_resident_different_lot_forbidden(
 ):
     lot_own = LotService.create_lot(session, LotCreate(block="Q", lot_number="4"))
     lot_other = LotService.create_lot(session, LotCreate(block="Q", lot_number="5"))
-    PackageService.create_package(session, normal_user, PackageCreate(lot_id=lot_other.id))
+    PackageService.create_package(
+        session, normal_user, PackageCreate(lot_id=lot_other.id)
+    )
     LotService.link_user(
         session,
         lot_own.id,
-        UserLotLinkCreate(user_id=resident_user.id, association_type=LotAssociationType.PROPRIETARIO),
+        UserLotLinkCreate(
+            user_id=resident_user.id, association_type=LotAssociationType.PROPRIETARIO
+        ),
     )
 
     with pytest.raises(PackageAccessForbiddenError):
@@ -164,7 +172,9 @@ def test_get_packages_for_lot_guest_forbidden_even_when_linked_via_user_lot_link
     LotService.link_user(
         session,
         lot.id,
-        UserLotLinkCreate(user_id=guest_user.id, association_type=LotAssociationType.PROPRIETARIO),
+        UserLotLinkCreate(
+            user_id=guest_user.id, association_type=LotAssociationType.PROPRIETARIO
+        ),
     )
 
     with pytest.raises(PackageAccessForbiddenError):
@@ -190,9 +200,13 @@ def test_get_packages_for_lot_guest_forbidden_even_when_linked_via_resident_row(
         PackageService.get_packages_for_lot(session, guest_user, lot.id)
 
 
-def test_get_packages_for_lot_filters_by_status(session: Session, admin_user: User, normal_user: User):
+def test_get_packages_for_lot_filters_by_status(
+    session: Session, admin_user: User, normal_user: User
+):
     lot = LotService.create_lot(session, LotCreate(block="Q", lot_number="8"))
-    pkg1 = PackageService.create_package(session, normal_user, PackageCreate(lot_id=lot.id))
+    pkg1 = PackageService.create_package(
+        session, normal_user, PackageCreate(lot_id=lot.id)
+    )
     PackageService.create_package(session, normal_user, PackageCreate(lot_id=lot.id))
     PackageService.mark_picked_up(session, admin_user, pkg1.id, PackagePickup())
 
@@ -223,19 +237,27 @@ def test_get_awaiting_pickup_queue_gatekeeper_cross_lot(
     assert lot_ids == {lot1.id, lot2.id}
 
 
-def test_get_awaiting_pickup_queue_forbidden_for_resident(session: Session, resident_user: User):
+def test_get_awaiting_pickup_queue_forbidden_for_resident(
+    session: Session, resident_user: User
+):
     with pytest.raises(PackageAccessForbiddenError):
         PackageService.get_awaiting_pickup_queue(session, resident_user)
 
 
-def test_get_awaiting_pickup_queue_forbidden_for_guest(session: Session, guest_user: User):
+def test_get_awaiting_pickup_queue_forbidden_for_guest(
+    session: Session, guest_user: User
+):
     with pytest.raises(PackageAccessForbiddenError):
         PackageService.get_awaiting_pickup_queue(session, guest_user)
 
 
-def test_get_package_by_id_gatekeeper_any(session: Session, admin_user: User, normal_user: User):
+def test_get_package_by_id_gatekeeper_any(
+    session: Session, admin_user: User, normal_user: User
+):
     lot = LotService.create_lot(session, LotCreate(block="S", lot_number="1"))
-    created = PackageService.create_package(session, normal_user, PackageCreate(lot_id=lot.id))
+    created = PackageService.create_package(
+        session, normal_user, PackageCreate(lot_id=lot.id)
+    )
 
     fetched = PackageService.get_package_by_id(session, admin_user, created.id)
     assert fetched.id == created.id
@@ -245,11 +267,15 @@ def test_get_package_by_id_linked_resident(
     session: Session, normal_user: User, resident_user: User
 ):
     lot = LotService.create_lot(session, LotCreate(block="S", lot_number="2"))
-    created = PackageService.create_package(session, normal_user, PackageCreate(lot_id=lot.id))
+    created = PackageService.create_package(
+        session, normal_user, PackageCreate(lot_id=lot.id)
+    )
     LotService.link_user(
         session,
         lot.id,
-        UserLotLinkCreate(user_id=resident_user.id, association_type=LotAssociationType.PROPRIETARIO),
+        UserLotLinkCreate(
+            user_id=resident_user.id, association_type=LotAssociationType.PROPRIETARIO
+        ),
     )
 
     fetched = PackageService.get_package_by_id(session, resident_user, created.id)
@@ -261,11 +287,15 @@ def test_get_package_by_id_different_lot_forbidden(
 ):
     lot_own = LotService.create_lot(session, LotCreate(block="S", lot_number="3"))
     lot_other = LotService.create_lot(session, LotCreate(block="S", lot_number="4"))
-    created = PackageService.create_package(session, normal_user, PackageCreate(lot_id=lot_other.id))
+    created = PackageService.create_package(
+        session, normal_user, PackageCreate(lot_id=lot_other.id)
+    )
     LotService.link_user(
         session,
         lot_own.id,
-        UserLotLinkCreate(user_id=resident_user.id, association_type=LotAssociationType.PROPRIETARIO),
+        UserLotLinkCreate(
+            user_id=resident_user.id, association_type=LotAssociationType.PROPRIETARIO
+        ),
     )
 
     with pytest.raises(PackageAccessForbiddenError):
@@ -276,11 +306,15 @@ def test_get_package_by_id_guest_forbidden_even_when_linked(
     session: Session, normal_user: User, guest_user: User
 ):
     lot = LotService.create_lot(session, LotCreate(block="S", lot_number="5"))
-    created = PackageService.create_package(session, normal_user, PackageCreate(lot_id=lot.id))
+    created = PackageService.create_package(
+        session, normal_user, PackageCreate(lot_id=lot.id)
+    )
     LotService.link_user(
         session,
         lot.id,
-        UserLotLinkCreate(user_id=guest_user.id, association_type=LotAssociationType.PROPRIETARIO),
+        UserLotLinkCreate(
+            user_id=guest_user.id, association_type=LotAssociationType.PROPRIETARIO
+        ),
     )
 
     with pytest.raises(PackageAccessForbiddenError):
@@ -297,7 +331,9 @@ def test_get_my_lots_resident(session: Session, resident_user: User):
     LotService.link_user(
         session,
         lot.id,
-        UserLotLinkCreate(user_id=resident_user.id, association_type=LotAssociationType.PROPRIETARIO),
+        UserLotLinkCreate(
+            user_id=resident_user.id, association_type=LotAssociationType.PROPRIETARIO
+        ),
     )
 
     lots = PackageService.get_my_lots(session, resident_user)
@@ -319,24 +355,35 @@ def test_get_my_lots_forbidden_for_gatekeeper_roles(
             PackageService.get_my_lots(session, user)
 
 
-def test_get_my_lots_forbidden_for_guest_even_when_linked(session: Session, guest_user: User):
+def test_get_my_lots_forbidden_for_guest_even_when_linked(
+    session: Session, guest_user: User
+):
     lot = LotService.create_lot(session, LotCreate(block="T", lot_number="2"))
     LotService.link_user(
         session,
         lot.id,
-        UserLotLinkCreate(user_id=guest_user.id, association_type=LotAssociationType.PROPRIETARIO),
+        UserLotLinkCreate(
+            user_id=guest_user.id, association_type=LotAssociationType.PROPRIETARIO
+        ),
     )
 
     with pytest.raises(PackageAccessForbiddenError):
         PackageService.get_my_lots(session, guest_user)
 
 
-def test_mark_picked_up_gatekeeper_any_lot(session: Session, admin_user: User, normal_user: User):
+def test_mark_picked_up_gatekeeper_any_lot(
+    session: Session, admin_user: User, normal_user: User
+):
     lot = LotService.create_lot(session, LotCreate(block="U", lot_number="1"))
-    created = PackageService.create_package(session, normal_user, PackageCreate(lot_id=lot.id))
+    created = PackageService.create_package(
+        session, normal_user, PackageCreate(lot_id=lot.id)
+    )
 
     updated = PackageService.mark_picked_up(
-        session, admin_user, created.id, PackagePickup(picked_up_by_notes="Retirado pelo síndico")
+        session,
+        admin_user,
+        created.id,
+        PackagePickup(picked_up_by_notes="Retirado pelo síndico"),
     )
     assert updated.status == PackageStatus.PICKED_UP
     assert updated.picked_up_at is not None
@@ -348,11 +395,15 @@ def test_mark_picked_up_linked_resident_sets_own_id(
     session: Session, normal_user: User, resident_user: User
 ):
     lot = LotService.create_lot(session, LotCreate(block="U", lot_number="2"))
-    created = PackageService.create_package(session, normal_user, PackageCreate(lot_id=lot.id))
+    created = PackageService.create_package(
+        session, normal_user, PackageCreate(lot_id=lot.id)
+    )
     LotService.link_user(
         session,
         lot.id,
-        UserLotLinkCreate(user_id=resident_user.id, association_type=LotAssociationType.PROPRIETARIO),
+        UserLotLinkCreate(
+            user_id=resident_user.id, association_type=LotAssociationType.PROPRIETARIO
+        ),
     )
 
     updated = PackageService.mark_picked_up(
@@ -368,26 +419,36 @@ def test_mark_picked_up_different_lot_forbidden(
 ):
     lot_own = LotService.create_lot(session, LotCreate(block="U", lot_number="3"))
     lot_other = LotService.create_lot(session, LotCreate(block="U", lot_number="4"))
-    created = PackageService.create_package(session, normal_user, PackageCreate(lot_id=lot_other.id))
+    created = PackageService.create_package(
+        session, normal_user, PackageCreate(lot_id=lot_other.id)
+    )
     LotService.link_user(
         session,
         lot_own.id,
-        UserLotLinkCreate(user_id=resident_user.id, association_type=LotAssociationType.PROPRIETARIO),
+        UserLotLinkCreate(
+            user_id=resident_user.id, association_type=LotAssociationType.PROPRIETARIO
+        ),
     )
 
     with pytest.raises(PackageAccessForbiddenError):
-        PackageService.mark_picked_up(session, resident_user, created.id, PackagePickup())
+        PackageService.mark_picked_up(
+            session, resident_user, created.id, PackagePickup()
+        )
 
 
 def test_mark_picked_up_guest_forbidden_even_when_linked(
     session: Session, normal_user: User, guest_user: User
 ):
     lot = LotService.create_lot(session, LotCreate(block="U", lot_number="5"))
-    created = PackageService.create_package(session, normal_user, PackageCreate(lot_id=lot.id))
+    created = PackageService.create_package(
+        session, normal_user, PackageCreate(lot_id=lot.id)
+    )
     LotService.link_user(
         session,
         lot.id,
-        UserLotLinkCreate(user_id=guest_user.id, association_type=LotAssociationType.PROPRIETARIO),
+        UserLotLinkCreate(
+            user_id=guest_user.id, association_type=LotAssociationType.PROPRIETARIO
+        ),
     )
 
     with pytest.raises(PackageAccessForbiddenError):
@@ -398,7 +459,9 @@ def test_mark_picked_up_already_picked_up_conflict(
     session: Session, admin_user: User, normal_user: User
 ):
     lot = LotService.create_lot(session, LotCreate(block="U", lot_number="6"))
-    created = PackageService.create_package(session, normal_user, PackageCreate(lot_id=lot.id))
+    created = PackageService.create_package(
+        session, normal_user, PackageCreate(lot_id=lot.id)
+    )
     PackageService.mark_picked_up(session, admin_user, created.id, PackagePickup())
 
     with pytest.raises(PackageAlreadyPickedUpError):
@@ -407,7 +470,9 @@ def test_mark_picked_up_already_picked_up_conflict(
 
 def test_mark_picked_up_not_found(session: Session, admin_user: User):
     with pytest.raises(PackageNotFoundError):
-        PackageService.mark_picked_up(session, admin_user, uuid.uuid4(), PackagePickup())
+        PackageService.mark_picked_up(
+            session, admin_user, uuid.uuid4(), PackagePickup()
+        )
 
 
 def test_package_read_names_null_when_referencing_user_deleted(
@@ -415,8 +480,12 @@ def test_package_read_names_null_when_referencing_user_deleted(
 ):
     """received_by_name/picked_up_by_name resolve to None if the FK'd user is gone."""
     lot = LotService.create_lot(session, LotCreate(block="V", lot_number="1"))
-    created = PackageService.create_package(session, normal_user, PackageCreate(lot_id=lot.id))
-    picked = PackageService.mark_picked_up(session, admin_user, created.id, PackagePickup())
+    created = PackageService.create_package(
+        session, normal_user, PackageCreate(lot_id=lot.id)
+    )
+    picked = PackageService.mark_picked_up(
+        session, admin_user, created.id, PackagePickup()
+    )
     assert picked.received_by_name == normal_user.full_name
     assert picked.picked_up_by_name == admin_user.full_name
 

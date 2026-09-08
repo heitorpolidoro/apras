@@ -19,13 +19,13 @@ from __future__ import annotations
 
 import ast
 import os
-from datetime import date
 from typing import TYPE_CHECKING
 
 import pytest
 from sqlalchemy import func
 from sqlmodel import select
 
+from app.core import clock
 from app.models.finance import BudgetLine, FinanceCategory, FinancialTransaction
 from tests.infraction_helpers import (
     create_infraction,
@@ -267,9 +267,7 @@ def test_rule_two_actually_catches_a_violation() -> None:
         "FinanceCategory",
     }
     attribute = ast.parse("x = finance_module.FinancialTransaction")
-    assert _referenced_names(attribute) & FORBIDDEN_NAMES == {
-        "FinancialTransaction"
-    }
+    assert _referenced_names(attribute) & FORBIDDEN_NAMES == {"FinancialTransaction"}
 
 
 # --------------------------------------------------------------------- #
@@ -379,7 +377,7 @@ def test_the_full_flow_writes_no_finance_row(
         rule_id=rule_id,
         lot=lot,
         resident=resident,
-        occurred_on=date.today(),
+        occurred_on=clock.today_utc(),
     )
     applied = client.post(
         f"/api/v1/infractions/{infraction['id']}/stages",

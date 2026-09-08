@@ -19,7 +19,11 @@ from app.services import media_service as media_service_module
 from tests.conftest import make_user
 
 
-def create_test_image_bytes(format: str = "JPEG", size: tuple[int, int] = (200, 200), color: str = "red") -> bytes:
+def create_test_image_bytes(
+    format: str = "JPEG",  # noqa: A002  # mirrors PIL's own `Image.save(format=...)` keyword
+    size: tuple[int, int] = (200, 200),
+    color: str = "red",
+) -> bytes:
     """Generate in-memory image bytes for testing."""
     img = Image.new("RGB", size, color=color)
     buf = io.BytesIO()
@@ -60,7 +64,9 @@ def test_upload_photo_resident_pending(client: TestClient, resident_token: str):
     files = {"file": ("test.jpg", image_bytes, "image/jpeg")}
     data = {"entity_type": "RESIDENT", "entity_id": str(uuid.uuid4())}
 
-    response = client.post("/api/v1/uploads/photo", headers=headers, files=files, data=data)
+    response = client.post(
+        "/api/v1/uploads/photo", headers=headers, files=files, data=data
+    )
     assert response.status_code == status.HTTP_201_CREATED
     body = response.json()
     assert body["status"] == "PENDING_APPROVAL"
@@ -79,7 +85,9 @@ def test_upload_photo_admin_auto_approved(client: TestClient, admin_token: str):
     files = {"file": ("test.png", image_bytes, "image/png")}
     data = {"entity_type": "VISITOR"}
 
-    response = client.post("/api/v1/uploads/photo", headers=headers, files=files, data=data)
+    response = client.post(
+        "/api/v1/uploads/photo", headers=headers, files=files, data=data
+    )
     assert response.status_code == status.HTTP_201_CREATED
     body = response.json()
     assert body["status"] == "APPROVED"
@@ -94,7 +102,9 @@ def test_upload_photo_file_too_large(client: TestClient, resident_token: str):
     files = {"file": ("large.jpg", large_bytes, "image/jpeg")}
     data = {"entity_type": "RESIDENT"}
 
-    response = client.post("/api/v1/uploads/photo", headers=headers, files=files, data=data)
+    response = client.post(
+        "/api/v1/uploads/photo", headers=headers, files=files, data=data
+    )
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert "excede o limite" in response.json()["detail"]
 
@@ -106,12 +116,16 @@ def test_upload_photo_invalid_format(client: TestClient, resident_token: str):
     files = {"file": ("test.txt", invalid_bytes, "text/plain")}
     data = {"entity_type": "RESIDENT"}
 
-    response = client.post("/api/v1/uploads/photo", headers=headers, files=files, data=data)
+    response = client.post(
+        "/api/v1/uploads/photo", headers=headers, files=files, data=data
+    )
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert "Formato de imagem inválido" in response.json()["detail"]
 
 
-def test_list_pending_photos_and_approval_workflow(client: TestClient, resident_token: str, admin_token: str):
+def test_list_pending_photos_and_approval_workflow(
+    client: TestClient, resident_token: str, admin_token: str
+):
     """Test listing pending photos, approving a photo, and rejecting a photo."""
     # 1. Resident uploads photo
     image_bytes = create_test_image_bytes()
@@ -120,7 +134,9 @@ def test_list_pending_photos_and_approval_workflow(client: TestClient, resident_
 
     files = {"file": ("pending.jpg", image_bytes, "image/jpeg")}
     data = {"entity_type": "RESIDENT"}
-    res_upload = client.post("/api/v1/uploads/photo", headers=headers_res, files=files, data=data)
+    res_upload = client.post(
+        "/api/v1/uploads/photo", headers=headers_res, files=files, data=data
+    )
     assert res_upload.status_code == status.HTTP_201_CREATED
     photo_id = res_upload.json()["id"]
 
@@ -139,22 +155,34 @@ def test_list_pending_photos_and_approval_workflow(client: TestClient, resident_
     assert meta_res.json()["id"] == photo_id
 
     # 4. Admin approves photo
-    approve_res = client.put(f"/api/v1/uploads/photos/{photo_id}/approve", headers=headers_admin)
+    approve_res = client.put(
+        f"/api/v1/uploads/photos/{photo_id}/approve", headers=headers_admin
+    )
     assert approve_res.status_code == status.HTTP_200_OK
     assert approve_res.json()["status"] == "APPROVED"
     assert approve_res.json()["approved_by_id"] is not None
 
     # 5. Resident uploads another photo to reject
     files2 = {"file": ("reject.jpg", image_bytes, "image/jpeg")}
-    res_upload2 = client.post("/api/v1/uploads/photo", headers=headers_res, files=files2, data=data)
+    res_upload2 = client.post(
+        "/api/v1/uploads/photo", headers=headers_res, files=files2, data=data
+    )
     photo_id2 = res_upload2.json()["id"]
 
     # Reject without reason -> 400
-    reject_bad = client.put(f"/api/v1/uploads/photos/{photo_id2}/reject", headers=headers_admin, json={"rejection_reason": ""})
+    reject_bad = client.put(
+        f"/api/v1/uploads/photos/{photo_id2}/reject",
+        headers=headers_admin,
+        json={"rejection_reason": ""},
+    )
     assert reject_bad.status_code == status.HTTP_400_BAD_REQUEST
 
     # Reject with reason -> 200
-    reject_res = client.put(f"/api/v1/uploads/photos/{photo_id2}/reject", headers=headers_admin, json={"rejection_reason": "Foto desfocada"})
+    reject_res = client.put(
+        f"/api/v1/uploads/photos/{photo_id2}/reject",
+        headers=headers_admin,
+        json={"rejection_reason": "Foto desfocada"},
+    )
     assert reject_res.status_code == status.HTTP_200_OK
     assert reject_res.json()["status"] == "REJECTED"
     assert reject_res.json()["rejection_reason"] == "Foto desfocada"
@@ -255,8 +283,7 @@ def test_the_upload_contract_matches_the_infraction_uploader():
     )
 
     assert (
-        ROUTE_PERMISSIONS[("POST", "/api/v1/uploads/photo")]
-        == "uploads:photo_create"
+        ROUTE_PERMISSIONS[("POST", "/api/v1/uploads/photo")] == "uploads:photo_create"
     ), (
         "ROUTE_PERMISSIONS for POST /api/v1/uploads/photo changed. "
         f"`UPLOAD_PHOTO_PERMISSION` in {_FRONTEND_CLIENT} is what the "
@@ -265,7 +292,8 @@ def test_the_upload_contract_matches_the_infraction_uploader():
     )
 
     guards = [
-        guard.permission for guard in _permission_guards(_upload_photo_route().dependant)
+        guard.permission
+        for guard in _permission_guards(_upload_photo_route().dependant)
     ]
     assert "uploads:photo_create" in guards, (
         "POST /api/v1/uploads/photo no longer carries "

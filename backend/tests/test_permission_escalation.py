@@ -114,9 +114,7 @@ def _superuser(session: Session) -> User:
     Explicit, so the case is about `is_superuser` and not about the enum that
     APRAS-47 §3.3 keeps in lockstep with it.
     """
-    return _make_user(
-        session, "DIRECTOR", tenant_admin=False, is_superuser=True
-    )
+    return _make_user(session, "DIRECTOR", tenant_admin=False, is_superuser=True)
 
 
 def _effective(session: Session, user: User) -> frozenset[str]:

@@ -10,11 +10,11 @@ rejection would surface as FastAPI's 422 where the ERs pin **400**.
 from __future__ import annotations
 
 import re
-from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlmodel import Session, select
 
+from app.core import clock
 from app.core.exceptions import (
     CoreModuleNotContractableError,
     InvalidModulePriceError,
@@ -32,10 +32,6 @@ if TYPE_CHECKING:  # pragma: no cover
     from app.schemas.plan import PlanCreate, PlanUpdate
 
 _CURRENCY_RE = re.compile(r"^[A-Z]{3}$")
-
-
-def _now() -> datetime:
-    return datetime.utcnow()  # noqa: DTZ003
 
 
 class PlanService:
@@ -184,7 +180,7 @@ class PlanService:
 
         for key, value in data.items():
             setattr(plan, key, value)
-        plan.updated_at = _now()
+        plan.updated_at = clock.db_now()
 
         session.add(plan)
         session.commit()

@@ -168,9 +168,7 @@ def test_assigning_a_user_to_a_role_carrying_a_disabled_modules_permission_still
     )
     assert response.status_code == 200
 
-    me = tenant_client.get(
-        "/api/v1/permissions/me", headers=_auth(assignee)
-    )
+    me = tenant_client.get("/api/v1/permissions/me", headers=_auth(assignee))
     assert not [p for p in me.json()["permissions"] if p.startswith("finance:")]
     assert me.json()["disabled_modules"] == ["finance"]
 
@@ -241,9 +239,7 @@ def test_an_over_privileged_assignment_is_still_refused_with_the_module_off(
     if finance_off:
         _disable(session, "finance")
     author = _role_author(session)
-    over_privileged = Role(
-        name="Tesouraria", permissions=["finance:category_create"]
-    )
+    over_privileged = Role(name="Tesouraria", permissions=["finance:category_create"])
     session.add(over_privileged)
     session.commit()
     session.refresh(over_privileged)
@@ -300,16 +296,12 @@ def test_superuser_only_permissions_are_still_ungrantable_with_the_module_off(
 # ---------------------------------------------------------------------------
 
 
-def test_the_grant_guard_reads_the_unstripped_set(
-    session: Session, tenant_admin: User
-):
+def test_the_grant_guard_reads_the_unstripped_set(session: Session, tenant_admin: User):
     """Same user, same session: the two functions differ by exactly the strip."""
     _disable(session, "finance")
     deps.tenant_context.set_acting_tenant(session, TENANT_A)
 
-    assert "finance:read" not in deps.get_effective_permissions(
-        tenant_admin, session
-    )
+    assert "finance:read" not in deps.get_effective_permissions(tenant_admin, session)
     assert "finance:read" in deps.get_grantable_permissions(tenant_admin, session)
 
 
@@ -382,14 +374,10 @@ def test_assert_can_grant_is_the_only_call_site():
     """The one call lives inside `assert_can_grant`; `assert_can_assign_roles`
     delegates to it and therefore inherits the change with no edit of its own.
     """
-    source = (APP_DIR / "services" / "role_service.py").read_text(
-        encoding="utf-8"
-    )
+    source = (APP_DIR / "services" / "role_service.py").read_text(encoding="utf-8")
     tree = ast.parse(source)
     functions = {
-        node.name: node
-        for node in ast.walk(tree)
-        if isinstance(node, ast.FunctionDef)
+        node.name: node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)
     }
 
     assert _count_calls(functions["assert_can_grant"], "get_grantable_permissions") == 1
@@ -397,9 +385,7 @@ def test_assert_can_grant_is_the_only_call_site():
         _count_calls(functions["assert_can_assign_roles"], "get_grantable_permissions")
         == 0
     )
-    assert (
-        _count_calls(functions["assert_can_grant"], "get_effective_permissions") == 0
-    )
+    assert _count_calls(functions["assert_can_grant"], "get_effective_permissions") == 0
 
 
 def _count_calls(node: ast.AST, name: str) -> int:

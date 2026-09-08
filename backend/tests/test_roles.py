@@ -1,4 +1,5 @@
 """Tests for roles endpoints and related exceptions/handlers."""
+
 import asyncio
 import uuid
 
@@ -13,6 +14,7 @@ from app.models.role import Role
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _admin_token(admin_user):
     return create_access_token(admin_user.id)
 
@@ -24,6 +26,7 @@ def _director_token(normal_user):
 # ---------------------------------------------------------------------------
 # exceptions.py coverage
 # ---------------------------------------------------------------------------
+
 
 def test_forbidden_error_default_message():
     exc = ForbiddenError()
@@ -45,6 +48,7 @@ def test_task_not_found_error_message():
 # exception_handlers.py coverage
 # ---------------------------------------------------------------------------
 
+
 def test_domain_exception_handler_forbidden():
     exc = ForbiddenError()
     response = asyncio.run(domain_exception_handler(None, exc))
@@ -59,14 +63,16 @@ def test_domain_exception_handler_task_not_found():
 
 def test_domain_exception_handler_generic_domain_error():
     from app.core.exceptions import DomainError
+
     exc = DomainError("something went wrong")
     response = asyncio.run(domain_exception_handler(None, exc))
     assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
 # ---------------------------------------------------------------------------
-# roles.py – read
+# roles.py -- read
 # ---------------------------------------------------------------------------
+
 
 def test_read_roles_lists_only_what_exists(client, admin_user):
     """`admin_user` carries the `Administrador (papel)` profile row.
@@ -110,8 +116,9 @@ def test_read_roles_director_allowed(client, normal_user):
 
 
 # ---------------------------------------------------------------------------
-# roles.py – create
+# roles.py -- create
 # ---------------------------------------------------------------------------
+
 
 def test_create_role(client, admin_user):
     token = _admin_token(admin_user)
@@ -152,8 +159,9 @@ def test_create_role_director_forbidden(client, normal_user):
 
 
 # ---------------------------------------------------------------------------
-# roles.py – update
+# roles.py -- update
 # ---------------------------------------------------------------------------
+
 
 def test_update_role(client, session, admin_user):
     ut = Role(name="OldName")
@@ -198,8 +206,9 @@ def test_update_role_director_forbidden(client, session, normal_user):
 
 
 # ---------------------------------------------------------------------------
-# roles.py – delete
+# roles.py -- delete
 # ---------------------------------------------------------------------------
+
 
 def test_delete_role(client, session, admin_user):
     ut = Role(name="ToDelete")

@@ -14,13 +14,9 @@ from uuid import UUID, uuid4
 from sqlalchemy import JSON, Column, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
+from app.core import clock
 from app.models.enums import SubscriptionChangeKind, SubscriptionStatus
 from app.models.tenant import tenant_id_field
-
-
-def _now() -> datetime:
-    """Naive UTC now, exactly as every other model in this package writes it."""
-    return datetime.utcnow()  # noqa: DTZ003
 
 
 class TenantSubscription(SQLModel, table=True):
@@ -60,9 +56,9 @@ class TenantSubscription(SQLModel, table=True):
         sa_column=Column(JSON, nullable=False, server_default="[]"),
     )
     notes: str | None = Field(default=None, nullable=True)
-    started_at: datetime = Field(default_factory=_now, nullable=False)
-    created_at: datetime = Field(default_factory=_now, nullable=False)
-    updated_at: datetime = Field(default_factory=_now, nullable=False)
+    started_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
 
 
 class SubscriptionChange(SQLModel, table=True):
@@ -101,11 +97,11 @@ class SubscriptionChange(SQLModel, table=True):
     from_plan_id: UUID | None = Field(
         default=None, foreign_key="plan.id", nullable=True
     )
-    to_plan_id: UUID | None = Field(
-        default=None, foreign_key="plan.id", nullable=True
-    )
+    to_plan_id: UUID | None = Field(default=None, foreign_key="plan.id", nullable=True)
     reason: str | None = Field(default=None, nullable=True)
     #: NOT NULL: all five write paths are authenticated requests, and a
     #: history row whose author is unknown is worse than no row.
     changed_by_id: UUID = Field(foreign_key="user.id", nullable=False, index=True)
-    changed_at: datetime = Field(default_factory=_now, nullable=False, index=True)
+    changed_at: datetime = Field(
+        default_factory=clock.db_now, nullable=False, index=True
+    )

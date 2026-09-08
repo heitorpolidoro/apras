@@ -97,221 +97,225 @@ TIER_PERMISSIONS: frozenset[str] = frozenset(
 # The catalogue (§4)
 # ---------------------------------------------------------------------------
 
-PERMISSIONS: frozenset[str] = SCOPE_PERMISSIONS | TIER_PERMISSIONS | frozenset(
-    {
-        # §4.1 tasks
-        "tasks:read",
-        "tasks:create",
-        "tasks:update",
-        "tasks:delete",
-        "tasks:comment",
-        # §4.2 categories
-        "categories:read",
-        "categories:create",
-        "categories:update",
-        "categories:delete",
-        # §4.3 users
-        "users:read",
-        "users:update",
-        "users:update_contact",
-        # §4.4 roles
-        "roles:read",
-        "roles:create",
-        "roles:update",
-        "roles:delete",
-        # §4.5 tenants
-        "tenants:read",
-        "tenants:create",
-        "tenants:update",
-        "tenants:members_read",
-        "tenants:members_manage",
-        "tenants:members_set_admin",
-        # §4.6 lots
-        "lots:read",
-        "lots:create",
-        "lots:update",
-        "lots:delete",
-        "lots:link_user",
-        "lots:unlink_user",
-        "lots:set_delinquency",
-        # §4.7 residents
-        "residents:read",
-        "residents:create",
-        "residents:update",
-        "residents:delete",
-        "residents:link_user",
-        "residents:unlink_user",
-        # §4.8 visitors
-        "visitors:read",
-        "visitors:create",
-        "visitors:update",
-        # §4.9 authorizations
-        "authorizations:read",
-        "authorizations:create",
-        "authorizations:revoke",
-        "authorizations:gate_lookup",
-        # §4.10 gate
-        "gate:checkin",
-        "gate:checkout",
-        "gate:logs_read",
-        # §4.11 occurrences
-        "occurrences:read",
-        "occurrences:create",
-        "occurrences:update_status",
-        "occurrences:add_note",
-        # §4.12 documents
-        "documents:read",
-        "documents:create",
-        "documents:delete",
-        "documents:download",
-        "documents:version_create",
-        "documents:folder_read",
-        "documents:folder_create",
-        "documents:folder_update",
-        "documents:folder_delete",
-        # §4.13 assemblies & votes
-        "assemblies:read",
-        "assemblies:create",
-        "assemblies:update",
-        "assemblies:close",
-        "assemblies:minutes_read",
-        "assemblies:minutes_save",
-        "votes:read",
-        "votes:create",
-        "votes:update",
-        "votes:close",
-        "votes:cast",
-        "votes:retract",
-        "votes:tally_read",
-        "votes:my_ballot_read",
-        "votes:eligible_lots_read",
-        "votes:eligibility_read",
-        "votes:eligibility_manage",
-        # §4.14 finance
-        "finance:read",
-        "finance:category_create",
-        "finance:category_update",
-        "finance:budget_create",
-        "finance:budget_update",
-        "finance:budget_delete",
-        "finance:transaction_create",
-        "finance:transaction_update",
-        "finance:transaction_delete",
-        "finance:invoice_upload",
-        "finance:invoice_delete",
-        # §4.15 projects
-        "projects:read",
-        "projects:create",
-        "projects:update",
-        "projects:delete",
-        "projects:milestone_create",
-        "projects:milestone_update",
-        "projects:milestone_delete",
-        "projects:update_create",
-        "projects:update_delete",
-        # §4.16 announcements
-        "announcements:read",
-        "announcements:create",
-        "announcements:update",
-        "announcements:delete",
-        "announcements:media_upload",
-        "announcements:media_delete",
-        "announcements:comment",
-        "announcements:comment_delete",
-        "announcements:mark_read",
-        "announcements:read_receipts_read",
-        # §4.17 feedback
-        "feedback:read",
-        "feedback:create",
-        "feedback:respond",
-        # §4.18 spaces & reservations
-        "spaces:read",
-        "spaces:create",
-        "spaces:update",
-        "spaces:deactivate",
-        "reservations:read",
-        "reservations:create",
-        "reservations:approve",
-        "reservations:reject",
-        "reservations:cancel",
-        # §4.19 packages
-        "packages:read",
-        "packages:create",
-        "packages:pickup",
-        "packages:queue_read",
-        "packages:my_lots_read",
-        # §4.20 assets & inventory
-        "assets:read",
-        "assets:summary_read",
-        "assets:create",
-        "assets:update",
-        "assets:delete",
-        "assets:movement_record",
-        "inventory:movements_read",
-        # §4.21 purchases
-        "purchases:read",
-        "purchases:summary_read",
-        "purchases:create",
-        "purchases:update",
-        "purchases:delete",
-        "purchases:quote_create",
-        "purchases:quote_update",
-        "purchases:quote_delete",
-        "purchases:decide",
-        "purchases:cancel",
-        # §4.22 uploads (media)
-        "uploads:photo_create",
-        "uploads:photo_read",
-        "uploads:pending_read",
-        "uploads:approve",
-        "uploads:reject",
-        "uploads:delete",
-        # §4.24 billing (APRAS-40) -- the subscription area
-        # `billing:read` is the *area*; `billing:manage` is the *act of
-        # contracting*. Two strings, not one, because a condominium that wants
-        # its treasurer to see the plan without being able to contract modules
-        # needs exactly this split. Neither implies the other.
-        "billing:read",
-        "billing:manage",
-        # §4.23 access_control
-        "access_control:devices_read",
-        "access_control:device_create",
-        "access_control:device_update_status",
-        "access_control:device_regenerate_key",
-        "access_control:facial_template_read",
-        "access_control:facial_template_sync",
-        "access_control:events_read",
-        # §4.25 infractions (APRAS-44)
-        #
-        # **One** module for the whole surface, never a second
-        # `infraction_rules` one: `MODULES` is derived from this catalogue, so
-        # a second module segment would produce a second independently
-        # toggleable feature -- and a tenant with `infractions` on and
-        # `infraction_rules` off would own a module it cannot configure. The
-        # rule catalogue is a sub-resource, so it carries the sub-resource in
-        # the action, on the `projects:milestone_create` precedent.
-        "infractions:read",
-        "infractions:create",
-        "infractions:advance",
-        "infractions:promote",
-        "infractions:contest",
-        "infractions:cycle_close",
-        # A **filter**, not an inverted gate: `GET /infractions/my-lots`
-        # narrows to the caller's linked lots and refuses nobody, so a staff
-        # member with no linked lot gets `[]`. The precedent is
-        # `gate:logs_read`, not `packages:my_lots_read` -- which is why
-        # `ADMIN_GAP_PERMISSIONS` stays a one-element set.
-        "infractions:my_lots_read",
-        "infractions:rule_read",
-        "infractions:rule_create",
-        "infractions:rule_update",
-        # `rule_deactivate`, not `rule_delete`: `DELETE` soft-deactivates
-        # because infractions reference rules and the lot's history has to
-        # stay whole and navigable. The precedent is `spaces:deactivate`.
-        "infractions:rule_deactivate",
-        "infractions:policy_update",
-        "infractions:settings_update",
-    }
+PERMISSIONS: frozenset[str] = (
+    SCOPE_PERMISSIONS
+    | TIER_PERMISSIONS
+    | frozenset(
+        {
+            # §4.1 tasks
+            "tasks:read",
+            "tasks:create",
+            "tasks:update",
+            "tasks:delete",
+            "tasks:comment",
+            # §4.2 categories
+            "categories:read",
+            "categories:create",
+            "categories:update",
+            "categories:delete",
+            # §4.3 users
+            "users:read",
+            "users:update",
+            "users:update_contact",
+            # §4.4 roles
+            "roles:read",
+            "roles:create",
+            "roles:update",
+            "roles:delete",
+            # §4.5 tenants
+            "tenants:read",
+            "tenants:create",
+            "tenants:update",
+            "tenants:members_read",
+            "tenants:members_manage",
+            "tenants:members_set_admin",
+            # §4.6 lots
+            "lots:read",
+            "lots:create",
+            "lots:update",
+            "lots:delete",
+            "lots:link_user",
+            "lots:unlink_user",
+            "lots:set_delinquency",
+            # §4.7 residents
+            "residents:read",
+            "residents:create",
+            "residents:update",
+            "residents:delete",
+            "residents:link_user",
+            "residents:unlink_user",
+            # §4.8 visitors
+            "visitors:read",
+            "visitors:create",
+            "visitors:update",
+            # §4.9 authorizations
+            "authorizations:read",
+            "authorizations:create",
+            "authorizations:revoke",
+            "authorizations:gate_lookup",
+            # §4.10 gate
+            "gate:checkin",
+            "gate:checkout",
+            "gate:logs_read",
+            # §4.11 occurrences
+            "occurrences:read",
+            "occurrences:create",
+            "occurrences:update_status",
+            "occurrences:add_note",
+            # §4.12 documents
+            "documents:read",
+            "documents:create",
+            "documents:delete",
+            "documents:download",
+            "documents:version_create",
+            "documents:folder_read",
+            "documents:folder_create",
+            "documents:folder_update",
+            "documents:folder_delete",
+            # §4.13 assemblies & votes
+            "assemblies:read",
+            "assemblies:create",
+            "assemblies:update",
+            "assemblies:close",
+            "assemblies:minutes_read",
+            "assemblies:minutes_save",
+            "votes:read",
+            "votes:create",
+            "votes:update",
+            "votes:close",
+            "votes:cast",
+            "votes:retract",
+            "votes:tally_read",
+            "votes:my_ballot_read",
+            "votes:eligible_lots_read",
+            "votes:eligibility_read",
+            "votes:eligibility_manage",
+            # §4.14 finance
+            "finance:read",
+            "finance:category_create",
+            "finance:category_update",
+            "finance:budget_create",
+            "finance:budget_update",
+            "finance:budget_delete",
+            "finance:transaction_create",
+            "finance:transaction_update",
+            "finance:transaction_delete",
+            "finance:invoice_upload",
+            "finance:invoice_delete",
+            # §4.15 projects
+            "projects:read",
+            "projects:create",
+            "projects:update",
+            "projects:delete",
+            "projects:milestone_create",
+            "projects:milestone_update",
+            "projects:milestone_delete",
+            "projects:update_create",
+            "projects:update_delete",
+            # §4.16 announcements
+            "announcements:read",
+            "announcements:create",
+            "announcements:update",
+            "announcements:delete",
+            "announcements:media_upload",
+            "announcements:media_delete",
+            "announcements:comment",
+            "announcements:comment_delete",
+            "announcements:mark_read",
+            "announcements:read_receipts_read",
+            # §4.17 feedback
+            "feedback:read",
+            "feedback:create",
+            "feedback:respond",
+            # §4.18 spaces & reservations
+            "spaces:read",
+            "spaces:create",
+            "spaces:update",
+            "spaces:deactivate",
+            "reservations:read",
+            "reservations:create",
+            "reservations:approve",
+            "reservations:reject",
+            "reservations:cancel",
+            # §4.19 packages
+            "packages:read",
+            "packages:create",
+            "packages:pickup",
+            "packages:queue_read",
+            "packages:my_lots_read",
+            # §4.20 assets & inventory
+            "assets:read",
+            "assets:summary_read",
+            "assets:create",
+            "assets:update",
+            "assets:delete",
+            "assets:movement_record",
+            "inventory:movements_read",
+            # §4.21 purchases
+            "purchases:read",
+            "purchases:summary_read",
+            "purchases:create",
+            "purchases:update",
+            "purchases:delete",
+            "purchases:quote_create",
+            "purchases:quote_update",
+            "purchases:quote_delete",
+            "purchases:decide",
+            "purchases:cancel",
+            # §4.22 uploads (media)
+            "uploads:photo_create",
+            "uploads:photo_read",
+            "uploads:pending_read",
+            "uploads:approve",
+            "uploads:reject",
+            "uploads:delete",
+            # §4.24 billing (APRAS-40) -- the subscription area
+            # `billing:read` is the *area*; `billing:manage` is the *act of
+            # contracting*. Two strings, not one, because a condominium that wants
+            # its treasurer to see the plan without being able to contract modules
+            # needs exactly this split. Neither implies the other.
+            "billing:read",
+            "billing:manage",
+            # §4.23 access_control
+            "access_control:devices_read",
+            "access_control:device_create",
+            "access_control:device_update_status",
+            "access_control:device_regenerate_key",
+            "access_control:facial_template_read",
+            "access_control:facial_template_sync",
+            "access_control:events_read",
+            # §4.25 infractions (APRAS-44)
+            #
+            # **One** module for the whole surface, never a second
+            # `infraction_rules` one: `MODULES` is derived from this catalogue, so
+            # a second module segment would produce a second independently
+            # toggleable feature -- and a tenant with `infractions` on and
+            # `infraction_rules` off would own a module it cannot configure. The
+            # rule catalogue is a sub-resource, so it carries the sub-resource in
+            # the action, on the `projects:milestone_create` precedent.
+            "infractions:read",
+            "infractions:create",
+            "infractions:advance",
+            "infractions:promote",
+            "infractions:contest",
+            "infractions:cycle_close",
+            # A **filter**, not an inverted gate: `GET /infractions/my-lots`
+            # narrows to the caller's linked lots and refuses nobody, so a staff
+            # member with no linked lot gets `[]`. The precedent is
+            # `gate:logs_read`, not `packages:my_lots_read` -- which is why
+            # `ADMIN_GAP_PERMISSIONS` stays a one-element set.
+            "infractions:my_lots_read",
+            "infractions:rule_read",
+            "infractions:rule_create",
+            "infractions:rule_update",
+            # `rule_deactivate`, not `rule_delete`: `DELETE` soft-deactivates
+            # because infractions reference rules and the lot's history has to
+            # stay whole and navigable. The precedent is `spaces:deactivate`.
+            "infractions:rule_deactivate",
+            "infractions:policy_update",
+            "infractions:settings_update",
+        }
+    )
 )
 
 
@@ -807,9 +811,7 @@ MODULES: frozenset[str] = frozenset(module_of(permission) for permission in PERM
 #: could turn it off and the condominium would lose the only surface from
 #: which it can contract anything back on -- the exact lock-out this constant
 #: exists to prevent.
-CORE_MODULES: frozenset[str] = frozenset(
-    {"tenants", "users", "roles", "billing"}
-)
+CORE_MODULES: frozenset[str] = frozenset({"tenants", "users", "roles", "billing"})
 
 #: The 23 billable features.
 TOGGLEABLE_MODULES: frozenset[str] = MODULES - CORE_MODULES

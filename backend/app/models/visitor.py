@@ -6,6 +6,8 @@ from uuid import UUID, uuid4
 
 from sqlmodel import Field, Relationship, SQLModel
 
+from app.core import clock
+
 from .enums import AuthorizationStatus, AuthorizationType
 from .tenant import tenant_id_field
 
@@ -30,11 +32,13 @@ class Visitor(SQLModel, table=True):
     vehicle_plate: str | None = Field(default=None, index=True)
     vehicle_model: str | None = Field(default=None)
     notes: str | None = Field(default=None)
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
-    updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
 
     # Relationships
-    authorizations: list["VisitorAuthorization"] = Relationship(back_populates="visitor")
+    authorizations: list["VisitorAuthorization"] = Relationship(
+        back_populates="visitor"
+    )
     access_logs: list["AccessLog"] = Relationship(back_populates="visitor")
 
 
@@ -55,7 +59,9 @@ class VisitorAuthorization(SQLModel, table=True):
     authorizer_user_id: UUID = Field(
         foreign_key="user.id", ondelete="CASCADE", nullable=False, index=True
     )
-    auth_type: AuthorizationType = Field(default=AuthorizationType.SINGLE, nullable=False)
+    auth_type: AuthorizationType = Field(
+        default=AuthorizationType.SINGLE, nullable=False
+    )
     allowed_days_json: str = Field(
         default='["MON","TUE","WED","THU","FRI","SAT","SUN"]', nullable=False
     )
@@ -68,8 +74,8 @@ class VisitorAuthorization(SQLModel, table=True):
         default=AuthorizationStatus.ACTIVE, nullable=False, index=True
     )
     notes: str | None = Field(default=None)
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
-    updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
 
     # Relationships
     visitor: Optional["Visitor"] = Relationship(back_populates="authorizations")
@@ -87,7 +93,11 @@ class AccessLog(SQLModel, table=True):
     # request-scoped acting tenant.
     tenant_id: UUID = tenant_id_field()
     authorization_id: UUID | None = Field(
-        default=None, foreign_key="visitor_authorization.id", ondelete="SET NULL", nullable=True, index=True
+        default=None,
+        foreign_key="visitor_authorization.id",
+        ondelete="SET NULL",
+        nullable=True,
+        index=True,
     )
     visitor_id: UUID = Field(
         foreign_key="visitor.id", ondelete="CASCADE", nullable=False, index=True
@@ -95,7 +105,9 @@ class AccessLog(SQLModel, table=True):
     lot_id: UUID = Field(
         foreign_key="lot.id", ondelete="CASCADE", nullable=False, index=True
     )
-    entry_time: datetime = Field(default_factory=datetime.utcnow, nullable=False, index=True)
+    entry_time: datetime = Field(
+        default_factory=clock.db_now, nullable=False, index=True
+    )
     exit_time: datetime | None = Field(default=None, index=True)
     gatekeeper_user_id: UUID | None = Field(
         default=None, foreign_key="user.id", nullable=True, index=True
@@ -104,7 +116,9 @@ class AccessLog(SQLModel, table=True):
     exit_notes: str | None = Field(default=None)
 
     # Relationships
-    authorization: Optional["VisitorAuthorization"] = Relationship(back_populates="access_logs")
+    authorization: Optional["VisitorAuthorization"] = Relationship(
+        back_populates="access_logs"
+    )
     visitor: Optional["Visitor"] = Relationship(back_populates="access_logs")
     lot: Optional["Lot"] = Relationship()
     gatekeeper: Optional["User"] = Relationship()

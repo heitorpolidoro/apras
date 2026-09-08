@@ -1,12 +1,13 @@
 """Edge cases and guard paths of the voting module (APRAS-33)."""
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
+from app.core import clock
 from app.core.exceptions import (
     AnonymousAssemblyError,
     ForbiddenError,
@@ -60,7 +61,7 @@ def test_resident_cannot_create_a_poll(session: Session):
         kind=VoteKind.ENQUETE,
         title="Enquete proibida",
         vote_type=VoteType.SINGLE_CHOICE,
-        closes_at=datetime.utcnow() + timedelta(days=1),
+        closes_at=clock.db_now() + timedelta(days=1),
         options=[VoteOptionCreate(label="Sim"), VoteOptionCreate(label="Não")],
     )
     with pytest.raises(ForbiddenError):
@@ -99,7 +100,7 @@ def test_a_link_that_has_not_started_yet_does_not_grant_eligibility(
     owner = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
     link = link_user_to_lot(session, owner, lot)
-    link.start_date = datetime.utcnow() + timedelta(days=5)
+    link.start_date = clock.db_now() + timedelta(days=5)
     session.add(link)
     session.commit()
 
@@ -110,9 +111,7 @@ def test_a_link_that_has_not_started_yet_does_not_grant_eligibility(
 def test_expired_link_does_not_grant_eligibility(session: Session):
     owner = make_user(session, "RESIDENT")
     lot = make_lot(session, "A", "1")
-    link_user_to_lot(
-        session, owner, lot, end_date=datetime.utcnow() - timedelta(days=1)
-    )
+    link_user_to_lot(session, owner, lot, end_date=clock.db_now() - timedelta(days=1))
 
     assert voting_service.get_lot_eligible_user_ids(session, lot) == set()
 
@@ -206,7 +205,7 @@ def test_cast_at_is_forced_to_increase_per_voter_key(session: Session):
 
     first = _cast(session, owner, vote, "Sim", lot)
     # Simulate a clock that has not moved (or went backwards) since.
-    first.cast_at = datetime.utcnow() + timedelta(hours=1)
+    first.cast_at = clock.db_now() + timedelta(hours=1)
     session.add(first)
     session.commit()
 
@@ -232,14 +231,14 @@ def test_tally_of_a_closed_vote_without_snapshot_is_materialised(session: Sessio
 # ---------------------------------------------------------------------------
 
 
-def test_assembly_and_vote_not_found_return_404(
-    client: TestClient, session: Session
-):
+def test_assembly_and_vote_not_found_return_404(client: TestClient, session: Session):
     admin = make_user(session, "ADMINISTRATOR")
     headers = auth_headers(client, admin)
     missing = uuid.uuid4()
 
-    assert client.get(f"/api/v1/assemblies/{missing}", headers=headers).status_code == 404
+    assert (
+        client.get(f"/api/v1/assemblies/{missing}", headers=headers).status_code == 404
+    )
     assert client.get(f"/api/v1/votes/{missing}", headers=headers).status_code == 404
 
 
@@ -276,9 +275,7 @@ def test_closing_an_already_closed_assembly_returns_400(
     assert response.status_code == 400
 
 
-def test_vote_listing_filters_by_kind_and_status(
-    client: TestClient, session: Session
-):
+def test_vote_listing_filters_by_kind_and_status(client: TestClient, session: Session):
     admin = make_user(session, "ADMINISTRATOR")
     assembly = make_assembly(session, admin)
     make_vote(session, admin, assembly=assembly)
@@ -319,9 +316,7 @@ def test_updating_a_closed_vote_or_making_an_assembly_anonymous_fails(
     vote = make_vote(session, admin, assembly=assembly)
 
     with pytest.raises(AnonymousAssemblyError):
-        voting_service.update_vote(
-            session, admin, vote, VoteUpdate(is_anonymous=True)
-        )
+        voting_service.update_vote(session, admin, vote, VoteUpdate(is_anonymous=True))
 
     voting_service.close_vote(session, admin, vote)
     with pytest.raises(VoteAlreadyClosedError):
@@ -345,13 +340,9 @@ def test_eligibility_management_rejects_unknown_lot_or_user(session: Session):
             session, admin, uuid.uuid4(), spouse.id
         )
     with pytest.raises(ForbiddenError):
-        voting_service.set_lot_voter_eligibility(
-            session, admin, lot.id, uuid.uuid4()
-        )
+        voting_service.set_lot_voter_eligibility(session, admin, lot.id, uuid.uuid4())
     with pytest.raises(LotNotFoundError):
-        voting_service.remove_lot_voter_eligibility(
-            session, admin, lot.id, spouse.id
-        )
+        voting_service.remove_lot_voter_eligibility(session, admin, lot.id, spouse.id)
 
 
 def test_minutes_of_an_assembly_without_votes(session: Session):
@@ -378,9 +369,7 @@ def test_poll_tally_attributes_by_voter_name(session: Session):
     assert tally.attributions[0].lot_label is None
 
 
-def test_guest_cannot_browse_the_voting_surface(
-    client: TestClient, session: Session
-):
+def test_guest_cannot_browse_the_voting_surface(client: TestClient, session: Session):
     guest = make_user(session, "GUEST")
     headers = auth_headers(client, guest)
 
@@ -407,9 +396,7 @@ def test_eligible_lots_endpoint_lists_the_units_the_caller_may_vote_for(
     assert listed.status_code == 200
     assert [item["label"] for item in listed.json()] == ["A/1", "B/2"]
 
-    poll_lots = client.get(
-        f"/api/v1/votes/{poll.id}/eligible-lots", headers=headers
-    )
+    poll_lots = client.get(f"/api/v1/votes/{poll.id}/eligible-lots", headers=headers)
     assert poll_lots.json() == []
 
 

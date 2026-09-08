@@ -5,7 +5,8 @@ from uuid import UUID
 
 from sqlmodel import Session, select
 
-from app.models.task import Task, TaskComment, TaskHistory, get_utc_now
+from app.core import clock
+from app.models.task import Task, TaskComment, TaskHistory
 from app.schemas.task import TaskCommentRead, TaskCreate, TaskUpdate
 
 if TYPE_CHECKING:
@@ -96,7 +97,7 @@ class TaskService:
                     field_name=key,
                     old_value=str(old_value) if old_value is not None else None,
                     new_value=str(value) if value is not None else None,
-                    timestamp=get_utc_now(),
+                    timestamp=clock.db_now(),
                 )
                 session.add(history)
                 setattr(db_task, key, value)
@@ -111,18 +112,16 @@ class TaskService:
                     field_name="visible_to",
                     old_value=",".join(old_ids) or None,
                     new_value=",".join(new_ids) or None,
-                    timestamp=get_utc_now(),
+                    timestamp=clock.db_now(),
                 )
                 session.add(history)
             db_task.visible_to = (
-                session.exec(
-                    select(Role).where(Role.id.in_(visible_to_ids))
-                ).all()
+                session.exec(select(Role).where(Role.id.in_(visible_to_ids))).all()
                 if visible_to_ids
                 else []
             )
 
-        db_task.updated_at = get_utc_now()
+        db_task.updated_at = clock.db_now()
         session.add(db_task)
         session.commit()
         session.refresh(db_task)
@@ -189,7 +188,7 @@ class TaskService:
     def delete_task(session: Session, db_task: Task, changed_by_id: UUID) -> None:
         """Perform soft delete on a task and log it in history."""
         db_task.is_deleted = True
-        db_task.updated_at = get_utc_now()
+        db_task.updated_at = clock.db_now()
 
         history = TaskHistory(
             task_id=db_task.id,
@@ -197,7 +196,7 @@ class TaskService:
             field_name="is_deleted",
             old_value="False",
             new_value="True",
-            timestamp=get_utc_now(),
+            timestamp=clock.db_now(),
         )
         session.add(history)
         session.add(db_task)
@@ -286,7 +285,7 @@ class TaskService:
         from app.models.user import User
 
         comment.content = content
-        comment.updated_at = get_utc_now()
+        comment.updated_at = clock.db_now()
         session.add(comment)
         session.commit()
         session.refresh(comment)

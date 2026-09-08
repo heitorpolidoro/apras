@@ -18,7 +18,7 @@ import io
 import os
 import pkgutil
 import uuid
-from datetime import UTC, date, datetime, timedelta
+from datetime import timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -28,6 +28,7 @@ from sqlmodel import Session, SQLModel, select
 
 import app.schemas
 from app.api.deps import get_effective_role_ids
+from app.core import clock
 from app.core.security import create_access_token, get_password_hash
 from app.core.tenant_context import TENANT_SCOPED_MODELS, acting_tenant_scope
 from app.models.access_control import AccessDevice, FacialAccessEvent, FacialTemplate
@@ -74,16 +75,6 @@ from tests.test_tenant_models import INHERITED_TABLES
 TENANT_A = DEFAULT_TENANT_ID
 
 
-def _now() -> datetime:
-    """Naive UTC `now`, matching what every model in this codebase stores."""
-    return datetime.now(UTC).replace(tzinfo=None)
-
-
-def _today() -> date:
-    """Today in UTC, as a naive date."""
-    return _now().date()
-
-
 def _auth(user: User, tenant_id=None) -> dict[str, str]:
     headers = {"Authorization": f"Bearer {create_access_token(user.id)}"}
     if tenant_id is not None:
@@ -108,7 +99,7 @@ def _png_bytes() -> bytes:
 # ---------------------------------------------------------------------------
 
 
-def _seed_tenant(raw: Session, tenant_id, actor: User, tag: str) -> dict:  # noqa: PLR0915
+def _seed_tenant(raw: Session, tenant_id, actor: User, tag: str) -> dict:  # noqa: PLR0915  # linear script; splitting it would hide the order rows must be created in
     """Seed one row of every tenant-scoped entity (plus the child rows the
     matrix needs) into `tenant_id`, through the unfiltered raw session.
 
@@ -156,9 +147,7 @@ def _seed_tenant(raw: Session, tenant_id, actor: User, tag: str) -> dict:  # noq
             created_by_id=actor.id,
         ),
     )
-    project = add(
-        "construction_project", ConstructionProject(title=f"Project {tag}")
-    )
+    project = add("construction_project", ConstructionProject(title=f"Project {tag}"))
     announcement = add(
         "announcement",
         Announcement(title=f"News {tag}", content="body", author_id=actor.id),
@@ -166,7 +155,8 @@ def _seed_tenant(raw: Session, tenant_id, actor: User, tag: str) -> dict:  # noq
     raw.commit()
 
     add(
-        "task", Task(title=f"Task {tag}", created_by_id=actor.id, category_id=category.id)
+        "task",
+        Task(title=f"Task {tag}", created_by_id=actor.id, category_id=category.id),
     )
     resident = add(
         "resident",
@@ -178,8 +168,8 @@ def _seed_tenant(raw: Session, tenant_id, actor: User, tag: str) -> dict:  # noq
         SpaceReservation(
             space_id=reservable.id,
             reserved_by_id=actor.id,
-            start_time=_now() + timedelta(days=1),
-            end_time=_now() + timedelta(days=1, hours=2),
+            start_time=clock.db_now() + timedelta(days=1),
+            end_time=clock.db_now() + timedelta(days=1, hours=2),
         ),
     )
     add(
@@ -205,7 +195,7 @@ def _seed_tenant(raw: Session, tenant_id, actor: User, tag: str) -> dict:  # noq
             category_id=finance_category.id,
             description=f"Tx {tag}",
             amount=50.0,
-            transaction_date=_today(),
+            transaction_date=clock.today_utc(),
             created_by_id=actor.id,
         ),
     )
@@ -257,7 +247,7 @@ def _seed_tenant(raw: Session, tenant_id, actor: User, tag: str) -> dict:  # noq
         Assembly(
             title=f"Assembly {tag}",
             type=AssemblyType.AGO,
-            held_on=_today(),
+            held_on=clock.today_utc(),
             created_by_id=actor.id,
         ),
     )
@@ -273,7 +263,7 @@ def _seed_tenant(raw: Session, tenant_id, actor: User, tag: str) -> dict:  # noq
             kind=VoteKind.ENQUETE,
             title=f"Vote {tag}",
             vote_type=VoteType.SINGLE_CHOICE,
-            closes_at=_now() + timedelta(days=5),
+            closes_at=clock.db_now() + timedelta(days=5),
             created_by_id=actor.id,
             assembly_id=None,
         ),
@@ -321,14 +311,14 @@ def _seed_tenant(raw: Session, tenant_id, actor: User, tag: str) -> dict:  # noq
         resident_id=resident.id,
         media_asset_id=rows["media_asset"].id,
         sync_status=FacialTemplateSyncStatus.SYNCED,
-        synced_at=_now(),
+        synced_at=clock.db_now(),
     )
     event = FacialAccessEvent(
         device_id=device.id,
         resident_id=resident.id,
         matched=True,
         access_granted=True,
-        event_time=_now(),
+        event_time=clock.db_now(),
     )
     raw.add_all([decision, template, event])
     raw.add(
@@ -483,7 +473,9 @@ def test_lot_keyed_collections(
     b_lot = seeded["b"]["lot"][0]
 
     assert (
-        tenant_client.get(f"/api/v1/lots/{b_lot}/residents", headers=headers).status_code
+        tenant_client.get(
+            f"/api/v1/lots/{b_lot}/residents", headers=headers
+        ).status_code
         == 404
     )
     response = tenant_client.get(f"/api/v1/lots/{a_lot}/residents", headers=headers)
@@ -759,7 +751,10 @@ def test_child_table_writes_within_the_tenant_still_work(
 
 
 def test_purchase_summary_excludes_the_other_tenant(
-    tenant_client: TestClient, seeded, user_in_tenant_a: User, member_admin: User,
+    tenant_client: TestClient,
+    seeded,
+    user_in_tenant_a: User,
+    member_admin: User,
     tenant_b: Tenant,
 ):
     """The summary aggregates only the acting tenant's requests and quotes."""
@@ -858,7 +853,9 @@ def test_webhook_with_a_foreign_resident_is_indistinguishable_from_no_match(
     # the device's tenant" is asserted through the device it hangs off.
     assert raw_session.get(AccessDevice, event.device_id).tenant_id == TENANT_A
     assert event.resident_id is None
-    assert raw_session.get(FacialTemplate, seeded["b"]["facial_template"][1]) is not None
+    assert (
+        raw_session.get(FacialTemplate, seeded["b"]["facial_template"][1]) is not None
+    )
 
 
 def test_webhook_with_its_own_tenants_resident_still_matches(
@@ -962,7 +959,9 @@ def test_unknown_tenant_is_403_for_everyone_else(
     session.add(user)
     session.commit()
 
-    response = tenant_client.get("/api/v1/categories/", headers=_auth(user, uuid.uuid4()))
+    response = tenant_client.get(
+        "/api/v1/categories/", headers=_auth(user, uuid.uuid4())
+    )
     assert response.status_code == 403
     assert response.json()["detail"] == "Not a member of the requested tenant"
 
@@ -984,7 +983,9 @@ def test_non_member_of_an_existing_tenant_is_403(
     session.add(UserTenantLink(user_id=user.id, tenant_id=TENANT_A))
     session.commit()
 
-    response = tenant_client.get("/api/v1/categories/", headers=_auth(user, tenant_b.id))
+    response = tenant_client.get(
+        "/api/v1/categories/", headers=_auth(user, tenant_b.id)
+    )
     assert response.status_code == 403
     assert response.json()["detail"] == "Not a member of the requested tenant"
 
@@ -1115,7 +1116,7 @@ def _model_name_by_table() -> dict[str, str]:
     """``__tablename__`` -> model class name, over every mapped SQLModel."""
     return {
         mapper.local_table.name: mapper.class_.__name__
-        for mapper in SQLModel._sa_registry.mappers  # noqa: SLF001
+        for mapper in SQLModel._sa_registry.mappers
     }
 
 
@@ -1197,10 +1198,10 @@ def test_inherited_table_queries_are_reviewed():
     found = set(_child_query_sites())
     allowlisted = set(REVIEWED_CHILD_QUERIES)
     assert not (found - allowlisted), (
-        "unreviewed inherited-table query sites: " f"{sorted(found - allowlisted)}"
+        f"unreviewed inherited-table query sites: {sorted(found - allowlisted)}"
     )
     assert not (allowlisted - found), (
-        "stale allowlist entries: " f"{sorted(allowlisted - found)}"
+        f"stale allowlist entries: {sorted(allowlisted - found)}"
     )
 
 
@@ -1240,9 +1241,7 @@ def test_creating_a_tenant_seeds_its_role_linked_roles(
     new_id = uuid.UUID(response.json()["id"])
 
     raw_session.expire_all()
-    seeded_types = raw_session.exec(
-        select(Role).where(Role.tenant_id == new_id)
-    ).all()
+    seeded_types = raw_session.exec(select(Role).where(Role.tenant_id == new_id)).all()
     assert {ut.name for ut in seeded_types} == set(LEGACY_ROLE_NAMES)
     assert all(ut.permissions == [] for ut in seeded_types)
 
@@ -1251,9 +1250,7 @@ def test_creating_a_tenant_does_not_touch_the_acting_tenants_types(
     tenant_client: TestClient, raw_session: Session, user_in_tenant_a: User
 ):
     """`acting_tenant_scope` stamps the *new* tenant, not the acting one."""
-    before = len(
-        raw_session.exec(select(Role).where(Role.tenant_id == TENANT_A)).all()
-    )
+    before = len(raw_session.exec(select(Role).where(Role.tenant_id == TENANT_A)).all())
     response = tenant_client.post(
         "/api/v1/tenants",
         headers=_auth(user_in_tenant_a),
@@ -1262,9 +1259,7 @@ def test_creating_a_tenant_does_not_touch_the_acting_tenants_types(
     assert response.status_code == 201
 
     raw_session.expire_all()
-    after = len(
-        raw_session.exec(select(Role).where(Role.tenant_id == TENANT_A)).all()
-    )
+    after = len(raw_session.exec(select(Role).where(Role.tenant_id == TENANT_A)).all())
     assert after == before
 
 
@@ -1379,7 +1374,7 @@ def _infraction_flow(client: TestClient, user: User, tenant_id, tag: str) -> dic
             "rule_id": rule_id,
             "lot_id": lot_id,
             "responsible_resident_id": resident,
-            "occurred_on": _today().isoformat(),
+            "occurred_on": clock.today_utc().isoformat(),
             "description": f"Infração {tag}",
             # A **forged** tenant_id has no field to ride in on -- no create
             # schema in this module declares one (`test_no_create_or_update_

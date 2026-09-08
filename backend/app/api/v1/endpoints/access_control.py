@@ -49,7 +49,6 @@ def _to_event_read(event: FacialAccessEvent) -> FacialAccessEventRead:
 
 @router.post(
     "/devices",
-    response_model=AccessDeviceKeyRead,
     status_code=status.HTTP_201_CREATED,
 )
 def create_device(
@@ -64,7 +63,6 @@ def create_device(
 
 @router.get(
     "/devices",
-    response_model=PaginatedAccessDeviceRead,
     status_code=status.HTTP_200_OK,
 )
 def list_devices(
@@ -79,7 +77,6 @@ def list_devices(
 
 @router.put(
     "/devices/{device_id}/status",
-    response_model=AccessDeviceRead,
     status_code=status.HTTP_200_OK,
 )
 def update_device_status(
@@ -89,13 +86,14 @@ def update_device_status(
     current_user: Annotated[User, Depends(deps.get_current_user)],
 ) -> AccessDeviceRead:
     """Manually update a device's status (Admin/Director only)."""
-    device = AccessControlService.update_device_status(session, device_id, status_in, current_user)
+    device = AccessControlService.update_device_status(
+        session, device_id, status_in, current_user
+    )
     return AccessDeviceRead.model_validate(device)
 
 
 @router.post(
     "/devices/{device_id}/regenerate-key",
-    response_model=AccessDeviceKeyRead,
     status_code=status.HTTP_200_OK,
 )
 def regenerate_device_key(
@@ -104,13 +102,14 @@ def regenerate_device_key(
     current_user: Annotated[User, Depends(deps.get_current_user)],
 ) -> AccessDeviceKeyRead:
     """Rotate a device's secret key (Admin/Director only)."""
-    device = AccessControlService.regenerate_device_key(session, device_id, current_user)
+    device = AccessControlService.regenerate_device_key(
+        session, device_id, current_user
+    )
     return _to_device_key_read(device)
 
 
 @router.post(
     "/residents/{resident_id}/facial-template/sync",
-    response_model=FacialTemplateRead,
     status_code=status.HTTP_200_OK,
 )
 def sync_facial_template(
@@ -119,7 +118,9 @@ def sync_facial_template(
     current_user: Annotated[User, Depends(deps.get_current_user)],
 ) -> FacialTemplateRead:
     """Trigger a (simulated) facial template sync from the resident's approved photo."""
-    template = AccessControlService.sync_facial_template(session, resident_id, current_user)
+    template = AccessControlService.sync_facial_template(
+        session, resident_id, current_user
+    )
     return FacialTemplateRead.model_validate(template)
 
 
@@ -134,13 +135,14 @@ def get_facial_template(
     current_user: Annotated[User, Depends(deps.get_current_user)],
 ) -> FacialTemplateRead | None:
     """Get the current facial template sync status for a resident."""
-    template: FacialTemplate | None = AccessControlService.get_facial_template(session, resident_id, current_user)
+    template: FacialTemplate | None = AccessControlService.get_facial_template(
+        session, resident_id, current_user
+    )
     return FacialTemplateRead.model_validate(template) if template else None
 
 
 @webhook_router.post(
     "/webhook/verification",
-    response_model=FacialAccessEventRead,
     status_code=status.HTTP_201_CREATED,
 )
 def facial_verification_webhook(
@@ -153,13 +155,14 @@ def facial_verification_webhook(
     Authenticated via the `X-Device-Key` header (not a user JWT), since physical
     devices cannot obtain a user session token.
     """
-    event = AccessControlService.process_verification_webhook(session, x_device_key, payload)
+    event = AccessControlService.process_verification_webhook(
+        session, x_device_key, payload
+    )
     return _to_event_read(event)
 
 
 @router.get(
     "/events",
-    response_model=PaginatedFacialAccessEventRead,
     status_code=status.HTTP_200_OK,
 )
 def list_events(
@@ -172,7 +175,14 @@ def list_events(
 ) -> PaginatedFacialAccessEventRead:
     """List facial access events, most recent first (Admin/Director/Manager only)."""
     events, total = AccessControlService.list_events(
-        session, current_user, device_id=device_id, resident_id=resident_id, skip=skip, limit=limit
+        session,
+        current_user,
+        device_id=device_id,
+        resident_id=resident_id,
+        skip=skip,
+        limit=limit,
     )
     items = [_to_event_read(e) for e in events]
-    return PaginatedFacialAccessEventRead(items=items, total=total, skip=skip, limit=limit)
+    return PaginatedFacialAccessEventRead(
+        items=items, total=total, skip=skip, limit=limit
+    )

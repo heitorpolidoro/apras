@@ -6,6 +6,8 @@ from uuid import UUID, uuid4
 
 from sqlmodel import Field, Relationship, SQLModel
 
+from app.core import clock
+
 from .enums import AccessDeviceStatus, FacialTemplateSyncStatus
 from .tenant import tenant_id_field
 
@@ -28,11 +30,15 @@ class AccessDevice(SQLModel, table=True):
     name: str = Field(nullable=False, unique=True, index=True)
     location: str | None = Field(default=None)
     device_key: str = Field(nullable=False, unique=True, index=True)
-    status: AccessDeviceStatus = Field(default=AccessDeviceStatus.OFFLINE, nullable=False, index=True)
+    status: AccessDeviceStatus = Field(
+        default=AccessDeviceStatus.OFFLINE, nullable=False, index=True
+    )
     last_seen_at: datetime | None = Field(default=None)
-    created_by_id: UUID = Field(foreign_key="user.id", ondelete="CASCADE", nullable=False, index=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
-    updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_by_id: UUID = Field(
+        foreign_key="user.id", ondelete="CASCADE", nullable=False, index=True
+    )
+    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
 
     # Relationships
     created_by: Optional["User"] = Relationship()
@@ -46,16 +52,22 @@ class FacialTemplate(SQLModel, table=True):
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     resident_id: UUID = Field(
-        foreign_key="resident.id", ondelete="CASCADE", nullable=False, unique=True, index=True
+        foreign_key="resident.id",
+        ondelete="CASCADE",
+        nullable=False,
+        unique=True,
+        index=True,
     )
-    media_asset_id: UUID = Field(foreign_key="media_asset.id", ondelete="CASCADE", nullable=False)
+    media_asset_id: UUID = Field(
+        foreign_key="media_asset.id", ondelete="CASCADE", nullable=False
+    )
     sync_status: FacialTemplateSyncStatus = Field(
         default=FacialTemplateSyncStatus.PENDING, nullable=False, index=True
     )
     synced_at: datetime | None = Field(default=None)
     failure_reason: str | None = Field(default=None)
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
-    updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
 
     # Relationships
     resident: Optional["Resident"] = Relationship()
@@ -72,12 +84,18 @@ class FacialAccessEvent(SQLModel, table=True):
         foreign_key="access_device.id", ondelete="CASCADE", nullable=False, index=True
     )
     resident_id: UUID | None = Field(
-        default=None, foreign_key="resident.id", ondelete="SET NULL", nullable=True, index=True
+        default=None,
+        foreign_key="resident.id",
+        ondelete="SET NULL",
+        nullable=True,
+        index=True,
     )
     matched: bool = Field(default=False, nullable=False)
     confidence_score: float | None = Field(default=None)
     access_granted: bool = Field(default=False, nullable=False)
-    event_time: datetime = Field(default_factory=datetime.utcnow, nullable=False, index=True)
+    event_time: datetime = Field(
+        default_factory=clock.db_now, nullable=False, index=True
+    )
     raw_payload: str | None = Field(default=None)
 
     # Relationships

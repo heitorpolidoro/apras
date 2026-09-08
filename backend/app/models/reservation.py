@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 from sqlalchemy import Index
 from sqlmodel import Field, Relationship, SQLModel
 
+from app.core import clock
 from app.models.enums import ReservationStatus
 from app.models.tenant import tenant_id_field
 
@@ -35,7 +36,7 @@ class ReservableSpace(SQLModel, table=True):
     capacity: int | None = Field(default=None)
     requires_approval: bool = Field(default=False, nullable=False)
     is_active: bool = Field(default=True, nullable=False)
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
 
     # Relationships
     reservations: list["SpaceReservation"] = Relationship(back_populates="space")
@@ -78,18 +79,14 @@ class SpaceReservation(SQLModel, table=True):
     )
     decided_at: datetime | None = Field(default=None)
     cancelled_at: datetime | None = Field(default=None)
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
 
     # Relationships
     space: "ReservableSpace" = Relationship(back_populates="reservations")
     reserved_by: "User" = Relationship(
-        sa_relationship_kwargs={
-            "foreign_keys": "[SpaceReservation.reserved_by_id]"
-        }
+        sa_relationship_kwargs={"foreign_keys": "[SpaceReservation.reserved_by_id]"}
     )
     decided_by: Optional["User"] = Relationship(
-        sa_relationship_kwargs={
-            "foreign_keys": "[SpaceReservation.decided_by_id]"
-        }
+        sa_relationship_kwargs={"foreign_keys": "[SpaceReservation.decided_by_id]"}
     )
     lot: Optional["Lot"] = Relationship()

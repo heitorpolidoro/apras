@@ -72,9 +72,7 @@ def _make_user(
 @pytest.fixture(name="directory_admin")
 def directory_admin_fixture(session: Session):
     """An ADMINISTRATOR whose only membership is tenant A."""
-    return _make_user(
-        session, "dir-admin@test.com", "ADMINISTRATOR", (TENANT_A,)
-    )
+    return _make_user(session, "dir-admin@test.com", "ADMINISTRATOR", (TENANT_A,))
 
 
 @pytest.fixture(name="syndic")
@@ -268,7 +266,8 @@ def test_tenant_admin_cannot_modify_an_administrator(
     )
     assert response.status_code == 403
     assert (
-        response.json()["detail"] == "Tenant administrators cannot modify an administrator"
+        response.json()["detail"]
+        == "Tenant administrators cannot modify an administrator"
     )
 
 
@@ -338,8 +337,10 @@ def test_contact_info_gains_no_escalation_rule(
 @pytest.fixture(name="typed_target")
 def typed_target_fixture(session: Session, tenant_b: Tenant):
     """A user carrying one Role in A and one in B."""
-    a_type = Role(name="Tipo A",)
-    b_type = Role(name="Tipo B",tenant_id=tenant_b.id)
+    a_type = Role(
+        name="Tipo A",
+    )
+    b_type = Role(name="Tipo B", tenant_id=tenant_b.id)
     session.add_all([a_type, b_type])
     session.commit()
     session.refresh(a_type)
@@ -382,7 +383,9 @@ def test_valid_ids_return_200_and_preserve_the_foreign_link(
     session: Session,
     raw_session: Session,
 ):
-    new_type = Role(name="Tipo A2",)
+    new_type = Role(
+        name="Tipo A2",
+    )
     session.add(new_type)
     session.commit()
     session.refresh(new_type)
@@ -490,9 +493,7 @@ def test_orphan_users_are_invisible_outside_the_default_tenant(
     session: Session, tenant_b: Tenant, orphan_user: User
 ):
     assert UserService.get_visible_user(session, orphan_user.id, tenant_b.id) is None
-    assert (
-        UserService.get_visible_user(session, orphan_user.id, TENANT_A) is not None
-    )
+    assert UserService.get_visible_user(session, orphan_user.id, TENANT_A) is not None
 
 
 def test_no_role_link_survives_a_missing_target(session: Session):

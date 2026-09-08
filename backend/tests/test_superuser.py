@@ -170,9 +170,7 @@ def test_a_tenant_admin_of_a_holds_nothing_at_all_in_b(
     tenant_context.set_acting_tenant(session, tenant_b.id)
 
     assert deps.get_effective_role_ids(user, session) == set()
-    reachable = session.exec(
-        select(Role).where(Role.tenant_id == tenant_b.id)
-    ).all()
+    reachable = session.exec(select(Role).where(Role.tenant_id == tenant_b.id)).all()
     assert all(role.permissions == [] for role in reachable)
 
     assert deps.get_effective_permissions(user, session) == frozenset()
@@ -200,10 +198,7 @@ def test_a_superuser_holds_the_documented_administrator_gap(session: Session):
     tenant_context.set_acting_tenant(session, DEFAULT_TENANT_ID)
 
     assert "packages:my_lots_read" in deps.get_effective_permissions(user, session)
-    assert (
-        "packages:my_lots_read"
-        not in bundle("ADMINISTRATOR")
-    )
+    assert "packages:my_lots_read" not in bundle("ADMINISTRATOR")
 
 
 # ---------------------------------------------------------------------------
@@ -231,26 +226,43 @@ def _auth(user: User) -> dict[str, str]:
 
 def _five_writes(client: TestClient, actor: User, tenant: Tenant, target: User):
     """Call each of the five writes once; yield `(label, response)`."""
-    yield "create", client.post(
-        "/api/v1/tenants", headers=_auth(actor), json={"name": f"C {uuid.uuid4().hex[:8]}"}
+    yield (
+        "create",
+        client.post(
+            "/api/v1/tenants",
+            headers=_auth(actor),
+            json={"name": f"C {uuid.uuid4().hex[:8]}"},
+        ),
     )
-    yield "update", client.patch(
-        f"/api/v1/tenants/{tenant.id}",
-        headers=_auth(actor),
-        json={"name": f"R {uuid.uuid4().hex[:8]}"},
+    yield (
+        "update",
+        client.patch(
+            f"/api/v1/tenants/{tenant.id}",
+            headers=_auth(actor),
+            json={"name": f"R {uuid.uuid4().hex[:8]}"},
+        ),
     )
-    yield "add_member", client.post(
-        f"/api/v1/tenants/{tenant.id}/members",
-        headers=_auth(actor),
-        json={"user_id": str(target.id)},
+    yield (
+        "add_member",
+        client.post(
+            f"/api/v1/tenants/{tenant.id}/members",
+            headers=_auth(actor),
+            json={"user_id": str(target.id)},
+        ),
     )
-    yield "set_admin", client.patch(
-        f"/api/v1/tenants/{tenant.id}/members/{target.id}",
-        headers=_auth(actor),
-        json={"is_tenant_admin": True},
+    yield (
+        "set_admin",
+        client.patch(
+            f"/api/v1/tenants/{tenant.id}/members/{target.id}",
+            headers=_auth(actor),
+            json={"is_tenant_admin": True},
+        ),
     )
-    yield "remove_member", client.delete(
-        f"/api/v1/tenants/{tenant.id}/members/{target.id}", headers=_auth(actor)
+    yield (
+        "remove_member",
+        client.delete(
+            f"/api/v1/tenants/{tenant.id}/members/{target.id}", headers=_auth(actor)
+        ),
     )
 
 
@@ -388,19 +400,23 @@ def test_a_group_carrying_a_superuser_only_permission_is_403_even_for_a_superuse
     client: TestClient, session: Session
 ):
     """The point is that the group would be a lie, not that the author is untrusted."""
-    for author in (_superuser(session), _member(session, "RESIDENT", tenant_admin=True)):
+    for author in (
+        _superuser(session),
+        _member(session, "RESIDENT", tenant_admin=True),
+    ):
         response = client.post(
             "/api/v1/roles/",
             headers=_scoped_auth(author),
-            json={"name": f"Falso {uuid.uuid4().hex[:6]}", "permissions": ["tenants:create"]},
+            json={
+                "name": f"Falso {uuid.uuid4().hex[:6]}",
+                "permissions": ["tenants:create"],
+            },
         )
 
         assert response.status_code == 403
         assert "tenants:create" in response.json()["detail"]
 
-    assert not session.exec(
-        select(Role).where(Role.name.like("Falso %"))
-    ).all()
+    assert not session.exec(select(Role).where(Role.name.like("Falso %"))).all()
 
 
 def test_patching_a_group_to_add_a_superuser_only_permission_is_403(

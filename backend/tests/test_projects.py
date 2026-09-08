@@ -8,6 +8,7 @@ from fastapi import status
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
+from app.core import clock
 from app.core.security import create_access_token, get_password_hash
 from app.models.enums import MilestoneStatus, ProjectStatus
 from app.models.project import ConstructionProject, ProjectMilestone, ProjectUpdate
@@ -258,15 +259,11 @@ def test_get_project_detail_success(
 
 def test_get_project_not_found(client: TestClient, admin_token: str):
     fake_id = uuid.uuid4()
-    resp = client.get(
-        f"/api/v1/projects/{fake_id}", headers=_auth_headers(admin_token)
-    )
+    resp = client.get(f"/api/v1/projects/{fake_id}", headers=_auth_headers(admin_token))
     assert resp.status_code == status.HTTP_404_NOT_FOUND
 
 
-def test_update_project_success(
-    client: TestClient, admin_token: str, session: Session
-):
+def test_update_project_success(client: TestClient, admin_token: str, session: Session):
     project = ConstructionProject(
         title="Academia Nova",
         total_budget=40000.0,
@@ -376,7 +373,7 @@ def test_milestone_crud_and_auto_completion_date(
     assert resp_up.status_code == status.HTTP_200_OK
     m_up_data = resp_up.json()
     assert m_up_data["status"] == "DONE"
-    assert m_up_data["completion_date"] == date.today().isoformat()
+    assert m_up_data["completion_date"] == clock.today_utc().isoformat()
 
     # 3. Delete milestone
     resp_del = client.delete(
@@ -406,7 +403,10 @@ def test_create_project_update_with_cost_impact(
     update_payload = {
         "title": "Instalação de Postes Solares",
         "content": "5 postes instalados na alameda principal com fotos anexas.",
-        "photos": ["https://cdn.example.com/pole1.png", "https://cdn.example.com/pole2.png"],
+        "photos": [
+            "https://cdn.example.com/pole1.png",
+            "https://cdn.example.com/pole2.png",
+        ],
         "cost_impact": 7500.0,
     }
     resp = client.post(
@@ -491,4 +491,3 @@ def test_milestone_and_update_not_found_errors(
         headers=_auth_headers(admin_token),
     )
     assert resp.status_code == status.HTTP_404_NOT_FOUND
-

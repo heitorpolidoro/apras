@@ -1,12 +1,12 @@
 """Occurrence service layer handling business logic and authorization checks."""
 
-from datetime import datetime
 import json
 from uuid import UUID
 
-from sqlmodel import Session, col, func, or_, select
+from sqlmodel import Session, func, or_, select
 
 from app.api.deps import has_permission
+from app.core import clock
 from app.core.exceptions import (
     OccurrenceAccessForbiddenError,
     OccurrenceNotFoundError,
@@ -67,7 +67,7 @@ class OccurrenceService:
         if occurrence.photo_urls_json:
             try:
                 photo_urls = json.loads(occurrence.photo_urls_json)
-            except Exception:
+            except Exception:  # noqa: BLE001  # best-effort side effect; a failure here must not fail the request
                 photo_urls = []
 
         return OccurrenceRead(
@@ -108,9 +108,7 @@ class OccurrenceService:
             or occurrence.is_public
             or (
                 occurrence.assigned_to_id == current_user.id
-                and has_permission(
-                    current_user, session, "occurrences:read_assigned"
-                )
+                and has_permission(current_user, session, "occurrences:read_assigned")
             )
         )
 
@@ -136,8 +134,8 @@ class OccurrenceService:
             photo_urls_json=photo_urls_json,
             status=OccurrenceStatus.OPEN,
             priority=OccurrencePriority.MEDIUM,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=clock.db_now(),
+            updated_at=clock.db_now(),
         )
 
         session.add(occurrence)
@@ -151,7 +149,7 @@ class OccurrenceService:
             status_to=OccurrenceStatus.OPEN,
             note="Ocorrência registrada no sistema",
             is_internal_only=False,
-            created_at=datetime.utcnow(),
+            created_at=clock.db_now(),
         )
         session.add(timeline_entry)
         session.commit()
@@ -181,7 +179,7 @@ class OccurrenceService:
             # `occurrences:read_assigned` (the legacy `{M}` set exactly).
             terms = [
                 Occurrence.reporter_user_id == current_user.id,
-                Occurrence.is_public == True,  # noqa: E712
+                Occurrence.is_public == True,  # noqa: E712  # SQLAlchemy column expression; `is True` does not compile to SQL
             ]
             if has_permission(current_user, session, "occurrences:read_assigned"):
                 terms.append(Occurrence.assigned_to_id == current_user.id)
@@ -273,7 +271,9 @@ class OccurrenceService:
         # Imported inside the method on purpose -- the occurrence module is
         # the *source* of a promotion and must not acquire an import-time
         # dependency on the module that consumes it.
-        from app.services.infraction_service import InfractionService
+        from app.services.infraction_service import (  # noqa: PLC0415  # cycle: occurrences is the promotion source, infractions its consumer
+            InfractionService,
+        )
 
         return OccurrenceDetailRead(
             **base_read.model_dump(),
@@ -316,7 +316,7 @@ class OccurrenceService:
                 OccurrenceStatus.RESOLVED,
                 OccurrenceStatus.REJECTED,
             ]:
-                occurrence.resolved_at = datetime.utcnow()
+                occurrence.resolved_at = clock.db_now()
 
         if update_in.priority is not None:
             occurrence.priority = update_in.priority
@@ -327,7 +327,7 @@ class OccurrenceService:
         if update_in.resolution_notes is not None:
             occurrence.resolution_notes = update_in.resolution_notes
 
-        occurrence.updated_at = datetime.utcnow()
+        occurrence.updated_at = clock.db_now()
 
         # Add timeline entry for update
         note_text = update_in.resolution_notes or (
@@ -343,7 +343,7 @@ class OccurrenceService:
             status_to=occurrence.status if status_changed else None,
             note=note_text,
             is_internal_only=False,
-            created_at=datetime.utcnow(),
+            created_at=clock.db_now(),
         )
         session.add(timeline_entry)
         session.commit()
@@ -383,9 +383,9 @@ class OccurrenceService:
                 OccurrenceStatus.RESOLVED,
                 OccurrenceStatus.REJECTED,
             ]:
-                occurrence.resolved_at = datetime.utcnow()
+                occurrence.resolved_at = clock.db_now()
 
-        occurrence.updated_at = datetime.utcnow()
+        occurrence.updated_at = clock.db_now()
 
         timeline_entry = OccurrenceTimeline(
             occurrence_id=occurrence.id,
@@ -394,7 +394,7 @@ class OccurrenceService:
             status_to=status_to,
             note=note_in.note,
             is_internal_only=is_internal,
-            created_at=datetime.utcnow(),
+            created_at=clock.db_now(),
         )
 
         session.add(timeline_entry)

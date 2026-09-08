@@ -1,9 +1,9 @@
 import uuid
 from datetime import datetime
-from typing import Optional, List
+
 from pydantic import BaseModel, ConfigDict
 
-from app.models.enums import EntityType, StorageProvider, PhotoApprovalStatus
+from app.models.enums import EntityType, PhotoApprovalStatus, StorageProvider
 
 
 class MediaAssetRead(BaseModel):
@@ -11,24 +11,24 @@ class MediaAssetRead(BaseModel):
 
     id: uuid.UUID
     entity_type: EntityType
-    entity_id: Optional[uuid.UUID] = None
+    entity_id: uuid.UUID | None = None
     storage_provider: StorageProvider
     file_path: str
     url: str
-    thumbnail_url: Optional[str] = None
+    thumbnail_url: str | None = None
     file_size_bytes: int
     mime_type: str
-    width: Optional[int] = None
-    height: Optional[int] = None
+    width: int | None = None
+    height: int | None = None
     status: PhotoApprovalStatus
-    rejection_reason: Optional[str] = None
+    rejection_reason: str | None = None
     uploaded_by_id: uuid.UUID
-    uploaded_by_name: Optional[str] = None
-    approved_by_id: Optional[uuid.UUID] = None
-    approved_by_name: Optional[str] = None
+    uploaded_by_name: str | None = None
+    approved_by_id: uuid.UUID | None = None
+    approved_by_name: str | None = None
     created_at: datetime
     updated_at: datetime
-    approved_at: Optional[datetime] = None
+    approved_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -42,6 +42,6 @@ class PhotoRejectRequest(BaseModel):
 class MediaAssetListResponse(BaseModel):
     """Response schema for paginated/filtered media asset lists."""
 
-    items: List[MediaAssetRead]
+    items: list[MediaAssetRead]
     total: int
     pending_count: int

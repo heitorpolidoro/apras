@@ -32,7 +32,7 @@ from sqlmodel import SQLModel
 # Imported for its side effect: registering every mapper, so
 # `SQLModel.metadata` is exhaustive when `test_0036_matches_the_model_metadata`
 # compares it against the live Postgres schema.
-import app.models  # noqa: F401
+import app.models  # noqa: F401  # every model must be imported before the metadata is compared
 
 TEST_POSTGRES_URL = os.environ.get("TEST_POSTGRES_URL")
 _BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -112,7 +112,7 @@ def migrated_pg_engine():
         with engine.begin() as conn:
             conn.execute(text("DROP SCHEMA public CASCADE"))
             conn.execute(text("CREATE SCHEMA public"))
-    except Exception as exc:  # pragma: no cover - environment-dependent
+    except Exception as exc:  # pragma: no cover - environment-dependent  # noqa: BLE001  # any failure to reach TEST_POSTGRES_URL means skip, whatever its type
         pytest.skip(f"Could not reach TEST_POSTGRES_URL ({exc})")
 
     _run_alembic("upgrade", "head")
@@ -147,12 +147,7 @@ def test_the_userrole_type_is_absent_at_head(isolated_pg_engine):
     """
     assert _userrole_labels(isolated_pg_engine) == set()
     with isolated_pg_engine.connect() as conn:
-        assert (
-            conn.execute(
-                text("SELECT to_regtype('userrole')")
-            ).scalar()
-            is None
-        )
+        assert conn.execute(text("SELECT to_regtype('userrole')")).scalar() is None
 
 
 def test_the_userrole_type_comes_back_with_all_six_labels_on_downgrade(
@@ -223,7 +218,7 @@ def test_the_user_role_column_is_absent_at_head_and_insertable_after_downgrade(
 
 
 # ---------------------------------------------------------------------------
-# 0018_add_role_to_user_type (APRAS-9) – seeded role-linked Role rows
+# 0018_add_role_to_user_type (APRAS-9) -- seeded role-linked Role rows
 # ---------------------------------------------------------------------------
 
 
@@ -276,8 +271,7 @@ def test_0018_seeds_five_rows(pg_engine_at_0018):
     with pg_engine_at_0018.connect() as conn:
         rows = conn.execute(
             text(
-                "SELECT role, name, allowed_menus FROM user_type "
-                "WHERE role IS NOT NULL"
+                "SELECT role, name, allowed_menus FROM user_type WHERE role IS NOT NULL"
             )
         ).all()
 
@@ -295,15 +289,17 @@ def test_0018_seeds_five_rows(pg_engine_at_0018):
 
 
 def test_0018_unique_constraint_rejects_a_duplicate_role(pg_engine_at_0018):
-    with pytest.raises(Exception, match="duplicate key|unique constraint"):
-        with pg_engine_at_0018.begin() as conn:
-            conn.execute(
-                text(
-                    "INSERT INTO user_type (id, name, allowed_menus, role) "
-                    "VALUES (:id, 'Duplicate Director', '[]', 'DIRECTOR')"
-                ),
-                {"id": uuid.uuid4()},
-            )
+    with (
+        pytest.raises(Exception, match=r"duplicate key|unique constraint"),
+        pg_engine_at_0018.begin() as conn,
+    ):
+        conn.execute(
+            text(
+                "INSERT INTO user_type (id, name, allowed_menus, role) "
+                "VALUES (:id, 'Duplicate Director', '[]', 'DIRECTOR')"
+            ),
+            {"id": uuid.uuid4()},
+        )
 
 
 def test_0018_unique_constraint_allows_multiple_null_roles(pg_engine_at_0018):
@@ -384,7 +380,7 @@ def test_downgrading_past_0020_is_a_safe_noop(migrated_pg_engine):
 
 
 # ---------------------------------------------------------------------------
-# 0024_task_visible_to_m2m (APRAS-11) – Task.visible_to becomes many-to-many
+# 0024_task_visible_to_m2m (APRAS-11) -- Task.visible_to becomes many-to-many
 # ---------------------------------------------------------------------------
 
 
@@ -517,7 +513,7 @@ def test_task_visible_to_downgrade_backfills_one_arbitrary_target(migrated_pg_en
 
 
 # ---------------------------------------------------------------------------
-# 0028_add_tenant_and_membership (APRAS-41) – tenancy schema and backfill
+# 0028_add_tenant_and_membership (APRAS-41) -- tenancy schema and backfill
 # ---------------------------------------------------------------------------
 #
 # Isolation, and why it is mandatory here rather than a nicety:
@@ -642,7 +638,9 @@ def _current_revision(engine) -> str:
     versions.
     """
     with engine.connect() as conn:
-        return conn.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
+        return conn.execute(
+            text("SELECT version_num FROM alembic_version")
+        ).scalar_one()
 
 
 def _reset_to(engine, target: str) -> None:
@@ -706,9 +704,7 @@ def test_every_scoped_table_has_not_null_tenant_id(isolated_pg_engine):
         }
         indexes = set(
             conn.execute(
-                text(
-                    "SELECT indexname FROM pg_indexes WHERE schemaname = 'public'"
-                )
+                text("SELECT indexname FROM pg_indexes WHERE schemaname = 'public'")
             )
             .scalars()
             .all()
@@ -807,16 +803,27 @@ def test_existing_rows_are_backfilled(pg_engine_at_0027):
     _run_alembic("upgrade", "head")
 
     with pg_engine_at_0027.connect() as conn:
-        assert conn.execute(
-            text("SELECT tenant_id FROM category WHERE id = :id"), {"id": category_id}
-        ).scalar_one() == DEFAULT_TENANT_ID
-        assert conn.execute(
-            text("SELECT tenant_id FROM task WHERE id = :id"), {"id": task_id}
-        ).scalar_one() == DEFAULT_TENANT_ID
-        links = conn.execute(
-            text("SELECT tenant_id FROM user_tenant_link WHERE user_id = :id"),
-            {"id": user_id},
-        ).scalars().all()
+        assert (
+            conn.execute(
+                text("SELECT tenant_id FROM category WHERE id = :id"),
+                {"id": category_id},
+            ).scalar_one()
+            == DEFAULT_TENANT_ID
+        )
+        assert (
+            conn.execute(
+                text("SELECT tenant_id FROM task WHERE id = :id"), {"id": task_id}
+            ).scalar_one()
+            == DEFAULT_TENANT_ID
+        )
+        links = (
+            conn.execute(
+                text("SELECT tenant_id FROM user_tenant_link WHERE user_id = :id"),
+                {"id": user_id},
+            )
+            .scalars()
+            .all()
+        )
 
     assert links == [DEFAULT_TENANT_ID]
 
@@ -856,15 +863,17 @@ def test_scoped_uniques_are_per_tenant(isolated_pg_engine):
             == 2
         )
 
-    with pytest.raises(Exception, match="duplicate key|unique constraint"):
-        with isolated_pg_engine.begin() as conn:
-            conn.execute(
-                text(
-                    "INSERT INTO category (id, tenant_id, name, color, is_active) "
-                    "VALUES (:id, :tenant_id, 'Manutenção', '#808080', true)"
-                ),
-                {"id": uuid.uuid4(), "tenant_id": DEFAULT_TENANT_ID},
-            )
+    with (
+        pytest.raises(Exception, match=r"duplicate key|unique constraint"),
+        isolated_pg_engine.begin() as conn,
+    ):
+        conn.execute(
+            text(
+                "INSERT INTO category (id, tenant_id, name, color, is_active) "
+                "VALUES (:id, :tenant_id, 'Manutenção', '#808080', true)"
+            ),
+            {"id": uuid.uuid4(), "tenant_id": DEFAULT_TENANT_ID},
+        )
 
 
 def test_downgrade_removes_tenant_schema(isolated_pg_engine):
@@ -937,14 +946,17 @@ def test_downgrade_removes_tenant_schema(isolated_pg_engine):
         "uq_finance_category_name_type",
     } <= unique_constraints
     # ...and their tenant-composite replacements are gone.
-    assert not {
-        "ix_category_tenant_name",
-        "ix_user_type_tenant_name",
-        "ix_user_type_tenant_role",
-        "ix_occurrence_tenant_protocol",
-        "ix_reservable_space_tenant_name",
-        "ix_asset_tenant_asset_tag",
-    } & unique_indexes
+    assert (
+        not {
+            "ix_category_tenant_name",
+            "ix_user_type_tenant_name",
+            "ix_user_type_tenant_role",
+            "ix_occurrence_tenant_protocol",
+            "ix_reservable_space_tenant_name",
+            "ix_asset_tenant_asset_tag",
+        }
+        & unique_indexes
+    )
 
     # Re-applying must succeed, so the downgrade left a schema 0028 can
     # migrate again (the fixture's teardown reset assumes nothing about it).
@@ -992,8 +1004,7 @@ def test_is_tenant_admin_column_shape_and_backfill(pg_engine_at_0027):
         flags = (
             conn.execute(
                 text(
-                    "SELECT is_tenant_admin FROM user_tenant_link "
-                    "WHERE user_id = :id"
+                    "SELECT is_tenant_admin FROM user_tenant_link WHERE user_id = :id"
                 ),
                 {"id": user_id},
             )
@@ -1157,9 +1168,7 @@ def test_is_superuser_column_shape_and_conversion(pg_engine_at_0027):
         ).one()
         flags = dict(
             conn.execute(
-                text(
-                    'SELECT id, is_superuser FROM "user" WHERE id IN (:a, :d)'
-                ),
+                text('SELECT id, is_superuser FROM "user" WHERE id IN (:a, :d)'),
                 {"a": admin_id, "d": director_id},
             ).all()
         )
@@ -1236,9 +1245,7 @@ def _names(engine, query: str) -> set[str]:
         return set(conn.execute(text(query)).scalars().all())
 
 
-_INDEX_NAMES = (
-    "SELECT indexname FROM pg_indexes WHERE schemaname = 'public'"
-)
+_INDEX_NAMES = "SELECT indexname FROM pg_indexes WHERE schemaname = 'public'"
 _CONSTRAINT_NAMES = (
     "SELECT c.conname FROM pg_constraint c "
     "JOIN pg_class cl ON cl.oid = c.conrelid "
@@ -1246,15 +1253,14 @@ _CONSTRAINT_NAMES = (
     "WHERE n.nspname = 'public'"
 )
 _TABLE_NAMES = (
-    "SELECT table_name FROM information_schema.tables "
-    "WHERE table_schema = 'public'"
+    "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"
 )
 
 
 def _columns(engine, table: str) -> set[str]:
     return _names(
         engine,
-        "SELECT column_name FROM information_schema.columns "  # noqa: S608
+        "SELECT column_name FROM information_schema.columns "  # noqa: S608  # literal table name, never user input
         f"WHERE table_name = '{table}'",
     )
 
@@ -1310,7 +1316,7 @@ def _assert_pre_0033_schema_is_back(engine) -> None:
             )
         ).scalar_one()
     assert folder_default.startswith(
-        "'[\"ADMINISTRATOR\", \"DIRECTOR\", \"MANAGER\", \"RESIDENT\"]'"
+        '\'["ADMINISTRATOR", "DIRECTOR", "MANAGER", "RESIDENT"]\''
     )
 
 
@@ -1406,8 +1412,10 @@ def _migration_literal() -> dict[str, list[str]]:
     )
     tree = ast.parse(path.read_text(encoding="utf-8"))
     for node in tree.body:
-        targets = node.targets if isinstance(node, ast.Assign) else (
-            [node.target] if isinstance(node, ast.AnnAssign) else []
+        targets = (
+            node.targets
+            if isinstance(node, ast.Assign)
+            else ([node.target] if isinstance(node, ast.AnnAssign) else [])
         )
         for target in targets:
             if isinstance(target, ast.Name) and target.id == "_LEGACY_BUNDLES":
@@ -1439,7 +1447,9 @@ def test_0033_literal_matches_the_recording():
 
     assert set(literal) == set(recorded) == set(LEGACY_ROLE_NAMES_BY_VALUE)
     for value, permissions in literal.items():
-        assert set(permissions) == set(recorded[value]) | NEW_TIER_BY_VALUE[value], value
+        assert set(permissions) == set(recorded[value]) | NEW_TIER_BY_VALUE[value], (
+            value
+        )
 
 
 def test_0033_drops_the_columns_the_index_and_the_type(isolated_pg_engine):
@@ -1569,10 +1579,7 @@ def _link_tenant(conn, user_id, tenant_id, *, is_tenant_admin: bool = False) -> 
 
 def _legacy_type_id(conn, tenant_id, role: str):
     return conn.execute(
-        text(
-            "SELECT id FROM user_type WHERE tenant_id = :tenant_id "
-            "AND role = :role"
-        ),
+        text("SELECT id FROM user_type WHERE tenant_id = :tenant_id AND role = :role"),
         {"tenant_id": tenant_id, "role": role},
     ).scalar()
 
@@ -1591,8 +1598,7 @@ def _upgrade_head_expecting_failure() -> str:
     """Run `alembic upgrade head` and return its stderr, asserting it failed."""
     result = _alembic("upgrade", "head")
     assert result.returncode != 0, (
-        "0033 was expected to refuse:\n"
-        f"stdout={result.stdout}\nstderr={result.stderr}"
+        f"0033 was expected to refuse:\nstdout={result.stdout}\nstderr={result.stderr}"
     )
     return result.stderr
 
@@ -1649,10 +1655,7 @@ def test_0033_refuses_a_user_explicitly_linked_to_a_foreign_legacy_role(
         assert "role" in _columns(pg_engine_at_0031, "user")
         bundles = (
             conn.execute(
-                text(
-                    "SELECT permissions::text FROM user_type "
-                    "WHERE role IS NOT NULL"
-                )
+                text("SELECT permissions::text FROM user_type WHERE role IS NOT NULL")
             )
             .scalars()
             .all()
@@ -1782,7 +1785,7 @@ def test_0033_does_not_refuse_an_inactive_or_flagged_user(pg_engine_at_0031):
     assert _current_revision(pg_engine_at_0031) == HEAD_REVISION
 
 
-def test_effective_permissions_are_unchanged_by_0033(pg_engine_at_0031):  # noqa: PLR0915
+def test_effective_permissions_are_unchanged_by_0033(pg_engine_at_0031):  # noqa: PLR0915  # linear script; splitting it would hide the order rows must be created in
     """ER-3's real ask (§11.2): the migration changes no user's power.
 
     Ten personas, seeded **at `0031`** with `is_superuser` written explicitly
@@ -1828,9 +1831,7 @@ def test_effective_permissions_are_unchanged_by_0033(pg_engine_at_0031):  # noqa
 
         # 1-6: one per legacy role, **no explicit link**.
         for value in profiles:
-            user_id = _seed_user(
-                conn, value, email=f"persona-{value.lower()}@test.com"
-            )
+            user_id = _seed_user(conn, value, email=f"persona-{value.lower()}@test.com")
             _link_tenant(conn, user_id, DEFAULT_TENANT_ID)
             personas[f"plain-{value}"] = (user_id, value)
 
@@ -1881,8 +1882,7 @@ def test_effective_permissions_are_unchanged_by_0033(pg_engine_at_0031):  # noqa
 
     recorded = _recorded_bundles()
     pre = {
-        key: set(recorded[value])
-        | ({"finance:read"} if key == "extra-role" else set())
+        key: set(recorded[value]) | ({"finance:read"} if key == "extra-role" else set())
         for key, (_user_id, value) in personas.items()
     }
 
@@ -1893,8 +1893,9 @@ def test_effective_permissions_are_unchanged_by_0033(pg_engine_at_0031):  # noqa
     from app.core.tenant_context import acting_tenant_scope
     from app.models.user import User
 
-    with Session(pg_engine_at_0031) as session, acting_tenant_scope(
-        session, DEFAULT_TENANT_ID
+    with (
+        Session(pg_engine_at_0031) as session,
+        acting_tenant_scope(session, DEFAULT_TENANT_ID),
     ):
         for key, (user_id, value) in personas.items():
             user = session.get(User, user_id)
@@ -1920,8 +1921,9 @@ def test_effective_permissions_are_unchanged_by_0033(pg_engine_at_0031):  # noqa
     # `len(PERMISSIONS)` -- the legacy ADMINISTRATOR bundle is untouched by
     # APRAS-40, which is the useful signal that only the "superuser sees
     # everything" set moved.
-    with Session(pg_engine_at_0031) as session, acting_tenant_scope(
-        session, DEFAULT_TENANT_ID
+    with (
+        Session(pg_engine_at_0031) as session,
+        acting_tenant_scope(session, DEFAULT_TENANT_ID),
     ):
         admin = session.get(User, personas["plain-ADMINISTRATOR"][0])
         assert len(deps.get_effective_permissions(admin, session)) == 157
@@ -2015,7 +2017,7 @@ def test_0033_document_folder_acl_round_trips(pg_engine_at_0031):
     def _pairs(column: str) -> dict[str, list[str]]:
         with pg_engine_at_0031.connect() as conn:
             rows = conn.execute(
-                text(f"SELECT id, {column} AS acl FROM document_folder")  # noqa: S608
+                text(f"SELECT id, {column} AS acl FROM document_folder")  # noqa: S608  # literal table name, never user input
             ).all()
         return {str(row.id): json.loads(row.acl or "[]") for row in rows}
 
@@ -2032,9 +2034,7 @@ def test_0033_document_folder_acl_round_trips(pg_engine_at_0031):
                 "FROM document_folder"
             )
         ).all()
-        role_rows = conn.execute(
-            text("SELECT id, tenant_id, name FROM role")
-        ).all()
+        role_rows = conn.execute(text("SELECT id, tenant_id, name FROM role")).all()
     name_by_id = {str(row.id): row.name for row in role_rows}
     tenant_by_id = {str(row.id): str(row.tenant_id) for row in role_rows}
     value_by_name = {v: k for k, v in LEGACY_ROLE_NAMES_BY_VALUE.items()}
@@ -2051,7 +2051,9 @@ def test_0033_document_folder_acl_round_trips(pg_engine_at_0031):
     # Identical to `before`, except that the unknown string is dropped by the
     # forward rewrite — which is exactly what §6 says it does.
     for folder_id, values in before.items():
-        assert mapped[folder_id] == [v for v in values if v in LEGACY_ROLE_NAMES_BY_VALUE]
+        assert mapped[folder_id] == [
+            v for v in values if v in LEGACY_ROLE_NAMES_BY_VALUE
+        ]
 
     _run_alembic("downgrade", _BEFORE_0033)
 
@@ -2093,8 +2095,7 @@ def test_0033_downgrade_restores_the_schema_and_recomputes_roles(
         # An operator-granted permission on a legacy row, before the backfill.
         conn.execute(
             text(
-                "UPDATE user_type SET permissions = '[\"finance:read\"]' "
-                "WHERE id = :id"
+                "UPDATE user_type SET permissions = '[\"finance:read\"]' WHERE id = :id"
             ),
             {"id": manager_type},
         )
@@ -2122,25 +2123,19 @@ def test_0033_downgrade_restores_the_schema_and_recomputes_roles(
         )
         resident_role = conn.execute(
             text(
-                "SELECT id FROM role WHERE tenant_id = :t AND name = "
-                "'Morador (papel)'"
+                "SELECT id FROM role WHERE tenant_id = :t AND name = 'Morador (papel)'"
             ),
             {"t": DEFAULT_TENANT_ID},
         ).scalar_one()
         conn.execute(
-            text(
-                "INSERT INTO user_role_link (user_id, role_id) "
-                "VALUES (:u, :r)"
-            ),
+            text("INSERT INTO user_role_link (user_id, role_id) VALUES (:u, :r)"),
             {"u": newcomer, "r": resident_role},
         )
 
     _run_alembic("downgrade", _BEFORE_0033)
 
     with pg_engine_at_0031.connect() as conn:
-        roles = dict(
-            conn.execute(text('SELECT email, role::text FROM "user"')).all()
-        )
+        roles = dict(conn.execute(text('SELECT email, role::text FROM "user"')).all())
         menus = (
             conn.execute(text("SELECT DISTINCT allowed_menus::text FROM role"))
             .scalars()
@@ -2151,13 +2146,7 @@ def test_0033_downgrade_restores_the_schema_and_recomputes_roles(
                 text("SELECT name, permissions::text FROM role WHERE role IS NOT NULL")
             ).all()
         )
-        links = (
-            conn.execute(
-                text("SELECT user_id FROM user_role_link")
-            )
-            .scalars()
-            .all()
-        )
+        links = conn.execute(text("SELECT user_id FROM user_role_link")).scalars().all()
 
     _assert_pre_0033_schema_is_back(pg_engine_at_0031)
 
@@ -2278,9 +2267,7 @@ def test_0034_backfills_every_pre_existing_tenant_to_all_modules_on(
     _run_alembic("upgrade", "head")
 
     with pg_engine_at_0027.connect() as conn:
-        rows = conn.execute(
-            text("SELECT id, disabled_modules::text FROM tenant")
-        ).all()
+        rows = conn.execute(text("SELECT id, disabled_modules::text FROM tenant")).all()
 
     assert rows
     assert {row.disabled_modules for row in rows} == {"[]"}
@@ -2403,12 +2390,10 @@ def test_0035_seeds_nothing(isolated_pg_engine):
     with isolated_pg_engine.connect() as conn:
         assert conn.execute(text("SELECT count(*) FROM plan")).scalar() == 0
         assert (
-            conn.execute(text("SELECT count(*) FROM tenant_subscription")).scalar()
-            == 0
+            conn.execute(text("SELECT count(*) FROM tenant_subscription")).scalar() == 0
         )
         assert (
-            conn.execute(text("SELECT count(*) FROM subscription_change")).scalar()
-            == 0
+            conn.execute(text("SELECT count(*) FROM subscription_change")).scalar() == 0
         )
 
 
@@ -2602,12 +2587,16 @@ def test_0036_stores_enums_as_strings_and_creates_no_postgres_type(
                 "AND column_name IN ('origin', 'action', 'fine_mode')"
             )
         ).all()
-        native = conn.execute(
-            text(
-                "SELECT typname FROM pg_type WHERE typtype = 'e' "
-                "AND typname LIKE 'infraction%'"
+        native = (
+            conn.execute(
+                text(
+                    "SELECT typname FROM pg_type WHERE typtype = 'e' "
+                    "AND typname LIKE 'infraction%'"
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
     assert types, "the enum columns are missing"
     assert {row.data_type for row in types} == {"character varying"}
@@ -2643,7 +2632,7 @@ def test_0036_seeds_nothing(isolated_pg_engine):
         counts = conn.execute(
             text(
                 " UNION ALL ".join(
-                    f"SELECT '{table}' AS name, count(*) AS n FROM {table}"  # noqa: S608
+                    f"SELECT '{table}' AS name, count(*) AS n FROM {table}"  # noqa: S608  # literal table name, never user input
                     for table in _INFRACTION_TABLES
                 )
             )
@@ -2687,9 +2676,7 @@ def test_0036_matches_the_model_metadata(isolated_pg_engine):
 
     live: dict[str, dict[str, bool]] = {}
     for row in rows:
-        live.setdefault(row.table_name, {})[row.column_name] = (
-            row.is_nullable == "YES"
-        )
+        live.setdefault(row.table_name, {})[row.column_name] = row.is_nullable == "YES"
 
     for name in _INFRACTION_TABLES:
         table = SQLModel.metadata.tables[name]

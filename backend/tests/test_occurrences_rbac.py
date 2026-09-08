@@ -62,7 +62,7 @@ def test_private_occurrence_visibility(
         OccurrenceService.get_occurrence_by_id(session, other_resident, occ.id)
 
     # Other resident list filter does NOT include private occurrence
-    items, total = OccurrenceService.get_occurrences(session, other_resident)
+    items, _total = OccurrenceService.get_occurrences(session, other_resident)
     matching = [i for i in items if i.id == occ.id]
     assert len(matching) == 0
 

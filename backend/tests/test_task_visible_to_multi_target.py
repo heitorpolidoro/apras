@@ -35,8 +35,12 @@ def _token(client: TestClient, username: str, password: str) -> str:
 @pytest.fixture(name="two_types")
 def two_types_fixture(session: Session):
     """Two distinct Roles with `tasks` menu access."""
-    type_a = Role(name="Financeiro",)
-    type_b = Role(name="Juridico",)
+    type_a = Role(
+        name="Financeiro",
+    )
+    type_b = Role(
+        name="Juridico",
+    )
     session.add(type_a)
     session.add(type_b)
     session.commit()
@@ -108,7 +112,9 @@ def test_manager_cannot_see_task_with_no_overlap_across_multiple_targets(
     """A Manager with zero overlap across all of a task's multiple targets
     cannot see it."""
     type_a, type_b = two_types
-    other_type = Role(name="RH",)
+    other_type = Role(
+        name="RH",
+    )
     session.add(other_type)
     session.commit()
 
@@ -163,7 +169,9 @@ def test_manager_sees_task_with_zero_targets(session: Session, admin):
 def test_manager_sees_task_with_single_target_they_hold(session: Session, admin):
     """A task with exactly one target the Manager holds is visible (basic
     single-target sanity check under the new list-backed relationship)."""
-    ut = Role(name="Single Target Type",)
+    ut = Role(
+        name="Single Target Type",
+    )
     session.add(ut)
     session.commit()
 
@@ -199,7 +207,9 @@ def test_list_tasks_filter_with_multiple_targets(
     with multiple targets to a Manager overlapping just one of them, and
     hides a multi-target task with no overlap at all."""
     type_a, type_b = two_types
-    other_type = Role(name="No Overlap Type",)
+    other_type = Role(
+        name="No Overlap Type",
+    )
     session.add(other_type)
     session.commit()
 
@@ -293,9 +303,7 @@ def test_create_task_defaults_to_all_explicit_ids_not_effective_set(
         json={"title": "Auto default task", "category_id": str(category.id)},
     )
     assert response.status_code == 200
-    profile_row = next(
-        role for role in manager.roles if role.name == "Gerente (papel)"
-    )
+    profile_row = next(role for role in manager.roles if role.name == "Gerente (papel)")
     visible_to_ids = {vt["id"] for vt in response.json()["visible_to"]}
     assert visible_to_ids == {
         str(type_a.id),
@@ -332,8 +340,6 @@ def test_create_task_falls_back_to_role_type_when_zero_explicit_types(
         json={"title": "Role fallback task", "category_id": str(category.id)},
     )
     assert response.status_code == 200
-    profile_row = next(
-        role for role in manager.roles if role.name == "Gerente (papel)"
-    )
+    profile_row = next(role for role in manager.roles if role.name == "Gerente (papel)")
     visible_to_ids = {vt["id"] for vt in response.json()["visible_to"]}
     assert visible_to_ids == {str(profile_row.id)}

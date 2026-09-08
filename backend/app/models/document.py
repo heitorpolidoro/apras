@@ -1,7 +1,10 @@
 import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
+
 from sqlmodel import Field, Relationship, SQLModel
+
+from app.core import clock
 from app.models.tenant import tenant_id_field
 
 if TYPE_CHECKING:
@@ -38,8 +41,8 @@ class DocumentFolder(SQLModel, table=True):
     # **required** — a folder created without an explicit ACL would otherwise
     # be invisible to everyone, so the caller is made to say.
     allowed_role_ids_json: str = Field(default="[]", nullable=False)
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
-    updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
 
     # Relationships
     parent_folder: Optional["DocumentFolder"] = Relationship(
@@ -90,8 +93,8 @@ class AssociationDocument(SQLModel, table=True):
         nullable=False,
         index=True,
     )
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
-    updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
 
     # Relationships
     folder: DocumentFolder = Relationship(back_populates="documents")
@@ -121,7 +124,7 @@ class DocumentDownloadLog(SQLModel, table=True):
         nullable=False,
         index=True,
     )
-    downloaded_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    downloaded_at: datetime = Field(default_factory=clock.db_now, nullable=False)
 
     # Relationships
     document: AssociationDocument = Relationship(back_populates="download_logs")

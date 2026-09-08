@@ -1,11 +1,13 @@
-"""Construction project service layer handling business logic and transactions (T007)."""
+"""Construction project service layer
+handling business logic and transactions
+(T007)."""
 
-from datetime import date, datetime
 import json
 from uuid import UUID
 
-from sqlmodel import Session, col, func, select
+from sqlmodel import Session, func, select
 
+from app.core import clock
 from app.core.exceptions import (
     MilestoneNotFoundError,
     ProjectNotFoundError,
@@ -73,8 +75,8 @@ class ProjectService:
             actual_completion_date=project_in.actual_completion_date,
             status=project_in.status,
             cover_photo_url=project_in.cover_photo_url,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=clock.db_now(),
+            updated_at=clock.db_now(),
         )
         session.add(project)
         session.commit()
@@ -106,9 +108,7 @@ class ProjectService:
             )
         )
         milestones = session.exec(milestones_query).all()
-        milestone_reads = [
-            MilestoneRead.model_validate(m) for m in milestones
-        ]
+        milestone_reads = [MilestoneRead.model_validate(m) for m in milestones]
 
         # Updates sorted by created_at desc
         updates_query = (
@@ -124,7 +124,7 @@ class ProjectService:
             if u.photos_json:
                 try:
                     photos = json.loads(u.photos_json)
-                except Exception:
+                except Exception:  # noqa: BLE001  # best-effort side effect; a failure here must not fail the request
                     photos = []
 
             author_summary: AuthorSummary | None = None
@@ -176,7 +176,7 @@ class ProjectService:
             if value is not None:
                 setattr(project, key, value)
 
-        project.updated_at = datetime.utcnow()
+        project.updated_at = clock.db_now()
         session.add(project)
         session.commit()
         session.refresh(project)
@@ -196,11 +196,8 @@ class ProjectService:
         cls.get_project_by_id(session, project_id)
 
         completion_date = milestone_in.completion_date
-        if (
-            milestone_in.status == MilestoneStatus.DONE
-            and completion_date is None
-        ):
-            completion_date = date.today()
+        if milestone_in.status == MilestoneStatus.DONE and completion_date is None:
+            completion_date = clock.today_utc()
 
         milestone = ProjectMilestone(
             project_id=project_id,
@@ -210,8 +207,8 @@ class ProjectService:
             due_date=milestone_in.due_date,
             completion_date=completion_date,
             display_order=milestone_in.display_order,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=clock.db_now(),
+            updated_at=clock.db_now(),
         )
         session.add(milestone)
         session.commit()
@@ -243,13 +240,13 @@ class ProjectService:
             and milestone_in.completion_date is None
             and not milestone.completion_date
         ):
-            milestone.completion_date = date.today()
+            milestone.completion_date = clock.today_utc()
 
         for key, value in update_data.items():
             if value is not None:
                 setattr(milestone, key, value)
 
-        milestone.updated_at = datetime.utcnow()
+        milestone.updated_at = clock.db_now()
         session.add(milestone)
         session.commit()
         session.refresh(milestone)
@@ -279,9 +276,7 @@ class ProjectService:
         """Posts a progress update / photo log and reflects financial cost impact."""
         project = cls.get_project_by_id(session, project_id)
 
-        photos_json = (
-            json.dumps(update_in.photos) if update_in.photos else None
-        )
+        photos_json = json.dumps(update_in.photos) if update_in.photos else None
 
         update = ProjectUpdate(
             project_id=project_id,
@@ -290,13 +285,13 @@ class ProjectService:
             content=update_in.content,
             photos_json=photos_json,
             cost_impact=update_in.cost_impact or 0.0,
-            created_at=datetime.utcnow(),
+            created_at=clock.db_now(),
         )
         session.add(update)
 
         if update_in.cost_impact and update_in.cost_impact > 0:
             project.executed_budget += update_in.cost_impact
-            project.updated_at = datetime.utcnow()
+            project.updated_at = clock.db_now()
             session.add(project)
 
         session.commit()

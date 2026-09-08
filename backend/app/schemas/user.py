@@ -3,26 +3,39 @@
 import re
 from uuid import UUID
 
-from app.schemas.tenant import TenantMembershipSummary
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    computed_field,
+    field_validator,
+)
+
 from app.schemas.role import RoleRead
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, computed_field
+from app.schemas.tenant import TenantMembershipSummary
+
+#: A CPF is 11 digits: 9 base digits plus the two check digits.
+CPF_DIGITS = 11
+#: The check-digit algorithm maps a remainder below this to 0.
+CPF_CHECK_REMAINDER_FLOOR = 2
 
 
 def _validate_cpf_digits(cpf_digits: str) -> bool:
     """Return True if the 11-digit CPF string passes the check-digit algorithm."""
-    if len(cpf_digits) != 11 or not cpf_digits.isdigit():
+    if len(cpf_digits) != CPF_DIGITS or not cpf_digits.isdigit():
         return False
     # Reject all-same-digit CPFs
     if len(set(cpf_digits)) == 1:
         return False
     # First check digit
     total = sum(int(cpf_digits[i]) * (10 - i) for i in range(9))
-    d1 = 0 if (total % 11) < 2 else 11 - (total % 11)
+    d1 = 0 if (total % 11) < CPF_CHECK_REMAINDER_FLOOR else 11 - (total % 11)
     if d1 != int(cpf_digits[9]):
         return False
     # Second check digit
     total = sum(int(cpf_digits[i]) * (11 - i) for i in range(10))
-    d2 = 0 if (total % 11) < 2 else 11 - (total % 11)
+    d2 = 0 if (total % 11) < CPF_CHECK_REMAINDER_FLOOR else 11 - (total % 11)
     return d2 == int(cpf_digits[10])
 
 
@@ -41,7 +54,7 @@ class UserCreate(UserBase):
     @classmethod
     def validate_cpf(cls, v: str) -> str:
         digits = re.sub(r"\D", "", v)
-        if len(digits) != 11:
+        if len(digits) != CPF_DIGITS:
             raise ValueError("CPF must have exactly 11 digits")
         if not _validate_cpf_digits(digits):
             raise ValueError("Invalid CPF")
@@ -125,7 +138,7 @@ class UserUpdate(BaseModel):
         if v is None:
             return v
         digits = re.sub(r"\D", "", v)
-        if len(digits) != 11:
+        if len(digits) != CPF_DIGITS:
             raise ValueError("CPF must have exactly 11 digits")
         if not _validate_cpf_digits(digits):
             raise ValueError("Invalid CPF")

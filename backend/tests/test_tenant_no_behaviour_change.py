@@ -74,9 +74,7 @@ def test_creating_a_second_tenant_leaves_effective_roles_unchanged(
     session.add(director)
     session.commit()
 
-    role_type = next(
-        role for role in director.roles if role.name == "Diretor (papel)"
-    )
+    role_type = next(role for role in director.roles if role.name == "Diretor (papel)")
     before = get_effective_role_ids(director, session)
 
     response = client.post(
@@ -138,14 +136,19 @@ def test_existing_list_endpoints_are_unchanged_by_a_second_tenant(
         headers=_headers(admin),
     )
 
-    categories_before = client.get("/api/v1/categories/", headers=_headers(admin)).json()
+    categories_before = client.get(
+        "/api/v1/categories/", headers=_headers(admin)
+    ).json()
     tasks_before = client.get("/api/v1/tasks/", headers=_headers(admin)).json()
 
     client.post(
         "/api/v1/tenants", json={"name": "Quarto Condomínio"}, headers=_headers(admin)
     )
 
-    assert client.get("/api/v1/categories/", headers=_headers(admin)).json() == categories_before
+    assert (
+        client.get("/api/v1/categories/", headers=_headers(admin)).json()
+        == categories_before
+    )
     assert client.get("/api/v1/tasks/", headers=_headers(admin)).json() == tasks_before
     assert len(categories_before) == 1
     assert len(tasks_before) == 1

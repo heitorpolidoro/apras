@@ -1,11 +1,10 @@
 """Unit and API integration tests for Occurrence management."""
 
-from datetime import datetime
-
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
+from app.core import clock
 from app.core.exceptions import OccurrenceNotFoundError
 from app.models.enums import (
     OccurrenceCategory,
@@ -27,7 +26,7 @@ from tests.conftest import make_user
 
 
 def test_protocol_generator_sequential(session: Session):
-    year = datetime.utcnow().year
+    year = clock.db_now().year
     p1 = generate_occurrence_protocol(session)
     assert p1 == f"OCO-{year}-000001"
 
@@ -157,14 +156,11 @@ def test_add_timeline_note_and_not_found(session: Session, admin_user: User):
     assert timeline_entry.is_internal_only is True
 
     # Test not found exception
-    fake_id = datetime.utcnow()
     with pytest.raises(OccurrenceNotFoundError):
         OccurrenceService.get_occurrence_by_id(session, admin_user, admin_user.id)
 
 
-def test_occurrences_api_endpoints(
-    client: TestClient, normal_user: User
-):
+def test_occurrences_api_endpoints(client: TestClient, normal_user: User):
     from app.core.security import create_access_token
 
     token = create_access_token(subject=normal_user.id)
@@ -178,9 +174,7 @@ def test_occurrences_api_endpoints(
         "is_public": True,
         "is_anonymous": False,
     }
-    response = client.post(
-        "/api/v1/occurrences", json=payload, headers=headers
-    )
+    response = client.post("/api/v1/occurrences", json=payload, headers=headers)
     assert response.status_code == 201
     data = response.json()
     assert data["protocol_number"].startswith("OCO-")
@@ -198,9 +192,7 @@ def test_occurrences_api_endpoints(
     assert list_data["items"][0]["id"] == occ_id
 
     # Get details via API
-    detail_res = client.get(
-        f"/api/v1/occurrences/{occ_id}", headers=headers
-    )
+    detail_res = client.get(f"/api/v1/occurrences/{occ_id}", headers=headers)
     assert detail_res.status_code == 200
     detail_data = detail_res.json()
     assert detail_data["id"] == occ_id

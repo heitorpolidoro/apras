@@ -31,7 +31,9 @@ class AccessDeviceRead(BaseModel):
 
 
 class AccessDeviceKeyRead(AccessDeviceRead):
-    """Extends AccessDeviceRead to expose the secret key exactly once (create/regenerate)."""
+    # Not re-wrapped: FastAPI publishes a Pydantic model's docstring as the
+    # schema `description`, so a line break here rewrites the OpenAPI document.
+    """Extends AccessDeviceRead to expose the secret key exactly once (create/regenerate)."""  # noqa: E501  # published verbatim as the OpenAPI schema description
 
     device_key: str
 

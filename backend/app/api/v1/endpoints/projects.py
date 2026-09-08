@@ -3,7 +3,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlmodel import Session
 
 from app.api import deps as api_deps
@@ -27,13 +27,12 @@ from app.services.project_service import ProjectService
 
 router = APIRouter()
 
+
 def _require_read_permission(
     current_user: User, session: Session, permission: str
 ) -> None:
     if not api_deps.has_permission(current_user, session, permission):
-        raise ProjectAccessForbiddenError(
-            "Access denied to construction projects"
-        )
+        raise ProjectAccessForbiddenError("Access denied to construction projects")
 
 
 def _require_admin_permission(
@@ -59,13 +58,13 @@ def _require_update_permission(
 # -----------------------------------------------------------------------------
 
 
-@router.get("", response_model=PaginatedProjects)
+@router.get("")
 def list_projects(
     session: Annotated[Session, Depends(get_session)],
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
-    status: ProjectStatus | None = Query(default=None),
-    skip: int = Query(default=0, ge=0),
-    limit: int = Query(default=50, ge=1, le=100),
+    status: Annotated[ProjectStatus | None, Query()] = None,
+    skip: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> PaginatedProjects:
     """Lists construction projects with optional status filter and pagination."""
     _require_read_permission(current_user, session, "projects:read")
@@ -80,7 +79,7 @@ def list_projects(
     )
 
 
-@router.post("", response_model=ProjectRead, status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED)
 def create_project(
     project_in: ProjectCreate,
     session: Annotated[Session, Depends(get_session)],
@@ -92,7 +91,7 @@ def create_project(
     return ProjectRead.model_validate(project)
 
 
-@router.get("/{id}", response_model=ProjectDetailRead)
+@router.get("/{id}")
 def get_project_detail(
     id: UUID,
     session: Annotated[Session, Depends(get_session)],
@@ -103,7 +102,7 @@ def get_project_detail(
     return ProjectService.get_project_detail(session, id)
 
 
-@router.put("/{id}", response_model=ProjectRead)
+@router.put("/{id}")
 def update_project(
     id: UUID,
     project_in: ProjectUpdateSchema,
@@ -136,7 +135,6 @@ def delete_project(
 
 @router.post(
     "/{id}/milestones",
-    response_model=MilestoneRead,
     status_code=status.HTTP_201_CREATED,
 )
 def create_milestone(
@@ -153,7 +151,6 @@ def create_milestone(
 
 @router.put(
     "/{id}/milestones/{milestone_id}",
-    response_model=MilestoneRead,
 )
 def update_milestone(
     id: UUID,
@@ -164,9 +161,7 @@ def update_milestone(
 ) -> MilestoneRead:
     """Updates milestone status, dates, or details (Admin/Director only)."""
     _require_admin_permission(current_user, session, "projects:milestone_update")
-    milestone = ProjectService.update_milestone(
-        session, id, milestone_id, milestone_in
-    )
+    milestone = ProjectService.update_milestone(session, id, milestone_id, milestone_in)
     return MilestoneRead.model_validate(milestone)
 
 
@@ -192,7 +187,6 @@ def delete_milestone(
 
 @router.post(
     "/{id}/updates",
-    response_model=ProjectUpdateRead,
     status_code=status.HTTP_201_CREATED,
 )
 def create_project_update(
@@ -203,9 +197,7 @@ def create_project_update(
 ) -> ProjectUpdateRead:
     """Posts a progress update log with photos and cost impact (Admin/Director/Manager)."""
     _require_update_permission(current_user, session, "projects:update_create")
-    return ProjectService.create_project_update(
-        session, id, current_user.id, update_in
-    )
+    return ProjectService.create_project_update(session, id, current_user.id, update_in)
 
 
 @router.delete(

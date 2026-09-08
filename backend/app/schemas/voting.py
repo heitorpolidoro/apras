@@ -3,6 +3,8 @@
 from datetime import date, datetime
 from uuid import UUID
 
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
 from app.models.enums import (
     AssemblyStatus,
     AssemblyType,
@@ -10,8 +12,6 @@ from app.models.enums import (
     VoteStatus,
     VoteType,
 )
-from pydantic import BaseModel, ConfigDict, Field, model_validator
-
 
 # ---------------------------------------------------------------------------
 # Assembly

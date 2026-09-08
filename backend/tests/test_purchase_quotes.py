@@ -88,9 +88,20 @@ def test_multiple_quotes_sorted_by_total_with_lowest_flag(
     client: TestClient, admin: User, manager: User, purchase_request: dict
 ) -> None:
     request_id = purchase_request["id"]
-    _add_quote(client, admin, request_id, supplier_name="Caro", unit_price=90.0, quantity=10)
-    _add_quote(client, manager, request_id, supplier_name="Barato", unit_price=10.0, quantity=10)
-    _add_quote(client, admin, request_id, supplier_name="Medio", unit_price=50.0, quantity=10)
+    _add_quote(
+        client, admin, request_id, supplier_name="Caro", unit_price=90.0, quantity=10
+    )
+    _add_quote(
+        client,
+        manager,
+        request_id,
+        supplier_name="Barato",
+        unit_price=10.0,
+        quantity=10,
+    )
+    _add_quote(
+        client, admin, request_id, supplier_name="Medio", unit_price=50.0, quantity=10
+    )
 
     res = client.get(f"/api/v1/purchase-requests/{request_id}", headers=_headers(admin))
     quotes = res.json()["quotes"]
@@ -239,9 +250,17 @@ def test_extra_fields_over_twenty_entries_is_422(
 def test_quote_validation_rejects_bad_price_and_quantity(
     client: TestClient, admin: User, purchase_request: dict
 ) -> None:
-    assert _add_quote(client, admin, purchase_request["id"], unit_price=-1).status_code == 422
-    assert _add_quote(client, admin, purchase_request["id"], quantity=0).status_code == 422
-    assert _add_quote(client, admin, purchase_request["id"], supplier_name="").status_code == 422
+    assert (
+        _add_quote(client, admin, purchase_request["id"], unit_price=-1).status_code
+        == 422
+    )
+    assert (
+        _add_quote(client, admin, purchase_request["id"], quantity=0).status_code == 422
+    )
+    assert (
+        _add_quote(client, admin, purchase_request["id"], supplier_name="").status_code
+        == 422
+    )
 
 
 def test_update_quote_replaces_extra_fields_wholesale(
@@ -256,7 +275,10 @@ def test_update_quote_replaces_extra_fields_wholesale(
 
     res = client.put(
         f"/api/v1/purchase-requests/{purchase_request['id']}/quotes/{quote['id']}",
-        json={"unit_price": 200.0, "extra_fields": [{"label": "Garantia", "value": "2 anos"}]},
+        json={
+            "unit_price": 200.0,
+            "extra_fields": [{"label": "Garantia", "value": "2 anos"}],
+        },
         headers=_headers(admin),
     )
     assert res.status_code == 200
