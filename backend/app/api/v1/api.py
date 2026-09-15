@@ -28,6 +28,7 @@ from app.api.v1.endpoints import (
     roles,
     subscription,
     tasks,
+    tenant_profile,
     tenants,
     uploads,
     users,
@@ -193,6 +194,16 @@ api_router.include_router(
     subscription.router,
     prefix="/subscription",
     tags=["subscription"],
+    dependencies=TENANT_SCOPED,
+)
+# APRAS-61 D1: the condominium profile, tenant-side for the same reason the
+# subscription area is. `/tenants/{id}` is GLOBAL_SCOPED and resolves no
+# acting tenant, so a `require_permission` guard there would refuse every
+# tenant role and every tenant admin.
+api_router.include_router(
+    tenant_profile.router,
+    prefix="/tenant-profile",
+    tags=["tenant-profile"],
     dependencies=TENANT_SCOPED,
 )
 # APRAS-40 §5.2: the install-wide plan catalogue. Every route is

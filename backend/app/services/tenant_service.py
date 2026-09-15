@@ -1,13 +1,18 @@
 """Tenant service layer for business logic (APRAS-41)."""
 
+import io
+from pathlib import Path
 from uuid import UUID
 
+from PIL import Image
 from sqlmodel import Session, select
 
 from app.core import clock
 from app.core.exceptions import (
     CoreModuleCannotBeDisabledError,
     TenantAlreadyExistsError,
+    TenantLogoInvalidFormatError,
+    TenantLogoTooLargeError,
     TenantMembershipAlreadyExistsError,
     TenantMembershipNotFoundError,
     TenantNotFoundError,
@@ -26,9 +31,11 @@ from app.schemas.tenant import (
     TenantMembershipSummary,
     TenantModulesRead,
     TenantModulesUpdate,
+    TenantProfileUpdate,
     TenantUpdate,
 )
 from app.services.role_service import role_names_in
+from app.services.storage_service import BaseStorageProvider, LocalStorageProvider
 
 # APRAS-40 §4.5: the raw module lever is historied as an OVERRIDE. The import
 # goes this way and never the other -- `subscription_service.py` must not
@@ -52,6 +59,19 @@ LEGACY_ROLE_NAMES: tuple[str, ...] = (
     "Morador (papel)",
     "Porteiro (papel)",
 )
+
+
+#: The public URL prefix :class:`LocalStorageProvider` mints, and the only
+#: prefix a stored ``logo_url`` is ever mapped back to a file we own. Any
+#: other value -- an externally hosted or hand-written URL -- is left alone on
+#: replacement and on removal (APRAS-61).
+LOCAL_UPLOAD_URL_PREFIX = "/static/uploads/"
+
+#: Module level, and bound once, exactly like ``announcement_service`` and
+#: ``finance_service``: the logo is written through the *existing* provider,
+#: and a test (or a future non-local backend) substitutes this one name rather
+#: than threading a provider through the router.
+_storage_provider: BaseStorageProvider = LocalStorageProvider()
 
 
 class TenantService:
@@ -431,6 +451,114 @@ class TenantService:
             raise TenantMembershipNotFoundError(user_id, tenant_id)
         session.delete(link)
         session.commit()
+
+    # -- the condominium profile (APRAS-61) ---------------------------------
+    #
+    # Three classmethods taking the **already resolved** acting ``Tenant``,
+    # never a ``tenant_id``: the router mounts ``TENANT_SCOPED``, so the
+    # subject is whatever ``deps.get_current_tenant`` resolved from
+    # ``X-Tenant-Id`` and there is nothing in a body or a path to forge.
+
+    #: 2 MiB, deliberately below ``media_service.MAX_FILE_SIZE``'s 5 MiB: the
+    #: logo is embedded in **every** printed document, not viewed once.
+    #: Mirrored by ``TENANT_LOGO_MAX_FILE_SIZE_BYTES`` in
+    #: ``frontend/src/api/tenantProfile.ts``, pinned from both sides.
+    LOGO_MAX_FILE_SIZE = 2 * 1024 * 1024
+
+    #: The same three strings as ``media_service.ALLOWED_MIME_TYPES``, which
+    #: the works report already renders. ``image/svg+xml`` is **out**: an SVG
+    #: is active content (script, ``foreignObject``, external references)
+    #: served same-origin from ``/static/uploads/`` and embedded in a
+    #: printable report a browser renders.
+    LOGO_ALLOWED_MIME_TYPES = frozenset({"image/jpeg", "image/png", "image/webp"})
+
+    @classmethod
+    def update_profile(
+        cls, session: Session, tenant: Tenant, profile_in: TenantProfileUpdate
+    ) -> Tenant:
+        """Rename the acting tenant, reusing ``update_tenant``'s rules.
+
+        The uniqueness check is not re-implemented here: one definition of
+        "a tenant name is globally unique", one ``TenantAlreadyExistsError``
+        (409), one place a future task has to change.
+        """
+        return cls.update_tenant(
+            session,
+            tenant.id,
+            TenantUpdate(**profile_in.model_dump(exclude_unset=True)),
+        )
+
+    @classmethod
+    def set_logo(
+        cls,
+        session: Session,
+        tenant: Tenant,
+        *,
+        file_bytes: bytes,
+        filename: str,
+        content_type: str,
+    ) -> Tenant:
+        """Validate, store and record the condominium's logo.
+
+        Size, then MIME, then Pillow-decodability, **all before** the write:
+        a refused upload writes no file and no column. The declared MIME type
+        is a claim the client makes; Pillow is the check.
+        """
+        if len(file_bytes) > cls.LOGO_MAX_FILE_SIZE:
+            raise TenantLogoTooLargeError
+        if content_type not in cls.LOGO_ALLOWED_MIME_TYPES:
+            raise TenantLogoInvalidFormatError
+        try:
+            Image.open(io.BytesIO(file_bytes)).verify()
+        except Exception as exc:
+            raise TenantLogoInvalidFormatError from exc
+
+        previous = tenant.logo_url
+        _, url = _storage_provider.save_file(file_bytes, filename, content_type)
+        tenant.logo_url = url
+        tenant.updated_at = clock.db_now()
+        session.add(tenant)
+        session.commit()
+        session.refresh(tenant)
+
+        cls._delete_stored_logo(previous)
+        return tenant
+
+    @classmethod
+    def clear_logo(cls, session: Session, tenant: Tenant) -> Tenant:
+        """Drop the logo. Idempotent: an already-null column is still a 200."""
+        previous = tenant.logo_url
+        if previous is None:
+            return tenant
+
+        tenant.logo_url = None
+        tenant.updated_at = clock.db_now()
+        session.add(tenant)
+        session.commit()
+        session.refresh(tenant)
+
+        cls._delete_stored_logo(previous)
+        return tenant
+
+    @staticmethod
+    def _delete_stored_logo(url: str | None) -> None:
+        """Best-effort removal of the file a previous ``logo_url`` named.
+
+        Only a ``/static/uploads/`` value is mapped back to a path, and it is
+        mapped **relative to the provider's own ``base_dir``** rather than by
+        stripping the leading slash: identical for the production provider
+        (``base_dir == "static/uploads"``) and honest for any other one. A
+        value pointing somewhere else is somebody else's file and is left
+        alone. ``delete_file`` already swallows, so a failure here never fails
+        the request that replaced the logo.
+        """
+        if url is None or not url.startswith(LOCAL_UPLOAD_URL_PREFIX):
+            return
+        base = getattr(_storage_provider, "base_dir", None)
+        if base is None:
+            return
+        relative = url[len(LOCAL_UPLOAD_URL_PREFIX) :]
+        _storage_provider.delete_file(str(Path(base) / relative))
 
     @staticmethod
     def _to_member_read(link: UserTenantLink, user: User) -> TenantMemberRead:

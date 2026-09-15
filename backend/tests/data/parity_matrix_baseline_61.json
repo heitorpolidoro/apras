@@ -1,0 +1,77 @@
+{
+  "_meta": {
+    "cell_count": 18,
+    "generator": "tests/tools/record_parity_baseline.py",
+    "harness": "tests/matrix_world.py",
+    "merge_base_sha": "f3ff483a62f4cca5e6db2c867ab0226f5b06d7e9",
+    "regenerate": "cd backend && POSTGRES_URL=sqlite:// SECRET_KEY=parity-matrix uv run python -m tests.tools.record_parity_baseline --out tests/data/parity_matrix_baseline_61.json --merge-base f3ff483a62f4cca5e6db2c867ab0226f5b06d7e9 --routes 'PATCH /api/v1/tenant-profile' --routes 'PUT /api/v1/tenant-profile/logo' --routes 'DELETE /api/v1/tenant-profile/logo'"
+  },
+  "cells": {
+    "ADMINISTRATOR": {
+      "DELETE": {
+        "/api/v1/tenant-profile/logo": 200
+      },
+      "PATCH": {
+        "/api/v1/tenant-profile": 200
+      },
+      "PUT": {
+        "/api/v1/tenant-profile/logo": 200
+      }
+    },
+    "DIRECTOR": {
+      "DELETE": {
+        "/api/v1/tenant-profile/logo": 403
+      },
+      "PATCH": {
+        "/api/v1/tenant-profile": 403
+      },
+      "PUT": {
+        "/api/v1/tenant-profile/logo": 403
+      }
+    },
+    "GUEST": {
+      "DELETE": {
+        "/api/v1/tenant-profile/logo": 403
+      },
+      "PATCH": {
+        "/api/v1/tenant-profile": 403
+      },
+      "PUT": {
+        "/api/v1/tenant-profile/logo": 403
+      }
+    },
+    "MANAGER": {
+      "DELETE": {
+        "/api/v1/tenant-profile/logo": 403
+      },
+      "PATCH": {
+        "/api/v1/tenant-profile": 403
+      },
+      "PUT": {
+        "/api/v1/tenant-profile/logo": 403
+      }
+    },
+    "PORTEIRO": {
+      "DELETE": {
+        "/api/v1/tenant-profile/logo": 403
+      },
+      "PATCH": {
+        "/api/v1/tenant-profile": 403
+      },
+      "PUT": {
+        "/api/v1/tenant-profile/logo": 403
+      }
+    },
+    "RESIDENT": {
+      "DELETE": {
+        "/api/v1/tenant-profile/logo": 403
+      },
+      "PATCH": {
+        "/api/v1/tenant-profile": 403
+      },
+      "PUT": {
+        "/api/v1/tenant-profile/logo": 403
+      }
+    }
+  }
+}

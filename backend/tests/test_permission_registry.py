@@ -157,8 +157,8 @@ def test_permission_strings_follow_the_convention():
     assert not bad, f"permissions violating <module>:<action>: {bad}"
 
 
-def test_unguarded_allowlist_is_twenty_three_routes():
-    assert len(UNGUARDED_ROUTES) == 23
+def test_unguarded_allowlist_is_twenty_four_routes():
+    assert len(UNGUARDED_ROUTES) == 24
 
 
 def test_route_count_is_fully_accounted_for():
@@ -191,13 +191,19 @@ def test_route_count_is_fully_accounted_for():
     taking 224/201/23 to **226/203/23**, with its own 12 cells in
     `tests/data/parity_matrix_baseline_60.json` and no catalogue permission
     added (`PERMISSIONS` stays 174).
+
+    APRAS-61 adds **three** permission-guarded routes and **one** unguarded
+    one -- the three condominium-profile writes and its self-scoped read --
+    taking 226/203/23 to **230/206/24**, with its own 18 cells in
+    `tests/data/parity_matrix_baseline_61.json` and exactly one catalogue
+    permission added, `tenants:profile_update` (`PERMISSIONS` 174 -> 175).
     """
     total = len(_all_route_keys())
     assert set(ROUTE_PERMISSIONS) & UNGUARDED_ROUTES == set()
     assert len(ROUTE_PERMISSIONS) + len(UNGUARDED_ROUTES) == total
-    assert len(UNGUARDED_ROUTES) == 23
-    assert len(ROUTE_PERMISSIONS) == total - 23
-    assert len(ROUTE_PERMISSIONS) == 203
+    assert len(UNGUARDED_ROUTES) == 24
+    assert len(ROUTE_PERMISSIONS) == total - 24
+    assert len(ROUTE_PERMISSIONS) == 206
 
 
 def test_every_router_module_has_at_least_one_permission():

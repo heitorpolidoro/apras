@@ -95,6 +95,7 @@ BASELINE_40_PATH = BACKEND_ROOT / "tests" / "data" / "parity_matrix_baseline_40.
 BASELINE_44_PATH = BACKEND_ROOT / "tests" / "data" / "parity_matrix_baseline_44.json"
 BASELINE_51_PATH = BACKEND_ROOT / "tests" / "data" / "parity_matrix_baseline_51.json"
 BASELINE_60_PATH = BACKEND_ROOT / "tests" / "data" / "parity_matrix_baseline_60.json"
+BASELINE_61_PATH = BACKEND_ROOT / "tests" / "data" / "parity_matrix_baseline_61.json"
 LEGACY_BUNDLES_PATH = BACKEND_ROOT / "tests" / "data" / "legacy_role_bundles.json"
 HARNESS_PATH = BACKEND_ROOT / "tests" / "matrix_world.py"
 
@@ -111,8 +112,17 @@ APRAS_51_CELL_COUNT = 150
 #: **An addend**, unlike `_51`: APRAS-60 maps two routes the F2 file never
 #: recorded, so its 12 cells are new keys rather than corrections.
 APRAS_60_CELL_COUNT = 12
+#: **An addend** too: APRAS-61's three condominium-profile writes are routes
+#: the F2 file never recorded, and `tenants:profile_update` is a permission no
+#: recorded bundle carries, so five of the six profiles are a plain 403 and
+#: ADMINISTRATOR passes only through the oracle's superuser branch.
+APRAS_61_CELL_COUNT = 18
 EXPECTED_CELL_COUNT = (
-    F2_CELL_COUNT + APRAS_40_CELL_COUNT + APRAS_44_CELL_COUNT + APRAS_60_CELL_COUNT
+    F2_CELL_COUNT
+    + APRAS_40_CELL_COUNT
+    + APRAS_44_CELL_COUNT
+    + APRAS_60_CELL_COUNT
+    + APRAS_61_CELL_COUNT
 )
 
 F2_MERGE_BASE_SHA = "02c2025abcda4626569921eafb3863dfc540eb9e"
@@ -164,7 +174,17 @@ APRAS_60_ROUTES = frozenset(
     }
 )
 
-ADDITIVE_ROUTES = APRAS_40_ROUTES | APRAS_44_ROUTES | APRAS_60_ROUTES
+#: The three routes APRAS-61 adds: the condominium-profile writes. Its fourth
+#: route, the self-scoped `GET`, is on `UNGUARDED_ROUTES` and so has no cell.
+APRAS_61_ROUTES = frozenset(
+    {
+        ("PATCH", "/api/v1/tenant-profile"),
+        ("PUT", "/api/v1/tenant-profile/logo"),
+        ("DELETE", "/api/v1/tenant-profile/logo"),
+    }
+)
+
+ADDITIVE_ROUTES = APRAS_40_ROUTES | APRAS_44_ROUTES | APRAS_60_ROUTES | APRAS_61_ROUTES
 
 #: The three cells APRAS-51 moves, `(profile, method, path) -> (old, new)`.
 #: Spelled out rather than computed, so the diff below is compared against a
@@ -208,7 +228,7 @@ F5_PATH_RENAMES: dict[str, str] = {
 }
 
 WRITE_METHODS = frozenset({"POST", "PUT", "PATCH"})
-EXPECTED_REQUEST_BODY_COUNT = 100
+EXPECTED_REQUEST_BODY_COUNT = 102
 META_KEYS = frozenset(
     {"merge_base_sha", "generator", "harness", "cell_count", "regenerate"}
 )
@@ -420,6 +440,11 @@ def load_apras_60_baseline() -> dict:
     return load_file(BASELINE_60_PATH)
 
 
+def load_apras_61_baseline() -> dict:
+    """The additive file of APRAS-61, and only ever that."""
+    return load_file(BASELINE_61_PATH)
+
+
 def load_apras_51_baseline() -> dict:
     """The **overriding** file of APRAS-51 §6.2, and only ever that.
 
@@ -457,18 +482,24 @@ def cells_of_51() -> set[tuple[str, str, str]]:
 
 
 def load_union() -> dict[tuple[str, str, str], int]:
-    """The four baselines as one `CELLS`-keyed cell map.
+    """The five baselines as one `CELLS`-keyed cell map.
 
-    Four of them **partition**: overlap among F2, `_40`, `_44` and `_60` is an
-    error, not a merge, because a cell appearing in two would mean one of them
-    had been re-recorded. The fifth, `_51`, is an **overriding layer**: its
+    Five of them **partition**: overlap among F2, `_40`, `_44`, `_60` and
+    `_61` is an error, not a merge, because a cell appearing in two would mean
+    one of them had been re-recorded. The sixth, `_51`, is an **overriding layer**: its
     keys must already exist (they are F2's), and for those keys only its value
     wins. `F5_PATH_RENAMES` is applied throughout -- it is the identity on
     every path it does not name, and one keying rule is cheaper to keep true
     than two.
     """
     merged: dict[tuple[str, str, str], int] = {}
-    for path in (BASELINE_PATH, BASELINE_40_PATH, BASELINE_44_PATH, BASELINE_60_PATH):
+    for path in (
+        BASELINE_PATH,
+        BASELINE_40_PATH,
+        BASELINE_44_PATH,
+        BASELINE_60_PATH,
+        BASELINE_61_PATH,
+    ):
         for role, by_method in load_file(path)["cells"].items():
             for method, by_path in by_method.items():
                 for route, status in by_path.items():
@@ -551,7 +582,7 @@ def test_matrix_covers_every_permission_mapped_route():
     assert len(CELLS) == EXPECTED_CELL_COUNT
 
 
-def test_the_twenty_three_unguarded_routes_are_the_only_ones_excluded():
+def test_the_twenty_four_unguarded_routes_are_the_only_ones_excluded():
     """No cell may be dropped for any reason other than being unguarded.
 
     13 at the IAM F5 merge base; APRAS-39 added the two superuser-only
@@ -564,9 +595,13 @@ def test_the_twenty_three_unguarded_routes_are_the_only_ones_excluded():
     are measured and its 108 cells come from nowhere else. APRAS-52 grows
     this list by one -- the operator-side history read -- and by zero cells,
     for the same reason as APRAS-40's nine: it maps to no catalogue
-    permission.
+    permission. APRAS-61 grows it by one for a *different* reason: `GET
+    /api/v1/tenant-profile` is authenticated and strictly self-scoped to the
+    acting tenant and returns what the caller already holds, so it joins the
+    list under the `/permissions/me` precedent (D6). Its three sibling writes
+    are measured, and are where all 18 of its cells come from.
     """
-    assert len(UNGUARDED_ROUTES) == 23
+    assert len(UNGUARDED_ROUTES) == 24
     assert not (set(ROUTE_PERMISSIONS) & UNGUARDED_ROUTES)
 
 
@@ -976,6 +1011,61 @@ def test_the_apras_60_baseline_matches_the_predicted_answers():
         assert "documents:create" in bundle_of(profile)
 
 
+def test_the_apras_61_baseline_declares_its_provenance():
+    """The same five `_meta` keys, its own merge base, and its own three
+    routes."""
+    meta = load_apras_61_baseline()["_meta"]
+    assert set(meta) == META_KEYS, "no timestamp, hostname or absolute path"
+    assert re.fullmatch(r"[0-9a-f]{40}", meta["merge_base_sha"])
+    assert meta["cell_count"] == APRAS_61_CELL_COUNT == 18
+    assert meta["merge_base_sha"] in meta["regenerate"]
+    assert "git worktree add" not in meta["regenerate"]
+    assert meta["regenerate"].count("--routes") == 3
+    assert BASELINE_61_PATH.name in meta["regenerate"]
+    assert (BACKEND_ROOT / meta["generator"]).exists()
+    assert (BACKEND_ROOT / meta["harness"]).exists()
+    assert meta["merge_base_sha"] != load_apras_60_baseline()["_meta"]["merge_base_sha"]
+
+
+def test_the_apras_61_baseline_carries_no_absolute_path_and_no_timestamp():
+    raw = BASELINE_61_PATH.read_text(encoding="utf-8")
+    assert str(BACKEND_ROOT) not in raw
+    assert not re.search(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}", raw)
+
+
+def test_the_apras_61_baseline_records_only_integer_status_codes():
+    for by_method in load_apras_61_baseline()["cells"].values():
+        for by_path in by_method.values():
+            for status in by_path.values():
+                assert isinstance(status, int)
+
+
+def test_the_apras_61_baseline_matches_the_predicted_answers():
+    """The prediction, written from the permission rather than read back.
+
+    `tenants:profile_update` is minted by APRAS-61 and is in **no** recorded
+    legacy bundle, so five of the six profiles are refused by the guard. Only
+    ADMINISTRATOR passes, and only through the oracle's superuser branch --
+    which is exactly why all three routes are in `ADDITIVE_ROUTES`, the set
+    `test_the_superuser_branch_changes_no_f2_verdict` excludes.
+    """
+    cells = load_apras_61_baseline()["cells"]
+    recorded = {
+        (profile, method, path): status
+        for profile, by_method in cells.items()
+        for method, by_path in by_method.items()
+        for path, status in by_path.items()
+    }
+    expected = {
+        (profile, method, path): (200 if profile == "ADMINISTRATOR" else 403)
+        for profile in PARITY_PROFILES
+        for method, path in APRAS_61_ROUTES
+    }
+    assert recorded == expected
+    for profile in PARITY_PROFILES:
+        assert "tenants:profile_update" not in bundle_of(profile)
+
+
 def test_the_apras_51_baseline_declares_its_provenance():
     """Its own merge base, and a provenance caveat stronger than `_40`'s.
 
@@ -1101,6 +1191,9 @@ def test_the_three_baselines_partition_route_permissions_exactly():
     sixty = {
         (method, path) for _role, method, path in cells_of(load_apras_60_baseline())
     }
+    sixty_one = {
+        (method, path) for _role, method, path in cells_of(load_apras_61_baseline())
+    }
 
     fifty_one = {
         (method, path) for _role, method, path in cells_of(load_apras_51_baseline())
@@ -1120,7 +1213,13 @@ def test_the_three_baselines_partition_route_permissions_exactly():
     assert not (f2 & sixty), "the F2 and APRAS-60 baselines overlap"
     assert not (forty & sixty), "the APRAS-40 and APRAS-60 baselines overlap"
     assert not (forty_four & sixty), "the APRAS-44 and APRAS-60 baselines overlap"
-    assert f2 | forty | forty_four | sixty == set(ROUTE_PERMISSIONS)
+    assert sixty_one == APRAS_61_ROUTES
+    assert len(sixty_one) == 3
+    assert not (f2 & sixty_one), "the F2 and APRAS-61 baselines overlap"
+    assert not (forty & sixty_one), "the APRAS-40 and APRAS-61 baselines overlap"
+    assert not (forty_four & sixty_one), "the APRAS-44 and APRAS-61 baselines overlap"
+    assert not (sixty & sixty_one), "the APRAS-60 and APRAS-61 baselines overlap"
+    assert f2 | forty | forty_four | sixty | sixty_one == set(ROUTE_PERMISSIONS)
     assert f2 == set(ROUTE_PERMISSIONS) - ADDITIVE_ROUTES
 
     union = load_union()

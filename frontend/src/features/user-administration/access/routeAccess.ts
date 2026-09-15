@@ -69,6 +69,13 @@ export const ROUTE_ACCESS: Record<string, AccessRule> = {
   // catalogue permission, so no `{ anyOf }` rule can express them, and
   // `{ anyOf: ["tenants:update"] }` is specifically wrong — a tenant_admin
   // holds it through the whole-catalogue short-circuit and the API answers 403.
+  // APRAS-61 D7: the condominium's own profile. `{ anyOf }` and not
+  // `{ module: "tenants" }`, which would be far too wide — every legacy role
+  // holds `tenants:read`, so a module rule would offer the screen to
+  // everybody and the API would answer 403 on every write. The permission is
+  // ordinary and grantable, so a tenant admin can tick it for a role, and
+  // holds it themselves through the whole-catalogue short-circuit.
+  "/admin/tenant-profile": { anyOf: ["tenants:profile_update"] },
   "/admin/plans": { superuser: true },
   "/admin/subscriptions": { superuser: true },
   // APRAS-44 §10.2. `{ module: "infractions" }` is specifically **wrong** for
@@ -178,6 +185,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       "/admin/users",
       "/admin/roles",
       "/admin/photo-approvals",
+      "/admin/tenant-profile",
       "/admin/modules",
       "/admin/plans",
       "/admin/subscriptions",
@@ -214,6 +222,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { path: "/admin/photo-approvals", labelKey: "nav.photoApprovals", iconName: "Camera" },
   { path: "/admin/access-control", labelKey: "nav.accessControl", iconName: "KeyRound" },
   { path: "/gate-monitor", labelKey: "nav.gateMonitor", iconName: "Tv" },
+  { path: "/admin/tenant-profile", labelKey: "nav.tenantProfile", iconName: "Landmark" },
   { path: "/admin/modules", labelKey: "nav.modules", iconName: "Sliders" },
   { path: "/subscription", labelKey: "nav.subscription", iconName: "CreditCard" },
   { path: "/admin/plans", labelKey: "nav.plans", iconName: "Sparkles" },

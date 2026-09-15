@@ -126,6 +126,7 @@ what makes "denial is in place" true without exception.
 | `/api/v1/permissions` | Permission catalogue & effective set | `backend/app/api/v1/endpoints/permissions.py` |
 | `/api/v1/tenants/{id}/modules` | Per-tenant module switch (`GET`/`PUT`, superuser only) | `backend/app/api/v1/endpoints/tenants.py` |
 | `/api/v1/subscription` | Tenant-side subscription area (`GET`, `PUT /modules`, `GET /history`) | `backend/app/api/v1/endpoints/subscription.py` |
+| `/api/v1/tenant-profile` | Tenant-side condominium profile (`GET`, `PATCH`, `PUT /logo`, `DELETE /logo`) | `backend/app/api/v1/endpoints/tenant_profile.py` |
 | `/api/v1/plans` | Install-wide plan catalogue (`GET`/`POST`/`GET {id}`/`PATCH {id}`, superuser only) | `backend/app/api/v1/endpoints/plans.py` |
 | `/api/v1/tenants/{id}/subscription` | Per-tenant subscription read and plan assignment (`GET`/`PUT`, plus `GET /history`, superuser only) | `backend/app/api/v1/endpoints/tenants.py` |
 | `/api/v1/tenants/{id}/subscription/courtesy` | Courtesy grants outside the plan (`PUT`, superuser only) | `backend/app/api/v1/endpoints/tenants.py` |
@@ -492,6 +493,44 @@ tenant.
   asserted literally by `tests/test_user_directory_scope.py`. Do not "fix"
   the doc by renaming them.
 
+#### Perfil do condomínio (APRAS-61)
+
+`/api/v1/tenant-profile` is the condominium's own profile: the name it is
+known by and the **logo** every document the system renders puts in its
+masthead. Before it, `tenant.logo_url` was a column an operator wrote with
+SQL.
+
+* **Tenant-side, with no `{tenant_id}` in any path** (D1), exactly like
+  `/api/v1/subscription` and for the same reason: `/api/v1/tenants/{id}` is
+  mounted `GLOBAL_SCOPED`, so it resolves no acting tenant, and with no
+  acting tenant `get_effective_role_ids` is empty and the `is_tenant_admin`
+  short-circuit is structurally absent — a `require_permission` guard there
+  would refuse every tenant role *and* every tenant admin. The subject is
+  whatever `X-Tenant-Id` resolved to, so there is nothing to forge.
+* **`tenants:profile_update`** guards the three writes (D7). It is an
+  ordinary, grantable string — **not** in `SUPERUSER_ONLY_PERMISSIONS` — so a
+  tenant admin can tick it for a role in the role editor, and holds it
+  themselves through APRAS-47's whole-catalogue short-circuit with no special
+  case in any handler. `tenants:update`, the operator's lever over *any*
+  tenant, is untouched. The `GET` is unguarded and self-scoped, under the
+  `/permissions/me` precedent (D6).
+* **`image/png`, `image/jpeg`, `image/webp`, up to 2 MiB** (D2, D3), stored
+  through the existing `LocalStorageProvider`. `image/svg+xml` is refused:
+  an SVG is active content served same-origin from `/static/uploads/` and
+  embedded in a printable report a browser renders, so accepting it without a
+  sanitiser is a stored-XSS surface. The bytes are opened with Pillow, so a
+  file that does not decode is refused even when its declared type is
+  accepted. Every refusal is a **422** (`TenantLogoTooLargeError`,
+  `TenantLogoInvalidFormatError`) and writes neither a file nor the column;
+  the media pipeline's 400-mapped `Photo*` pair is left alone.
+* Replacing or removing a logo deletes the previous file, best-effort, and
+  **only** when its URL starts with `/static/uploads/`: an externally hosted
+  or hand-written value is somebody else's file.
+* **The Sidebar/Navbar do not display the logo** (D4). Every sidebar render
+  would need a new per-page fetch or `logo_url` on `GET /api/v1/auth/me`,
+  which is a global route and deliberately answers nothing tenant-relative
+  beyond the membership summary. It is a deliverable of its own.
+
 ### Módulos por tenant
 
 A per-tenant **feature switch** (APRAS-39) that composes with the permission
@@ -821,9 +860,9 @@ capability columns; there is no role column and no per-user permission.
 
 ### Permissions are in code
 
-`backend/app/core/permissions.py` is the vocabulary: **174 strings** in **28
+`backend/app/core/permissions.py` is the vocabulary: **175 strings** in **28
 modules**, spelled `<module>:<action>` (`tasks:read`, `purchases:decide`,
-`gate:checkin`). `ROUTE_PERMISSIONS` maps **203** routes to one permission
+`gate:checkin`). `ROUTE_PERMISSIONS` maps **206** routes to one permission
 each; `UNGUARDED_ROUTES` names the rest. A route in neither fails
 `tests/test_permission_registry.py`, in CI, before it can ship with a hole in
 it.
@@ -833,11 +872,11 @@ model — so it stays importable from Alembic, from a script and from a test
 with no database.
 
 **Every mapped route is now proven enforced** (APRAS-51).
-`backend/tests/test_permission_alignment.py` places all 203 in exactly one
-declared enforcement form — 53 route-level `Depends(require_permission(P))`,
+`backend/tests/test_permission_alignment.py` places all 206 in exactly one
+declared enforcement form — 56 route-level `Depends(require_permission(P))`,
 5 `get_current_superuser`, 3 membership-gated, 5 service-enforced, 137
 in-handler — with the exception allowlist `UNENFORCED` **empty**, and sweeps
-the other 195 with a real request from a caller holding the whole catalogue
+the other 198 with a real request from a caller holding the whole catalogue
 except the route's own permission, pinning the *shape* of the refusal. Two
 forms are deliberate and are proven per route rather than excused: **five
 routes are enforced in a service** — the two ballot routes, whose

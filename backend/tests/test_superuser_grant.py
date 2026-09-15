@@ -102,7 +102,7 @@ def test_a_superuser_can_grant_is_superuser(client: TestClient, session: Session
     # And the flag really means the whole catalogue, in this tenant.
     me = client.get("/api/v1/permissions/me", headers=_auth(target))
     assert me.status_code == 200
-    assert len(me.json()["permissions"]) == 174
+    assert len(me.json()["permissions"]) == 175
 
 
 def test_a_superuser_can_revoke_is_superuser(client: TestClient, session: Session):
@@ -287,9 +287,12 @@ def test_the_route_is_unguarded_by_permission_and_superuser_guarded():
     # taking the count to 23 while `ROUTE_PERMISSIONS` stays at 201. APRAS-60
     # then adds two *mapped* routes and no unguarded one -- the construction
     # projects report and its save -- taking 201 -> 203 with its 12 cells in
-    # the additive `parity_matrix_baseline_60.json`.
-    assert len(UNGUARDED_ROUTES) == 23
-    assert len(ROUTE_PERMISSIONS) == 203
+    # the additive `parity_matrix_baseline_60.json`. APRAS-61 then adds
+    # three mapped routes -- the condominium-profile writes -- and one
+    # unguarded one -- its self-scoped read -- taking 203/23 -> 206/24, with
+    # its 18 cells in the additive `parity_matrix_baseline_61.json`.
+    assert len(UNGUARDED_ROUTES) == 24
+    assert len(ROUTE_PERMISSIONS) == 206
 
     route = next(
         r

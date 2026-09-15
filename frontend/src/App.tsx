@@ -41,6 +41,7 @@ import RolesAdminPage from "./features/user-administration/pages/RolesAdminPage"
 import RoleDetailPage from "./features/user-administration/pages/RoleDetailPage";
 import TenantModulesPage from "./features/user-administration/pages/TenantModulesPage";
 import SubscriptionPage from "./features/user-administration/pages/SubscriptionPage";
+import TenantProfilePage from "./features/user-administration/pages/TenantProfilePage";
 import PlansAdminPage from "./features/user-administration/pages/PlansAdminPage";
 import TenantSubscriptionsPage from "./features/user-administration/pages/TenantSubscriptionsPage";
 import InfractionsPage from "./features/infraction-management/pages/InfractionsPage";
@@ -378,6 +379,17 @@ function App() {
                       requiredAccess={ROUTE_ACCESS["/admin/modules"]}
                     >
                       <TenantModulesPage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/admin/tenant-profile"
+                  element={
+                    <ProtectedRoute
+                      requiredAccess={ROUTE_ACCESS["/admin/tenant-profile"]}
+                    >
+                      <TenantProfilePage />
                     </ProtectedRoute>
                   }
                 />

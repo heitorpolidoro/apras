@@ -550,3 +550,36 @@ None.
   "landing_path")` pins the *model* shape rather than the stored row. That is
   the stronger assertion for as long as the column survives APRAS-58, so this
   is a note rather than a change request.
+
+## [APRAS-61] Perfil do condomínio com upload do logo — 2026-09-15 (code_review round 1)
+- `backend/app/services/tenant_service.py` — `set_logo` passes the client-supplied
+  `filename` straight to `LocalStorageProvider.save_file`, which derives the stored
+  extension from `Path(filename).suffix`. There is no traversal (the basename is a
+  uuid4 and only the suffix survives), but the *extension* is attacker-controlled, so
+  `logo.html` with PNG-polyglot bytes would be written under `/static/uploads/` and
+  served same-origin — the exact class D2 exists to close. This is **pre-existing**
+  behaviour shared by all five `save_file` call sites (`media_service`,
+  `announcement_service`, `finance_service`, `voting_service`, and now this one), so
+  it is not a regression introduced here and not blocking. Worth a follow-up task
+  that derives the extension from the validated MIME type in `save_file` itself,
+  fixing all five at once.
+- `frontend/src/hooks/useTenantProfile.ts` — the spec's Approach says the TanStack key
+  is "invalidated by all three mutations"; the implementation instead writes the
+  response body in with `setQueryData`. The rationale in the file (the body *is* the
+  new state; an invalidation would flash the old logo) is sound and, in my view,
+  better than the spec text. Flagging only so the divergence from the written spec is
+  on record, not as a defect.
+- `frontend/src/features/user-administration/pages/TenantProfilePage.tsx:122` —
+  `clearLogo.mutate(undefined as never, …)`. Typing `useProfileMutation`'s variables
+  as `void` for the clear mutation would drop the cast.
+- `frontend/src/i18n/locales/{pt,en}.json` — `tenantProfile.errors.size` hard-codes
+  "2 MB" while `tenantProfile.hint` interpolates `{{size}}` from the pinned constant.
+  If the cap ever moves, the hint follows and the error message silently lies. Reuse
+  the interpolation.
+
+
+## [APRAS-61] Perfil do condomínio com upload do logo — 2026-09-15 (qa_review round 1)
+
+- I ran the backend suite with `-p no:randomly` for a deterministic single pass. The CI invocation (`uv run pytest`) randomizes order; nothing in the diff looks order-sensitive, but the ordinary randomized run is the one that ships.
+- `TenantService._delete_stored_logo` maps a `/static/uploads/…` URL back to a path relative to the provider's `base_dir`, which is the cwd-relative default `static/uploads`. That is correct today and matches the rest of the media pipeline, but it makes logo deletion silently a no-op if the process is ever started from a different working directory. `delete_file` already swallows, so the failure mode is an orphaned file rather than a broken request — worth an absolute `base_dir` at some point, not for this task.
+- `set_logo` validates size before MIME, so a 3 MB SVG reports "too large" rather than "wrong format". Both are 422 and both are correct; only the copy the operator reads differs.

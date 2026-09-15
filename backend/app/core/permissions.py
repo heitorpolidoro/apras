@@ -126,6 +126,13 @@ PERMISSIONS: frozenset[str] = (
             "tenants:read",
             "tenants:create",
             "tenants:update",
+            # APRAS-61 D7: the condominium's *own* profile -- name and logo --
+            # written through the tenant-side `/api/v1/tenant-profile` router.
+            # Deliberately **not** `tenants:update`, which is the operator's
+            # superuser-only lever over any tenant, and deliberately **not** in
+            # `SUPERUSER_ONLY_PERMISSIONS`, so a tenant admin can tick it for a
+            # role in the role editor.
+            "tenants:profile_update",
             "tenants:members_read",
             "tenants:members_manage",
             "tenants:members_set_admin",
@@ -352,6 +359,11 @@ ROUTE_PERMISSIONS: dict[tuple[str, str], str] = {
     ("GET", "/api/v1/tenants/{tenant_id}"): "tenants:read",
     ("POST", "/api/v1/tenants"): "tenants:create",
     ("PATCH", "/api/v1/tenants/{tenant_id}"): "tenants:update",
+    # APRAS-61: the tenant-side profile writes. No `{tenant_id}`: the subject
+    # is the acting tenant (D1). The matching read is unguarded, below.
+    ("PATCH", "/api/v1/tenant-profile"): "tenants:profile_update",
+    ("PUT", "/api/v1/tenant-profile/logo"): "tenants:profile_update",
+    ("DELETE", "/api/v1/tenant-profile/logo"): "tenants:profile_update",
     ("GET", "/api/v1/tenants/{tenant_id}/members"): "tenants:members_read",
     ("POST", "/api/v1/tenants/{tenant_id}/members"): "tenants:members_manage",
     (
@@ -688,6 +700,11 @@ UNGUARDED_ROUTES: frozenset[tuple[str, str]] = frozenset(
         # The static permission vocabulary. No tenant data, no user data;
         # identical for every authenticated caller (IAM F4).
         ("GET", "/api/v1/permissions/"),
+        # Strictly self-scoped to the acting tenant, and returns what the
+        # caller already holds: `/auth/me` carries the tenant name and the
+        # logo is a public static asset (APRAS-61 D6). The three writes on the
+        # same router are permission-guarded.
+        ("GET", "/api/v1/tenant-profile"),
         # Authenticated by X-Device-Key, no user in the request at all.
         ("POST", "/api/v1/access-control/webhook/verification"),
         # superuser-only, guarded by deps.get_current_superuser (IAM F5,

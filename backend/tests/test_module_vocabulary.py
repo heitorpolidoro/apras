@@ -76,7 +76,7 @@ def test_filter_by_modules_on_an_empty_disabled_set_is_the_identity():
 def test_every_permission_belongs_to_a_declared_module():
     """No catalogue string can name a module the vocabulary does not know."""
     assert {module_of(p) for p in PERMISSIONS} <= MODULES
-    assert len(PERMISSIONS) == 174
+    assert len(PERMISSIONS) == 175
 
 
 #: The 28 module names, spelled out. Deliberately a literal and not a

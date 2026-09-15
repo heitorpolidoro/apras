@@ -116,6 +116,13 @@ PERMISSION_GUARDED_ROUTES: frozenset[tuple[str, str]] = (
             ("GET", "/api/v1/subscription"),
             ("GET", "/api/v1/subscription/history"),
             ("PUT", "/api/v1/subscription/modules"),
+            # APRAS-61 D1/D7: the three condominium-profile writes. Same
+            # shape and same argument as the billing three above -- a
+            # tenant-side router with no `{tenant_id}` in its paths, guarded
+            # by one newly minted, ordinary catalogue string.
+            ("PATCH", "/api/v1/tenant-profile"),
+            ("PUT", "/api/v1/tenant-profile/logo"),
+            ("DELETE", "/api/v1/tenant-profile/logo"),
         }
     )
     | frozenset(
@@ -420,6 +427,11 @@ def test_the_permission_guarded_routes_are_the_apras43_seven_plus_billing():
         ("GET", "/api/v1/subscription/history"),
         ("PUT", "/api/v1/subscription/modules"),
     ]
+    apras61_profile_routes = [
+        ("PATCH", "/api/v1/tenant-profile"),
+        ("PUT", "/api/v1/tenant-profile/logo"),
+        ("DELETE", "/api/v1/tenant-profile/logo"),
+    ]
     apras44_infraction_routes = {
         key
         for key, permission in ROUTE_PERMISSIONS.items()
@@ -429,13 +441,15 @@ def test_the_permission_guarded_routes_are_the_apras43_seven_plus_billing():
     assert len(apras40_billing_routes) == 3
     assert len(apras44_infraction_routes) == 18
     assert len(APRAS_51_ROUTES) == 25
+    assert len(apras61_profile_routes) == 3
     assert (
         set(apras43_admin_routes)
         | set(apras40_billing_routes)
         | apras44_infraction_routes
         | APRAS_51_ROUTES
+        | set(apras61_profile_routes)
     ) == PERMISSION_GUARDED_ROUTES
-    assert len(PERMISSION_GUARDED_ROUTES) == 53
+    assert len(PERMISSION_GUARDED_ROUTES) == 56
 
 
 # ---------------------------------------------------------------------------

@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>APRAS-61 — Perfil do condomínio</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-50 text-slate-900">
+<div class="max-w-5xl mx-auto p-6 space-y-6">
+
+  <header class="space-y-1">
+    <h1 class="text-2xl font-bold">APRAS-61 — Perfil do condomínio</h1>
+    <p class="text-sm text-slate-600">
+      Menu <strong>Sistema → Perfil do condomínio</strong> (<code>/admin/tenant-profile</code>),
+      liberado por <code>tenants:profile_update</code> (implícito para <em>is_tenant_admin</em>).
+      Escreve <code>tenant.logo_url</code> via <code>PUT /api/v1/tenant-profile/logo</code>.
+    </p>
+  </header>
+
+  <nav class="flex flex-wrap gap-2 border-b border-slate-200">
+    <button data-tab="withLogo" class="tab px-4 py-2 text-sm font-medium border-b-2 border-slate-900">Com logo</button>
+    <button data-tab="empty" class="tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-slate-500">Sem logo</button>
+    <button data-tab="error" class="tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-slate-500">Arquivo recusado (422)</button>
+    <button data-tab="denied" class="tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-slate-500">Sem permissão (403)</button>
+    <button data-tab="report" class="tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-slate-500">Efeito no relatório</button>
+  </nav>
+
+  <!-- ========================= COM LOGO ========================= -->
+  <section data-panel="withLogo" class="panel space-y-4">
+    <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div class="flex items-center gap-3 border-b border-slate-100 px-6 py-4">
+        <i data-lucide="landmark" class="h-5 w-5 text-slate-500"></i>
+        <div>
+          <h2 class="text-lg font-semibold">Perfil do condomínio</h2>
+          <p class="text-xs text-slate-500">Dados exibidos nos documentos gerados pelo sistema.</p>
+        </div>
+      </div>
+
+      <div class="grid gap-8 px-6 py-6 md:grid-cols-[220px_1fr]">
+        <div class="space-y-3">
+          <span class="text-xs font-semibold uppercase tracking-wide text-slate-500">Logo</span>
+          <div class="flex h-36 w-full items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+            <img alt="Logo do condomínio" class="max-h-32 max-w-[180px] object-contain"
+              src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 160'%3E%3Crect width='240' height='160' fill='%23082f2a'/%3E%3Ccircle cx='120' cy='66' r='34' fill='none' stroke='%23c6a04a' stroke-width='5'/%3E%3Cpath d='M92 118h56' stroke='%23c6a04a' stroke-width='5'/%3E%3Ctext x='120' y='74' font-family='Georgia' font-size='30' fill='%23f7f1e5' text-anchor='middle'%3EAS%3C/text%3E%3Ctext x='120' y='142' font-family='Georgia' font-size='16' fill='%23ead6a4' text-anchor='middle'%3EAltos da Serra%3C/text%3E%3C/svg%3E" />
+          </div>
+          <p class="text-xs text-slate-500">PNG, JPEG ou WebP · até 2 MB</p>
+          <div class="flex flex-col gap-2">
+            <button onclick="document.getElementById('picker').click()"
+              class="inline-flex items-center justify-center gap-2 rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800">
+              <i data-lucide="upload" class="h-4 w-4"></i> Trocar logo
+            </button>
+            <input id="picker" type="file" class="hidden" accept="image/png,image/jpeg,image/webp" />
+            <button onclick="switchTab('empty')"
+              class="inline-flex items-center justify-center gap-2 rounded-md border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50">
+              <i data-lucide="trash-2" class="h-4 w-4"></i> Remover logo
+            </button>
+          </div>
+        </div>
+
+        <div class="space-y-5">
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Nome do condomínio</label>
+            <input value="Residencial Altos da Serra VI"
+              class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-900 focus:outline-none" />
+            <p class="mt-1 text-xs text-slate-500">Único em toda a instalação: um nome já usado responde 409.</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Identificador</label>
+            <input readonly value="8f1c0f2e-5e5c-4a0f-9c1e-1c2a3b4d5e6f"
+              class="mt-1 w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-xs text-slate-500" />
+          </div>
+          <div class="flex items-center gap-3">
+            <button class="rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">Salvar</button>
+            <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+              <i data-lucide="check" class="h-3.5 w-3.5"></i> Logo atualizado
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rounded-lg border border-slate-200 bg-white p-4 text-xs text-slate-600">
+      <code>PUT /api/v1/tenant-profile/logo</code> · multipart <code>file</code> ·
+      resposta <code>{ "id": "…", "name": "…", "is_active": true, "logo_url": "/static/uploads/2026/09/&lt;uuid&gt;.png" }</code>.
+      O envio substitui o arquivo anterior (apagado do disco quando é local).
+    </div>
+  </section>
+
+  <!-- ========================= SEM LOGO ========================= -->
+  <section data-panel="empty" class="panel hidden space-y-4">
+    <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div class="flex items-center gap-3 border-b border-slate-100 px-6 py-4">
+        <i data-lucide="landmark" class="h-5 w-5 text-slate-500"></i>
+        <h2 class="text-lg font-semibold">Perfil do condomínio</h2>
+      </div>
+      <div class="grid gap-8 px-6 py-6 md:grid-cols-[220px_1fr]">
+        <div class="space-y-3">
+          <span class="text-xs font-semibold uppercase tracking-wide text-slate-500">Logo</span>
+          <div class="flex h-36 w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 text-slate-400">
+            <i data-lucide="image" class="h-7 w-7"></i>
+            <span class="text-xs">Nenhum logo enviado</span>
+          </div>
+          <p class="text-xs text-slate-500">PNG, JPEG ou WebP · até 2 MB</p>
+          <button onclick="switchTab('withLogo')"
+            class="inline-flex w-full items-center justify-center gap-2 rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800">
+            <i data-lucide="upload" class="h-4 w-4"></i> Enviar logo
+          </button>
+        </div>
+        <div class="space-y-5">
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Nome do condomínio</label>
+            <input value="Condomínio Padrão"
+              class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-900 focus:outline-none" />
+          </div>
+          <p class="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            Sem logo, o cabeçalho do relatório de obras é impresso apenas com o nome do condomínio — nunca com uma imagem quebrada.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= ERRO 422 ========================= -->
+  <section data-panel="error" class="panel hidden space-y-4">
+    <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div class="flex items-center gap-3 border-b border-slate-100 px-6 py-4">
+        <i data-lucide="landmark" class="h-5 w-5 text-slate-500"></i>
+        <h2 class="text-lg font-semibold">Perfil do condomínio</h2>
+      </div>
+      <div class="space-y-4 px-6 py-6">
+        <div class="flex items-start gap-3 rounded-md border border-red-200 bg-red-50 px-4 py-3">
+          <i data-lucide="alert-triangle" class="mt-0.5 h-5 w-5 text-red-600"></i>
+          <div class="text-sm text-red-800">
+            <p class="font-medium">Arquivo recusado</p>
+            <p class="mt-0.5">Formatos aceitos: PNG, JPEG e WebP. Tamanho máximo: 2 MB.</p>
+          </div>
+        </div>
+        <ul class="space-y-2 text-sm">
+          <li class="flex items-center justify-between rounded-md border border-slate-200 px-3 py-2">
+            <span><code>brasao.svg</code> — image/svg+xml</span>
+            <span class="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">recusado no cliente</span>
+          </li>
+          <li class="flex items-center justify-between rounded-md border border-slate-200 px-3 py-2">
+            <span><code>fachada.png</code> — 3,4 MB</span>
+            <span class="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">recusado no cliente</span>
+          </li>
+          <li class="flex items-center justify-between rounded-md border border-slate-200 px-3 py-2">
+            <span><code>logo.png</code> — bytes corrompidos</span>
+            <span class="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700">422 do backend</span>
+          </li>
+        </ul>
+        <p class="text-xs text-slate-500">
+          Em todos os casos <code>tenant.logo_url</code> permanece inalterado e nenhum arquivo é gravado.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= SEM PERMISSÃO ========================= -->
+  <section data-panel="denied" class="panel hidden space-y-4">
+    <div class="rounded-xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+      <i data-lucide="lock" class="mx-auto h-10 w-10 text-slate-400"></i>
+      <h2 class="mt-4 text-lg font-semibold">Acesso restrito</h2>
+      <p class="mt-1 text-sm text-slate-600">
+        Você não tem permissão para acessar esta área.
+      </p>
+      <p class="mt-4 text-xs text-slate-500">
+        <code>RestrictedAccessMessage</code> renderizado no lugar da página (sem redirecionamento).
+        O item de menu também não aparece: a regra é
+        <code>{ anyOf: ["tenants:profile_update"] }</code>, e as três rotas de escrita respondem 403.
+      </p>
+    </div>
+  </section>
+
+  <!-- ========================= RELATÓRIO ========================= -->
+  <section data-panel="report" class="panel hidden space-y-4">
+    <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <h2 class="text-lg font-semibold">Consequência, sem uma linha alterada no relatório</h2>
+      <p class="mt-1 text-sm text-slate-600">
+        <code>project_report_service</code> já lê <code>tenant.logo_url</code>. O cabeçalho passa a exibir o logo enviado:
+      </p>
+      <div class="mt-4 overflow-hidden rounded-lg border border-slate-200">
+        <div class="flex items-center justify-between bg-[#f7f1e5] px-6 py-4">
+          <img alt="Logo" class="h-12 w-auto rounded"
+            src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 160'%3E%3Crect width='240' height='160' fill='%23082f2a'/%3E%3Ccircle cx='120' cy='66' r='34' fill='none' stroke='%23c6a04a' stroke-width='5'/%3E%3Ctext x='120' y='74' font-family='Georgia' font-size='30' fill='%23f7f1e5' text-anchor='middle'%3EAS%3C/text%3E%3C/svg%3E" />
+          <div class="text-right">
+            <span class="block text-[10px] font-bold uppercase tracking-widest text-[#9b7327]">Relatório de obras</span>
+            <span class="block font-serif text-base font-bold text-[#082f2a]">Residencial Altos da Serra VI</span>
+            <span class="block text-[10px] text-slate-500">15 de setembro de 2026</span>
+          </div>
+        </div>
+      </div>
+      <p class="mt-4 text-xs text-slate-500">
+        O logo fica em <code>/static/uploads/&lt;ano&gt;/&lt;mês&gt;/&lt;uuid&gt;.png</code>, servido pelo mesmo mount
+        <code>StaticFiles</code> já usado pelas fotos. SVG não é aceito (conteúdo ativo em HTML impresso).
+      </p>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  function switchTab(name) {
+    document.querySelectorAll(".panel").forEach((p) => {
+      p.classList.toggle("hidden", p.dataset.panel !== name);
+    });
+    document.querySelectorAll(".tab").forEach((t) => {
+      const on = t.dataset.tab === name;
+      t.classList.toggle("border-slate-900", on);
+      t.classList.toggle("border-transparent", !on);
+      t.classList.toggle("text-slate-500", !on);
+    });
+  }
+  document.querySelectorAll(".tab").forEach((t) => {
+    t.addEventListener("click", () => switchTab(t.dataset.tab));
+  });
+  document.getElementById("picker").addEventListener("change", () => switchTab("error"));
+  lucide.createIcons();
+</script>
+</body>
+</html>

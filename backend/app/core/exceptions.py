@@ -446,6 +446,38 @@ class AnnouncementMediaTooLargeError(DomainError):
         super().__init__(message)
 
 
+class TenantLogoTooLargeError(DomainError):
+    """Raised when an uploaded condominium logo exceeds the 2 MiB cap.
+
+    Its own class rather than :class:`PhotoFileTooLargeError`: that one is
+    mapped to **400** and is the media pipeline's published contract, while
+    APRAS-61 D5 states a refused logo is a **422**. Reusing it would move a
+    shipped status code for the photo routes too.
+    """
+
+    def __init__(
+        self, message: str = "Arquivo excede o limite máximo permitido de 2MB."
+    ) -> None:
+        super().__init__(message)
+
+
+class TenantLogoInvalidFormatError(DomainError):
+    """Raised when a logo's MIME type is outside the accepted set or its bytes
+    do not decode.
+
+    SVG is deliberately refused (APRAS-61 D2): it is active content served
+    same-origin from ``/static/uploads/`` and embedded in a printable report a
+    browser renders, so accepting it without a sanitiser is a stored-XSS
+    surface.
+    """
+
+    def __init__(
+        self,
+        message: str = "Formato de imagem inválido. Formatos aceitos: PNG, JPEG, WebP.",
+    ) -> None:
+        super().__init__(message)
+
+
 class FinanceCategoryNotFoundError(DomainError):
     """Raised when a finance category is not found."""
 

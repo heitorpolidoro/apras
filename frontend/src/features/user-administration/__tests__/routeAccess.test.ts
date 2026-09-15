@@ -87,17 +87,19 @@ describe("ROUTE_ACCESS / NAV_ITEMS", () => {
     expect(paths).toContain("/admin/subscriptions");
   });
 
-  it("NAV_GROUPS covers all 30 NAV_ITEMS with zero omissions and zero duplicates", () => {
+  // 30 before APRAS-61, which adds "/admin/tenant-profile" to the
+  // `administration` group.
+  it("NAV_GROUPS covers all 31 NAV_ITEMS with zero omissions and zero duplicates", () => {
     expect(NAV_GROUPS).toHaveLength(7);
     const navItemPaths = NAV_ITEMS.map((item) => item.path);
-    expect(navItemPaths).toHaveLength(30);
+    expect(navItemPaths).toHaveLength(31);
 
     const allGroupPaths = NAV_GROUPS.flatMap((group) => group.itemPaths);
-    expect(allGroupPaths).toHaveLength(30);
+    expect(allGroupPaths).toHaveLength(31);
 
     // No duplicates within all groups combined
     const uniqueGroupPaths = new Set(allGroupPaths);
-    expect(uniqueGroupPaths.size).toBe(30);
+    expect(uniqueGroupPaths.size).toBe(31);
 
     // Exact match of paths between NAV_GROUPS and NAV_ITEMS
     expect([...allGroupPaths].sort()).toEqual([...navItemPaths].sort());

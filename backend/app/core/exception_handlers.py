@@ -83,6 +83,8 @@ from app.core.exceptions import (
     TallyNotAvailableError,
     TaskNotFoundError,
     TenantAlreadyExistsError,
+    TenantLogoInvalidFormatError,
+    TenantLogoTooLargeError,
     TenantMembershipAlreadyExistsError,
     TenantMembershipNotFoundError,
     TenantNotFoundError,
@@ -215,6 +217,11 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             # APRAS-44 §7.7: the module's single 'the body names
             # something wrong' code -- never 400, never 409.
             InfractionValidationError,
+            # APRAS-61 D5: a refused condominium logo. Their own classes
+            # rather than the media pipeline's Photo* pair, which is mapped
+            # to 400 below and is a published contract.
+            TenantLogoInvalidFormatError,
+            TenantLogoTooLargeError,
         ),
     ):
         status_code = status.HTTP_422_UNPROCESSABLE_ENTITY

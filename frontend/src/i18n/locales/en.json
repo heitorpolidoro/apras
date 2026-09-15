@@ -52,7 +52,8 @@
       "registry": "Registry",
       "financial": "Financial & Plans",
       "administration": "System"
-    }
+    },
+    "tenantProfile": "Condominium profile"
   },
   "dashboard": {
     "general": {
@@ -1466,7 +1467,8 @@
       "update_create": "Create update",
       "update_delete": "Delete update",
       "update_status": "Update status",
-      "version_create": "Create version"
+      "version_create": "Create version",
+      "profile_update": "Update condominium profile"
     },
     "overrides": {},
     "loading": "Loading permissions…",
@@ -1827,6 +1829,35 @@
       "remove": "Remove",
       "save": "Save",
       "select": "Select"
+    }
+  },
+  "tenantProfile": {
+    "title": "Condominium profile",
+    "subtitle": "Data shown on the documents the system renders.",
+    "logoLabel": "Logo",
+    "logoAlt": "Condominium logo",
+    "logoEmpty": "No logo uploaded",
+    "fileInputLabel": "Select the logo file",
+    "hint": "PNG, JPEG or WebP · up to {{size}} MB",
+    "upload": "Upload logo",
+    "replace": "Replace logo",
+    "remove": "Remove logo",
+    "nameLabel": "Condominium name",
+    "nameHint": "Unique across the whole installation: a name already in use answers 409.",
+    "idLabel": "Identifier",
+    "save": "Save",
+    "saved": "Profile updated",
+    "logoSaved": "Logo updated",
+    "logoRemoved": "Logo removed",
+    "noLogoWarning": "Without a logo the report masthead is printed with the condominium name alone — never with a broken image.",
+    "errors": {
+      "title": "File rejected",
+      "type": "Accepted formats: PNG, JPEG and WebP.",
+      "size": "Maximum size: 2 MB.",
+      "rejected": "The server rejected the file: its content is not a valid PNG, JPEG or WebP image.",
+      "conflict": "A condominium with that name already exists.",
+      "forbidden": "You do not have permission to change the condominium profile.",
+      "generic": "Could not save. Please try again."
     }
   }
 }

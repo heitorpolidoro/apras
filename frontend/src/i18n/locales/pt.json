@@ -52,7 +52,8 @@
       "registry": "Cadastros",
       "financial": "Financeiro & Planos",
       "administration": "Sistema"
-    }
+    },
+    "tenantProfile": "Perfil do condomínio"
   },
   "dashboard": {
     "general": {
@@ -1466,7 +1467,8 @@
       "update_create": "Criar atualização",
       "update_delete": "Excluir atualização",
       "update_status": "Alterar status",
-      "version_create": "Criar versão"
+      "version_create": "Criar versão",
+      "profile_update": "Editar perfil do condomínio"
     },
     "overrides": {},
     "loading": "Carregando permissões…",
@@ -1827,6 +1829,35 @@
       "remove": "Remover",
       "save": "Salvar",
       "select": "Selecione"
+    }
+  },
+  "tenantProfile": {
+    "title": "Perfil do condomínio",
+    "subtitle": "Dados exibidos nos documentos gerados pelo sistema.",
+    "logoLabel": "Logo",
+    "logoAlt": "Logo do condomínio",
+    "logoEmpty": "Nenhum logo enviado",
+    "fileInputLabel": "Selecionar arquivo do logo",
+    "hint": "PNG, JPEG ou WebP · até {{size}} MB",
+    "upload": "Enviar logo",
+    "replace": "Trocar logo",
+    "remove": "Remover logo",
+    "nameLabel": "Nome do condomínio",
+    "nameHint": "Único em toda a instalação: um nome já usado responde 409.",
+    "idLabel": "Identificador",
+    "save": "Salvar",
+    "saved": "Perfil atualizado",
+    "logoSaved": "Logo atualizado",
+    "logoRemoved": "Logo removido",
+    "noLogoWarning": "Sem logo, o cabeçalho dos relatórios é impresso apenas com o nome do condomínio — nunca com uma imagem quebrada.",
+    "errors": {
+      "title": "Arquivo recusado",
+      "type": "Formatos aceitos: PNG, JPEG e WebP.",
+      "size": "Tamanho máximo: 2 MB.",
+      "rejected": "O servidor recusou o arquivo: o conteúdo não é uma imagem PNG, JPEG ou WebP válida.",
+      "conflict": "Já existe um condomínio com esse nome.",
+      "forbidden": "Você não tem permissão para alterar o perfil do condomínio.",
+      "generic": "Não foi possível salvar. Tente novamente."
     }
   }
 }

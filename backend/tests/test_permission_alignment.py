@@ -1,6 +1,6 @@
 """Every mapped route is in a *declared enforcement form* (APRAS-51).
 
-The defect this module closes: `ROUTE_PERMISSIONS` maps 203 routes to one
+The defect this module closes: `ROUTE_PERMISSIONS` maps 206 routes to one
 catalogue permission each, and on 25 of them that permission was never
 consulted anywhere in the request. The map claimed a gate the code did not
 have. Nothing noticed, because `test_permission_registry.py` only asserts a
@@ -21,7 +21,8 @@ Two oracles, both mechanical, both here:
 What the two together prove: every mapped route is in a declared form, and
 every swept route refuses, in a declared shape, a caller who holds everything
 but its mapped permission. What they do **not** prove: that the refusal is
-*caused* by the mapped permission on the 137 in-handler routes. For those the
+*caused* by the mapped permission on the 137 in-handler routes.
+That count is unchanged by APRAS-61, whose three new routes are all D-form. For those the
 sweep is a strong necessary condition, and `REFUSAL_SHAPES` is what stops an
 unrelated 404 or 400 from passing silently -- which is exactly what an earlier
 `not 2xx` assertion did on three routes whose permission was never read.
@@ -95,13 +96,21 @@ HARNESS_PATH = BACKEND_ROOT / "tests" / "matrix_world.py"
 #: and that is proven rather than asserted -- all five `tests/data/*.json`
 #: baselines stay byte-identical.
 #:
+#: APRAS-61 moved it once more: `REQUEST_BODIES` gains the two write bodies of
+#: the condominium-profile router, `Upload` gains an optional `content` (the
+#: logo route opens the bytes with Pillow, so the shared `_FILE_BYTES` would
+#: record a 422 about the payload instead of the authorization answer), and
+#: `neutralised_storage` swaps a fourth module-level provider. Every other
+#: route's payload is unchanged, and that is proven rather than asserted --
+#: all six `tests/data/*.json` baselines stay byte-identical.
+#:
 #: APRAS-54 moved it deliberately and twice: `ruff format` reflowed the file,
 #: and the private `_now()` at its top was collapsed into `app.core.clock`
 #: along with the other five re-implementations in the tree. The world it
 #: builds is unchanged, and that is proven rather than asserted -- all five
 #: `tests/data/*.json` baselines stay byte-identical, which is exactly the
 #: property this pin exists to protect.
-HARNESS_SHA256 = "b82e54d5b419759e47357257233687a2569c719d125f0195bcf5411e7e2e1012"
+HARNESS_SHA256 = "bf443586e1c5c5a6d34f3f06d71d8d7ada5b71d831f4f8df850e443bf846ba38"
 
 
 # ---------------------------------------------------------------------------
@@ -109,7 +118,7 @@ HARNESS_SHA256 = "b82e54d5b419759e47357257233687a2569c719d125f0195bcf5411e7e2e10
 # ---------------------------------------------------------------------------
 
 #: **D** -- `PermissionRequired(P)` in `route.dependant`.
-EXPECTED_DEPENDENCY_FORM = 53
+EXPECTED_DEPENDENCY_FORM = 56
 #: **S** -- `deps.get_current_superuser` and `P in SUPERUSER_ONLY_PERMISSIONS`.
 EXPECTED_SUPERUSER_FORM = 5
 #: **M** -- `MEMBERSHIP_GATED`, §5.
@@ -428,7 +437,7 @@ def success_status(method: str, path: str) -> int:
 
 
 def test_the_five_forms_partition_route_permissions():
-    """53 + 5 + 3 + 5 + 137 == 203, as an equality against the registry."""
+    """56 + 5 + 3 + 5 + 137 == 206, as an equality against the registry."""
     dependency = set(dependency_form())
     superuser = superuser_form()
     membership = set(MEMBERSHIP_GATED)
@@ -449,7 +458,7 @@ def test_the_five_forms_partition_route_permissions():
             + EXPECTED_SERVICE_FORM
             + EXPECTED_IN_HANDLER_FORM
         )
-        == 203
+        == 206
         == len(ROUTE_PERMISSIONS)
     )
 
@@ -493,11 +502,16 @@ def test_every_route_level_permission_matches_the_registry():
 
 
 def test_the_dependency_form_gained_exactly_the_twenty_five():
-    """The 25 of §3 are D-form, and D grew from 28 to 53 by exactly them."""
+    """The 25 of §3 are D-form, and D grew from 28 to 53 by exactly them.
+
+    The 28 is the *pre-APRAS-51* baseline and never moves; the right-hand
+    side does. APRAS-61 adds three more route-level guards -- the three
+    condominium-profile writes -- so the difference is 31 today.
+    """
     dependency = set(dependency_form())
     assert dependency >= APRAS_51_ROUTES
     assert len(APRAS_51_ROUTES) == 25
-    assert len(dependency) - len(APRAS_51_ROUTES) == 28
+    assert len(dependency) - len(APRAS_51_ROUTES) == 31
 
 
 def test_membership_gated_is_exactly_three_with_a_reason_each():
@@ -587,8 +601,8 @@ def test_the_permission_required_docstring_claims_no_fixed_route_count():
         assert anchor in doc, f"PermissionRequired's docstring does not name {anchor}"
 
 
-def test_the_swept_routes_are_two_hundred_and_one_minus_eight():
-    assert len(SWEPT_ROUTES) == 195
+def test_the_swept_routes_are_two_hundred_and_six_minus_eight():
+    assert len(SWEPT_ROUTES) == 198
     assert set(SWEPT_ROUTES) == (
         set(ROUTE_PERMISSIONS) - set(MEMBERSHIP_GATED) - set(SERVICE_ENFORCED)
     )

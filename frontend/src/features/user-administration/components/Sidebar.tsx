@@ -42,6 +42,7 @@ import {
   FileWarning,
   Scale,
   AlertCircle,
+  Landmark,
   ChevronDown,
   ChevronRight,
   PanelLeftClose,
@@ -81,6 +82,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   FileWarning,
   Scale,
   AlertCircle,
+  Landmark,
 };
 
 const SidebarItemLink: React.FC<{

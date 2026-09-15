@@ -41,6 +41,33 @@ class TenantRead(TenantBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class TenantProfileRead(BaseModel):
+    """The acting condominium's own profile (APRAS-61).
+
+    Deliberately **not** ``TenantRead``: the profile screen shows what an
+    administrator of one condominium may see and change about it, and the
+    timestamps are operator data. ``logo_url`` is what the surface exists for.
+    """
+
+    id: UUID
+    name: str
+    is_active: bool
+    logo_url: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TenantProfileUpdate(BaseModel):
+    """The writable half of the profile: the name, and only the name.
+
+    ``is_active`` is absent on purpose (APRAS-61): deactivating a condominium
+    stays a superuser act on ``PATCH /api/v1/tenants/{tenant_id}``. The bounds
+    are ``TenantUpdate``'s, not a second opinion about them.
+    """
+
+    name: str | None = Field(None, min_length=1, max_length=120)
+
+
 class ModuleStateRead(BaseModel):
     """One module's state in one tenant (APRAS-39 §6.1)."""
 

@@ -65,6 +65,7 @@ every write. The world is never rebuilt.
 
 from __future__ import annotations
 
+import base64
 import json
 import re
 import uuid
@@ -138,7 +139,7 @@ from app.models.tenant import (
 )
 from app.models.visitor import AccessLog, Visitor, VisitorAuthorization
 from app.models.voting import Assembly, LotVoterEligibility, Vote, VoteOption
-from app.services import announcement_service, finance_service
+from app.services import announcement_service, finance_service, tenant_service
 from app.services.media_service import media_service
 from app.services.storage_service import BaseStorageProvider
 from tests.conftest import make_user, profile_role
@@ -199,10 +200,11 @@ def _cpf(seed: int) -> str:
 class _NullStorage(BaseStorageProvider):
     """The production storage providers, with their file system amputated.
 
-    The three upload routes in the matrix (`POST /uploads/photo`,
-    `POST /announcements/{id}/media`, `POST /finance/transactions/{id}/invoice`)
-    reach a module-level `LocalStorageProvider` that writes under
-    `backend/static/uploads`. The harness swaps all three for this stub while
+    The four upload routes in the matrix (`POST /uploads/photo`,
+    `POST /announcements/{id}/media`, `POST /finance/transactions/{id}/invoice`
+    and, since APRAS-61, `PUT /tenant-profile/logo`) reach a module-level
+    `LocalStorageProvider` that writes under
+    `backend/static/uploads`. The harness swaps all four for this stub while
     the matrix runs: the handlers, the services and the status codes are
     untouched, and no cell can leave a file behind or make the baseline
     depend on a directory. `settings` carries no upload-directory knob, so
@@ -224,15 +226,18 @@ def neutralised_storage() -> Iterator[None]:
     original_media = media_service.storage_provider
     original_announcement = announcement_service._storage_provider
     original_finance = finance_service._storage_provider
+    original_tenant = tenant_service._storage_provider
     media_service.storage_provider = stub
     announcement_service._storage_provider = stub  # type: ignore[assignment]
     finance_service._storage_provider = stub  # type: ignore[assignment]
+    tenant_service._storage_provider = stub  # type: ignore[assignment]
     try:
         yield
     finally:
         media_service.storage_provider = original_media
         announcement_service._storage_provider = original_announcement
         finance_service._storage_provider = original_finance
+        tenant_service._storage_provider = original_tenant
 
 
 # ---------------------------------------------------------------------------
@@ -972,16 +977,32 @@ NO_BODY = _NoBody()
 
 @dataclass(frozen=True)
 class Upload:
-    """A multipart body: one small in-memory file plus optional form fields."""
+    """A multipart body: one small in-memory file plus optional form fields.
+
+    `content` is `None` for every route that only has to get *past* the body
+    into its authorization answer, which is all `_FILE_BYTES` was ever for. A
+    route that validates the bytes themselves -- `PUT /tenant-profile/logo`
+    opens them with Pillow (APRAS-61 D3) -- states its own, so the recorded
+    cell is the authorization answer rather than a 422 about the payload.
+    """
 
     field_name: str
     filename: str
     content_type: str
     form: dict[str, str] = field(default_factory=dict)
+    content: bytes | None = None
 
 
 #: One pixel's worth of bytes. Never written to disk (see `_NullStorage`).
 _FILE_BYTES = b"matrix-upload"
+
+#: A real, Pillow-decodable 1x1 PNG, spelled as the bytes rather than built
+#: with Pillow at import time: the recorded baseline must be a pure function
+#: of this file, not of an installed encoder's version.
+_PNG_BYTES = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmM"
+    "IQAAAABJRU5ErkJggg=="
+)
 
 BodySpec = Callable[[MatrixWorld], Any]
 
@@ -998,8 +1019,8 @@ def _today() -> str:
     return clock.db_now().date().isoformat()
 
 
-#: `(METHOD, path) -> body spec`, for exactly the 99 POST/PUT/PATCH routes
-#: of `ROUTE_PERMISSIONS`. The 25 DELETE routes declare no body model and are
+#: `(METHOD, path) -> body spec`, for exactly the 102 POST/PUT/PATCH routes
+#: of `ROUTE_PERMISSIONS`. The DELETE routes declare no body model and are
 #: deliberately absent. A missing entry is never allowed to default to `{}`.
 REQUEST_BODIES: dict[tuple[str, str], BodySpec] = {
     # --- tasks -------------------------------------------------------------
@@ -1051,6 +1072,11 @@ REQUEST_BODIES: dict[tuple[str, str], BodySpec] = {
         "user_id": str(w.outsider_user_id)
     },
     ("POST", "/api/v1/residents/{resident_id}/unlink-user"): NO_BODY,
+    # --- tenant profile (APRAS-61) -----------------------------------------
+    ("PATCH", "/api/v1/tenant-profile"): _static({"name": "Matrix Renamed Tenant"}),
+    ("PUT", "/api/v1/tenant-profile/logo"): _static(
+        Upload("file", "logo.png", "image/png", content=_PNG_BYTES)
+    ),
     # --- visitors ----------------------------------------------------------
     ("POST", "/api/v1/visitors"): _static({"full_name": "Matrix New Visitor"}),
     ("PUT", "/api/v1/visitors/{visitor_id}"): _static(
@@ -1359,7 +1385,7 @@ def run_cell(
             kwargs["files"] = {
                 payload.field_name: (
                     payload.filename,
-                    _FILE_BYTES,
+                    payload.content or _FILE_BYTES,
                     payload.content_type,
                 )
             }

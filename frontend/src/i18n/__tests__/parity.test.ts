@@ -40,13 +40,13 @@ describe("i18n locale parity", () => {
     // The catalogue was 26 modules and 84 distinct actions at IAM F1/F2;
     // APRAS-44 adds `infractions` and its ten new action segments (`read`,
     // `create` and `my_lots_read` already existed and are shared), so 27 and
-    // 94.
+    // 94. APRAS-61 mints one more action segment, `profile_update`, so 95.
     //
     // 27 and not 28: `billing` (APRAS-40) has a `modules.names` entry but no
     // `permissions.modules` label. That gap predates this slice and is left
     // alone deliberately -- fixing it here would hide it in an unrelated diff.
     expect(modules(PT_KEYS)).toHaveLength(27);
-    expect(actions(PT_KEYS)).toHaveLength(94);
+    expect(actions(PT_KEYS)).toHaveLength(95);
     expect(modules(EN_KEYS)).toEqual(modules(PT_KEYS));
     expect(actions(EN_KEYS)).toEqual(actions(PT_KEYS));
   });
