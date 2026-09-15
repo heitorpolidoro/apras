@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Building2, HardHat, Plus, RefreshCw,  } from 'lucide-react';
+import { ArrowLeft, Building2, FileText, HardHat, Plus, RefreshCw, Save,  } from 'lucide-react';
 import { useEffectivePermissionSet } from '../../user-administration/access/useCanAccess';
 import type {
   ConstructionProject,
@@ -14,6 +14,7 @@ import type {
   ProjectUpdatePayload,
 } from '../../../types/project';
 import { useCreateMilestone, useCreateProject, useCreateProjectUpdate, useDeleteMilestone, useDeleteProject, useDeleteProjectUpdate, useProjectDetail, useProjects, useUpdateMilestone, useUpdateProject,  } from '../hooks/useProjects';
+import { getProjectsReport, saveProjectsReport } from '../../../api/projects';
 import { ProjectSummaryCard } from './ProjectSummaryCard';
 import { BudgetVsActualProgressBar } from './BudgetVsActualProgressBar';
 import { MilestoneTimeline } from './MilestoneTimeline';
@@ -32,6 +33,13 @@ export const ConstructionTrackerPage: React.FC = () => {
   const canManage = has("projects:create");
   const canPostUpdate =
     has("projects:update_create");
+  const canGenerateReport = has("projects:read");
+  const canSaveReport = has("documents:create");
+
+  // Report feedback (APRAS-60)
+  const [reportMessage, setReportMessage] = useState<
+    { kind: 'success' | 'error'; text: string } | null
+  >(null);
 
   // Filters & Selected State
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('ALL');
@@ -146,6 +154,44 @@ export const ConstructionTrackerPage: React.FC = () => {
     setDeleteConfirmUpdate(null);
   };
 
+  // Handlers: report (APRAS-60)
+  /**
+   * A bare `window.open` of the API URL would send no token, so the HTML is
+   * fetched through the authenticated client and opened from an object URL.
+   */
+  const handleGenerateReport = async () => {
+    setReportMessage(null);
+    try {
+      const html = await getProjectsReport();
+      const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+      window.open(url, '_blank');
+    } catch {
+      setReportMessage({
+        kind: 'error',
+        text: t('projects.reportError', 'Não foi possível gerar o relatório.'),
+      });
+    }
+  };
+
+  const handleSaveReport = async () => {
+    setReportMessage(null);
+    try {
+      await saveProjectsReport();
+      setReportMessage({
+        kind: 'success',
+        text: t('projects.reportSaved', 'Relatório salvo em Documentos.'),
+      });
+    } catch {
+      setReportMessage({
+        kind: 'error',
+        text: t(
+          'projects.reportSaveError',
+          'Não foi possível salvar o relatório em Documentos.'
+        ),
+      });
+    }
+  };
+
   const projects = projectsData?.items || [];
 
   return (
@@ -178,6 +224,30 @@ export const ConstructionTrackerPage: React.FC = () => {
             <span className="hidden sm:inline">Atualizar</span>
           </Button>
 
+          {canGenerateReport && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleGenerateReport}
+              className="flex items-center gap-1.5"
+            >
+              <FileText className="w-4 h-4" />
+              <span>{t('projects.generateReport', 'Gerar relatório')}</span>
+            </Button>
+          )}
+
+          {canSaveReport && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSaveReport}
+              className="flex items-center gap-1.5"
+            >
+              <Save className="w-4 h-4" />
+              <span>{t('projects.saveToDocuments', 'Salvar em Documentos')}</span>
+            </Button>
+          )}
+
           {canManage && (
             <Button
               onClick={() => {
@@ -192,6 +262,19 @@ export const ConstructionTrackerPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {reportMessage && (
+        <div
+          role="status"
+          className={
+            reportMessage.kind === 'success'
+              ? 'rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200'
+              : 'rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200'
+          }
+        >
+          {reportMessage.text}
+        </div>
+      )}
 
       {/* Main Content Area */}
       {selectedProjectId ? (

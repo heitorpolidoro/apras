@@ -304,3 +304,148 @@
 
 ---
 
+
+## [APRAS-60] Relatório geral de obras em HTML imprimível, salvo em Documentos — 2026-09-14
+
+- There are **four** parity baseline files on disk
+  (`parity_matrix_baseline.json`, `_40`, `_44`, `_51`), not three. `_51` is an
+  *override* layer, not an addend, so it needs no change, but the spec's
+  phrase "the three pre-existing baselines stay byte-identical" should say
+  four files stay untouched to avoid an implementer "fixing" `_51`. Note also
+  that only the F2 file and `legacy_role_bundles.json` carry pinned sha256
+  assertions; `_40`/`_44`/`_51` are pinned by provenance tests instead, so
+  "their pinned sha256 assertions must still pass" is only true of F2.
+- The new baseline will need a `_meta` block with a `merge_base_sha` and will
+  have to be produced by `tests/tools/record_parity_baseline.py`; the spec's
+  file list names the constants but not the recorder invocation. Adding it
+  would save a round.
+- `matrix_world.neutralised_storage` swaps only the three *module-level*
+  providers (`media_service`, `announcement_service`, `finance_service`). If
+  the new service constructs `LocalStorageProvider()` inline the way
+  `save_minutes` does, the ADMINISTRATOR/DIRECTOR parity cells will write real
+  files under `backend/static/uploads` (gitignored, so harmless, but contrary
+  to the harness's "every non-role dimension neutralised" contract). Exposing
+  a module-level `_storage_provider` and adding it to `neutralised_storage`
+  would keep the matrix side-effect free — it is one more edit inside the
+  `matrix_world.py` change the spec already budgets a sha re-pin for.
+- Because the world is shared across all cells, the new POST cell mutates it
+  (a folder and a document row). Worth stating in the spec that the full
+  parity run must be executed once end-to-end to prove the F2 file really
+  stays byte-identical.
+- Test criterion 5 asserts the body contains no `nan`; that substring occurs
+  in ordinary Portuguese proper names (e.g. "Fernanda"), so the fixture data
+  for that case should be chosen deliberately, or the assertion made
+  case-sensitive on `NaN`.
+- The route-ordering note says "declared before `GET /api/v1/projects/{project_id}`";
+  the actual path parameter in `projects.py` is `{id}`. Cosmetic, but the
+  registry key is `("GET", "/api/v1/projects/{id}")`.
+- The model field is `contractor_name`, not `contractor`.
+
+## [APRAS-60] Relatório geral de obras em HTML imprimível, salvo em Documentos — 2026-09-14
+
+- "in the project's display timezone" (line 121) names a mechanism that does
+  not exist in the tree: `app.core.clock` returns naive UTC and the precedent
+  `voting_service._fmt_datetime` (`voting_service.py:994`) formats it directly
+  with `strftime`. Nothing hangs on it — the ER asserts the format, not the
+  value — but spelling it as `clock.db_now().strftime("%d/%m/%Y %H:%M:%S")`
+  would remove an invitation to invent a timezone conversion.
+- The spec does not name `publication_year`/`publication_month` for the
+  `AssociationDocumentCreate` it builds; `save_minutes` fills them from the
+  assembly date (`voting_service.py:1185–1186`). The generation date is the
+  obvious analogue; saying so costs one clause.
+- Worth a line in the new helper's docstring cross-referencing
+  `voting_service._find_or_create_minutes_folder`, so a future reader who
+  notices the two folder helpers differ finds the reason at the divergence
+  rather than in this spec.
+
+## [APRAS-60] Relatório geral de obras em HTML imprimível, salvo em Documentos — 2026-09-14
+
+* `backend/tests/matrix_world.py`'s `REQUEST_BODIES` is length-asserted against
+  `EXPECTED_REQUEST_BODY_COUNT = 99` in `test_permission_parity_matrix.py:608`.
+  The spec lists the `NO_BODY` entry and the `HARNESS_SHA256` re-pin but not
+  this constant; add "`EXPECTED_REQUEST_BODY_COUNT` 99 → 100" to the file list.
+* The migration's `down_revision` is unstated. The committed head is
+  `0036_add_infraction_tables`; `0037_remove_papel_suffix` is **untracked** in
+  this worktree (same class as `sync_drive_obras.py`, which the spec does call
+  out). Chaining onto `0037` breaks a clean checkout; chaining onto `0036`
+  alongside a later-committed `0037` produces two heads. Say explicitly that
+  `down_revision` is the head at implementation time and that the number is
+  renumbered at merge.
+* "the three pre-existing parity baselines stay byte-identical": there are
+  **four** files — `parity_matrix_baseline_51.json` exists but is an *override*,
+  not an addend (see the comment at `test_permission_parity_matrix.py:103-109`).
+  Wording is harmless for the partition claim but should say "four files
+  untouched, three of them addends".
+* The bar labels: the ported `one_bar()` markup is
+  `<span>previsto</span><b>13%</b>`, so the spec's "reading `previsto X%`" and
+  the criterion-6 assertion "the label `previsto —`" are not contiguous strings
+  in a mock-faithful document. State the assertion as the `<b>` content inside
+  `div.tag.plan`, so the test does not push the implementer away from the mock.
+* Criterion 4 cannot distinguish "**all** IN_PROGRESS" from the generator's
+  `items[:3]` cap, because it uses only 2 IN_PROGRESS milestones. Use 4 so the
+  deliberate divergence from `groups_html()` is actually pinned.
+* The presentation order *within* the `Concluídos` card is unspecified
+  (selection order is). The mock renders oldest→newest (`items[-3:]`); say
+  whether the rendered list is newest-first.
+* `AssociationDocument.title` "using `app.core.clock` in the project's display
+  timezone": no display-timezone concept exists — `voting_service._fmt_datetime`
+  is a plain `strftime` over a naive value, and `AGENTS.md`'s clock rule keeps
+  every stored datetime naive. Drop the phrase.
+* Every recent feature commit updates `AGENTS.md` (APRAS-51/52/53/44/40), and
+  this task falsifies its literal "`ROUTE_PERMISSIONS` maps **201** routes".
+  Add `AGENTS.md` to the files-touched list.
+* Cosmetic: the route the new ones must precede is
+  `GET /api/v1/projects/{id}`, not `{project_id}`.
+* The mock emits `<title>Relatório de Obras — <tenant></title>`; the spec never
+  mentions the document `<title>`.
+
+## [APRAS-60] Relatório geral de obras em HTML imprimível, salvo em Documentos — 2026-09-14
+
+- Test criterion 9 spells the resolution as
+  `session.get(Tenant, tenant_context.acting_tenant_id(session))`, omitting the
+  `or DEFAULT_TENANT_ID` fallback that "Tenant scoping" and expected result 4
+  both carry. It is harmless as written — that test sets the acting tenant on the
+  session, so the fallback never fires — but repeating the full expression would
+  keep a single spelling of the rule across the document.
+- "Tenant scoping" permits either the relationship route or the
+  `project_id.in_(...)` route for milestones and bulletins. Both are correct; if
+  the implementer picks the relationship route, a `selectinload` on the projects
+  query would avoid N+1 on an install with many projects. Worth a line in the
+  service docstring either way, since the choice is invisible in the output.
+
+## [APRAS-60] Relatório geral de obras em HTML imprimível, salvo em Documentos — 2026-09-14
+
+- `backend/pyproject.toml:109-114` — the `E501` per-file ignore is granted to
+  the whole of `project_report_service.py`, while the justification (the ported
+  CSS constant) covers only one string. A future long *Python* line in that
+  module now goes unnoticed. Non-blocking; if you want the narrower version,
+  `# noqa: E501` on the `CSS` assignment alone would do it, at the cost of one
+  more line against `NOQA_CAP`.
+- `project_report_service.py:487` and `:559` — `getattr(tenant, "logo_url", None)`
+  / `getattr(tenant, "name", None)` are being used as a `None`-guard on the
+  *object*, not as attribute discovery. `tenant.logo_url if tenant else None`
+  says the same thing and would still fail loudly if the attribute were ever
+  renamed away. Purely a readability point; the behaviour under test is correct.
+- `project_report_service.py:637-640` — `get_report_html` is a one-line
+  passthrough to `render_report_html`. It mirrors `voting_service.get_minutes_html`,
+  so I am not calling it duplication, but the endpoint could call the renderer
+  directly.
+- `project_report_service.py:702` — `save_report` is annotated `-> Any` while
+  the route declares `AssociationDocumentRead`. Narrowing the return annotation
+  (as the route already does) would let the type checker connect the two.
+- `ConstructionTrackerPage.tsx:163-166` — the object URL is never
+  `URL.revokeObjectURL`'d. On a page where an operator generates the report
+  repeatedly this leaks one blob per click for the lifetime of the document.
+  Revoking it on the new tab's `load`, or after a timeout, is the usual fix.
+
+## [APRAS-60] Relatório geral de obras em HTML imprimível, salvo em Documentos — 2026-09-15
+
+- `planned_to_date` accepts a lexically well-formed but calendrically impossible month (`"2026-13"`) because the
+  guard is `re.fullmatch(r"\d{4}-\d{2}", month)` and the comparison is string-based. Such a point is treated as
+  "in the future" rather than as a malformed curve, so a schedule containing it silently renders `previsto 0%`
+  instead of degrading to "no curve". A `01 <= mm <= 12` check would make the strictness the docstring claims exact.
+  Not blocking: no writer of the column can currently produce that value (there is no API or UI for it).
+- `_find_or_create_obras_folder` matches the folder by `name == "Obras" AND parent_id IS NULL` within the ambient
+  tenant scope. That is correct today, but an operator who renames the tenant's "Obras" folder will silently get a
+  second one on the next save. A stable marker (a system-folder flag or a fixed id per tenant) would make the
+  "created once" property independent of the display name.

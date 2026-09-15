@@ -27,8 +27,10 @@ TESTS = BACKEND / "tests"
 #: ignores (``ARG002`` above all) retired whole classes of per-line comment.
 #:
 #: It may fall freely. Raising it is a decision that belongs in a task's spec,
-#: not in a diff.
-NOQA_CAP = 68
+#: not in a diff -- APRAS-60 §17 raised it by exactly one, for the `E711` its
+#: `parent_id == None` folder lookup needs and that `voting_service` already
+#: spells the same way.
+NOQA_CAP = 69
 
 #: A ``noqa: CODE[, CODE...]`` directive followed by two spaces and a reason.
 NOQA_OK = re.compile(r"#\s*noqa:\s*[A-Z]+[0-9]+(\s*,\s*[A-Z]+[0-9]+)*\s+#\s+\S")

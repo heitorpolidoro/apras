@@ -827,7 +827,7 @@ capability columns; there is no role column and no per-user permission.
 
 `backend/app/core/permissions.py` is the vocabulary: **174 strings** in **28
 modules**, spelled `<module>:<action>` (`tasks:read`, `purchases:decide`,
-`gate:checkin`). `ROUTE_PERMISSIONS` maps **201** routes to one permission
+`gate:checkin`). `ROUTE_PERMISSIONS` maps **203** routes to one permission
 each; `UNGUARDED_ROUTES` names the rest. A route in neither fails
 `tests/test_permission_registry.py`, in CI, before it can ship with a hole in
 it.
@@ -837,11 +837,11 @@ model — so it stays importable from Alembic, from a script and from a test
 with no database.
 
 **Every mapped route is now proven enforced** (APRAS-51).
-`backend/tests/test_permission_alignment.py` places all 201 in exactly one
+`backend/tests/test_permission_alignment.py` places all 203 in exactly one
 declared enforcement form — 53 route-level `Depends(require_permission(P))`,
-5 `get_current_superuser`, 3 membership-gated, 5 service-enforced, 135
+5 `get_current_superuser`, 3 membership-gated, 5 service-enforced, 137
 in-handler — with the exception allowlist `UNENFORCED` **empty**, and sweeps
-the other 193 with a real request from a caller holding the whole catalogue
+the other 195 with a real request from a caller holding the whole catalogue
 except the route's own permission, pinning the *shape* of the refusal. Two
 forms are deliberate and are proven per route rather than excused: **five
 routes are enforced in a service** — the two ballot routes, whose
@@ -1152,6 +1152,57 @@ still the only member. `rule_deactivate`, not `rule_delete`: `DELETE
 rules and the lot's history has to stay whole and navigable. A deactivated
 rule refuses to start a *new* infraction (422) while every existing process
 still advances along its very same ladder.
+
+### Relatório de obras
+
+The printable construction-projects report (`APRAS-60`): one self-contained
+HTML document for the acting tenant, **one `div.page` per project** and no
+tenant totals header, rendered by
+`app/services/project_report_service.py` and served by
+`GET /api/v1/projects/report`. `POST /api/v1/projects/report/save` files the
+same HTML in the Documents module. **The PDF is the browser's Print dialog**,
+against the report's `@page`/`@media print` CSS: no server-side PDF renderer
+and **no new dependency**, because Vercel's serverless runtime cannot carry
+WeasyPrint's or wkhtmltopdf's native binaries.
+
+Four decisions carry it:
+
+1. **Three scoping mechanisms, one per entity.** `ConstructionProject` carries
+   its own `tenant_id` and is narrowed by the ambient `with_loader_criteria`.
+   `ProjectMilestone` and `ProjectUpdate` carry none — they are *inherited*
+   tables — so the renderer reaches them **only** through
+   `project.milestones` / `project.updates`, and a test walks the module's AST
+   to prove no `select()` over either exists. The acting tenant's own row is
+   covered by neither, so it is resolved with
+   `session.get(Tenant, tenant_context.acting_tenant_id(session) or DEFAULT_TENANT_ID)`
+   and never `select(Tenant).first()`, which would print another
+   condominium's logo and name.
+2. **The save route's permission set is exactly `projects:read` +
+   `documents:create`**, and `documents:folder_create` is deliberately *not*
+   required. `document_service.create_folder` demands it, so going through it
+   would answer 403 on a tenant's first save and 201 on the second — a
+   state-dependent authorization answer and a button that fails exactly once.
+   `_find_or_create_obras_folder` therefore constructs the fixed "Obras" row
+   itself, field for field, with the ACL taken from `select(Role)` over the
+   acting tenant. The `documents:create` assertion is `save_report`'s **first
+   statement**: a refused caller leaves no folder and no file on disk.
+3. **Two nullable columns, migration `0037_logo_and_planned_progress`.**
+   `tenant.logo_url` is the masthead logo and
+   `construction_project.planned_progress_json` is the contractor's planned
+   physical-progress curve (`[{"month": "YYYY-MM", "pct": float}]`), which the
+   "previsto até hoje" bar reads. Both are additive, un-backfilled and
+   **written by SQL/seed only** — this slice ships no upload UI and no curve
+   editor. No table is added, so the 53-table partition is unchanged.
+4. **Degradation is behaviour.** A zero budget, a null date, a missing cover
+   photo, an empty milestone list, an absent curve and a malformed
+   `photos_json` each render an em-dash, a placeholder or an omitted element;
+   the document never contains a visible `None`, `NaN` or `null`, and the
+   budget block never divides by zero.
+
+`ROUTE_PERMISSIONS` goes 201 → **203** and `PERMISSIONS` stays **174** — no
+new catalogue string. The 12 new parity cells live in the additive
+`backend/tests/data/parity_matrix_baseline_60.json`; the three pre-existing
+baselines stay byte-identical.
 
 ### Soft Delete
 

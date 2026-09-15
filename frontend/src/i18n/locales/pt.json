@@ -745,6 +745,11 @@
     "pageTitle": "Acompanhamento de Obras",
     "pageSubtitle": "Acompanhe o andamento físico, metas e execução financeira das reformas e melhorias do condomínio.",
     "newProject": "Nova Obra",
+    "generateReport": "Gerar relatório",
+    "saveToDocuments": "Salvar em Documentos",
+    "reportSaved": "Relatório salvo em Documentos.",
+    "reportError": "Não foi possível gerar o relatório.",
+    "reportSaveError": "Não foi possível salvar o relatório em Documentos.",
     "allStatuses": "Todos os Status",
     "status": {
       "PLANNED": "Planejada",

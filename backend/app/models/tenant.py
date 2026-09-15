@@ -114,6 +114,12 @@ class Tenant(SQLModel, table=True):
         default_factory=list,
         sa_column=Column(JSON, nullable=False, server_default="[]"),
     )
+    # The masthead logo of every document this tenant's modules render
+    # (APRAS-60). Nullable, with no backfill and no server default: an
+    # install that never uploaded one renders its documents without an
+    # ``<img>`` rather than with a broken one. Written by SQL/seed for now --
+    # this task deliberately ships no upload UI and no API for it.
+    logo_url: str | None = Field(default=None, nullable=True)
     created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
     updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
 

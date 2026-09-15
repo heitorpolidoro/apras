@@ -1,6 +1,6 @@
 """Every mapped route is in a *declared enforcement form* (APRAS-51).
 
-The defect this module closes: `ROUTE_PERMISSIONS` maps 201 routes to one
+The defect this module closes: `ROUTE_PERMISSIONS` maps 203 routes to one
 catalogue permission each, and on 25 of them that permission was never
 consulted anywhere in the request. The map claimed a gate the code did not
 have. Nothing noticed, because `test_permission_registry.py` only asserts a
@@ -21,7 +21,7 @@ Two oracles, both mechanical, both here:
 What the two together prove: every mapped route is in a declared form, and
 every swept route refuses, in a declared shape, a caller who holds everything
 but its mapped permission. What they do **not** prove: that the refusal is
-*caused* by the mapped permission on the 135 in-handler routes. For those the
+*caused* by the mapped permission on the 137 in-handler routes. For those the
 sweep is a strong necessary condition, and `REFUSAL_SHAPES` is what stops an
 unrelated 404 or 400 from passing silently -- which is exactly what an earlier
 `not 2xx` assertion did on three routes whose permission was never read.
@@ -89,13 +89,19 @@ HARNESS_PATH = BACKEND_ROOT / "tests" / "matrix_world.py"
 #: 1206-cell star test running against a world its golden file never recorded.
 #: The guard is against an *unnoticed* edit, not against every edit.
 #:
+#: APRAS-60 moved it once more: `REQUEST_BODIES` gains the `NO_BODY` entry of
+#: `POST /api/v1/projects/report/save`, without which the harness would post a
+#: `null` body to a route that takes none. The world is otherwise unchanged,
+#: and that is proven rather than asserted -- all five `tests/data/*.json`
+#: baselines stay byte-identical.
+#:
 #: APRAS-54 moved it deliberately and twice: `ruff format` reflowed the file,
 #: and the private `_now()` at its top was collapsed into `app.core.clock`
 #: along with the other five re-implementations in the tree. The world it
 #: builds is unchanged, and that is proven rather than asserted -- all five
 #: `tests/data/*.json` baselines stay byte-identical, which is exactly the
 #: property this pin exists to protect.
-HARNESS_SHA256 = "57be2567eda5c6a4e6611fba01dd3e34b0176c53f5064f1c860fc6df40e21c0b"
+HARNESS_SHA256 = "b82e54d5b419759e47357257233687a2569c719d125f0195bcf5411e7e2e1012"
 
 
 # ---------------------------------------------------------------------------
@@ -111,7 +117,7 @@ EXPECTED_MEMBERSHIP_FORM = 3
 #: **E** -- `SERVICE_ENFORCED`, §4.4.
 EXPECTED_SERVICE_FORM = 5
 #: **H** -- derived, never listed: everything else, proven by the sweep.
-EXPECTED_IN_HANDLER_FORM = 135
+EXPECTED_IN_HANDLER_FORM = 137
 
 #: The exception allowlist. It ships **empty** and a future task may not grow
 #: it without deleting `test_no_mapped_route_is_unenforced`'s assertion: a
@@ -395,7 +401,7 @@ def superuser_form() -> set[tuple[str, str]]:
 def in_handler_form() -> set[tuple[str, str]]:
     """**H** is *derived*, deliberately, and never hand-listed.
 
-    A hand list of 135 keys would give a future author somewhere to type a new
+    A hand list of 137 keys would give a future author somewhere to type a new
     unenforced route and call it declared. A derived bucket sends every new
     route straight into the sweep, which cannot be satisfied by typing.
     """
@@ -422,7 +428,7 @@ def success_status(method: str, path: str) -> int:
 
 
 def test_the_five_forms_partition_route_permissions():
-    """53 + 5 + 3 + 5 + 135 == 201, as an equality against the registry."""
+    """53 + 5 + 3 + 5 + 137 == 203, as an equality against the registry."""
     dependency = set(dependency_form())
     superuser = superuser_form()
     membership = set(MEMBERSHIP_GATED)
@@ -443,7 +449,7 @@ def test_the_five_forms_partition_route_permissions():
             + EXPECTED_SERVICE_FORM
             + EXPECTED_IN_HANDLER_FORM
         )
-        == 201
+        == 203
         == len(ROUTE_PERMISSIONS)
     )
 
@@ -582,7 +588,7 @@ def test_the_permission_required_docstring_claims_no_fixed_route_count():
 
 
 def test_the_swept_routes_are_two_hundred_and_one_minus_eight():
-    assert len(SWEPT_ROUTES) == 193
+    assert len(SWEPT_ROUTES) == 195
     assert set(SWEPT_ROUTES) == (
         set(ROUTE_PERMISSIONS) - set(MEMBERSHIP_GATED) - set(SERVICE_ENFORCED)
     )

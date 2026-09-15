@@ -12,6 +12,7 @@ import type {
   ProjectUpdateCreatePayload,
   ProjectUpdatePayload,
 } from '../types/project';
+import type { AssociationDocument } from '../types/document';
 
 export interface ProjectFilterParams {
   status?: ProjectStatus;
@@ -98,4 +99,25 @@ export const deleteProjectUpdate = async (
   updateId: string
 ): Promise<void> => {
   await apiClient.delete(`/projects/${projectId}/updates/${updateId}`);
+};
+
+/**
+ * The printable construction-projects report (APRAS-60).
+ *
+ * `responseType: "text"` rather than a bare `window.open` of the API URL: the
+ * route is authenticated and a new tab would carry no `Authorization` header,
+ * so the caller renders the returned HTML from an object URL instead.
+ */
+export const getProjectsReport = async (): Promise<string> => {
+  const response = await apiClient.get<string>('/projects/report', {
+    responseType: 'text',
+  });
+  return response.data;
+};
+
+export const saveProjectsReport = async (): Promise<AssociationDocument> => {
+  const response = await apiClient.post<AssociationDocument>(
+    '/projects/report/save'
+  );
+  return response.data;
 };

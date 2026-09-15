@@ -106,6 +106,12 @@ ignore = [
 # route contract, and it is paid deliberately.
 "app/api/v1/endpoints/**" = ["A002"]
 "app/core/**" = ["INP001", "E501"]
+# The approved report's CSS is one module-level constant, ported rule for rule
+# from `docs/tasks/APRAS-60-mock-generator.py` so the emitted document stays
+# diffable against the approved mock. Re-wrapping ~90 declarations under 88
+# columns destroys exactly that property and buys nothing: CSS ignores the
+# line breaks either way.
+"app/services/project_report_service.py" = ["E501"]
 "app/models/**" = ["INP001"]
 "app/schemas/**" = ["INP001"]
 "app/main.py" = ["INP001"]

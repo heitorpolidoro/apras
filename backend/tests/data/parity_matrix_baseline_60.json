@@ -1,0 +1,59 @@
+{
+  "_meta": {
+    "cell_count": 12,
+    "generator": "tests/tools/record_parity_baseline.py",
+    "harness": "tests/matrix_world.py",
+    "merge_base_sha": "09f7e2ecd8d00645446418f4c081aba48ceb7c1d",
+    "regenerate": "cd backend && POSTGRES_URL=sqlite:// SECRET_KEY=parity-matrix uv run python -m tests.tools.record_parity_baseline --out tests/data/parity_matrix_baseline_60.json --merge-base 09f7e2ecd8d00645446418f4c081aba48ceb7c1d --routes 'GET /api/v1/projects/report' --routes 'POST /api/v1/projects/report/save'"
+  },
+  "cells": {
+    "ADMINISTRATOR": {
+      "GET": {
+        "/api/v1/projects/report": 200
+      },
+      "POST": {
+        "/api/v1/projects/report/save": 201
+      }
+    },
+    "DIRECTOR": {
+      "GET": {
+        "/api/v1/projects/report": 200
+      },
+      "POST": {
+        "/api/v1/projects/report/save": 201
+      }
+    },
+    "GUEST": {
+      "GET": {
+        "/api/v1/projects/report": 403
+      },
+      "POST": {
+        "/api/v1/projects/report/save": 403
+      }
+    },
+    "MANAGER": {
+      "GET": {
+        "/api/v1/projects/report": 200
+      },
+      "POST": {
+        "/api/v1/projects/report/save": 403
+      }
+    },
+    "PORTEIRO": {
+      "GET": {
+        "/api/v1/projects/report": 403
+      },
+      "POST": {
+        "/api/v1/projects/report/save": 403
+      }
+    },
+    "RESIDENT": {
+      "GET": {
+        "/api/v1/projects/report": 200
+      },
+      "POST": {
+        "/api/v1/projects/report/save": 403
+      }
+    }
+  }
+}

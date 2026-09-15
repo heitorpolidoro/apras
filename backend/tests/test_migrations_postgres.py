@@ -51,8 +51,9 @@ _BEFORE_0033 = "0032_rename_user_type_to_role"
 #: line instead of eight -- and so the eight cases stay claims about *head*
 #: rather than about whichever revision was last when they were written. The
 #: relative `-1` steps were retired for the same reason (see `_BEFORE_0033`).
-HEAD_REVISION = "0036_add_infraction_tables"
-_BEFORE_HEAD = "0035_add_subscription_tables"
+_BEFORE_0036 = "0035_add_subscription_tables"
+HEAD_REVISION = "0037_logo_and_planned_progress"
+_BEFORE_HEAD = "0036_add_infraction_tables"
 
 pytestmark = pytest.mark.skipif(
     not TEST_POSTGRES_URL,
@@ -2641,12 +2642,12 @@ def test_0036_seeds_nothing(isolated_pg_engine):
 
 
 def test_0036_round_trips(isolated_pg_engine):
-    """`downgrade -1` drops all seven and a re-`upgrade` restores them."""
+    """Downgrading past 0036 drops all seven and a re-`upgrade` restores them."""
     assert _current_revision(isolated_pg_engine) == HEAD_REVISION
 
-    _run_alembic("downgrade", "-1")
+    _run_alembic("downgrade", _BEFORE_0036)
 
-    assert _current_revision(isolated_pg_engine) == _BEFORE_HEAD
+    assert _current_revision(isolated_pg_engine) == _BEFORE_0036
     assert _present_tables(isolated_pg_engine, _INFRACTION_TABLES) == set()
 
     _run_alembic("upgrade", "head")
@@ -2655,6 +2656,90 @@ def test_0036_round_trips(isolated_pg_engine):
     assert _present_tables(isolated_pg_engine, _INFRACTION_TABLES) == set(
         _INFRACTION_TABLES
     )
+
+
+# ---------------------------------------------------------------------------
+# 0037_logo_and_planned_progress (APRAS-60) - two nullable columns, no table
+# ---------------------------------------------------------------------------
+
+
+def test_0037_adds_two_nullable_columns_and_no_table(isolated_pg_engine):
+    """The whole of the migration, asserted against the live schema.
+
+    Nullable is the load-bearing half: the report degrades to "no `<img>`" and
+    "no previsto curve" on a `NULL`, so a `NOT NULL` here would have forced a
+    backfill with a value nobody chose.
+    """
+    assert "logo_url" in _columns(isolated_pg_engine, "tenant")
+    assert "planned_progress_json" in _columns(
+        isolated_pg_engine, "construction_project"
+    )
+    with isolated_pg_engine.connect() as conn:
+        nullability = dict(
+            conn.execute(
+                text(
+                    "SELECT table_name || '.' || column_name, is_nullable "
+                    "FROM information_schema.columns WHERE "
+                    "(table_name = 'tenant' AND column_name = 'logo_url') OR "
+                    "(table_name = 'construction_project' "
+                    "AND column_name = 'planned_progress_json')"
+                )
+            ).all()
+        )
+    assert nullability == {
+        "tenant.logo_url": "YES",
+        "construction_project.planned_progress_json": "YES",
+    }
+
+
+def test_0037_seeds_nothing(isolated_pg_engine):
+    """No backfill, no server default: every existing row reads `NULL`."""
+    with isolated_pg_engine.connect() as conn:
+        assert (
+            conn.execute(
+                text("SELECT count(*) FROM tenant WHERE logo_url IS NOT NULL")
+            ).scalar()
+            == 0
+        )
+        defaults = (
+            conn.execute(
+                text(
+                    "SELECT column_default FROM information_schema.columns "
+                    "WHERE (table_name = 'tenant' AND column_name = 'logo_url') OR "
+                    "(table_name = 'construction_project' "
+                    "AND column_name = 'planned_progress_json')"
+                )
+            )
+            .scalars()
+            .all()
+        )
+    assert set(defaults) == {None}
+
+
+def test_0037_round_trips(isolated_pg_engine):
+    """`downgrade -1` drops both columns and a re-`upgrade` restores them."""
+    assert _current_revision(isolated_pg_engine) == HEAD_REVISION
+    tables_at_head = _names(isolated_pg_engine, _TABLE_NAMES)
+
+    _run_alembic("downgrade", _BEFORE_HEAD)
+
+    assert _current_revision(isolated_pg_engine) == _BEFORE_HEAD
+    assert "logo_url" not in _columns(isolated_pg_engine, "tenant")
+    assert "planned_progress_json" not in _columns(
+        isolated_pg_engine, "construction_project"
+    )
+    # Additive means additive, in both directions: the 53-table partition is
+    # untouched, so the table set either side of the step is the same set.
+    assert _names(isolated_pg_engine, _TABLE_NAMES) == tables_at_head
+
+    _run_alembic("upgrade", "head")
+
+    assert _current_revision(isolated_pg_engine) == HEAD_REVISION
+    assert "logo_url" in _columns(isolated_pg_engine, "tenant")
+    assert "planned_progress_json" in _columns(
+        isolated_pg_engine, "construction_project"
+    )
+    assert _names(isolated_pg_engine, _TABLE_NAMES) == tables_at_head
 
 
 def test_0036_matches_the_model_metadata(isolated_pg_engine):

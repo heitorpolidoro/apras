@@ -284,9 +284,12 @@ def test_the_route_is_unguarded_by_permission_and_superuser_guarded():
     # `tests/data/parity_matrix_baseline_40.json` and `_44.json`. APRAS-44
     # adds **no** unguarded route, which is why 22 did not move there.
     # APRAS-52 adds exactly one, the operator-side subscription-history read,
-    # taking the count to 23 while `ROUTE_PERMISSIONS` stays at 201.
+    # taking the count to 23 while `ROUTE_PERMISSIONS` stays at 201. APRAS-60
+    # then adds two *mapped* routes and no unguarded one -- the construction
+    # projects report and its save -- taking 201 -> 203 with its 12 cells in
+    # the additive `parity_matrix_baseline_60.json`.
     assert len(UNGUARDED_ROUTES) == 23
-    assert len(ROUTE_PERMISSIONS) == 201
+    assert len(ROUTE_PERMISSIONS) == 203
 
     route = next(
         r

@@ -362,3 +362,129 @@ describe('ConstructionTrackerPage handlers', () => {
     ).toBeNull();
   });
 });
+
+/**
+ * APRAS-60 — the two report buttons, their permission gates and their
+ * handlers. Kept in this file because the page's permission double
+ * (`mockPermissionSet`) and its API mock already live here; a sibling module
+ * would have to rebuild both.
+ */
+describe('ConstructionTrackerPage report actions', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockPermissionSet.mockReturnValue({ has: hasOf('ADMINISTRATOR') });
+    vi.mocked(projectsApi.getProjects).mockResolvedValue(mockProjectsResponse);
+    vi.mocked(projectsApi.getProjectDetail).mockResolvedValue(mockProjectDetail);
+    vi.mocked(projectsApi.getProjectsReport).mockResolvedValue(
+      '<html lang="pt-BR"><body>relatório</body></html>'
+    );
+    vi.mocked(projectsApi.saveProjectsReport).mockResolvedValue(
+      {} as never
+    );
+  });
+
+  it('renders both buttons for a caller holding both permissions', async () => {
+    mockPermissionSet.mockReturnValue({
+      has: (permission: string) =>
+        ['projects:read', 'documents:create'].includes(permission),
+    });
+    renderPage();
+
+    expect(
+      await screen.findByRole('button', { name: /Gerar relatório/i })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /Salvar em Documentos/i })
+    ).toBeInTheDocument();
+  });
+
+  it('hides "Gerar relatório" without projects:read', async () => {
+    mockPermissionSet.mockReturnValue({
+      has: (permission: string) => permission === 'documents:create',
+    });
+    renderPage();
+
+    await screen.findByRole('button', { name: /Salvar em Documentos/i });
+    expect(
+      screen.queryByRole('button', { name: /Gerar relatório/i })
+    ).toBeNull();
+  });
+
+  it('hides "Salvar em Documentos" without documents:create', async () => {
+    mockPermissionSet.mockReturnValue({
+      has: (permission: string) => permission === 'projects:read',
+    });
+    renderPage();
+
+    await screen.findByRole('button', { name: /Gerar relatório/i });
+    expect(
+      screen.queryByRole('button', { name: /Salvar em Documentos/i })
+    ).toBeNull();
+  });
+
+  it('opens the generated report in a new tab from an object URL', async () => {
+    const open = vi.fn();
+    const createObjectURL = vi.fn(() => 'blob:relatorio');
+    vi.stubGlobal('open', open);
+    vi.stubGlobal('URL', { ...URL, createObjectURL });
+    renderPage();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: /Gerar relatório/i })
+    );
+
+    await waitFor(() =>
+      expect(projectsApi.getProjectsReport).toHaveBeenCalledTimes(1)
+    );
+    await waitFor(() => expect(createObjectURL).toHaveBeenCalled());
+    expect(open).toHaveBeenCalledWith('blob:relatorio', '_blank');
+    vi.unstubAllGlobals();
+  });
+
+  it('saves the report and shows the success message', async () => {
+    renderPage();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: /Salvar em Documentos/i })
+    );
+
+    await waitFor(() =>
+      expect(projectsApi.saveProjectsReport).toHaveBeenCalledTimes(1)
+    );
+    expect(
+      await screen.findByText('Relatório salvo em Documentos.')
+    ).toBeInTheDocument();
+  });
+
+  it('surfaces an error when the save fails', async () => {
+    vi.mocked(projectsApi.saveProjectsReport).mockRejectedValue(
+      new Error('403')
+    );
+    renderPage();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: /Salvar em Documentos/i })
+    );
+
+    expect(
+      await screen.findByText(
+        'Não foi possível salvar o relatório em Documentos.'
+      )
+    ).toBeInTheDocument();
+  });
+
+  it('surfaces an error when the report cannot be generated', async () => {
+    vi.mocked(projectsApi.getProjectsReport).mockRejectedValue(
+      new Error('500')
+    );
+    renderPage();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: /Gerar relatório/i })
+    );
+
+    expect(
+      await screen.findByText('Não foi possível gerar o relatório.')
+    ).toBeInTheDocument();
+  });
+});

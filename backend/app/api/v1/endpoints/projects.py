@@ -4,6 +4,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
+from fastapi.responses import HTMLResponse
 from sqlmodel import Session
 
 from app.api import deps as api_deps
@@ -11,6 +12,7 @@ from app.core.exceptions import ProjectAccessForbiddenError
 from app.db import get_session
 from app.models.enums import ProjectStatus
 from app.models.user import User
+from app.schemas.document import AssociationDocumentRead
 from app.schemas.project import (
     MilestoneCreate,
     MilestoneRead,
@@ -23,6 +25,7 @@ from app.schemas.project import (
     ProjectUpdateRead,
     ProjectUpdateSchema,
 )
+from app.services import project_report_service
 from app.services.project_service import ProjectService
 
 router = APIRouter()
@@ -89,6 +92,42 @@ def create_project(
     _require_admin_permission(current_user, session, "projects:create")
     project = ProjectService.create_project(session, project_in)
     return ProjectRead.model_validate(project)
+
+
+# -----------------------------------------------------------------------------
+# Report endpoints (APRAS-60)
+#
+# Both are declared **above** `GET /{id}`: FastAPI matches in declaration
+# order, so a later `report` would be read as a `UUID` path parameter and
+# answer 422 instead of rendering anything.
+# -----------------------------------------------------------------------------
+
+
+@router.get("/report", response_class=HTMLResponse)
+def get_projects_report(
+    session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[User, Depends(api_deps.get_current_user)],
+) -> HTMLResponse:
+    """Render the acting tenant's construction projects as printable HTML."""
+    _require_read_permission(current_user, session, "projects:read")
+    return HTMLResponse(
+        content=project_report_service.get_report_html(session, current_user)
+    )
+
+
+@router.post("/report/save", status_code=status.HTTP_201_CREATED)
+def save_projects_report(
+    session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[User, Depends(api_deps.get_current_user)],
+) -> AssociationDocumentRead:
+    """Store the rendered report in the Document Center.
+
+    The permission set is exactly `projects:read` + `documents:create`. The
+    second is asserted by `save_report` itself, as its first statement, so a
+    refused caller leaves no folder and no file behind.
+    """
+    _require_read_permission(current_user, session, "projects:read")
+    return project_report_service.save_report(session, current_user)
 
 
 @router.get("/{id}")

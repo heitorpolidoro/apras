@@ -745,6 +745,11 @@
     "pageTitle": "Construction & Improvement Tracking",
     "pageSubtitle": "Track physical progress, stage milestones, and financial execution of HOA renovations and construction projects.",
     "newProject": "New Project",
+    "generateReport": "Generate report",
+    "saveToDocuments": "Save to Documents",
+    "reportSaved": "Report saved to Documents.",
+    "reportError": "The report could not be generated.",
+    "reportSaveError": "The report could not be saved to Documents.",
     "allStatuses": "All Statuses",
     "status": {
       "PLANNED": "Planned",

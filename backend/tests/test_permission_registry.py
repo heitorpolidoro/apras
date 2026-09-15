@@ -185,13 +185,19 @@ def test_route_count_is_fully_accounted_for():
     file stays byte-identical all the same: APRAS-40's 18 new cells live in
     `tests/data/parity_matrix_baseline_40.json` (§9.2) and APRAS-44's 108 in
     `tests/data/parity_matrix_baseline_44.json` (APRAS-44 §8.5).
+
+    APRAS-60 adds **two** permission-guarded routes and no unguarded one --
+    the construction-projects report and its save into the Documents module --
+    taking 224/201/23 to **226/203/23**, with its own 12 cells in
+    `tests/data/parity_matrix_baseline_60.json` and no catalogue permission
+    added (`PERMISSIONS` stays 174).
     """
     total = len(_all_route_keys())
     assert set(ROUTE_PERMISSIONS) & UNGUARDED_ROUTES == set()
     assert len(ROUTE_PERMISSIONS) + len(UNGUARDED_ROUTES) == total
     assert len(UNGUARDED_ROUTES) == 23
     assert len(ROUTE_PERMISSIONS) == total - 23
-    assert len(ROUTE_PERMISSIONS) == 201
+    assert len(ROUTE_PERMISSIONS) == 203
 
 
 def test_every_router_module_has_at_least_one_permission():

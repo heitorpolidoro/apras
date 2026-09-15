@@ -469,6 +469,14 @@ ROUTE_PERMISSIONS: dict[tuple[str, str], str] = {
     ("DELETE", "/api/v1/finance/transactions/{id}/invoice"): "finance:invoice_delete",
     # §4.15 projects -- /api/v1/projects
     ("GET", "/api/v1/projects"): "projects:read",
+    # APRAS-60: the printable report and its filing into the Documents
+    # module. The save route maps to `documents:create` and not to
+    # `projects:read` because the act it performs is the creation of a
+    # document; it additionally requires `projects:read` in the handler, and
+    # nothing else -- `documents:folder_create` is deliberately not required,
+    # or the first save of a tenant would 403 and the second would 201.
+    ("GET", "/api/v1/projects/report"): "projects:read",
+    ("POST", "/api/v1/projects/report/save"): "documents:create",
     ("GET", "/api/v1/projects/{id}"): "projects:read",
     ("POST", "/api/v1/projects"): "projects:create",
     ("PUT", "/api/v1/projects/{id}"): "projects:update",

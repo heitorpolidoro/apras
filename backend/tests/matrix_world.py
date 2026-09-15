@@ -1163,6 +1163,8 @@ REQUEST_BODIES: dict[tuple[str, str], BodySpec] = {
     ("PUT", "/api/v1/projects/{id}/milestones/{milestone_id}"): _static(
         {"title": "Matrix renamed milestone"}
     ),
+    # APRAS-60: the report save route takes no body at all.
+    ("POST", "/api/v1/projects/report/save"): NO_BODY,
     ("POST", "/api/v1/projects/{id}/updates"): _static(
         {"title": "Matrix new update", "content": "Matrix new update content"}
     ),

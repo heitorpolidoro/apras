@@ -2,8 +2,9 @@
 
 import uuid
 from datetime import date, datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
+from sqlalchemy import JSON, Column
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.core import clock
@@ -37,6 +38,16 @@ class ConstructionProject(SQLModel, table=True):
         default=ProjectStatus.PLANNED, nullable=False, index=True
     )
     cover_photo_url: str | None = Field(default=None, nullable=True)
+    # The contractor's planned physical-progress curve (APRAS-60): an ordered
+    # list of ``{"month": "YYYY-MM", "pct": float}`` points taken from the
+    # physical-financial schedule. Portable ``JSON`` rather than a Postgres
+    # type, for the reason migration ``0030`` records: the test harness builds
+    # this schema on ``sqlite://`` with ``SQLModel.metadata.create_all()``.
+    # Nullable with no backfill -- a project without a schedule renders the
+    # report's bar with no "previsto" curve at all. Written by SQL/seed only.
+    planned_progress_json: list[dict[str, Any]] | None = Field(
+        default=None, sa_column=Column(JSON, nullable=True)
+    )
     created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
     updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
 
