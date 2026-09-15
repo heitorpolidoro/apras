@@ -450,26 +450,13 @@ dependency.
 
 ## Mock
 
-The operator approved the layout on 2026-09-14. The approved artefacts are the
-**source of truth for structure, content and print behaviour**:
-
-* `docs/tasks/APRAS-60-mock.html` — the approved sheet (one project,
-  `realizado 22%` ahead of `previsto 13.2%`);
-* `docs/tasks/APRAS-60-mock-generator.py` — the generator that produced it.
-  **Read it before implementing**: its `CSS` constant and its `groups_html()`,
-  `one_bar()`, `cylinder_svg()` and `updates_html()` rendering rules are what
-  must be ported into the renderer. Its `timeline_html()`, `stages_html()`,
-  `gantt_svg()`, `curve_svg()` and `deadline_html()` are **dead code for this
-  task** — they are not emitted by the approved document and are out of scope;
-* `docs/tasks/APRAS-60-mock-atrasado.html` — realized behind planned
-  (`seg.b.behind`, muted red);
-* `docs/tasks/APRAS-60-mock-perto-adiantado.html`,
-  `docs/tasks/APRAS-60-mock-perto-atrasado.html`,
-  `docs/tasks/APRAS-60-mock-perto-igual.html` — the three
-  `abs(planned - realized) < 8` cases, all rendering `one close` with
-  `tag plan below`.
-
-The mocks' photos and logo are inline data URIs standing in for the real
+The operator approved the layout on 2026-09-14. `docs/tasks/APRAS-60-mock.html`
+is the **source of truth for structure, content and print behaviour**: one
+project sheet with `realizado 22%` ahead of `previsto 13.2%`. The behaviour of
+the progress bar in the other cases (realized behind planned → `seg.b.behind`,
+muted red; `abs(planned - realized) < 8` → `one close` with `tag plan below`)
+is pinned by the renderer's tests rather than by extra mock files. The mock's
+photos and logo are inline data URIs standing in for the real
 `cover_photo_url`, `photos_json` and `tenant.logo_url` values.
 
 ## Expected Results
