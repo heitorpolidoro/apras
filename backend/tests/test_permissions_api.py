@@ -196,6 +196,22 @@ def test_me_matches_get_effective_permissions(client: TestClient, session: Sessi
     assert body["permissions"] == sorted(deps.get_effective_permissions(user, session))
 
 
+def test_me_returns_exactly_the_three_documented_keys(
+    client: TestClient, session: Session
+):
+    """The body is `{tenant_id, permissions, disabled_modules}` (APRAS-57).
+
+    Exact, so a re-added field fails CI: APRAS-57 removed the role landing
+    preference from the payload and nothing may quietly grow back onto the
+    one endpoint every authenticated screen reads on boot.
+    """
+    user = _user(session)
+
+    body = client.get(ME_URL, headers=_auth(user)).json()
+
+    assert set(body) == {"tenant_id", "permissions", "disabled_modules"}
+
+
 def test_me_reports_no_disabled_modules_for_an_all_on_tenant(
     client: TestClient, session: Session
 ):

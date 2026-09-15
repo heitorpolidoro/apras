@@ -449,3 +449,104 @@
   tenant scope. That is correct today, but an operator who renames the tenant's "Obras" folder will silently get a
   second one on the next save. A stable marker (a system-folder flag or a fixed id per tenant) would make the
   "created once" property independent of the display name.
+
+## [APRAS-57] Remover landing_path do modelo de papel — 2026-09-15
+
+- The spec says `ProtectedRoute.guestWelcome.test.tsx` has "one non-landing case". It
+  has five cases, two of which are permission cases ("lets a DIRECTOR through…",
+  "shows the restricted-access message to a caller holding no tasks permission"). Both
+  are already covered by `ProtectedRoute.permissions.test.tsx` ("renders the page when
+  the rule's module permission is held" / 'renders "Acesso restrito" when it is not'),
+  so the spec's "if it is not already covered there" escape hatch keeps the outcome
+  correct — but the count is wrong and should be corrected so the developer does not go
+  looking for a single case.
+- While removing `landingRedirect` from `routeAccess.ts` and `permissions.ts`, the
+  neighbouring comments say the flag marks "the two routes"; it marks three. Worth
+  noting in the spec that those comments disappear with the flag rather than being
+  repaired.
+- `ProtectedRoute.tsx` keeps `useMyPermissions` for `disabled_modules`; spelling that
+  out in the "Files touched" bullet would remove the small chance a developer strips the
+  hook wholesale and breaks the module-off copy.
+
+## [APRAS-57] Remover landing_path do modelo de papel — 2026-09-15 (spec_review round 2)
+
+- Result 2's third grep path, `frontend/src/**/__tests__`, is shell-dependent:
+  it recurses under zsh, but under bash without `globstar` it degrades to
+  `frontend/src/*/__tests__`, which matches no existing directory and makes
+  grep error out rather than report cleanly. A shell-agnostic form —
+  e.g. `grep -rln <pattern> backend/tests frontend/src --include='*.test.ts'
+  --include='*.test.tsx' --include='permissionFixtures.ts'`, or simply grepping
+  `frontend/src` and allowlisting — would verify the same thing without
+  depending on the operator's shell.
+- Result 14 requires `AGENTS.md` to contain zero occurrences of `landing_path`
+  or `landingRedirect`, while the Files-touched entry says the paragraphs are
+  "rewritten to describe the post-removal behaviour". A rewrite phrased as
+  "roles no longer carry a `landing_path`" would satisfy the prose intent and
+  fail the grep. Result 14 is the binding criterion, so the developer should
+  drop the terms entirely rather than describe their absence.
+
+## [APRAS-61] Perfil do condomínio com upload do logo — 2026-09-15 (spec_review round 1)
+
+- §"Test criteria", frontend: "the page renders `RestrictedAccessMessage` for a caller
+  without `tenants:profile_update`" is loosely worded — that component is a
+  module-private const inside
+  `frontend/src/features/user-administration/components/ProtectedRoute.tsx:37`, is not
+  exported, and the page itself carries no gate (D6 is explicit that the gate is the
+  `ROUTE_ACCESS` rule). State that the test renders the page *through* `ProtectedRoute`,
+  so an implementer does not export the component or duplicate an in-page gate.
+- §"Behavior — backend": `TenantProfileUpdate = {name: str | None}` does not say what
+  `PATCH` with `name: null` (or an empty body) answers. A 200 no-op is the natural
+  reading, but one sentence removes the choice.
+- `AGENTS.md:738` ("**201/174** and all four parity baselines stay byte-identical") is
+  prose that `test_docs_agents_md.py` does not check, and it is already stale. Not this
+  task's debt, but the paragraph is being edited anyway.
+- Consider naming the follow-up from D4 ("show the tenant logo in the sidebar header")
+  as a concrete backlog item when this ships.
+
+
+## [APRAS-61] Perfil do condomínio com upload do logo — 2026-09-15 (spec_review round 2)
+
+None.
+
+## [APRAS-57] Remover landing_path do modelo de papel — 2026-09-15 (code_review round 1)
+
+- `backend/tests/test_roles.py` — the new
+  `test_update_role_ignores_an_unknown_landing_path_key` ends with
+  `assert not hasattr(session.get(Role, ut.id), "landing_path")`. That is an
+  assertion about the *mapped class*, already pinned exactly by
+  `test_role_schemas_expose_permissions`; it cannot observe the still-present
+  DB column, so the docstring's "nothing about a landing is persisted" claims
+  slightly more than the code shows. The 200 + exact-response-keys assertions
+  above it are the load-bearing ones and they are right. Non-blocking.
+- `frontend/src/__tests__/RootRedirect.test.tsx` — the case "renders the
+  general dashboard for a caller whose role formerly carried /welcome" drives
+  `withPermissions([])`, i.e. it is distinguished from the `/gate` case only by
+  its title. Harmless, but the guest persona's identity is now carried by the
+  test name alone.
+
+
+## [APRAS-57] Remover landing_path do modelo de papel — 2026-09-15 (code_review round 2)
+
+* `frontend/src/__tests__/RootRedirect.test.tsx` — the second case is titled
+  "…formerly carried /welcome" but is driven by `withPermissions([])`, identical in
+  substance to the third ordinary-caller case save for the empty permission set.
+  It is not wrong, just nearly redundant; a comment naming the guest persona
+  explicitly (as the `/gate` case does) would carry the intent better.
+* `backend/tests/test_role_permissions.py:332` — the function is still named
+  `test_role_read_carries_no_role_and_no_allowed_menus` while its docstring now
+  describes a three-key set. Renaming it to match what it pins today would help
+  the next reader.
+
+
+## [APRAS-57] Remover landing_path do modelo de papel — 2026-09-15 (code_review round 3)
+
+* `frontend/src/__tests__/RootRedirect.test.tsx` — the second case
+  ("…formerly carried /welcome") asserts only that `Painel Geral` renders; its
+  sibling also asserts the routed pages are absent. Adding
+  `expect(screen.queryByText("Welcome Page")).toBeNull()` there would make the
+  "no navigation" claim symmetric across both persona cases. It is already
+  covered transitively by the `/gate` case.
+* `backend/tests/test_roles.py` — `assert not hasattr(session.get(Role, ut.id),
+  "landing_path")` pins the *model* shape rather than the stored row. That is
+  the stronger assertion for as long as the column survives APRAS-58, so this
+  is a note rather than a change request.

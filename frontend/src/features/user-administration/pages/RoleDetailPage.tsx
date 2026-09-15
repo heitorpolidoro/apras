@@ -3,7 +3,6 @@ import { Link, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
-import { Select } from "../../../components/ui/select";
 import { useRoles } from "../../../hooks/useRoles";
 import { usePermissionCatalogue } from "../../../hooks/usePermissionQueries";
 import { usePermissionSet } from "../access/useCanAccess";
@@ -12,25 +11,6 @@ import RoleMembersPanel from "../components/RoleMembersPanel";
 import { useUpdateRole } from "../hooks/useRoleMutations";
 import { friendlyPermissionError } from "../utils/permissionErrors";
 import type { Role } from "../../../types/auth";
-
-/**
- * The in-app paths a role may pin its members to (IAM F5, APRAS-49 §8.1).
- *
- * Mirrors `backend/app/schemas/role.py::LANDING_PATHS`, which is the
- * authority: an open string would be an open redirect the moment
- * `RootRedirect` consumes it, so the backend rejects anything outside the
- * list with a 422 and this array only keeps the operator from having to
- * discover that by trial.
- */
-const LANDING_PATHS = [
-  "/",
-  "/tasks",
-  "/dashboard",
-  "/gate",
-  "/welcome",
-  "/announcements",
-  "/occurrences",
-] as const;
 
 /**
  * The editor proper, mounted under `key={role.id}`.
@@ -49,7 +29,6 @@ const RoleEditor: React.FC<{ role: Role }> = ({ role }) => {
 
   const [name, setName] = useState(role.name);
   const [selected, setSelected] = useState<string[]>(role.permissions ?? []);
-  const [landingPath, setLandingPath] = useState<string>(role.landing_path ?? "");
   const [error, setError] = useState<string | null>(null);
 
   const save = () => {
@@ -63,11 +42,6 @@ const RoleEditor: React.FC<{ role: Role }> = ({ role }) => {
           // verbatim, so editing a name never strips a permission the author
           // cannot grant (§6.3).
           permissions: selected,
-          // Always sent, and `null` when the operator picked "none" — this
-          // is the control §10.4 promises, and it is the reason the backend
-          // reads `model_fields_set` rather than a `None` sentinel: an
-          // explicit null has to stay distinguishable from an absent field.
-          landing_path: landingPath || null,
         },
       },
       { onError: (err) => setError(friendlyPermissionError(err, t)) },
@@ -102,31 +76,6 @@ const RoleEditor: React.FC<{ role: Role }> = ({ role }) => {
           onChange={(event) => setName(event.target.value)}
           className="w-72"
         />
-      </div>
-
-      <div>
-        <label
-          htmlFor="role-landing-path"
-          className="text-sm font-medium text-muted-foreground block mb-1"
-        >
-          {t("roles.landingPath")}
-        </label>
-        <Select
-          id="role-landing-path"
-          value={landingPath}
-          onChange={(event) => setLandingPath(event.target.value)}
-          className="w-72"
-        >
-          <option value="">{t("roles.landingPathNone")}</option>
-          {LANDING_PATHS.map((path) => (
-            <option key={path} value={path}>
-              {path}
-            </option>
-          ))}
-        </Select>
-        <p className="text-xs text-muted-foreground mt-1">
-          {t("roles.landingPathHint")}
-        </p>
       </div>
 
       {cataloguePending && (

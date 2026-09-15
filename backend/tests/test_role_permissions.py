@@ -331,7 +331,7 @@ def test_an_ordinary_role_can_still_be_deleted(client: TestClient, session: Sess
 def test_role_read_carries_no_role_and_no_allowed_menus(
     client: TestClient, session: Session
 ):
-    """`{id, name, permissions, landing_path}` -- and nothing else."""
+    """`{id, name, permissions}` -- and nothing else."""
     admin = make_user(
         session,
         id=uuid.uuid4(),
@@ -348,7 +348,7 @@ def test_role_read_carries_no_role_and_no_allowed_menus(
     )
     assert response.status_code == status.HTTP_200_OK
     for payload in response.json():
-        assert set(payload) == {"id", "name", "permissions", "landing_path"}
+        assert set(payload) == {"id", "name", "permissions"}
 
 
 def test_create_role_ignores_a_role_field(client: TestClient, session: Session):

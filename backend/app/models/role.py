@@ -45,14 +45,5 @@ class Role(SQLModel, table=True):
         default_factory=list,
         sa_column=Column(JSON, nullable=False, server_default="[]"),
     )
-    # Where a member of this role lands after login, or None (IAM F5,
-    # APRAS-49 §10.4). Landing is a *preference*, not authorization: no
-    # predicate over the catalogue separates "pin the gatekeeper to the gate"
-    # from "the board can also open the gate", so the two role-shaped
-    # redirects the enum switch expressed became data on the row. Validated
-    # against a small allowlist of in-app paths on the write schemas -- an
-    # open string would be an open redirect the moment `RootRedirect`
-    # consumes it.
-    landing_path: str | None = Field(default=None, nullable=True)
 
     users: list["User"] = Relationship(back_populates="roles", link_model=UserRoleLink)

@@ -50,7 +50,6 @@ const answer = (permissions: readonly string[], pending = false) => {
             data: {
               tenant_id: "t-1",
               permissions: [...permissions],
-              landing_path: null,
               // APRAS-39 §7: always sent; `[]` is the all-on state.
               disabled_modules: [],
             },
@@ -146,6 +145,20 @@ describe("ProtectedRoute gating on /permissions/me", () => {
     renderRoute("/admin/users", "Administração");
 
     expect(await screen.findByText("Administração")).toBeInTheDocument();
+  });
+
+  it("shows the restricted message in place on /dashboard to a caller holding no tasks permission", async () => {
+    // Moved here from `ProtectedRoute.guestWelcome.test.tsx`, whose other
+    // cases died with the landing redirect (APRAS-57). The claim it keeps is
+    // the one that never depended on landing: a denial is rendered **in
+    // place**, never as a bounce somewhere else.
+    authAs("RESIDENT");
+    answer(["finance:read"]);
+
+    renderRoute("/dashboard", "Tasks Content");
+
+    expect(await screen.findByText("Acesso restrito")).toBeInTheDocument();
+    expect(screen.queryByText("Tasks Content")).toBeNull();
   });
 
   it("admits an administrator to /admin/photo-approvals", async () => {

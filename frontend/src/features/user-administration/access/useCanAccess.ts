@@ -162,15 +162,11 @@ export const useCanShowMenuPredicate = (): ((
 };
 
 /**
- * "Could the caller open this path?", for the two consumers that must agree
- * about it (APRAS-39 §10.4, code review round 1 finding 2).
+ * "Could the caller open this path?", for a consumer holding a path rather
+ * than a rule.
  *
- * `RootRedirect` uses it to *choose* a landing; `ProtectedRoute` uses it to
- * decide whether the `landingRedirect` bounce may fire. They have to share one
- * evaluation, because the failure mode of two is precisely round 1's bug: the
- * chain rejects `/gate` and picks `/dashboard`, and `/dashboard`'s
- * `landingRedirect` sends the caller straight back to the `/gate` the chain
- * just rejected.
+ * `GeneralDashboardPage` is the caller: it asks before offering a shortcut,
+ * so the panel never points at a screen that would answer "Acesso restrito".
  *
  * A predicate rather than a boolean, so a caller can ask about several paths
  * without calling a hook in a loop. It reads the **real** set — the same one

@@ -72,7 +72,6 @@ const answerPermissions = (permissions: string[], disabled: string[] = []) => {
         data: {
           tenant_id: "t-1",
           permissions,
-          landing_path: null,
           disabled_modules: disabled,
         },
       });

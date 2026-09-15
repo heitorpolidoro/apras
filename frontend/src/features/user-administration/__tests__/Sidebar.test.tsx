@@ -51,7 +51,6 @@ const renderSidebar = (
           data: {
             tenant_id: "t-1",
             permissions: [...permissions],
-            landing_path: null,
             disabled_modules: [],
           },
         })
@@ -191,7 +190,6 @@ const renderSidebarWithController = (
           data: {
             tenant_id: "t-1",
             permissions: [...permissions],
-            landing_path: null,
             disabled_modules: [],
           },
         })

@@ -87,7 +87,6 @@ def profile_role(
         name=name,
         tenant_id=tenant_id,
         permissions=sorted(bundle(profile)),
-        landing_path={"PORTEIRO": "/gate", "GUEST": "/welcome"}.get(profile),
     )
     session.add(role)
     session.commit()

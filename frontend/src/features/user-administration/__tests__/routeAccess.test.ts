@@ -43,21 +43,23 @@ describe("ROUTE_ACCESS / NAV_ITEMS", () => {
     expect(unruled).toEqual([]);
   });
 
-  it("only /categories, /dashboard, and /tasks carry landingRedirect, and nothing carries legacyMenu", () => {
+  it("no rule carries landingRedirect, and none carries legacyMenu", () => {
     const withLegacyMenu = Object.entries(ROUTE_ACCESS)
       .filter(([, rule]) => "legacyMenu" in rule)
       .map(([path]) => path)
       .sort();
     const withLanding = Object.entries(ROUTE_ACCESS)
-      .filter(([, rule]) => "landingRedirect" in rule && rule.landingRedirect)
+      .filter(([, rule]) => "landingRedirect" in rule)
       .map(([path]) => path)
       .sort();
 
-    // `legacyMenu` died with the `allowed_menus` gate (IAM F5, §4.1); its
-    // sibling `landingRedirect` survives on exactly the landing-honouring routes,
-    // because landing is a preference rather than authorization (§10.4).
+    // `legacyMenu` died with the `allowed_menus` gate (IAM F5, §4.1) and
+    // APRAS-57 buried its sibling `landingRedirect` with the role landing
+    // preference: `/` is one page for everybody and no route bounces a
+    // caller anywhere. A rule is now its shape and nothing else, so this
+    // stays a **negative** assertion naming the dead key literally.
     expect(withLegacyMenu).toEqual([]);
-    expect(withLanding).toEqual(["/categories", "/dashboard", "/tasks"]);
+    expect(withLanding).toEqual([]);
   });
 
   it("the two role routes share one rule shape", () => {

@@ -4,11 +4,6 @@ export interface Role {
   /** The role's permission bundle (IAM F2 put it on `RoleRead`).
    *  Optional so every pre-existing `Role` fixture keeps type-checking. */
   permissions?: string[];
-  /** Where a member of this role lands after login, or null (IAM F5,
-   *  APRAS-49 §10.4). Landing is a preference, not authorization: the enum
-   *  switch that sent a GUEST to `/welcome` and a PORTEIRO to `/gate` is now
-   *  this column, editable in the role editor. */
-  landing_path?: string | null;
 }
 
 /** One membership of the *calling* user, as returned by `GET /auth/me`. */

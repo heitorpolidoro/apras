@@ -13,11 +13,6 @@ export interface PermissionDescriptor {
 export interface MyPermissions {
   tenant_id: string;
   permissions: PermissionKey[];
-  /** The first non-null `landing_path` among my roles in this tenant,
-   *  ordered by role name, or null (IAM F5, APRAS-49 §10.4). It follows the
-   *  **effective** (simulation-aware) identity because landing is a
-   *  preference; route *access* stays on the real set. */
-  landing_path?: string | null;
   /** The acting tenant's turned-off modules, sorted (APRAS-39 §7).
    *
    *  Required, not optional: `MyPermissionsRead` defaults it to `[]`, so the
@@ -72,16 +67,11 @@ export interface TenantModules {
  * through the whole-catalogue short-circuit, so the rule would offer the menu
  * to a user the API answers 403.
  *
- * `landingRedirect` marks the two routes that honour the caller's
- * `landing_path` (IAM F5, APRAS-49 §10.4). It is typed `never` on the other
- * two arms so a third one cannot be added by accident. F5 deleted its
- * sibling `legacyMenu` together with the menu gate it read (§4.1).
+ * The rule carries nothing beyond its shape: APRAS-57 deleted the
+ * landing-redirect flag with the role landing preference, as F5 had already
+ * deleted `legacyMenu` with the menu gate it read (§4.1).
  */
 export type AccessRule =
-  | { module: string; landingRedirect?: boolean; superuser?: never }
-  | {
-      anyOf: readonly PermissionKey[];
-      landingRedirect?: never;
-      superuser?: never;
-    }
-  | { superuser: true; landingRedirect?: never };
+  | { module: string; superuser?: never }
+  | { anyOf: readonly PermissionKey[]; superuser?: never }
+  | { superuser: true };

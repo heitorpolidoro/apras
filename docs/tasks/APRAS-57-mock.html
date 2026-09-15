@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>APRAS-57 — sem landing_path</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-50 text-slate-900">
+<div class="max-w-5xl mx-auto p-6 space-y-6">
+
+  <header class="space-y-1">
+    <h1 class="text-2xl font-bold">APRAS-57 — remoção do landing_path</h1>
+    <p class="text-sm text-slate-600">Duas telas afetadas: o editor de papel (perde o seletor e para de enviar o campo) e a rota <code>/</code> (passa a renderizar o dashboard geral para todo mundo).</p>
+  </header>
+
+  <nav class="flex gap-2 border-b border-slate-200">
+    <button data-tab="role" class="tab px-4 py-2 text-sm font-medium border-b-2 border-slate-900">Editor de papel</button>
+    <button data-tab="root" class="tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-slate-500">Rota /</button>
+    <button data-tab="before" class="tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-slate-500">Antes × depois</button>
+  </nav>
+
+  <!-- ROLE EDITOR -->
+  <section id="panel-role" class="panel space-y-6">
+    <div class="bg-white rounded-lg border border-slate-200 p-6 space-y-6">
+      <div class="flex items-center justify-between">
+        <h2 class="text-xl font-bold">Porteiro</h2>
+        <button class="px-3 py-1.5 text-sm border border-slate-300 rounded-md">Voltar</button>
+      </div>
+
+      <div>
+        <label class="text-sm font-medium text-slate-500 block mb-1" for="role-name">Nome</label>
+        <input id="role-name" value="Porteiro" class="w-72 border border-slate-300 rounded-md px-3 py-2 text-sm" />
+      </div>
+
+      <div class="rounded-md border border-dashed border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-800">
+        Onde ficava <strong>“Página inicial do papel”</strong> não há mais nada: nem o <code>&lt;select&gt;</code>, nem a dica, nem as chaves <code>roles.landingPath*</code>.
+      </div>
+
+      <div>
+        <h3 class="text-sm font-semibold mb-2">Permissões</h3>
+        <div class="grid grid-cols-2 gap-2 text-sm">
+          <label class="flex items-center gap-2 border border-slate-200 rounded px-3 py-2"><input type="checkbox" checked /> gate:checkin</label>
+          <label class="flex items-center gap-2 border border-slate-200 rounded px-3 py-2"><input type="checkbox" checked /> tasks:read</label>
+          <label class="flex items-center gap-2 border border-slate-200 rounded px-3 py-2"><input type="checkbox" /> visitors:create</label>
+          <label class="flex items-center gap-2 border border-slate-200 rounded px-3 py-2"><input type="checkbox" /> packages:queue_read</label>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-3">
+        <button class="px-3 py-2 text-sm border border-slate-300 rounded-md">Cancelar</button>
+        <button id="save" class="px-3 py-2 text-sm rounded-md bg-slate-900 text-white">Salvar</button>
+      </div>
+    </div>
+
+    <div class="bg-slate-900 text-slate-100 rounded-lg p-4 text-xs font-mono">
+      <div class="text-slate-400 mb-1">PATCH /api/v1/roles/&lt;id&gt;</div>
+      <pre id="payload">clique em Salvar</pre>
+    </div>
+  </section>
+
+  <!-- ROOT -->
+  <section id="panel-root" class="panel hidden space-y-4">
+    <div class="bg-white rounded-lg border border-slate-200 p-6">
+      <p class="text-sm text-slate-600 mb-3">Escolha o papel do usuário autenticado e veja para onde <code>/</code> leva:</p>
+      <div class="flex gap-2 mb-4">
+        <button class="who px-3 py-1.5 text-sm rounded-md bg-slate-900 text-white" data-who="Porteiro">Porteiro</button>
+        <button class="who px-3 py-1.5 text-sm rounded-md border border-slate-300" data-who="Convidado">Convidado</button>
+        <button class="who px-3 py-1.5 text-sm rounded-md border border-slate-300" data-who="Diretor">Diretor</button>
+      </div>
+      <div class="rounded-md border border-slate-200 p-4">
+        <div class="text-xs text-slate-500">URL</div>
+        <div class="font-mono text-sm mb-3">/</div>
+        <div class="text-xs text-slate-500">Renderiza</div>
+        <div class="font-semibold">GeneralDashboardPage</div>
+        <p id="who-note" class="text-sm text-slate-600 mt-2">Porteiro: nenhum redirecionamento para <code>/gate</code>. O menu continua oferecendo a Portaria normalmente.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- BEFORE/AFTER -->
+  <section id="panel-before" class="panel hidden">
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="bg-white rounded-lg border border-slate-200 p-4">
+        <h3 class="font-semibold mb-2 text-slate-500">Antes</h3>
+        <pre class="text-xs font-mono whitespace-pre-wrap">GET /permissions/me
+{
+  "tenant_id": "...",
+  "permissions": [...],
+  "landing_path": "/gate",
+  "disabled_modules": []
+}</pre>
+      </div>
+      <div class="bg-white rounded-lg border border-slate-200 p-4">
+        <h3 class="font-semibold mb-2 text-emerald-700">Depois</h3>
+        <pre class="text-xs font-mono whitespace-pre-wrap">GET /permissions/me
+{
+  "tenant_id": "...",
+  "permissions": [...],
+  "disabled_modules": []
+}</pre>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+  document.querySelectorAll(".tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".tab").forEach((t) => {
+        t.classList.remove("border-slate-900");
+        t.classList.add("border-transparent", "text-slate-500");
+      });
+      tab.classList.add("border-slate-900");
+      tab.classList.remove("border-transparent", "text-slate-500");
+      document.querySelectorAll(".panel").forEach((p) => p.classList.add("hidden"));
+      document.getElementById("panel-" + tab.dataset.tab).classList.remove("hidden");
+    });
+  });
+
+  document.getElementById("save").addEventListener("click", () => {
+    const permissions = [...document.querySelectorAll('#panel-role input[type=checkbox]')]
+      .filter((c) => c.checked)
+      .map((c) => c.parentElement.textContent.trim());
+    document.getElementById("payload").textContent = JSON.stringify(
+      { name: document.getElementById("role-name").value, permissions },
+      null,
+      2,
+    );
+  });
+
+  const notes = {
+    Porteiro: "Porteiro: nenhum redirecionamento para /gate. O menu continua oferecendo a Portaria normalmente.",
+    Convidado: "Convidado: nenhum redirecionamento para /welcome; cartões sem permissão simplesmente não aparecem.",
+    Diretor: "Diretor: comportamento inalterado — já caía no dashboard geral.",
+  };
+  document.querySelectorAll(".who").forEach((b) => {
+    b.addEventListener("click", () => {
+      document.querySelectorAll(".who").forEach((x) => {
+        x.className = "who px-3 py-1.5 text-sm rounded-md border border-slate-300";
+      });
+      b.className = "who px-3 py-1.5 text-sm rounded-md bg-slate-900 text-white";
+      document.getElementById("who-note").textContent = notes[b.dataset.who];
+    });
+  });
+
+  if (window.lucide) window.lucide.createIcons();
+</script>
+</body>
+</html>

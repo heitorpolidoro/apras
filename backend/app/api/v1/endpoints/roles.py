@@ -46,7 +46,6 @@ def create_role(
     role = Role(
         name=role_in.name,
         permissions=role_in.permissions,
-        landing_path=role_in.landing_path,
     )
     session.add(role)
     session.commit()
@@ -76,21 +75,6 @@ def update_role(
         role_service.assert_can_grant(session, current_user, role_in.permissions)
         db_type.permissions = role_in.permissions
     db_type.name = role_in.name
-    # `landing_path` is **only** written when the client actually sent it.
-    #
-    # Its sibling `permissions` guards the same hazard with a `None`
-    # sentinel, which does not work here: `None` is a *meaningful* value —
-    # it is how an operator clears a landing preference — so "field absent"
-    # and "field explicitly null" have to stay distinguishable, and
-    # `model_fields_set` is what distinguishes them.
-    #
-    # Without this, a save from any client that omits the field (F4's role
-    # editor sent exactly `{name, permissions}`) would write NULL over the
-    # `/gate` and `/welcome` values migration `0033` backfills onto
-    # `Porteiro (papel)` and `Convidado (papel)`, silently regressing the two
-    # landing redirects §10.4 exists to preserve.
-    if "landing_path" in role_in.model_fields_set:
-        db_type.landing_path = role_in.landing_path
     session.add(db_type)
     session.commit()
     session.refresh(db_type)

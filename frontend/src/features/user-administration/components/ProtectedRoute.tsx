@@ -3,7 +3,7 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import { useMyPermissions } from "../../../hooks/usePermissionQueries";
-import { useCanAccess, useCanOpenPath } from "../access/useCanAccess";
+import { useCanAccess } from "../access/useCanAccess";
 import { Spinner } from "../../../components/ui/spinner";
 import type { AccessRule } from "../../../types/permissions";
 
@@ -73,15 +73,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const { isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
   const { allowed, isLoading: isAccessLoading } = useCanAccess(requiredAccess);
-  // The landing redirect is not authorization — a PORTEIRO genuinely holds
-  // `tasks:read` — so it reads the caller's `landing_path` preference, on
-  // exactly the two routes that carry `landingRedirect` (IAM F5 §10.4).
-  // `/permissions/me` is the effective-set endpoint, so this follows the
-  // simulated identity by construction, which is what makes simulating a
-  // porteiro show the porteiro's landing.
+  // Read for `disabled_modules` alone: it decides which of the two denial
+  // copies the restricted message shows. Nothing on this payload gates.
   const { data: myPermissions } = useMyPermissions();
-  const landingPath = myPermissions?.landing_path ?? null;
-  const canOpen = useCanOpenPath();
 
   if (isLoading) return <Spinner />;
 
@@ -91,25 +85,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Without this the page would flash "Acesso restrito" on every cold load,
   // which is exactly the regression `TenantBootstrapOrder.test.tsx` catches.
-  // It sits **above** the landing redirect since APRAS-39: that redirect now
-  // asks whether its target is accessible, and an unsettled set answers "no"
-  // to everything. (Behaviour-preserving on its own — `landingPath` comes
-  // from the same unsettled query, so it was null here anyway.)
   if (isAccessLoading) return <Spinner />;
-
-  if (
-    requiredAccess?.landingRedirect &&
-    landingPath &&
-    landingPath !== location.pathname &&
-    // APRAS-39 §10.4: only bounce somewhere the caller can actually be.
-    // Without this test the fallback chain is undone — it rejects a landing
-    // whose module is off, picks `/dashboard`, and `/dashboard`'s own
-    // `landingRedirect` sends the caller straight back to the rejected
-    // landing. Same evaluation as `RootRedirect`'s, deliberately shared.
-    canOpen(landingPath)
-  ) {
-    return <Navigate to={landingPath} replace />;
-  }
 
   if (!allowed) {
     const module = moduleOfRule(requiredAccess);

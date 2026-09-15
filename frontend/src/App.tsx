@@ -17,7 +17,6 @@ import { SimulationProvider } from "./features/user-administration/context/Simul
 import { TenantProvider } from "./features/user-administration/context/TenantContext";
 import { SidebarProvider } from "./features/user-administration/context/SidebarContext";
 import { useSidebar } from "./features/user-administration/context/useSidebar";
-import { useMyPermissions } from "./hooks/usePermissionQueries";
 import { cn } from "./lib/utils";
 import Navbar from "./features/user-administration/components/Navbar";
 import SimulationBanner from "./features/user-administration/components/SimulationBanner";
@@ -48,47 +47,25 @@ import InfractionsPage from "./features/infraction-management/pages/InfractionsP
 import InfractionRulesPage from "./features/infraction-management/pages/InfractionRulesPage";
 import MyInfractionsPage from "./features/infraction-management/pages/MyInfractionsPage";
 import { ROUTE_ACCESS } from "./features/user-administration/access/routeAccess";
-import {
-  useCanOpenPath,
-  usePermissionSet,
-} from "./features/user-administration/access/useCanAccess";
+import { usePermissionSet } from "./features/user-administration/access/useCanAccess";
 import { Spinner } from "./components/ui/spinner";
 import "./App.css";
 
 /**
- * Root-redirect target. Uses the user's real role (never the simulated
- * role from useEffectiveIdentity/SimulationContext): an active GUEST goes
- * to /welcome, an active PORTEIRO goes to /gate, everyone else (including
- * the brief isLoading window where `user` is still undefined) goes to
- * /dashboard as before.
- */
-/**
- * Where "/" lands the caller.
+ * Where "/" lands the caller: the general dashboard, for everybody.
  *
- * IAM F5 (APRAS-49 §10.4) replaced the three-way enum switch with data:
- * `GET /permissions/me` returns the first non-null `landing_path` among the
- * caller's roles in the acting tenant, ordered by role name. Landing is a
- * *preference*, not authorization — a PORTEIRO genuinely holds `tasks:read`,
- * so no predicate over the catalogue could separate "pin the gatekeeper to
- * the gate" from "the board can also open the gate" — which is why it lives
- * on the role row and is operator-editable, a feature the hard-coded switch
- * never had.
+ * APRAS-57 removed the per-role landing preference — first an enum switch,
+ * then a column on the role row — so this component no longer chooses a
+ * destination and issues no navigation at all. It only holds the render
+ * while the permission set is still settling, exactly as `ProtectedRoute`
+ * does: navigating away here would unmount the component before the
+ * dashboard's own gating could run.
  */
 export const RootRedirect: React.FC = () => {
-  const { data } = useMyPermissions();
   const set = usePermissionSet();
-  const canOpen = useCanOpenPath();
 
   if (set.isLoading) return <Spinner />;
 
-  const landing = data?.landing_path ?? null;
-
-  // If user has a specific landing configured that is accessible and not root, redirect to it
-  if (landing && landing !== "/" && canOpen(landing)) {
-    return <Navigate to={landing} replace />;
-  }
-
-  // Otherwise render General Dashboard directly
   return <GeneralDashboardPage />;
 };
 

@@ -23,9 +23,7 @@ export interface EffectiveIdentity {
  * `useSimulation` — the absence of those imports on that path is the
  * mechanical guarantee that an administrator can never be locked out of
  * ending a simulation (APRAS-35, re-pinned by
- * `ProtectedRoute.permissions.test.tsx`). The one exception is
- * `landing_path`, which follows the effective identity on purpose: landing
- * is a preference, not authorization (§10.4).
+ * `ProtectedRoute.permissions.test.tsx`).
  */
 export const useEffectiveIdentity = (): EffectiveIdentity => {
   const { user } = useAuth();

@@ -23,9 +23,8 @@ describe("the auth types after the enum", () => {
     expectTypeOf<User>().toHaveProperty("is_superuser");
   });
 
-  it("Role carries a bundle and a landing preference, not a role value", () => {
+  it("Role carries a bundle, not a role value and not a landing preference", () => {
     expectTypeOf<Role>().toHaveProperty("permissions");
-    expectTypeOf<Role>().toHaveProperty("landing_path");
     expectTypeOf<Role>().not.toHaveProperty("role");
     expectTypeOf<Role>().not.toHaveProperty("allowed_menus");
   });

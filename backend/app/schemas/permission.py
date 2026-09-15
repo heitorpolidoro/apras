@@ -33,14 +33,6 @@ class MyPermissionsRead(BaseModel):
     `tenant_id` echoes the tenant the answer was computed for, so a client
     can never mistake a stale payload for the current tenant's.
 
-    `landing_path` (IAM F5, APRAS-49 §10.4) is the first non-null
-    `Role.landing_path` among the caller's roles in the acting tenant,
-    ordered by role name for determinism, or None. It rides on *this*
-    endpoint because it follows the **effective** (simulation-aware)
-    identity: landing is a preference, not authorization, so simulating a
-    porteiro should show you the porteiro's landing -- and that is safe
-    precisely because route *access* stays on the real set.
-
     `disabled_modules` (APRAS-39 §7) is the acting tenant's turned-off
     modules, sorted. `permissions` is **already** stripped by
     `deps.get_effective_permissions`, so gating never reads this field —
@@ -54,5 +46,4 @@ class MyPermissionsRead(BaseModel):
 
     tenant_id: UUID
     permissions: list[str]  # sorted
-    landing_path: str | None = None
     disabled_modules: list[str] = []  # sorted; APRAS-39

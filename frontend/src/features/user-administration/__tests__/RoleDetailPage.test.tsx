@@ -182,7 +182,6 @@ describe("RoleDetailPage", () => {
             permissions: MY_PERMISSIONS.filter(
               (permission) => !permission.startsWith("finance:"),
             ),
-            landing_path: null,
             disabled_modules: ["finance"],
           },
         });
@@ -221,65 +220,20 @@ describe("RoleDetailPage", () => {
     expect(box("finance:read")!.checked).toBe(false);
   });
 
-  it("offers the landing-path control and round-trips its value (§10.4)", async () => {
-    // The feature §10.4 promises and the hard-coded enum switch never had:
-    // an operator decides where a role's members land. It is *always* sent,
-    // and `null` when "none" is picked — which is why the backend reads
-    // `model_fields_set` rather than a `None` sentinel: an explicit null has
-    // to stay distinguishable from an absent field (CR1).
-    roles = [{ ...CUSTOM_ROLE, landing_path: "/gate" }];
+  it("saves a body of exactly {name, permissions}", async () => {
+    // APRAS-57: the role landing preference is gone from the product, so
+    // the editor sends the two fields a role has and nothing else. Exact
+    // keys, so a field creeping back into the payload fails CI.
+    roles = [CUSTOM_ROLE];
     renderDetail();
 
-    const select = (await screen.findByLabelText(
-      "Página inicial do papel",
-    )) as HTMLSelectElement;
-    expect(select.value).toBe("/gate");
+    await waitFor(() => expect(screen.getByLabelText("Nome")).not.toBeNull());
 
-    await userEvent.selectOptions(select, "/welcome");
     await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
 
     await waitFor(() => expect(mockedPatch).toHaveBeenCalled());
-    const [, body] = mockedPatch.mock.calls[0] as [
-      string,
-      { landing_path: string | null },
-    ];
-    expect(body.landing_path).toBe("/welcome");
-  });
-
-  it("sends an explicit null when the operator clears the landing path", async () => {
-    roles = [{ ...CUSTOM_ROLE, landing_path: "/gate" }];
-    renderDetail();
-
-    const select = (await screen.findByLabelText(
-      "Página inicial do papel",
-    )) as HTMLSelectElement;
-    await userEvent.selectOptions(select, "");
-    await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
-
-    await waitFor(() => expect(mockedPatch).toHaveBeenCalled());
-    const [, body] = mockedPatch.mock.calls[0] as [
-      string,
-      { landing_path: string | null },
-    ];
-    expect(body.landing_path).toBeNull();
-  });
-
-  it("offers only the allowlisted paths, so the control cannot mint a redirect", async () => {
-    renderDetail();
-
-    const select = (await screen.findByLabelText(
-      "Página inicial do papel",
-    )) as HTMLSelectElement;
-    expect([...select.options].map((option) => option.value)).toEqual([
-      "",
-      "/",
-      "/tasks",
-      "/dashboard",
-      "/gate",
-      "/welcome",
-      "/announcements",
-      "/occurrences",
-    ]);
+    const [, body] = mockedPatch.mock.calls[0] as [string, object];
+    expect(Object.keys(body).sort()).toEqual(["name", "permissions"]);
   });
 
   it("sends no allowed_menus at all (IAM F5 §4.1)", async () => {

@@ -132,12 +132,6 @@ def test_make_user_defaults_the_flag_only_for_the_administrator_profile(
     assert _user(session, "GUEST", is_superuser=True).is_superuser is True
 
 
-def test_the_two_landing_carrying_profiles_carry_their_landing(session: Session):
-    assert profile_role(session, "PORTEIRO").landing_path == "/gate"
-    assert profile_role(session, "GUEST").landing_path == "/welcome"
-    assert profile_role(session, "DIRECTOR").landing_path is None
-
-
 def test_role_names_in_answers_nothing_without_a_tenant(session: Session):
     """`role_names_in(user, None)` is `[]`, never every role the user has.
 

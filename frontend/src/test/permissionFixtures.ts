@@ -563,27 +563,17 @@ export const permissionsOf = (
   // APRAS-39: `[]` is the all-on state, which is what every pre-existing
   // fixture means. The backend always sends the field, so the type requires
   // it and no consumer carries a defensive `?? []`.
-  landing_path: null,
   disabled_modules: [...disabled_modules],
 });
 
-/**
- * A ready-made `useMyPermissions()` return value for a settled query.
- *
- * `landing_path` (IAM F5, APRAS-49 §10.4) rides on this endpoint because it
- * follows the **effective** identity: landing is a preference, not
- * authorization, so simulating a porteiro shows the porteiro's landing. It
- * defaults to `null` — most callers have no opinion about where to land.
- */
+/** A ready-made `useMyPermissions()` return value for a settled query. */
 export const settledPermissions = (
   permissions: readonly string[],
-  landing_path: string | null = null,
   disabled_modules: readonly string[] = [],
 ) => ({
   data: {
     tenant_id: "00000000-0000-0000-0000-000000000001",
     permissions: [...permissions],
-    landing_path,
     // APRAS-39 §7: always present, `[]` meaning every module active — which
     // is what every fixture predating the module switch means.
     disabled_modules: [...disabled_modules],

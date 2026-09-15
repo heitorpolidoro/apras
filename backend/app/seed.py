@@ -144,12 +144,6 @@ def seed_db() -> None:  # noqa: PLR0915  # linear seed script; splitting it woul
         for name, bundle in DEMO_BUNDLES.items():
             by_name[name].permissions = sorted(bundle)
             session.add(by_name[name])
-        # The two landing preferences the enum switch used to hard-code
-        # (APRAS-49 §10.4), so the dev demo shows the feature.
-        by_name["Porteiro (papel)"].landing_path = "/gate"
-        by_name["Convidado (papel)"].landing_path = "/welcome"
-        session.add(by_name["Porteiro (papel)"])
-        session.add(by_name["Convidado (papel)"])
         session.commit()
         print(f"✅ {len(by_name)} papéis criados.")
 

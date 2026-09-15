@@ -179,6 +179,30 @@ def test_update_role(client, session, admin_user):
     assert response.json()["name"] == "NewName"
 
 
+def test_update_role_ignores_an_unknown_landing_path_key(client, session, admin_user):
+    """A stale client may still send `landing_path`; it is simply dropped.
+
+    `RoleUpdate` does not declare the field and sets no `extra="forbid"`, so
+    Pydantic ignores it: the save answers 200, the response carries only
+    `{id, name, permissions}` and nothing about a landing is persisted.
+    """
+    ut = Role(name="LandingSender")
+    session.add(ut)
+    session.commit()
+    session.refresh(ut)
+
+    token = _admin_token(admin_user)
+    response = client.patch(
+        f"/api/v1/roles/{ut.id}",
+        json={"name": "LandingSender", "permissions": [], "landing_path": "/gate"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert set(response.json()) == {"id", "name", "permissions"}
+    assert not hasattr(session.get(Role, ut.id), "landing_path")
+
+
 def test_update_role_not_found(client, admin_user):
     token = _admin_token(admin_user)
     response = client.patch(

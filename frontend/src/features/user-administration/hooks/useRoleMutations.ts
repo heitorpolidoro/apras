@@ -15,9 +15,6 @@ import type { Role } from "../../../types/auth";
 export interface RolePayload {
   name: string;
   permissions: string[];
-  /** IAM F5 (APRAS-49 §8.1). Optional: an editor that does not opinionate
-   *  about landing simply omits it. */
-  landing_path?: string | null;
 }
 
 const useRoleInvalidation = () => {

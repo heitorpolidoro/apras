@@ -56,12 +56,12 @@ Building administrators and HOA boards juggle dozens of operational tasks — ma
 ## Frontend (React SPA)
 
 - Single-page application served by Vite; deployed as a static site on **Vercel** (`apras-front`).
-- Client-side routing with `react-router-dom`. Root `/` resolves through
-  `RootRedirect`'s fallback chain (APRAS-39 §10.4): the caller's
-  `landing_path` if its route is accessible → `/dashboard` if accessible →
-  the first `NAV_ITEMS` entry they may see, in declaration order → `/welcome`.
-  The chain exists because a tenant with `tasks` turned off would otherwise
-  strand everyone on a restricted `/dashboard`.
+- Client-side routing with `react-router-dom`. Root `/` renders the general
+  dashboard for **every** authenticated caller: `RootRedirect` holds a spinner
+  while the permission set settles and then renders `GeneralDashboardPage`,
+  issuing no navigation. APRAS-57 removed the per-role landing preference that
+  used to choose a destination here, so there is no fallback chain left to
+  reason about — the dashboard gates its own contents.
 - Authentication state managed via React Context (`AuthContext`), JWT stored in `sessionStorage` or `localStorage` (depending on "remember me").
 - All API calls go through a centralised Axios client (`src/api/client.ts`) that auto-attaches the `Bearer` token and an optional Vercel protection bypass header.
 - Server-state caching and mutations handled by **TanStack Query** (`useQuery` / `useMutation`).
@@ -98,15 +98,11 @@ the **simulated** one while an administrator is "viewing as"
 route renders `RestrictedAccessMessage` **in place** and never redirects; since
 APRAS-39 that component has a second, purely presentational variant for a
 route whose module the tenant has turned off (`common.moduleUnavailable`).
-One field survives, on exactly two entries — `/dashboard` and `/categories`:
-`landingRedirect`, which sends a caller carrying a `landing_path` preference
-(GUEST → `/welcome`, PORTEIRO → `/gate`) to it instead. It is a preference,
-not authorization, which is why it lives on the role row. Since APRAS-39 it
-fires **only when the landing target is itself accessible**: a PORTEIRO whose
-tenant has `gate` turned off stays where `RootRedirect`'s chain put them
-rather than being bounced onto a screen that would refuse them. Its sibling
-`legacyMenu` died together with `deps.assert_menu_access`, which IAM F5
-deleted.
+A rule is its shape and nothing else. The two extra fields entries used to
+carry are both gone: `legacyMenu` died together with `deps.assert_menu_access`
+(IAM F5), and APRAS-57 removed the landing-redirect flag with the role landing
+preference it read — **no route ever bounces a caller anywhere**, which is
+what makes "denial is in place" true without exception.
 
 ## Backend (FastAPI)
 
@@ -774,7 +770,7 @@ not of the role.
 **The two permission reads.** `GET /api/v1/permissions/` returns the whole
 static catalogue — one row per permission, pre-split into `module`, `action`
 and `superuser_only` — and `GET /api/v1/permissions/me` returns
-`{tenant_id, permissions[], landing_path, disabled_modules[]}`, i.e.
+`{tenant_id, permissions[], disabled_modules[]}` — exactly those three keys, i.e.
 `deps.get_effective_permissions` for the **acting tenant**, sorted (APRAS-48),
 already stripped of the tenant's disabled modules (APRAS-39). The router is mounted `TENANT_SCOPED`,
 so `/me` resolves its tenant through the same `get_current_tenant` ladder as
@@ -876,8 +872,8 @@ left to the matrix to notice.
 
 ### Roles are data
 
-One `role` row per tenant: a name, a flat `permissions` list, an optional
-`landing_path`. There is **no role nesting** and there are **no per-user
+One `role` row per tenant: a name and a flat `permissions` list, and nothing
+else since APRAS-57. There is **no role nesting** and there are **no per-user
 permissions** — both are standing board decisions, and both are what keep a
 user's effective set answerable by one union with no traversal.
 

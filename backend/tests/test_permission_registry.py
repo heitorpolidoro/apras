@@ -233,22 +233,9 @@ def test_role_schemas_expose_permissions():
     F1's ER-6 pinned these schemas *in F1*; IAM F2 is the slice that makes
     roles editable, so the three schemas gained `permissions`. IAM F5
     (APRAS-49 §8.1) dropped `allowed_menus` with the menu gate and `role`
-    with the enum, and added `landing_path`. The assertion stays exact, so a
-    future field still fails CI.
+    with the enum; APRAS-57 dropped the landing preference with the feature
+    itself. The assertion stays exact, so a future field still fails CI.
     """
-    assert set(RoleCreate.model_fields) == {
-        "name",
-        "permissions",
-        "landing_path",
-    }
-    assert set(RoleUpdate.model_fields) == {
-        "name",
-        "permissions",
-        "landing_path",
-    }
-    assert set(RoleRead.model_fields) == {
-        "id",
-        "name",
-        "permissions",
-        "landing_path",
-    }
+    assert set(RoleCreate.model_fields) == {"name", "permissions"}
+    assert set(RoleUpdate.model_fields) == {"name", "permissions"}
+    assert set(RoleRead.model_fields) == {"id", "name", "permissions"}
