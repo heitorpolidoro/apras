@@ -128,4 +128,5 @@ gha-creds-*.json
 .vercel
 .worktrees/
 .env*
+!.env.example
 .meridian/
