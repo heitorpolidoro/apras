@@ -25,7 +25,7 @@ from app.services.tenant_service import TenantService
 #: so the three sets are spelled here, deliberately small and readable rather
 #: than a reproduction of the retired enum's 155/144/83 strings.
 DEMO_BUNDLES: dict[str, list[str]] = {
-    "Administrador (papel)": [
+    "Administrador": [
         "roles:read",
         "roles:create",
         "roles:update",
@@ -45,7 +45,7 @@ DEMO_BUNDLES: dict[str, list[str]] = {
         "categories:update",
         "categories:delete",
     ],
-    "Diretor (papel)": [
+    "Diretor": [
         "roles:read",
         "users:read",
         "tasks:read",
@@ -60,7 +60,7 @@ DEMO_BUNDLES: dict[str, list[str]] = {
         "announcements:read",
         "announcements:create",
     ],
-    "Gerente (papel)": [
+    "Gerente": [
         "roles:read",
         "users:read",
         # Deliberately **no** `tasks:read_all` / `tasks:update_any`: that
@@ -156,7 +156,7 @@ def seed_db() -> None:  # noqa: PLR0915  # linear seed script; splitting it woul
             is_superuser=True,
             is_active=True,
             cpf="52998224725",
-            roles=[by_name["Administrador (papel)"]],
+            roles=[by_name["Administrador"]],
         )
         session.add(admin)
 
@@ -184,7 +184,7 @@ def seed_db() -> None:  # noqa: PLR0915  # linear seed script; splitting it woul
                 full_name=d_data["full_name"],
                 is_active=True,
                 cpf=d_data["cpf"],
-                roles=[by_name["Diretor (papel)"], roles[d_data["full_name"]]],
+                roles=[by_name["Diretor"], roles[d_data["full_name"]]],
             )
             session.add(user)
             diretores.append(user)
@@ -194,7 +194,7 @@ def seed_db() -> None:  # noqa: PLR0915  # linear seed script; splitting it woul
             email="gerente1@apras.com",
             hashed_password=get_password_hash("test_user_password"),
             full_name="Gerente Operacional",
-            roles=[by_name["Gerente (papel)"], roles["Gerente Operacional"]],
+            roles=[by_name["Gerente"], roles["Gerente Operacional"]],
             is_active=True,
             cpf="07491723040",
         )

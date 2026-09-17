@@ -303,7 +303,7 @@ def test_create_task_defaults_to_all_explicit_ids_not_effective_set(
         json={"title": "Auto default task", "category_id": str(category.id)},
     )
     assert response.status_code == 200
-    profile_row = next(role for role in manager.roles if role.name == "Gerente (papel)")
+    profile_row = next(role for role in manager.roles if role.name == "Gerente")
     visible_to_ids = {vt["id"] for vt in response.json()["visible_to"]}
     assert visible_to_ids == {
         str(type_a.id),
@@ -340,6 +340,6 @@ def test_create_task_falls_back_to_role_type_when_zero_explicit_types(
         json={"title": "Role fallback task", "category_id": str(category.id)},
     )
     assert response.status_code == 200
-    profile_row = next(role for role in manager.roles if role.name == "Gerente (papel)")
+    profile_row = next(role for role in manager.roles if role.name == "Gerente")
     visible_to_ids = {vt["id"] for vt in response.json()["visible_to"]}
     assert visible_to_ids == {str(profile_row.id)}

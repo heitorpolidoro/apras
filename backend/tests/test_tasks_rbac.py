@@ -13,7 +13,7 @@ def test_the_manager_profile_still_names_a_real_role(session: Session):
     """The successor of "MANAGER must exist as a valid `UserRole` value"."""
     role = profile_role(session, "MANAGER")
 
-    assert role.name == "Gerente (papel)"
+    assert role.name == "Gerente"
     assert set(role.permissions) == bundle("MANAGER")
 
 

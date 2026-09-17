@@ -164,10 +164,10 @@ def test_me_keeps_existing_fields(session: Session, client: TestClient):
 
     assert body["email"] == "me-fields@test.com"
     assert "role" not in body
-    assert "Diretor (papel)" in [row["name"] for row in body["roles"]]
+    assert "Diretor" in [row["name"] for row in body["roles"]]
     assert body["username"] == "me-fields"
     assert sorted(ut["name"] for ut in body["roles"]) == [
-        "Diretor (papel)",
+        "Diretor",
         "Me Fields Type",
     ]
     assert body["is_active"] is True

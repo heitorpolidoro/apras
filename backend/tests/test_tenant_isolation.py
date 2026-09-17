@@ -1268,7 +1268,7 @@ def test_effective_roles_resolve_the_acting_tenants_role_type(
 ):
     """`get_effective_role_ids` reads the acting tenant from the session
     and falls back to the default tenant when there is none (§7.1)."""
-    b_type = Role(name="Diretor (papel) B", tenant_id=tenant_b.id)
+    b_type = Role(name="Diretor B", tenant_id=tenant_b.id)
     session.add(b_type)
     session.commit()
     session.refresh(b_type)

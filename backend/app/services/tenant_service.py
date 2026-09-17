@@ -52,12 +52,12 @@ from app.services.subscription_service import SubscriptionService
 #: They are ordinary rows -- editable, renamable, deletable -- and this tuple
 #: is only what ``ensure_legacy_roles`` inserts when they are absent.
 LEGACY_ROLE_NAMES: tuple[str, ...] = (
-    "Administrador (papel)",
-    "Diretor (papel)",
-    "Gerente (papel)",
-    "Convidado (papel)",
-    "Morador (papel)",
-    "Porteiro (papel)",
+    "Administrador",
+    "Diretor",
+    "Gerente",
+    "Convidado",
+    "Morador",
+    "Porteiro",
 )
 
 

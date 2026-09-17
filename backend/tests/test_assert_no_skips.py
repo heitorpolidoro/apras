@@ -2,8 +2,8 @@
 
 `tests/test_migrations_postgres.py` self-skips when `TEST_POSTGRES_URL` is
 unset or unreachable, and a fully-skipped pytest run exits **0**. That is how
-53 cases stayed invisible inside a green `Backend Tests` check between
-APRAS-27 and APRAS-50, and it is the exact failure mode a race on the service
+the module's whole case list stayed invisible inside a green `Backend Tests`
+check between APRAS-27 and APRAS-50, and it is the exact failure mode a race on the service
 container's health check would reintroduce.
 
 `scripts/assert_no_skips.py` is the second line of defence, so it is the one
@@ -20,9 +20,10 @@ import subprocess
 import sys
 
 SCRIPT = pathlib.Path(__file__).resolve().parents[1] / "scripts" / "assert_no_skips.py"
+MODULE = pathlib.Path(__file__).resolve().parent / "test_migrations_postgres.py"
 
 #: The literal `classname` pytest writes for the module, verified against a
-#: real run of it rather than guessed (`migration-test-results.xml`, 53/53).
+#: real run of it rather than guessed (`migration-test-results.xml`).
 MODULE_CLASSNAME = "tests.test_migrations_postgres"
 
 
@@ -34,15 +35,26 @@ def _load():
     return module
 
 
+def _floor() -> int:
+    """`MIN_CASES`, read from the guard rather than re-typed here.
+
+    Spelling the number twice is what made this file fail the day APRAS-58
+    lowered the floor; every case below sizes its fixture off this instead.
+    """
+    return _load().MIN_CASES
+
+
 def _junit(
     tmp_path,
     *,
-    passed: int = 53,
+    passed: int | None = None,
     skipped: int = 0,
     classname: str = MODULE_CLASSNAME,
     extra: str = "",
 ) -> str:
     """A JUnit XML shaped exactly like the one pytest writes for the module."""
+    if passed is None:
+        passed = _floor()
     cases = [
         f'<testcase classname="{classname}" name="test_case_{index}" time="1.0" />'
         for index in range(passed)
@@ -71,25 +83,56 @@ def test_the_guard_script_exists_outside_the_test_tree():
     assert SCRIPT.parent.name == "scripts"
 
 
-def test_the_floor_is_the_case_count_at_e188866():
-    assert _load().MIN_CASES == 53
+def test_the_floor_is_the_modules_real_case_count():
+    """`MIN_CASES` equals what the module actually collects.
+
+    Collected for real, in a subprocess, rather than trusted: a floor typed
+    from memory is the one thing that makes the guard itself a guess. Pytest
+    collects without a Postgres -- the module self-*skips*, which happens
+    after collection -- so this costs one interpreter start and no database.
+    """
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            str(MODULE),
+            "--collect-only",
+            "-q",
+            "-p",
+            "no:cacheprovider",
+            "-o",
+            "addopts=",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+        cwd=str(SCRIPT.parents[1]),
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    collected = sum(
+        1 for line in result.stdout.splitlines() if line.startswith("tests/")
+    )
+    assert collected > 0, result.stdout
+    assert collected == _load().MIN_CASES
 
 
 def test_a_full_green_run_is_accepted(tmp_path, capsys):
-    """53 collected, none skipped: exactly what the green CI run must produce."""
+    """Every case collected, none skipped: what a green CI run must produce."""
     assert _load().main([_junit(tmp_path)]) == 0
-    assert "collected=53 skipped=0" in capsys.readouterr().out
+    assert f"collected={_floor()} skipped=0" in capsys.readouterr().out
 
 
 def test_the_floor_is_a_floor_and_not_an_equality(tmp_path, capsys):
     """A later task that *adds* a case must not have to touch the guard."""
-    assert _load().main([_junit(tmp_path, passed=60)]) == 0
-    assert "collected=60 skipped=0" in capsys.readouterr().out
+    above = _floor() + 7
+    assert _load().main([_junit(tmp_path, passed=above)]) == 0
+    assert f"collected={above} skipped=0" in capsys.readouterr().out
 
 
 def test_one_skipped_case_fails_the_job_and_is_named(tmp_path, capsys):
     """The whole point: a skip is invisible in a green check unless something looks."""
-    assert _load().main([_junit(tmp_path, passed=52, skipped=1)]) != 0
+    assert _load().main([_junit(tmp_path, passed=_floor() - 1, skipped=1)]) != 0
     output = capsys.readouterr().out
     assert "skipped=1" in output
     assert "test_skipped_0" in output
@@ -97,16 +140,17 @@ def test_one_skipped_case_fails_the_job_and_is_named(tmp_path, capsys):
 
 def test_a_fully_skipped_run_fails_the_job(tmp_path, capsys):
     """Today's bug, reintroduced by a race on the service container's health check."""
-    assert _load().main([_junit(tmp_path, passed=0, skipped=53)]) != 0
-    assert "skipped=53" in capsys.readouterr().out
+    assert _load().main([_junit(tmp_path, passed=0, skipped=_floor())]) != 0
+    assert f"skipped={_floor()}" in capsys.readouterr().out
 
 
 def test_a_short_collection_fails_the_job(tmp_path, capsys):
     """Deselecting or deleting cases to make the job green is excluded outright."""
-    assert _load().main([_junit(tmp_path, passed=52)]) != 0
+    short = _floor() - 1
+    assert _load().main([_junit(tmp_path, passed=short)]) != 0
     output = capsys.readouterr().out
-    assert "collected=52" in output
-    assert "53" in output
+    assert f"collected={short}" in output
+    assert str(_floor()) in output
 
 
 def test_a_run_that_never_collected_the_module_fails_and_says_so(tmp_path, capsys):
@@ -126,7 +170,7 @@ def test_only_this_module_counts_towards_the_verdict(tmp_path, capsys):
         '<skipped type="pytest.skip" message="unrelated" /></testcase>'
     )
     assert _load().main([_junit(tmp_path, extra=other)]) == 0
-    assert "collected=53 skipped=0" in capsys.readouterr().out
+    assert f"collected={_floor()} skipped=0" in capsys.readouterr().out
 
 
 def test_the_selector_is_the_dotted_module_and_not_the_filename(tmp_path, capsys):
@@ -185,4 +229,4 @@ def test_the_cli_entry_point_exits_zero_on_a_green_artifact(tmp_path):
         cwd=str(SCRIPT.parents[1]),
     )
     assert result.returncode == 0, result.stderr
-    assert "collected=53 skipped=0" in result.stdout
+    assert f"collected={_floor()} skipped=0" in result.stdout

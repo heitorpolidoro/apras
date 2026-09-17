@@ -160,7 +160,7 @@ def test_only_a_real_membership_contributes(session: Session):
     is actually a member of it.
     """
     user = _make_user(session, "MANAGER")
-    role_type = Role(name="Gerente", permissions=["lots:delete"])
+    role_type = Role(name="Gerente Operacional", permissions=["lots:delete"])
     session.add(role_type)
     session.commit()
 

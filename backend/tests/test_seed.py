@@ -33,9 +33,9 @@ from app.services.tenant_service import LEGACY_ROLE_NAMES, TenantService
 
 #: The three profiles of ER-4, and what each is a member of.
 DEMO_PROFILES: dict[str, tuple[str, ...]] = {
-    "admin@apras.com": ("Administrador (papel)",),
-    "diretor1@apras.com": ("Diretor (papel)", "Diretor Comercial"),
-    "gerente1@apras.com": ("Gerente (papel)", "Gerente Operacional"),
+    "admin@apras.com": ("Administrador",),
+    "diretor1@apras.com": ("Diretor", "Diretor Comercial"),
+    "gerente1@apras.com": ("Gerente", "Gerente Operacional"),
 }
 
 
@@ -48,9 +48,9 @@ def test_the_demo_bundles_name_only_catalogue_permissions():
 
 def test_the_demo_bundles_target_three_historically_named_roles():
     assert set(DEMO_BUNDLES) == {
-        "Administrador (papel)",
-        "Diretor (papel)",
-        "Gerente (papel)",
+        "Administrador",
+        "Diretor",
+        "Gerente",
     }
     assert set(DEMO_BUNDLES) <= set(LEGACY_ROLE_NAMES)
 
@@ -63,12 +63,12 @@ def test_the_demo_manager_bundle_keeps_the_legacy_tier(session: Session):
     two facts are the legacy tiers, and a demo that granted the manager
     everything would stop showing them.
     """
-    manager = DEMO_BUNDLES["Gerente (papel)"]
+    manager = DEMO_BUNDLES["Gerente"]
     assert "tasks:read_all" not in manager
     assert "tasks:update_any" not in manager
     assert "occurrences:read_assigned" in manager
 
-    for board in ("Administrador (papel)", "Diretor (papel)"):
+    for board in ("Administrador", "Diretor"):
         assert "tasks:read_all" in DEMO_BUNDLES[board]
         assert "tasks:update_any" in DEMO_BUNDLES[board]
 
@@ -83,9 +83,9 @@ def test_the_demo_bundles_are_the_demos_opinion_not_a_product_default():
     from tests.conftest import bundle
 
     for name, profile in (
-        ("Administrador (papel)", "ADMINISTRATOR"),
-        ("Diretor (papel)", "DIRECTOR"),
-        ("Gerente (papel)", "MANAGER"),
+        ("Administrador", "ADMINISTRATOR"),
+        ("Diretor", "DIRECTOR"),
+        ("Gerente", "MANAGER"),
     ):
         assert set(DEMO_BUNDLES[name]) < bundle(profile)
 

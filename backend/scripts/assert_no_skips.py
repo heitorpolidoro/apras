@@ -2,9 +2,10 @@
 
 `tests/test_migrations_postgres.py` self-skips when `TEST_POSTGRES_URL` is
 unset or unreachable, and a fully-skipped pytest run exits 0. Between
-APRAS-27 and APRAS-50 that is how 53 cases stayed invisible inside a green
-check. This reads the JUnit XML the job just produced and refuses a run in
-which the module was collected-but-skipped, or not collected at all.
+APRAS-27 and APRAS-50 that is how the module's whole case list stayed
+invisible inside a green check. This reads the JUnit XML the job just produced
+and refuses a run in which the module was collected-but-skipped, or not
+collected at all.
 """
 
 import os
@@ -18,10 +19,12 @@ import xml.etree.ElementTree as ET
 #: `collected=0`, but on the wrong diagnosis and one CI round trip later.
 MODULE_CLASSNAME = "tests.test_migrations_postgres"
 
-#: A **floor**, not an equality: the case count at `e188866`. A later task
-#: that adds a case must not have to touch this file, while a task that
-#: deletes the module -- or silences it by deselecting cases -- cannot pass.
-MIN_CASES = 53
+#: A **floor**, not an equality: the case count the rewritten module collects
+#: after APRAS-58 squashed the 39-revision history into one, verified against
+#: a real Postgres run rather than counted by eye. A later task that adds a
+#: case must not have to touch this file, while a task that deletes the module
+#: -- or silences it by deselecting cases -- cannot pass.
+MIN_CASES = 20
 
 
 def _verdict(collected: int, skipped: list[str]) -> list[str]:

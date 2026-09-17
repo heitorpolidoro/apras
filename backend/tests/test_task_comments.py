@@ -332,7 +332,7 @@ def test_history_resolves_assigned_to_id(
     # resolved_new_value has name and role
     assert entry["resolved_new_value"] is not None
     assert entry["resolved_new_value"]["name"] == normal_user.full_name
-    assert "Diretor (papel)" in entry["resolved_new_value"]["roles"]
+    assert "Diretor" in entry["resolved_new_value"]["roles"]
     # old_value was None (unassigned before)
     assert entry["resolved_old_value"] is None
 

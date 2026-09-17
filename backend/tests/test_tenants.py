@@ -231,7 +231,7 @@ def test_add_member_returns_201_with_the_user_details(
     assert body["email"] == resident.email
     assert body["full_name"] == resident.full_name
     # `TenantMemberRead.role` became `roles: list[str]` (§8.2).
-    assert body["roles"] == ["Morador (papel)"]
+    assert body["roles"] == ["Morador"]
     assert body["linked_at"]
 
 
