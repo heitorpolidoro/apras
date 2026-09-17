@@ -146,7 +146,7 @@ def test_contact_info_update_ignores_extra_fields(
     assert data["is_active"] == original_is_active
     # `role_ids` in the payload is ignored: `UserContactInfoUpdate` has
     # no such field, so the target keeps the roles it had.
-    assert [row["name"] for row in data["roles"]] == ["Diretor (papel)"]
+    assert [row["name"] for row in data["roles"]] == ["Diretor"]
 
 
 def test_contact_info_update_with_noncanonical_stored_cpf_returns_200(

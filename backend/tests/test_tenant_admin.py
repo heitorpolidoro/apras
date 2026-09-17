@@ -678,13 +678,13 @@ def test_ensure_legacy_roles_inserts_only_the_missing_rows(
     session: Session, tenant_b: Tenant
 ):
     with acting_tenant_scope(session, tenant_b.id):
-        session.add(Role(name="Morador (papel)"))
+        session.add(Role(name="Morador"))
         session.commit()
 
     TenantService.ensure_legacy_roles(session, tenant_b.id)
     rows = _role_types(session, tenant_b.id)
     assert len(rows) == len(LEGACY_ROLE_NAMES)
-    assert len([ut for ut in rows if ut.name == "Morador (papel)"]) == 1
+    assert len([ut for ut in rows if ut.name == "Morador"]) == 1
 
 
 def test_create_tenant_still_seeds_the_six_historically_named_roles(

@@ -87,7 +87,7 @@ def test_read_roles_lists_only_what_exists(client, admin_user):
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == status.HTTP_200_OK
-    assert [row["name"] for row in response.json()] == ["Administrador (papel)"]
+    assert [row["name"] for row in response.json()] == ["Administrador"]
 
 
 def test_read_roles_with_data(client, session, admin_user):

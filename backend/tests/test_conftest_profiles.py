@@ -112,7 +112,7 @@ def test_make_user_unions_extra_roles_rather_than_replacing_the_profile(
 
     user = _user(session, "MANAGER", roles=[extra], is_superuser=False)
 
-    assert {role.name for role in user.roles} == {"Gerente (papel)", "Conselho"}
+    assert {role.name for role in user.roles} == {"Gerente", "Conselho"}
     assert deps.get_effective_permissions(user, session) == bundle("MANAGER") | {
         "finance:read"
     }
@@ -143,4 +143,4 @@ def test_role_names_in_answers_nothing_without_a_tenant(session: Session):
     user = _user(session, "DIRECTOR")
 
     assert role_names_in(user, None) == []
-    assert role_names_in(user, DEFAULT_TENANT_ID) == ["Diretor (papel)"]
+    assert role_names_in(user, DEFAULT_TENANT_ID) == ["Diretor"]

@@ -55,8 +55,8 @@ jobs:
           backend/coverage.xml
           backend/test-results.xml
 
-  # A separate job, not a bigger `backend` one: roughly 30 of the 53 cases
-  # re-run the whole Alembic chain twice (fixture setup and teardown), so
+  # A separate job, not a bigger `backend` one: 16 of the module's 20 cases
+  # re-run the migration twice (fixture setup and teardown), so
   # folding it in would add that cost to the job every change waits on. As its
   # own job it runs in parallel, `Backend Tests`'s duration is unchanged by
   # construction, and "Backend Migration Tests (Postgres) x" names the failure
@@ -86,7 +86,7 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: apras_test
-          # Migration `0028` seeds the non-ASCII `Condomínio Padrão`, so the
+          # The migration seeds the non-ASCII `Condomínio Padrão`, so the
           # cluster must be UTF-8. The image's `LANG` already makes `initdb`
           # default to UTF8; stating it here survives an image whose `LANG`
           # changes, and `--locale=C` fixes collation instead of inheriting

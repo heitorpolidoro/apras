@@ -202,9 +202,9 @@ cd backend && uv run ruff format . && uv run ruff check . --fix
 
 `backend/tests/test_migrations_postgres.py` needs a real Postgres it is
 allowed to destroy: every fixture runs `DROP SCHEMA public CASCADE` and
-re-runs the Alembic chain. **Never point `TEST_POSTGRES_URL` at the dev
+re-runs the migration. **Never point `TEST_POSTGRES_URL` at the dev
 database on 5436** — it will be emptied. The database must be **UTF-8**:
-migration `0028` seeds `Condomínio Padrão`.
+the migration seeds `Condomínio Padrão`.
 
 **initdb (no Docker needed — the dev machine's Docker disk is often full):**
 
@@ -254,7 +254,7 @@ as the source of truth.
   `backend/tests/test_migrations_postgres.py` against a throwaway
   **Postgres 16 (UTF-8)** service container. The module self-skips wherever
   `TEST_POSTGRES_URL` is unset, so **CI is the source of truth** for it; a
-  guard step fails the job if the module reports any skip or fewer than 53
+  guard step fails the job if the module reports any skip or fewer than 20
   cases, because a fully-skipped run exits 0. `ci.yml` also accepts
   `workflow_dispatch`, so any branch can be run manually with
   `gh workflow run ci.yml --ref <branch>`.
@@ -446,9 +446,8 @@ only the same `(user, tenant)` pair twice is a conflict.
 **Direct vs inherited scope.** A table carries its own `tenant_id` when a
 tenant filter has to constrain it directly — i.e. it is reachable by a route
 that lists it or fetches it by its own id without a scoped parent's id in the
-path, or it has no NOT NULL FK to a scoped table. **28** tables are in that
-group — APRAS-41's 27 plus `tenant_subscription` (APRAS-40), the first one
-added after migration `0028`. The other **21** (`taskcomment`, `ballot`,
+path, or it has no NOT NULL FK to a scoped table. **32** tables are in that
+group. The other **24** (`taskcomment`, `ballot`,
 `announcement_comment`, `subscription_change`, …) **inherit** their tenant
 through a NOT NULL FK to a scoped parent and deliberately carry no
 `tenant_id`: duplicating it would create a second, forgeable source of truth
@@ -458,13 +457,12 @@ catalogue) — for 53 in all. The partition is asserted mechanically in
 `backend/tests/test_tenant_models.py`, so a table added by a future task
 cannot escape classification.
 
-Migration `0028`'s own `_TENANT_SCOPED_TABLES` literal is **frozen history**
-and records only what that migration scoped; a directly-scoped table added
-later registers in `POST_0028_SCOPED_TABLES`
-(`backend/tests/test_tenant_models.py`) and in `TENANT_SCOPED_TABLES`
-(`backend/tests/test_migrations_postgres.py`, an exact-set assertion against
-the live schema), and must name its tenant FK `fk_<table>_tenant_id` to satisfy
-`test_every_scoped_table_has_the_four_properties`.
+The migration's own `_TENANT_SCOPED_TABLES` literal is the **complete**
+list, read with `ast` by `backend/tests/test_tenant_models.py` and
+`backend/tests/test_tenant_context.py`; `TENANT_SCOPED_TABLES`
+(`backend/tests/test_migrations_postgres.py`) restates it as an exact-set
+assertion against the live schema. A new directly-scoped table registers in
+both and must name its tenant FK `fk_<table>_tenant_id`.
 
 **Per-tenant uniqueness.** Constraints that would otherwise collide across
 condominiums are keyed on `tenant_id`: `category.name`, `role.name`,
@@ -475,12 +473,12 @@ condominiums are keyed on `tenant_id`: `category.name`, `role.name`,
 authenticates a hardware credential, so one condominium's device must not be
 able to impersonate another's.
 
-**The default tenant.** Migration `0028_add_tenant_and_membership` seeds a
-single tenant with the fixed id `00000000-0000-0000-0000-000000000001` and
-backfills every existing row and every existing user's membership into it.
-The same literal is both the Python-side model default and each column's
-`server_default`, which is what keeps pre-tenant code and tests working
-unchanged.
+**The default tenant.** The migration seeds a single tenant with the fixed
+id `00000000-0000-0000-0000-000000000001`, plus that tenant's six
+`LEGACY_ROLE_NAMES` roles with `permissions = []`. The same literal is both
+the Python-side model default and each scoped column's `server_default`, which
+is what lets any code path that names no tenant still land somewhere
+definite.
 
 **Tenant administrator.** `user_tenant_link.is_tenant_admin` (APRAS-43) is a
 capability, never a role: it grants **every permission in the catalogue**,
@@ -567,7 +565,7 @@ the surface it contracts modules from could not administer itself back into
 existence. The other **24** are the billable features.
 
 **Storage is negative.** `tenant.disabled_modules` (portable `JSON`,
-`NOT NULL DEFAULT '[]'`, migration `0034`) lists what is *off*, so `[]` means
+`NOT NULL DEFAULT '[]'`) lists what is *off*, so `[]` means
 "everything on": the column's `server_default` is the all-on backfill for
 every existing tenant, a new tenant is all-on with no seeding, and a module a
 future task adds is active everywhere with no data step. What it gives up,
@@ -668,7 +666,7 @@ wires a provider once an account exists (same blocker class as `APRAS-13`).
 No SDK, no API key, no webhook receiver, no outbound HTTP call, and no
 dependency was added to `backend/pyproject.toml` or `frontend/package.json`.
 
-**Three tables** (migration `0035`, exactly reversible, seeding nothing):
+**Three tables**, seeding nothing:
 
 * `plan` — the install-wide, superuser-managed catalogue. **Global**: it
   carries no `tenant_id`, because a per-tenant catalogue would make "which
@@ -732,7 +730,7 @@ match wins, so a module in both the plan and the courtesy set reads `"PLAN"`):
 6. `"OVERRIDE"` — active, subscription exists, in neither.
 
 **No subscription — the semantics.** A fresh install has **no plans and no
-subscriptions** (`0035` inserts no rows), so adopting billing is opt-in. For a
+subscriptions** (the migration inserts no rows), so adopting billing is opt-in. For a
 tenant with no subscription row: `GET /api/v1/subscription` is **200** with
 `plan: null`, every toggleable module `source: "UNMANAGED"` when active and
 **`can_contract: false`** for every module — because the contracting `PUT` is
@@ -801,7 +799,7 @@ plan changes (a plan change is a commercial negotiation and without a provider
 it cannot be paid for, so plan assignment stays superuser-only); per-tenant or
 custom plans; deleting a plan; and a module dependency graph.
 
-**Install superuser.** `user.is_superuser` (APRAS-47, migration `0031`) is the
+**Install superuser.** `user.is_superuser` (APRAS-47) is the
 global counterpart of `is_tenant_admin`: every permission in **every** tenant
 and with no acting tenant at all — `deps.get_effective_permissions` answers it
 before any tenant is resolved. It is a column, not a role and not a group, so:
@@ -938,12 +936,11 @@ else since APRAS-57. There is **no role nesting** and there are **no per-user
 permissions** — both are standing board decisions, and both are what keep a
 user's effective set answerable by one union with no traversal.
 
-Six rows per tenant carry the pre-F5 bundles because migration `0033` put them
-there. They are **ordinary, editable, deletable roles**: there are no system
-roles, and nothing is seeded with permissions by any migration or by
-`TenantService.ensure_legacy_roles`, which inserts the six historically-named
-rows with `permissions = []` and grants nobody anything. Deleting
-`Diretor (papel)` strips every director, and that is the operator's
+Six rows per tenant carry the historical role names. They are **ordinary,
+editable, deletable roles**: there are no system roles, and nothing is seeded
+with permissions by any migration or by `TenantService.ensure_legacy_roles`,
+which inserts the six rows with `permissions = []` and grants nobody anything.
+Deleting `Diretor` strips every director, and that is the operator's
 prerogative.
 
 A user's effective set is `deps.get_effective_permissions`: the superuser
@@ -1032,55 +1029,22 @@ The words "user type" and "group" no longer name anything: the entity is a
 
 ### Migrating an existing install
 
-```bash
-# 1. back up first -- 0033 is not byte-reversible
-pg_dump -h localhost -p 5436 -U postgres apras > /tmp/apras-pre-f5.sql
+There is no such path any more. APRAS-58 collapsed the 39-revision history
+into a single `0001_initial_schema` generated from the models, so
+`alembic upgrade head` only ever builds an **empty** database: an install stamped
+with a retired revision has to be reset (`DROP SCHEMA public CASCADE; CREATE
+SCHEMA public;`) before it can be migrated again, and its superuser re-created
+by signup plus `UPDATE "user" SET is_superuser = true`.
 
-# 2. migrate
-cd backend && POSTGRES_URL=postgresql://postgres:postgres@localhost:5436/apras \
-  .venv/bin/alembic upgrade head
-
-# 3. if a guard refuses, it prints the affected users; fix and re-run:
-#    UPDATE "user" SET is_superuser = true WHERE email = '...';
-#    or INSERT INTO user_tenant_link (user_id, tenant_id) VALUES (...);
-
-# 4. full reset instead (destroys demo data):
-cd backend && .venv/bin/python -m app.seed
-```
-
-`0033` **refuses to run** in two places, and both print exactly who is
-affected:
-
-1. **Before writing anything**, if any user is explicitly linked to a
-   historically-named role row that is not their own enum role. The backfill
-   would silently widen them, so it stops instead and prints two remediations
-   that both preserve today's effective set exactly. There is no override
-   flag: an env var would let the widening ship silently, which is the one
-   thing the guard exists to prevent.
-2. **After the backfill and before the drops**, if any active,
-   non-superuser, non-tenant-admin user would be left with no way in.
-
-**Reversibility.** `alembic downgrade -1` restores the schema exactly,
-restores everything `0033` *wrote* exactly, and restores what it *dropped*
-best-effort. `role.allowed_menus` comes back `[]` for every row — those values
-are deliberately not journalled, and that is the whole of the loss.
-
-**`f5_backfill_journal`.** The table `0033` leaves at head so its downgrade can
-restore role bundles, backfill-created links and folder ACLs exactly. It is
-**required** by that downgrade, not merely helpful: with the table missing,
-`alembic downgrade -1` refuses by name and changes nothing. `DROP TABLE
-f5_backfill_journal` is therefore a **one-way door** — safe only once you are
-certain you will never downgrade past `0033`. The table has no SQLModel model
-and is invisible to `Base.metadata`, so `alembic revision --autogenerate` at
-head would propose dropping it; no workflow here runs autogenerate (every
-migration in `alembic/versions/` is hand-written), and this line exists so
-that stays a known fact rather than a lost rollback.
+A fresh install therefore starts at the default tenant with its six
+`permissions = []` roles, and `python -m app.seed` is what puts usable data in
+front of it.
 
 ### Infrações
 
 The per-condominium **rule catalogue**, its per-rule escalation ladder, and the
 infraction process (`APRAS-44`). One toggleable module, `infractions`, 13
-permissions, 18 routes, seven tables, migration `0036`.
+permissions, 18 routes, seven tables.
 
 **Five decisions carry the design, and none of them is an implementation
 detail.**
@@ -1154,7 +1118,7 @@ where the step *is* the suggestion but nothing was truncated.
 read: this codebase has no per-lot billing anywhere. A `MULTIPLE` fine
 multiplies `infraction_settings.condo_fee_amount`, a tenant-scoped singleton
 owned by this module, materialised lazily on the first `PUT` (so migration
-`0036` seeds nothing) and read as all-nulls when absent. With it unset, the
+the migration seeds nothing) and read as all-nulls when absent. With it unset, the
 suggestion answers `fine_amount_unavailable_reason = "CONDO_FEE_NOT_SET"` and
 `POST /stages` is a 409 unless an explicit `fine_amount` is passed. Applied
 amounts are **frozen** on the stage row, so a later change to the fee never
@@ -1243,7 +1207,7 @@ Four decisions carry it:
    itself, field for field, with the ACL taken from `select(Role)` over the
    acting tenant. The `documents:create` assertion is `save_report`'s **first
    statement**: a refused caller leaves no folder and no file on disk.
-3. **Two nullable columns, migration `0037_logo_and_planned_progress`.**
+3. **Two nullable columns.**
    `tenant.logo_url` is the masthead logo and
    `construction_project.planned_progress_json` is the contractor's planned
    physical-progress curve (`[{"month": "YYYY-MM", "pct": float}]`), which the

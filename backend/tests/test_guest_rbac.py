@@ -25,7 +25,7 @@ def test_the_guest_profile_still_names_a_real_role(session: Session):
     """
     role = profile_role(session, "GUEST")
 
-    assert role.name == "Convidado (papel)"
+    assert role.name == "Convidado"
     assert set(role.permissions) == bundle("GUEST")
 
 

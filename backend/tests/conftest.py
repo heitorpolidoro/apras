@@ -54,12 +54,12 @@ NEW_TIER: dict[str, frozenset[str]] = {
 #: `profile -> role name`, the six names `TenantService.LEGACY_ROLE_NAMES`
 #: carries and migration `0033` backfilled.
 PROFILE_ROLE_NAMES: dict[str, str] = {
-    "ADMINISTRATOR": "Administrador (papel)",
-    "DIRECTOR": "Diretor (papel)",
-    "MANAGER": "Gerente (papel)",
-    "GUEST": "Convidado (papel)",
-    "RESIDENT": "Morador (papel)",
-    "PORTEIRO": "Porteiro (papel)",
+    "ADMINISTRATOR": "Administrador",
+    "DIRECTOR": "Diretor",
+    "MANAGER": "Gerente",
+    "GUEST": "Convidado",
+    "RESIDENT": "Morador",
+    "PORTEIRO": "Porteiro",
 }
 
 

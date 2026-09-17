@@ -112,10 +112,6 @@ def test_the_document_states_the_model_that_exists():
         "tasks:read_all",
         "tasks:update_any",
         "occurrences:read_assigned",
-        # the journal and both refusals
-        "f5_backfill_journal",
-        "one-way door",
-        "refuses to run",
     ):
         assert claim in text, f"AGENTS.md does not state: {claim!r}"
 
@@ -194,14 +190,21 @@ def test_the_route_map_names_the_role_admin_screens():
 
 
 def test_the_runbook_is_present_and_runnable_shaped():
-    """§9.3, verbatim enough that an operator can paste it."""
+    """The upgrade path an operator is told to take, stated where §9.3's
+    pre-F5 runbook used to be.
+
+    APRAS-58 collapsed the 39-revision history into one root revision, so
+    there is no in-place upgrade of an install stamped with a retired
+    revision and no `alembic downgrade -1` to fall back on: the document has
+    to say the reset out loud, or an operator will try the old runbook.
+    """
     section = next(
         body
         for heading, _start, body in _sections()
         if heading == "### Migrating an existing install"
     )
     text = "\n".join(section)
-    assert "pg_dump" in text
+    assert "DROP SCHEMA public CASCADE" in text
     assert "alembic upgrade head" in text
     assert "python -m app.seed" in text
-    assert "alembic downgrade -1" in text
+    assert "is_superuser" in text

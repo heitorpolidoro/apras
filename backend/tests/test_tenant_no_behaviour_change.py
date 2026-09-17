@@ -74,7 +74,7 @@ def test_creating_a_second_tenant_leaves_effective_roles_unchanged(
     session.add(director)
     session.commit()
 
-    role_type = next(role for role in director.roles if role.name == "Diretor (papel)")
+    role_type = next(role for role in director.roles if role.name == "Diretor")
     before = get_effective_role_ids(director, session)
 
     response = client.post(
@@ -99,7 +99,7 @@ def test_creating_a_second_tenant_seeds_its_own_role_types(
     tenant, so the default tenant's set is untouched and the direct-call
     assertions above still resolve exactly one row.
     """
-    session.add(Role(name="Gerente (papel)"))
+    session.add(Role(name="Gerente"))
     session.commit()
     before_default_tenant = len(
         session.query(Role).filter(Role.tenant_id == DEFAULT_TENANT_ID).all()

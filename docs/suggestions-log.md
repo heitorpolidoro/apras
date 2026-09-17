@@ -583,3 +583,99 @@ None.
 - I ran the backend suite with `-p no:randomly` for a deterministic single pass. The CI invocation (`uv run pytest`) randomizes order; nothing in the diff looks order-sensitive, but the ordinary randomized run is the one that ships.
 - `TenantService._delete_stored_logo` maps a `/static/uploads/…` URL back to a path relative to the provider's `base_dir`, which is the cwd-relative default `static/uploads`. That is correct today and matches the rest of the media pipeline, but it makes logo deletion silently a no-op if the process is ever started from a different working directory. `delete_file` already swallows, so the failure mode is an orphaned file rather than a broken request — worth an absolute `base_dir` at some point, not for this task.
 - `set_logo` validates size before MIME, so a 3 MB SVG reports "too large" rather than "wrong format". Both are 422 and both are correct; only the copy the operator reads differs.
+
+## [APRAS-58] Consolidar as 40 migrações em uma única 0001_initial_schema — 2026-09-17 (spec_review round 1)
+
+- §Approach 5 / §Files touched: `.github/workflows/ci.yml` is listed as touched
+  only for a comment re-statement ("roughly 30 of the 53 cases"), but no
+  expected result covers it, so the edit is invisible to QA. Either fold it
+  into the `MIN_CASES` result or accept it as incidental.
+- `assert_no_skips.py` documents `MIN_CASES` as "a **floor**, not an equality",
+  with the stated virtue that adding a case must not require touching the file.
+  Expected Result 6 demands equality with the collected count. That is a
+  deliberate tightening, and the spec does say to re-state the docstring — worth
+  making explicit that the floor-vs-equality doctrine is being changed, so a
+  later reader does not treat the new value as a floor again.
+- §Test criteria case 9 says `TENANT_SCOPED_TABLES` where §Approach 4 says
+  `_TENANT_SCOPED_TABLES`. The underscored spelling is the one
+  `test_tenant_models.py` / `test_tenant_context.py` parse for; align the two
+  mentions to avoid the implementer writing the un-underscored name.
+- §Files touched, `backend/pyproject.toml`: the "only if the coverage gate
+  fails, add `app/seed_demo.py` to the omit list" escape hatch is bounded and
+  justified, but it makes Expected Result 8 pass by two different routes. A
+  one-line note on which route was taken, in the commit body, would keep the
+  record honest.
+
+## [APRAS-58] Consolidar as 40 migrações em uma única 0001_initial_schema — 2026-09-17 (spec_review round 2)
+
+- §Approach 4 names the literal `_TENANT_SCOPED_TABLES` (leading underscore)
+  while §Test criteria case 9 writes `TENANT_SCOPED_TABLES`. Not blocking —
+  Expected Result 6 is phrased over test outcomes, not the identifier — but
+  picking one spelling would spare the implementer a guess when writing the
+  `ast` lookup in `test_tenant_models.py`/`test_tenant_context.py`.
+- §Files touched lists `backend/pyproject.toml` as conditional ("only if the
+  coverage gate fails"). Conditional file edits are fine here because Expected
+  Result 8 judges the gate, not the file, but a note in the commit body about
+  whether the omit entry was needed would help the APRAS-59 operator.
+
+## [APRAS-58] Consolidar as 40 migrações em uma única 0001_initial_schema — 2026-09-17 (code_review round 1)
+
+1. **`AGENTS.md:449-456` — the partition total is now self-contradicting.**
+   The diff correctly updated the two group counts (28 → **32** directly
+   scoped, 21 → **24** inherited) but left the sentence's closing total at
+   "Four tables are unscoped ... — **for 53 in all**". 32 + 24 + 4 = **60**,
+   which is exactly `len(SQLModel.metadata.tables)` (verified live: 60). The
+   arithmetic was internally consistent *before* this diff (28 + 21 + 4 = 53)
+   and is wrong after it. One-word fix: `53` → `60`. Not blocking — it is
+   prose, no test asserts it, and a second stale "53-table partition" already
+   predates this diff at `AGENTS.md:1216` (out of this task's scope) — but the
+   next reader of that paragraph will trip on it.
+2. **`backend/app/seed_demo.py` (+2219/-733) rides in on a migration-squash
+   commit.** The spec authorised committing the working-tree version "as-is",
+   and the spec's own acceptance criterion anticipates it (I verified it: see
+   Evidence §6). Still, ~2200 lines of demo-data expansion unrelated to the
+   squash will be indistinguishable from the squash in `git log -p`. Worth one
+   sentence in the commit body saying the file arrived from an earlier demo
+   session, so a later bisect does not read it as part of the migration work.
+3. **Unstaged working-tree noise must not be swept into the commit.**
+   `AGENTS.md` is `MM`: the *unstaged* hunk is a 22-line "Running locally"
+   section belonging to `f72e94e` (dev-env), not to this task, and
+   `docs/suggestions-log.md` is modified and unstaged. The spec requires a
+   clean `git status --porcelain` at the end; resolve those two separately
+   rather than with a blanket `git add -A`.
+4. **`_ENUM_TYPES` (`0001_initial_schema.py:100-140`) is a hand-maintained
+   list of 38 native enum types**, and nothing but the Postgres round-trip
+   case keeps it complete. That case self-skips without `TEST_POSTGRES_URL`,
+   so a future task adding an enum gets no local signal — only CI's
+   `Backend Migration Tests (Postgres)` job will catch it. The file's own
+   docstring says this; it is the right design given `op.drop_table` does not
+   drop types, and `assert_no_skips.py` keeps the CI side armed. Flagging it
+   only so the next author knows the list is a manual obligation.
+5. **On APRAS-63 / APRAS-64 folding into this same file (asked explicitly,
+   not part of the verdict): nothing in the structure makes it hard.**
+   `upgrade()` is 60 flat `op.create_table(...)` blocks in dependency order.
+   - APRAS-63's `purchase_quote` attachment column is a one-line insertion in
+     the block at `0001_initial_schema.py:850`.
+   - APRAS-64's twelve float → `Numeric(12, 2)` moves are twelve in-place
+     substitutions among the file's 17 `sa.Float()` occurrences.
+   - `downgrade()` needs **no** corresponding edit in either case: it is
+     `drop_table`-based, so an added column and a changed column type are both
+     absorbed.
+   - `[tool.ruff.format] exclude` covers `alembic/versions/**`, so hand edits
+     will not be reflowed by the formatter.
+   The one discipline to keep: change the **models first**, then mirror them
+   here, because the compare I ran below (and the module's cases 3-4) is what
+   proves the two agree.
+
+
+## [APRAS-58] Consolidar as 40 migrações em uma única 0001_initial_schema — 2026-09-17 (qa_review round 1)
+
+- `tests/test_migrations_postgres.py` still narrates history by bare ordinal ("the retired
+  `0033`", "`0037`'s two columns", "which is how the retired `0037` learnt it"). Those are
+  not revision ids and nothing resolves them, but a reader a year from now has no way to
+  look them up since the modules are gone. Consider naming what the ordinal *did*
+  ("the pre-squash revision that dropped `user.role`") instead of its number.
+- Unrelated to the task, and out of scope for these expected results: the working tree
+  carries unstaged edits to `AGENTS.md` (+22) and `docs/suggestions-log.md` (+84) that are
+  not part of the staged change under test. Worth confirming they are intentional leftovers
+  from another process before the branch is committed.
