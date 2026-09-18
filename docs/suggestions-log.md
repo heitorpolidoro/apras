@@ -679,3 +679,164 @@ None.
   carries unstaged edits to `AGENTS.md` (+22) and `docs/suggestions-log.md` (+84) that are
   not part of the staged change under test. Worth confirming they are intentional leftovers
   from another process before the branch is committed.
+
+## [APRAS-62] Acabamento da tela de tarefas — 2026-09-17 (spec_review round 1)
+
+- The spec's own "Expected Results" checklist is a condensed paraphrase of the
+  task's `expected_results` and silently drops verifiable clauses that the body
+  does cover: *"vence hoje"*, `<mark>` **in the list** as well as the card,
+  summary and chips staying on screen when the result is empty, dropping on the
+  origin column firing nothing, a `readOnly` card not being draggable, the
+  overdue counter rendering as a *removable* chip, and
+  `assigned_to_id: null` / unchanged payload shape. Restate the task's
+  `expected_results` verbatim so the implementer builds to the same list QA
+  checks.
+- Nothing is said about what the user sees when the optimistic PATCH fails: the
+  spec covers the cache rollback but not whether an error message appears (the
+  dashboard already has `AlertModal` for the connection error). One sentence.
+- `useAssignableUsers` returns `User` objects whose roles are `Role[]`
+  (`src/types/auth.ts`), so "the role name(s) on their own line" is satisfiable;
+  worth naming the field (`user.roles.map(r => r.name)`) and saying what renders
+  for a user with several roles.
+- The overdue counter is specified as counting "over the same visible set the
+  summary counts" — say explicitly what it reads once `overdueOnly` is on
+  (it would then equal the visible count).
+
+## [APRAS-62] Acabamento da tela de tarefas — 2026-09-17 (spec_review round 2)
+
+- Double-fire risk from the B1 fix: `handleKeyDown` is kept on the now-native
+  `task-card-open` `<button>`, so in a real browser `Enter` fires both the
+  keydown handler and the native click, calling `onClick` twice. jsdom's
+  `fireEvent.keyDown` does not synthesise the click, so the existing
+  `toHaveBeenCalledTimes(1)` assertions still pass and hide it. Opening a modal
+  is idempotent, so this is non-blocking, but dropping the manual
+  `Enter`/`Space` handling and relying on native button activation would be
+  cleaner.
+- Consider asserting the `aria-live` grab/drop announcement in the board drag
+  test, not only the visible ring — the spec promises it but no test criterion
+  covers it.
+
+## [APRAS-63] Acabamento da tela de orçamentos — 2026-09-17 (spec_review round 1)
+
+- The quote attachment accepts `application/pdf` while
+  `media_service.ALLOWED_MIME_TYPES` accepts `image/webp` and no PDF. Two
+  neighbouring upload paths with disjoint accepted sets is a future confusion;
+  a one-line comment in `purchase_service.py` saying why the sets differ would
+  pay for itself.
+- D2 reuses `media_service.MAX_FILE_SIZE` by import but the frontend pins its own
+  `QUOTE_ATTACHMENT_MAX_FILE_SIZE_BYTES`. The two-sided contract test (Test
+  criteria 9) should assert against the imported backend constant, not a
+  re-typed 5 MiB literal, or the pin can drift silently if `media_service` changes.
+- Test criteria 2 lists the 422 cases inline; naming them as a parametrised case
+  id list would make the QA read of "a refused file answers 422" unambiguous.
+
+## [APRAS-63] Acabamento da tela de orçamentos — 2026-09-17 (spec_review round 2)
+- None.
+
+## [APRAS-64] Dinheiro em Decimal/Numeric — 2026-09-17 (spec_review round 1)
+
+- §Scope's factual claim "Money is multiplied in exactly two places" is wrong. `app/services/purchase_service.py:41` (`_quote_total`) is a third multiplication of `unit_price * quantity` with a `round(...)`, and `purchase_service.py:362` / `asset_service.py:164` round aggregates. ER 4's "no `round(` over money remains under `app/`" does force all five through `quantize_money()`, so the requirement set still closes — but the prose (and ER 4's "both call sites") understates the surface and should name all five.
+- §Decision 2 says "`Money` is also what carries `max_digits=12, decimal_places=2`". `Money` as defined is only `Annotated[Decimal, PlainSerializer(...)]`; the constraints are per-field `Field()` kwargs (as Decision 3 implies for `(8, 4)`). Reword to avoid suggesting a second annotated alias.
+- §Test criteria's fine regression — "a `condo_fee_amount` whose product ends in a half-cent rounds up" — is looser than its purchase-quote sibling. Pin the literal values, as ER 4 does.
+
+
+## [APRAS-64] Dinheiro em Decimal/Numeric — 2026-09-17 (spec_review round 2)
+
+- ER 6 says the rule is `MoneyIn` on `*Create`/`*Update` schemas. If any
+  `*Create` schema is also returned as a response anywhere, that field would
+  lose its scale bound; worth one sentence confirming the request schemas are
+  request-only.
+- Decision 4 states request values are quantized "before persisted" but the
+  §Files touched list only names `purchase.py`'s `_compute_total` and
+  `infraction_service._price` as quantize sites. Naming where an incoming
+  `unit_price`/`fine_amount` itself (not just the derived total) is quantized
+  would remove an implementation choice.
+
+## [APRAS-64] Dinheiro em Decimal/Numeric — 2026-09-17 (spec_review round 3)
+
+- `test_migrations_postgres.py`'s metadata-vs-live comparison covers names and
+  nullability but not types, which is why the `NUMERIC(12,2)` (migration) vs
+  bare `NUMERIC` (SQLModel, nullable) divergence passes silently. Worth one
+  sentence in §"Approach" recording that the divergence is known, intentional
+  and invisible to the existing drift suite, so a later task does not "fix"
+  the migration down to bare `NUMERIC` to make the two agree.
+
+
+## [APRAS-64] Dinheiro em Decimal/Numeric — 2026-09-17 (spec_review round 4)
+
+- §Decision 2, line 96 asserts flatly that `Money` "is what makes SQLModel emit
+  `NUMERIC(12, 2)` (measured)", while §Test criteria line 210 records the
+  measured counter-case that a nullable `Money | None` column yields a bare
+  `NUMERIC`. Both are true in their own context, but read together the earlier
+  sentence overstates. Since the DDL is hand-written in
+  `0001_initial_schema.py` and PostgreSQL is the precision oracle, this has no
+  implementation consequence — worth one qualifying clause ("for non-nullable
+  columns") on line 96 the next time the file is edited, not worth a round.
+- The spec never says whether the twelve-column PostgreSQL assertion should be
+  table-driven (one parametrised case over a literal list of
+  `(table, column, precision, scale)`) or a single case with twelve asserts.
+  Either satisfies ER 3; a parametrised list makes a missing column visible in
+  the test report. Implementation detail.
+- Q1/Q2/Q3 remain open operator questions with implemented answers recorded.
+  They are decisions, not spec defects; the spec states the one-line change for
+  each if the operator rules otherwise.
+
+## [APRAS-62] Acabamento da tela de tarefas — 2026-09-18 (spec_review round 3)
+- Verify the drag manually in Firefox and Safari during implementation: the
+  jsdom `fireEvent.dragStart` tests cannot detect a browser refusing to start a
+  drag from a form-control element. If one refuses, wrapping the unchanged
+  `<button>` in a `<div draggable>` preserves both the single-button-role
+  invariant and `TaskCard.test.tsx:80`.
+- Expected result 4 says "no drag handle" while the spec permits an optional
+  decorative grip icon and the mock draws one. Wording it as "no focusable drag
+  handle / no second button role" would remove any chance of a QA reading them
+  as contradictory.
+- The spec does not say whether the decorative grip is hidden when dragging is
+  disabled (status filter active, or a `readOnly` card). Showing a grip on a
+  card that cannot be dragged is the same dead affordance the header hint
+  exists to avoid. Cosmetic, implementer's call.
+
+## [APRAS-64] Dinheiro em Decimal/Numeric — 2026-09-18 (spec_review round 5)
+
+- Decision 5 justifies truncation only on its own terms ("a half-typed value is
+  never destroyed mid-keystroke"). Add one sentence stating the asymmetry with
+  `quantize_money`'s `ROUND_HALF_UP` and why it is intentional — the two rules
+  never observe the same event, and `2.675` can no longer reach the API from a
+  browser. A future reader comparing ER 5 with ER 8 will otherwise read it as an
+  oversight.
+- The Decision 5 table is introduced as "The eleven money inputs" and then
+  clarified parenthetically as twelve rows; ER 9 likewise says "All twelve money
+  inputs ... with `places = 2`" and then carves out the multiplier. Both are
+  unambiguous on a careful read but cost the reader a second pass. Say "twelve
+  inputs — eleven money fields at `places = 2` and one ratio at `places = 4`" in
+  both places.
+- Five of the twelve call sites hold numeric state (`Number(e.target.value)`):
+  `AssetFormModal`, `PlansAdminPage` (both), `InfractionRulesPage` (the two
+  step fields via `updateStep`). On those, a trailing separator that
+  `limitDecimals` deliberately passes through (`"2."`) is still collapsed by
+  `Number()` to `2`, so the dot disappears under the cursor. This is
+  pre-existing behaviour that the task neither introduces nor is funded to fix —
+  and the spec is right to refuse the unification refactor — but it means the
+  helper's `"2."` pass-through case only actually protects the string-state call
+  sites. Worth one line in Decision 5 so the developer does not chase it as a
+  bug during implementation.
+- `AvatarCropEditor` is named in the "leave alone" list but contains no
+  `type="number"` input. Harmless; drop it for accuracy.
+
+
+## [APRAS-62] Acabamento da tela de tarefas — 2026-09-18 (code_review round 1)
+- `TaskDashboard.tsx:62-77` — `matchingTasks` re-implements a subset of `useTaskFiltering`'s predicate (status / priority / assignee / search) instead of reusing it. It omits the category filter and the simulation visibility rules (`canSeeSimulatedTask`) that `TaskBoard` and `TaskList` do apply, so while simulating a role the summary and the overdue counter can count tasks the board does not render. Reusing `useTaskFiltering` (or extracting its predicate) would make the two agree by construction.
+- `TaskDashboard.tsx:281` — `totalCount={loadedTasks.length}`. Because status/priority/assignee/category are *server* filters (`fetchTasks` sends them as query params), `loadedTasks` is already filtered, so with only server filters active the bar reads "Mostrando 12 de 12 tarefas" while chips simultaneously state that filters are on. The spec's example ("12 de 47") implies the unfiltered total. X < Y still happens correctly for search / overdue, which is the main case, so this is cosmetic rather than wrong.
+- `en.json` / `pt.json` — `tasks.dashboard.clearSearch` is added to both locales but never referenced in any `.ts`/`.tsx` (YAGNI; the chip's remove control uses `removeFilter`). Separately, `tasks.form.unassigned` lost its last consumer when the `<select>` was replaced (`AssigneePicker` uses `assigneeNone`) and is now orphaned in both locales.
+- `AssigneePicker.tsx:127-130` — `blurTimer` is never cleared on unmount, unlike `TaskFilterBar.tsx:73-78` which does clear its debounce timer. Harmless under React 18 (the state update on an unmounted component is a no-op), but the two timers in this task handle the same situation differently.
+- `TaskCard.tsx:139-140` — stray double blank line before `export default`.
+- `TaskDashboard.test.tsx` ("filters client-side, with no change to the useTasks query key") asserts `vi.mocked(useTasks).mock.calls.length` **toBeGreaterThan** the earlier count. That is true simply because typing re-renders; the assertion that actually proves the test's name is the per-call `expect(options).not.toHaveProperty("search")` loop right after. The count assertion reads as the opposite of what the title claims and could mislead a later reader.
+
+---
+
+# Evidence
+
+
+## [APRAS-62] Acabamento da tela de tarefas — 2026-09-18 (qa_review round 1)
+- `TaskFilterBar` defines `tasks.dashboard.clearSearch` in both locales but never renders it (the search chip's remove button uses `removeFilter`). Harmless, but it is a key with no consumer; either wire it to a clear-button inside the input or drop it.
+- `HighlightedText.matchRanges` rebuilds the normalised index map for every render of every card; with long descriptions and fast typing this is O(cards x text). A `useMemo` keyed on `(text, needle)` would make the cost proportional to changes rather than renders. Not measurable at current list sizes.

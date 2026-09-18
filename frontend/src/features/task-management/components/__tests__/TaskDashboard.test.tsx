@@ -1,7 +1,7 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act, within } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import TaskDashboard from "../TaskDashboard";
-import { useTasks, useCreateTask, useUpdateTask, useTaskHistory, useDeleteTask,  } from "../../hooks/useTasks";
+import { useTasks, useCreateTask, useUpdateTask, useUpdateTaskStatus, useTaskHistory, useDeleteTask,  } from "../../hooks/useTasks";
 import { useCategories } from "../../hooks/useCategories";
 import { useRoles } from "../../../../hooks/useRoles";
 import { TaskStatus, TaskPriority } from "../../types";
@@ -42,6 +42,7 @@ vi.mock("../../hooks/useTasks", () => ({
   useTasks: vi.fn(),
   useCreateTask: vi.fn(),
   useUpdateTask: vi.fn(),
+  useUpdateTaskStatus: vi.fn(),
   useTaskHistory: vi.fn(),
   useDeleteTask: vi.fn(),
   useComments: vi.fn(() => ({ data: [], isLoading: false })),
@@ -139,6 +140,10 @@ describe("TaskDashboard", () => {
       mutate: vi.fn(),
       isPending: false,
     } as any); // skipcq: JS-0323
+    vi.mocked(useUpdateTaskStatus).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    } as unknown as ReturnType<typeof useUpdateTaskStatus>);
     vi.mocked(useDeleteTask).mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
@@ -619,5 +624,237 @@ describe("TaskDashboard", () => {
     expect(useTasks).toHaveBeenLastCalledWith(
       expect.objectContaining({ assigned_to_id: null }),
     );
+  });
+});
+
+// ── APRAS-62: search, chips, summary, overdue counter and the drop strip ──
+describe("TaskDashboard — APRAS-62", () => {
+  const statusMutate = vi.fn();
+
+  const boardTasks = [
+    {
+      ...mockTasks[0],
+      id: "1",
+      title: "Manutenção do elevador",
+      description: "Contrato anual",
+      status: TaskStatus.PENDING,
+    },
+    {
+      ...mockTasks[0],
+      id: "2",
+      title: "Assembleia ordinária",
+      description: "Pauta do semestre",
+      status: TaskStatus.IN_PROGRESS,
+      due_date: "2020-01-01T12:00:00Z",
+    },
+  ];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(useTasks).mockReturnValue({
+      data: boardTasks,
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as unknown as ReturnType<typeof useTasks>);
+    vi.mocked(useCreateTask).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    } as unknown as ReturnType<typeof useCreateTask>);
+    vi.mocked(useUpdateTask).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    } as unknown as ReturnType<typeof useUpdateTask>);
+    vi.mocked(useUpdateTaskStatus).mockReturnValue({
+      mutate: statusMutate,
+      isPending: false,
+    } as unknown as ReturnType<typeof useUpdateTaskStatus>);
+    vi.mocked(useDeleteTask).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    } as unknown as ReturnType<typeof useDeleteTask>);
+    vi.mocked(useTaskHistory).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useTaskHistory>);
+    vi.mocked(useUsersHook.useUsers).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useUsersHook.useUsers>);
+    vi.mocked(useUsersHook.useAssignableUsers).mockReturnValue({
+      data: [
+        { id: "user-2", full_name: "Marta Nogueira", email: "m@apras.test" },
+      ],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useUsersHook.useAssignableUsers>);
+    vi.mocked(useCategories).mockReturnValue({
+      data: [{ id: "cat-1", name: "Geral", color: "#808080", is_active: true }],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useCategories>);
+    vi.mocked(useRoles).mockReturnValue({
+      data: [{ id: "type-1", name: "Gerente" }],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useRoles>);
+  });
+
+  const typeSearch = (value: string) => {
+    fireEvent.change(screen.getByLabelText("Buscar tarefas"), {
+      target: { value },
+    });
+    act(() => {
+      vi.advanceTimersByTime(250);
+    });
+  };
+
+  it("filters client-side, with no change to the useTasks query key", () => {
+    vi.useFakeTimers();
+    render(<TaskDashboard />);
+
+    const callsBefore = vi.mocked(useTasks).mock.calls.length;
+    typeSearch("elevador");
+
+    // The matched fragment is wrapped in a `<mark>`, so the title's text is
+    // split across nodes: match on the heading's accessible name.
+    expect(
+      screen.getByRole("heading", { name: "Manutenção do elevador" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Assembleia ordinária")).not.toBeInTheDocument();
+    expect(vi.mocked(useTasks).mock.calls.length).toBeGreaterThan(callsBefore);
+    vi.mocked(useTasks).mock.calls.forEach(([options]) => {
+      expect(options).not.toHaveProperty("search");
+      expect(options).not.toHaveProperty("overdueOnly");
+    });
+    vi.useRealTimers();
+  });
+
+  it("reports how many tasks are visible out of the total", () => {
+    vi.useFakeTimers();
+    render(<TaskDashboard />);
+    expect(screen.getByText("Mostrando 2 de 2 tarefas")).toBeInTheDocument();
+
+    typeSearch("elevador");
+    expect(screen.getByText("Mostrando 1 de 2 tarefas")).toBeInTheDocument();
+    vi.useRealTimers();
+  });
+
+  it("clears one chip and leaves the others alone", () => {
+    vi.useFakeTimers();
+    render(<TaskDashboard />);
+
+    typeSearch("elevador");
+    fireEvent.change(screen.getByDisplayValue("Todas as prioridades"), {
+      target: { value: TaskPriority.MEDIUM },
+    });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Remover filtro: Prioridade: Média" }),
+    );
+
+    expect(screen.queryByText("Prioridade: Média")).not.toBeInTheDocument();
+    expect(screen.getByText("“elevador”")).toBeInTheDocument();
+    vi.useRealTimers();
+  });
+
+  it("filters the board from the overdue counter", () => {
+    render(<TaskDashboard />);
+
+    const counter = screen.getByRole("button", { name: /1 em atraso/ });
+    fireEvent.click(counter);
+
+    expect(screen.getByText("Assembleia ordinária")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Manutenção do elevador"),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("Em atraso")).toBeInTheDocument();
+  });
+
+  it("patches the status once on drop and offers Desfazer", () => {
+    render(<TaskDashboard />);
+
+    const card = screen
+      .getByText("Manutenção do elevador")
+      .closest("button") as HTMLElement;
+    fireEvent.dragStart(card);
+    fireEvent.drop(screen.getByTestId(`task-column-${TaskStatus.COMPLETED}`));
+
+    expect(statusMutate).toHaveBeenCalledTimes(1);
+    expect(statusMutate).toHaveBeenCalledWith({
+      id: "1",
+      status: TaskStatus.COMPLETED,
+    });
+
+    const strip = screen.getByTestId("task-move-strip");
+    expect(strip).toHaveTextContent("Manutenção do elevador");
+    expect(strip).toHaveTextContent("Pendente");
+    expect(strip).toHaveTextContent("Concluída");
+
+    fireEvent.click(within(strip).getByRole("button", { name: "Desfazer" }));
+    expect(statusMutate).toHaveBeenCalledTimes(2);
+    expect(statusMutate).toHaveBeenLastCalledWith({
+      id: "1",
+      status: TaskStatus.PENDING,
+    });
+    expect(screen.queryByTestId("task-move-strip")).not.toBeInTheDocument();
+  });
+
+  it("dismisses the strip on its own after a while", () => {
+    vi.useFakeTimers();
+    render(<TaskDashboard />);
+
+    const card = screen
+      .getByText("Manutenção do elevador")
+      .closest("button") as HTMLElement;
+    fireEvent.dragStart(card);
+    fireEvent.drop(screen.getByTestId(`task-column-${TaskStatus.BLOCKED}`));
+    expect(screen.getByTestId("task-move-strip")).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(8_000);
+    });
+    expect(screen.queryByTestId("task-move-strip")).not.toBeInTheDocument();
+    vi.useRealTimers();
+  });
+
+  it("can be dismissed by hand", () => {
+    render(<TaskDashboard />);
+
+    const card = screen
+      .getByText("Manutenção do elevador")
+      .closest("button") as HTMLElement;
+    fireEvent.dragStart(card);
+    fireEvent.drop(screen.getByTestId(`task-column-${TaskStatus.BLOCKED}`));
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Dispensar aviso" }),
+    );
+    expect(screen.queryByTestId("task-move-strip")).not.toBeInTheDocument();
+  });
+
+  it("keeps the summary and chips on screen when nothing matches", () => {
+    vi.useFakeTimers();
+    render(<TaskDashboard />);
+
+    typeSearch("piscina");
+    expect(screen.getByText("Mostrando 0 de 2 tarefas")).toBeInTheDocument();
+    expect(screen.getByText("“piscina”")).toBeInTheDocument();
+    vi.useRealTimers();
+  });
+
+  it("clears every filter at once", () => {
+    vi.useFakeTimers();
+    render(<TaskDashboard />);
+
+    typeSearch("elevador");
+    fireEvent.change(screen.getByDisplayValue("Todas as prioridades"), {
+      target: { value: TaskPriority.MEDIUM },
+    });
+
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Limpar filtros" })[0],
+    );
+
+    expect(screen.getByText("Mostrando 2 de 2 tarefas")).toBeInTheDocument();
+    expect(screen.queryByText("“elevador”")).not.toBeInTheDocument();
+    vi.useRealTimers();
   });
 });

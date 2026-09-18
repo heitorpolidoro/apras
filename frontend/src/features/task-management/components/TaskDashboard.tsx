@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { TaskStatus, TaskPriority } from "../types";
 
@@ -6,49 +6,127 @@ import TaskList from "./TaskList";
 import TaskBoard from "./TaskBoard";
 import TaskForm from "./TaskForm";
 import TaskDetailsView from "./TaskDetailsView";
-import { useTasks } from "../hooks/useTasks";
+import { useTasks, useUpdateTaskStatus } from "../hooks/useTasks";
 import { useCategories } from "../hooks/useCategories";
 import { useAssignableUsers } from "../../../hooks/useUsers";
 import { Button } from "../../../components/ui/button";
 import { Select } from "../../../components/ui/select";
 import { AlertModal } from "../../../components/ui/alert-modal";
-import { Plus, LayoutGrid, List } from "lucide-react";
-import { getStatusLabel } from "../utils/taskUtils";
+import { Plus, LayoutGrid, List, Undo2, X } from "lucide-react";
+import { getStatusLabel, isOverdue, matchesSearch } from "../utils/taskUtils";
+import TaskFilterBar, { type ServerFilterKey } from "./TaskFilterBar";
 
 const TaskDashboard: React.FC = () => {
   const { t } = useTranslation();
   const [viewMode, setViewMode] = useState<"list" | "board">("board");
-  const [filters, setFilters] = useState<{
+  // Two filter objects, not one (APRAS-62). `serverFilters` is the `useTasks`
+  // query key; `clientFilters` never reaches it, so typing in the search box
+  // re-filters the loaded list instead of refetching on every keystroke.
+  const [serverFilters, setServerFilters] = useState<{
     status: TaskStatus | null;
     priority: TaskPriority | null;
     category_id: string | null;
     assigned_to_id: string | null;
   }>({ status: null, priority: null, category_id: null, assigned_to_id: null });
+  const [clientFilters, setClientFilters] = useState<{
+    search: string;
+    overdueOnly: boolean;
+  }>({ search: "", overdueOnly: false });
+  const [lastMove, setLastMove] = useState<{
+    taskId: string;
+    title: string;
+    from: TaskStatus;
+    to: TaskStatus;
+  } | null>(null);
 
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
-  const { data: tasks, isLoading, isError, error } = useTasks(filters);
+  const { data: tasks, isLoading, isError, error } = useTasks(serverFilters);
   const { data: categories } = useCategories();
   const { data: users } = useAssignableUsers();
+  const updateStatus = useUpdateTaskStatus();
+
+  const filters = useMemo(
+    () => ({ ...serverFilters, ...clientFilters }),
+    [serverFilters, clientFilters],
+  );
 
   const selectedTask = tasks?.find((t) => t.id === selectedTaskId);
 
-  const handleFilterChange = (
-    filterType: "status" | "priority" | "category_id" | "assigned_to_id",
-    value: TaskStatus | TaskPriority | string | null,
+  // The summary's two numbers, and the overdue counter. The counter ignores
+  // `overdueOnly` itself: otherwise turning it on would make it count its own
+  // result and always agree with the summary.
+  const loadedTasks = useMemo(() => tasks ?? [], [tasks]);
+  const matchingTasks = useMemo(
+    () =>
+      loadedTasks.filter((task) => {
+        if (filters.status && task.status !== filters.status) return false;
+        if (filters.priority && task.priority !== filters.priority)
+          return false;
+        if (
+          filters.assigned_to_id &&
+          task.assigned_to_id !== filters.assigned_to_id
+        )
+          return false;
+        return matchesSearch(task, filters.search);
+      }),
+    [loadedTasks, filters],
+  );
+  const overdueCount = matchingTasks.filter((task) => isOverdue(task)).length;
+  const visibleCount = filters.overdueOnly
+    ? overdueCount
+    : matchingTasks.length;
+
+  // The confirmation strip is transient: it names the move just made and
+  // offers to undo it, then gets out of the way.
+  useEffect(() => {
+    if (!lastMove) return undefined;
+    const timer = setTimeout(() => setLastMove(null), 8_000);
+    return () => clearTimeout(timer);
+  }, [lastMove]);
+
+  const handleTaskMove = (
+    taskId: string,
+    from: TaskStatus,
+    to: TaskStatus,
   ) => {
-    setFilters((prev) => ({ ...prev, [filterType]: value }));
+    const moved = tasks?.find((task) => task.id === taskId);
+    updateStatus.mutate({ id: taskId, status: to });
+    setLastMove({ taskId, title: moved?.title ?? "", from, to });
   };
 
-  const clearFilters = () =>
-    setFilters({
+  const handleUndoMove = () => {
+    if (!lastMove) return;
+    // Undo is a second write, never a cache replay: the server stays the
+    // single source of truth for the task's status.
+    updateStatus.mutate({ id: lastMove.taskId, status: lastMove.from });
+    setLastMove(null);
+  };
+
+  const handleFilterChange = (
+    filterType: ServerFilterKey,
+    value: TaskStatus | TaskPriority | string | null,
+  ) => {
+    setServerFilters((prev) => ({ ...prev, [filterType]: value }));
+  };
+
+  const clearFilters = () => {
+    setServerFilters({
       status: null,
       priority: null,
       category_id: null,
       assigned_to_id: null,
     });
+    setClientFilters({ search: "", overdueOnly: false });
+  };
+
+  const handleSearchChange = (search: string) =>
+    setClientFilters((prev) => ({ ...prev, search }));
+
+  const handleOverdueToggle = () =>
+    setClientFilters((prev) => ({ ...prev, overdueOnly: !prev.overdueOnly }));
 
   const handleTaskClick = (taskId: string) => {
     setSelectedTaskId(taskId);
@@ -102,7 +180,7 @@ const TaskDashboard: React.FC = () => {
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6 p-4 rounded-lg border bg-muted/30">
         <div className="flex flex-wrap gap-3">
           <Select
-            value={filters.status ?? ""}
+            value={serverFilters.status ?? ""}
             onChange={(e) =>
               handleFilterChange(
                 "status",
@@ -120,7 +198,7 @@ const TaskDashboard: React.FC = () => {
           </Select>
 
           <Select
-            value={filters.priority ?? ""}
+            value={serverFilters.priority ?? ""}
             onChange={(e) =>
               handleFilterChange(
                 "priority",
@@ -138,7 +216,7 @@ const TaskDashboard: React.FC = () => {
           </Select>
 
           <Select
-            value={filters.category_id ?? ""}
+            value={serverFilters.category_id ?? ""}
             onChange={(e) =>
               handleFilterChange("category_id", e.target.value || null)
             }
@@ -153,7 +231,7 @@ const TaskDashboard: React.FC = () => {
           </Select>
 
           <Select
-            value={filters.assigned_to_id ?? ""}
+            value={serverFilters.assigned_to_id ?? ""}
             onChange={(e) =>
               handleFilterChange("assigned_to_id", e.target.value || null)
             }
@@ -167,14 +245,6 @@ const TaskDashboard: React.FC = () => {
             ))}
           </Select>
 
-          {(filters.status ||
-            filters.priority ||
-            filters.category_id ||
-            filters.assigned_to_id) && (
-            <Button variant="ghost" size="sm" onClick={clearFilters}>
-              {t("tasks.dashboard.clearFilters")}
-            </Button>
-          )}
         </div>
 
         <div className="flex items-center border rounded-lg p-1 bg-background">
@@ -201,6 +271,48 @@ const TaskDashboard: React.FC = () => {
         </div>
       </div>
 
+      <TaskFilterBar
+        search={clientFilters.search}
+        onSearchChange={handleSearchChange}
+        overdueOnly={clientFilters.overdueOnly}
+        onOverdueToggle={handleOverdueToggle}
+        overdueCount={overdueCount}
+        visibleCount={visibleCount}
+        totalCount={loadedTasks.length}
+        filters={serverFilters}
+        categories={categories}
+        users={users}
+        onClearFilter={(key) => handleFilterChange(key, null)}
+        onClearAll={clearFilters}
+      />
+
+      {lastMove && (
+        <div
+          data-testid="task-move-strip"
+          className="flex flex-wrap items-center gap-3 mb-4 rounded-lg border border-border/60 bg-muted/40 px-4 py-2 text-sm"
+        >
+          <span className="text-muted-foreground">
+            {t("tasks.board.moved", {
+              title: lastMove.title,
+              from: getStatusLabel(lastMove.from, t),
+              to: getStatusLabel(lastMove.to, t),
+            })}
+          </span>
+          <Button variant="outline" size="sm" onClick={handleUndoMove}>
+            <Undo2 className="size-4" />
+            {t("tasks.board.undo")}
+          </Button>
+          <button
+            type="button"
+            className="ml-auto rounded-full p-1 text-muted-foreground hover:bg-black/10 dark:hover:bg-white/10"
+            aria-label={t("tasks.board.dismissMove")}
+            onClick={() => setLastMove(null)}
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+      )}
+
       {/* Task view */}
       {viewMode === "list" ? (
         <TaskList
@@ -219,6 +331,7 @@ const TaskDashboard: React.FC = () => {
           error={error}
           filters={filters}
           onTaskClick={handleTaskClick}
+          onTaskMove={handleTaskMove}
         />
       )}
 

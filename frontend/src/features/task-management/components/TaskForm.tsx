@@ -16,6 +16,7 @@ import { Label } from "../../../components/ui/label";
 import { AlertModal } from "../../../components/ui/alert-modal";
 import { getStatusLabel } from "../utils/taskUtils";
 import RoleMultiSelect from "../../user-administration/components/RoleMultiSelect";
+import AssigneePicker from "./AssigneePicker";
 
 interface TaskFormProps {
   task?: TaskRead;
@@ -93,6 +94,10 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSuccess, onCancel }) => {
         return newErrors;
       });
     }
+  };
+
+  const handleAssigneeChange = (assigneeId: string | null) => {
+    setFormData((prev) => ({ ...prev, assigned_to_id: assigneeId ?? "" }));
   };
 
   const handleVisibleToIdsChange = (ids: string[]) => {
@@ -260,23 +265,13 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSuccess, onCancel }) => {
           <Label htmlFor="assigned_to_id">
             {t("tasks.form.assigneeLabel")}
           </Label>
-          <Select
+          <AssigneePicker
             id="assigned_to_id"
-            name="assigned_to_id"
-            value={formData.assigned_to_id as string}
-            onChange={handleChange}
+            users={users ?? []}
+            value={(formData.assigned_to_id as string) || null}
+            onChange={handleAssigneeChange}
             disabled={isLoading}
-          >
-            <option value="">{t("tasks.form.unassigned")}</option>
-            {users?.map((user) => (
-              <option key={user.id} value={user.id}>
-                {user.full_name || user.email}
-              </option>
-            ))}
-          </Select>
-          <p className="text-xs text-muted-foreground">
-            {t("tasks.form.assigneeHelper")}
-          </p>
+          />
         </div>
 
         <div className="flex flex-col gap-1.5">

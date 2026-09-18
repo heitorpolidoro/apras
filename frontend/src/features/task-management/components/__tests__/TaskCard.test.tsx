@@ -54,9 +54,9 @@ describe("TaskCard", () => {
     expect(screen.getByText("Test Description")).toBeInTheDocument();
     expect(screen.getByText("Pendente")).toBeInTheDocument();
     expect(screen.getByText("Média")).toBeInTheDocument();
-    // Date is rendered without "Due:" prefix
-    const dateEl = screen.getByText(/\d{1,2}\/\d{1,2}\/\d{4}/);
-    expect(dateEl).toBeInTheDocument();
+    // A deadline long past now reads as relative overdue wording, not a
+    // raw date (APRAS-62). The icon is asserted too: never colour alone.
+    expect(screen.getByTestId("due-date-icon")).toBeInTheDocument();
   });
 
   it("renders 'Sem descrição' when description is missing", () => {
@@ -153,11 +153,16 @@ describe("TaskCard", () => {
       i18n: { language: "en" },
     } as any);
 
-    render(<TaskCard task={mockTask} />);
+    // A distant deadline keeps the absolute date (APRAS-62's `future`
+    // state); "today" is whenever this suite runs, so the fixture is
+    // computed from it rather than frozen.
+    const far = new Date();
+    far.setFullYear(far.getFullYear() + 2);
+    render(<TaskCard task={{ ...mockTask, due_date: far.toISOString() }} />);
 
-    // In US format it might be MM/DD/YYYY or M/D/YYYY
-    // 12/31/2023
-    expect(screen.getByText("12/31/2023")).toBeInTheDocument();
+    expect(
+      screen.getByText(far.toLocaleDateString("en-US")),
+    ).toBeInTheDocument();
   });
 
   it("renders category badge with name and color dot", () => {
@@ -202,5 +207,126 @@ describe("TaskCard", () => {
     ) as HTMLElement | null;
     expect(dot).toBeTruthy();
     expect(dot?.style.backgroundColor).toBe("rgb(128, 128, 128)");
+  });
+});
+
+// ── APRAS-62: search highlight, due-date wording and mouse-only dragging ──
+describe("TaskCard — APRAS-62", () => {
+  beforeEach(() => {
+    vi.mocked(useTranslation).mockReturnValue({
+      t: (s: string) => s,
+      i18n: { language: "pt" },
+    } as unknown as ReturnType<typeof useTranslation>);
+  });
+
+  it("exposes exactly one button role, and it is the draggable root", () => {
+    render(<TaskCard task={mockTask} draggable />);
+
+    const buttons = screen.getAllByRole("button");
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0]).toHaveAttribute("draggable", "true");
+  });
+
+  it("is not draggable unless the board says so", () => {
+    render(<TaskCard task={mockTask} />);
+    expect(screen.getByRole("button")).toHaveAttribute("draggable", "false");
+  });
+
+  it("is not draggable when the card is read-only", () => {
+    render(<TaskCard task={mockTask} draggable readOnly />);
+    expect(screen.getByRole("button")).toHaveAttribute("draggable", "false");
+  });
+
+  it("puts the task id on the dataTransfer and reports the drag start", () => {
+    const onDragStart = vi.fn();
+    const onDragEnd = vi.fn();
+    render(
+      <TaskCard
+        task={mockTask}
+        draggable
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+      />,
+    );
+
+    const setData = vi.fn();
+    fireEvent.dragStart(screen.getByRole("button"), {
+      dataTransfer: { setData, effectAllowed: "" },
+    });
+    expect(setData).toHaveBeenCalledWith("text/plain", mockTask.id);
+    expect(onDragStart).toHaveBeenCalledWith(mockTask.id);
+
+    fireEvent.dragEnd(screen.getByRole("button"));
+    expect(onDragEnd).toHaveBeenCalledTimes(1);
+  });
+
+  it("starts a drag even when the event carries no dataTransfer", () => {
+    const onDragStart = vi.fn();
+    render(<TaskCard task={mockTask} draggable onDragStart={onDragStart} />);
+
+    fireEvent.dragStart(screen.getByRole("button"));
+    expect(onDragStart).toHaveBeenCalledWith(mockTask.id);
+  });
+
+  it("has no grab/move/drop key handling: arrow keys do nothing", () => {
+    const onClick = vi.fn();
+    const onDragStart = vi.fn();
+    render(
+      <TaskCard
+        task={mockTask}
+        draggable
+        onClick={onClick}
+        onDragStart={onDragStart}
+      />,
+    );
+
+    const card = screen.getByRole("button");
+    fireEvent.keyDown(card, { key: "ArrowLeft" });
+    fireEvent.keyDown(card, { key: "ArrowRight" });
+    fireEvent.keyDown(card, { key: "ArrowUp" });
+    fireEvent.keyDown(card, { key: "ArrowDown" });
+
+    expect(onClick).not.toHaveBeenCalled();
+    expect(onDragStart).not.toHaveBeenCalled();
+    expect(card).not.toHaveAttribute("aria-grabbed");
+  });
+
+  it("renders the grip affordance as decorative, never as a control", () => {
+    render(<TaskCard task={mockTask} draggable />);
+
+    const grip = screen.getByTestId("task-card-grip");
+    expect(grip).toHaveAttribute("aria-hidden", "true");
+    expect(grip.tagName).toBe("SPAN");
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+  });
+
+  it("does not render the grip when the card is not draggable", () => {
+    render(<TaskCard task={mockTask} />);
+    expect(screen.queryByTestId("task-card-grip")).not.toBeInTheDocument();
+  });
+
+  it("wraps the searched fragment in a mark, in title and description", () => {
+    const task = {
+      ...mockTask,
+      title: "Revisão da manutenção",
+      description: "Contrato de manutenção anual",
+    };
+    const { container } = render(<TaskCard task={task} search="manutencao" />);
+
+    const marks = container.querySelectorAll("mark");
+    expect(marks).toHaveLength(2);
+    expect(marks[0].textContent).toBe("manutenção");
+  });
+
+  it("renders no mark without a search", () => {
+    const { container } = render(<TaskCard task={mockTask} />);
+    expect(container.querySelectorAll("mark")).toHaveLength(0);
+  });
+
+  it("renders the overdue wording and an icon for a past deadline", () => {
+    render(<TaskCard task={mockTask} />);
+
+    expect(screen.getByTestId("due-date-icon")).toBeInTheDocument();
+    expect(screen.getByText("tasks.dueDate.overdueMany")).toBeInTheDocument();
   });
 });

@@ -113,6 +113,47 @@ export const useUpdateTask = () => {
 };
 
 /**
+ * Hook to move a task to another status, optimistically.
+ *
+ * This is the board drag-and-drop's only write (APRAS-62): the cached
+ * `["tasks", …]` lists are updated in `onMutate`, rolled back in `onError`
+ * and reconciled with the server in `onSettled`. *Undo* is a second call of
+ * this same mutation with the previous status — never a cache replay — so a
+ * failed undo is refused and reported by the server like any other write.
+ *
+ * @returns React Query mutation result.
+ */
+export const useUpdateTaskStatus = () => {
+  const queryClient = useQueryClient();
+  return useMutation<
+    unknown,
+    Error,
+    { id: string; status: TaskStatus },
+    { previous: [readonly unknown[], unknown][] }
+  >({
+    mutationFn: ({ id, status }) => apiClient.patch(`/tasks/${id}`, { status }),
+    onMutate: async ({ id, status }) => {
+      await queryClient.cancelQueries({ queryKey: ["tasks"] });
+      const previous = queryClient.getQueriesData({ queryKey: ["tasks"] });
+      queryClient.setQueriesData<TaskRead[]>({ queryKey: ["tasks"] }, (old) =>
+        Array.isArray(old)
+          ? old.map((task) => (task.id === id ? { ...task, status } : task))
+          : old,
+      );
+      return { previous };
+    },
+    onError: (_error, _variables, context) => {
+      context?.previous.forEach(([key, data]) => {
+        queryClient.setQueryData(key, data);
+      });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    },
+  });
+};
+
+/**
  * Fetches the audit history for a specific task.
  *
  * @param taskId - The UUID of the task.

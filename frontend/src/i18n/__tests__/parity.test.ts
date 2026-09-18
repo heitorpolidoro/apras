@@ -65,3 +65,12 @@ describe("i18n locale parity", () => {
     expect(empty(en as Tree)).toEqual([]);
   });
 });
+
+describe("retired keys", () => {
+  it("no longer carries the assignee placeholder helper (APRAS-62)", () => {
+    // The `<select>` it apologised for is now a searchable picker, so the
+    // string is gone from both locales rather than left dangling in one.
+    expect(EN_KEYS).not.toContain("tasks.form.assigneeHelper");
+    expect(PT_KEYS).not.toContain("tasks.form.assigneeHelper");
+  });
+});

@@ -1,5 +1,5 @@
 import { renderHook } from "@testing-library/react";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import { useTaskFiltering } from "../useTaskFiltering";
 import { TaskStatus, TaskPriority } from "../../types";
 import type { TaskRead } from "../../types";
@@ -227,5 +227,97 @@ describe("useTaskFiltering", () => {
     const firstResult = result.current;
     rerender({ tasks: mockTasks, filters });
     expect(result.current).toBe(firstResult); // Referential equality check
+  });
+});
+
+describe("useTaskFiltering — free-text search", () => {
+  const searchTasks: TaskRead[] = [
+    {
+      ...mockTasks[0],
+      id: "s1",
+      title: "Manutenção do elevador",
+      description: "Contrato anual",
+    },
+    {
+      ...mockTasks[1],
+      id: "s2",
+      title: "Trocar lâmpadas",
+      description: "Garagem e hall, com manutencao preventiva",
+    },
+    { ...mockTasks[2], id: "s3", title: "Assembleia", description: null },
+  ];
+
+  it("matches a title accent- and case-insensitively", () => {
+    const { result } = renderHook(() =>
+      useTaskFiltering(searchTasks, { search: "MANUTENCAO" }),
+    );
+    expect(result.current.map((task) => task.id)).toEqual(["s1", "s2"]);
+  });
+
+  it("keeps a description-only match", () => {
+    const { result } = renderHook(() =>
+      useTaskFiltering(searchTasks, { search: "contrato" }),
+    );
+    expect(result.current.map((task) => task.id)).toEqual(["s1"]);
+  });
+
+  it("filters nothing for a blank search", () => {
+    const { result } = renderHook(() =>
+      useTaskFiltering(searchTasks, { search: "   " }),
+    );
+    expect(result.current).toHaveLength(3);
+  });
+
+  it("returns nothing when no task matches", () => {
+    const { result } = renderHook(() =>
+      useTaskFiltering(searchTasks, { search: "piscina" }),
+    );
+    expect(result.current).toEqual([]);
+  });
+});
+
+describe("useTaskFiltering — overdueOnly", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const overdueTasks: TaskRead[] = [
+    {
+      ...mockTasks[0],
+      id: "late",
+      status: TaskStatus.PENDING,
+      due_date: "2026-09-13T00:00:00",
+    },
+    {
+      ...mockTasks[1],
+      id: "late-done",
+      status: TaskStatus.COMPLETED,
+      due_date: "2026-09-13T00:00:00",
+    },
+    {
+      ...mockTasks[2],
+      id: "future",
+      status: TaskStatus.PENDING,
+      due_date: "2026-10-13T00:00:00",
+    },
+    { ...mockTasks[0], id: "no-date", status: TaskStatus.PENDING },
+  ];
+
+  it("keeps only past-due open tasks", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 8, 18, 10, 0));
+    const { result } = renderHook(() =>
+      useTaskFiltering(overdueTasks, { overdueOnly: true }),
+    );
+    expect(result.current.map((task) => task.id)).toEqual(["late"]);
+  });
+
+  it("filters nothing when overdueOnly is false", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 8, 18, 10, 0));
+    const { result } = renderHook(() =>
+      useTaskFiltering(overdueTasks, { overdueOnly: false }),
+    );
+    expect(result.current).toHaveLength(4);
   });
 });

@@ -1,11 +1,16 @@
 import { useMemo } from "react";
 import type { TaskRead, TaskStatus, TaskPriority } from "../types";
 import { canSeeSimulatedTask, type Has } from "../utils/simulatedPermissions";
+import { isOverdue, matchesSearch } from "../utils/taskUtils";
 
 export interface TaskFilters {
   status?: TaskStatus | null;
   priority?: TaskPriority | null;
   assigned_to_id?: string | null;
+  /** Free text matched client-side against the title and the description. */
+  search?: string | null;
+  /** Keeps only tasks past their deadline and still open. */
+  overdueOnly?: boolean;
 }
 
 /**
@@ -44,6 +49,8 @@ export const useTaskFiltering = (
         task.assigned_to_id !== filters.assigned_to_id
       )
         return false;
+      if (!matchesSearch(task, filters.search)) return false;
+      if (filters.overdueOnly && !isOverdue(task)) return false;
       if (simulation?.isSimulating) {
         if (!canSeeSimulatedTask(task, simulation.has, simulation.roleIds)) {
           return false;

@@ -276,7 +276,19 @@
       "viewBoard": "Quadro",
       "allCategories": "Todas as categorias",
       "allAssignees": "Todos os responsáveis",
-      "connectionError": "Não foi possível conectar ao servidor"
+      "connectionError": "Não foi possível conectar ao servidor",
+      "searchLabel": "Buscar tarefas",
+      "searchPlaceholder": "Buscar por título ou descrição",
+      "clearSearch": "Limpar busca",
+      "summary": "Mostrando {{visible}} de {{total}} tarefas",
+      "overdueCount": "{{count}} em atraso",
+      "removeFilter": "Remover filtro",
+      "chipStatus": "Situação: {{value}}",
+      "chipPriority": "Prioridade: {{value}}",
+      "chipCategory": "Categoria: {{value}}",
+      "chipAssignee": "Responsável: {{value}}",
+      "chipSearch": "“{{value}}”",
+      "chipOverdue": "Em atraso"
     },
     "list": {
       "loading": "Carregando tarefas...",
@@ -295,6 +307,21 @@
     "card": {
       "noDescription": "Sem descrição"
     },
+    "dueDate": {
+      "overdueOne": "1 dia em atraso",
+      "overdueMany": "{{days}} dias em atraso",
+      "today": "vence hoje",
+      "tomorrow": "vence amanhã",
+      "soonOne": "em 1 dia",
+      "soonMany": "em {{days}} dias"
+    },
+    "board": {
+      "dragDisabledByStatusFilter": "Remova o filtro de situação para mover tarefas",
+      "dropHint": "Solte para mover para “{{status}}”",
+      "moved": "{{title}}: {{from}} para {{to}}",
+      "undo": "Desfazer",
+      "dismissMove": "Dispensar aviso"
+    },
     "form": {
       "editTitle": "Editar Tarefa",
       "newTitle": "Nova Tarefa",
@@ -308,7 +335,10 @@
       "statusLabel": "Status",
       "assigneeLabel": "Atribuído a",
       "unassigned": "Não atribuído",
-      "assigneeHelper": "Seleção de usuário será melhorada em versões futuras.",
+      "assigneeSearchPlaceholder": "Buscar por nome ou e-mail",
+      "assigneeNone": "Deixar sem responsável",
+      "assigneeNoResults": "Nenhuma pessoa encontrada",
+      "assigneeNoRole": "Sem papel",
       "dueDateLabel": "Data de entrega",
       "cancel": "Cancelar",
       "submitSaving": "Salvando...",

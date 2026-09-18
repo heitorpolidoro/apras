@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import TaskForm from "../TaskForm";
 import { TaskPriority, TaskStatus } from "../../types";
@@ -182,8 +182,9 @@ describe("TaskForm", () => {
     expect(screen.getByLabelText(/Status/i)).toBeInTheDocument();
     // Test initial state date formatting
     expect(screen.getByLabelText(/Data de entrega/i)).toHaveValue("2023-10-27");
-    // Test assigned_to_id rendering
-    expect(screen.getByLabelText(/Atribuído a/i)).toHaveValue("user-1");
+    // The assignee field is a searchable picker (APRAS-62): it shows the
+    // assigned person's *name*, and submits their id unchanged.
+    expect(screen.getByLabelText(/Atribuído a/i)).toHaveValue("User 1");
   });
 
   it("handles fallback logic for missing fields in edit mode", () => {
@@ -462,15 +463,15 @@ describe("TaskForm", () => {
 
     render(<TaskForm onSuccess={mockOnSuccess} onCancel={mockOnCancel} />);
 
-    const select = screen.getByLabelText(/Atribuído a/i);
-    const options = Array.from(select.querySelectorAll("option"));
+    fireEvent.focus(screen.getByLabelText(/Atribuído a/i));
+    // Scoped to the picker's listbox: the priority and category `<select>`s
+    // contribute `option` roles of their own.
+    const options = within(screen.getByRole("listbox")).getAllByRole("option");
 
-    expect(
-      options.find((o) => o.textContent === "Full Name"),
-    ).toBeInTheDocument();
-    expect(
-      options.find((o) => o.textContent === "user2_only"),
-    ).toBeInTheDocument();
+    expect(options[0]).toHaveTextContent("Full Name");
+    // A person with no name falls back to their email, as the old
+    // `<option>` label did.
+    expect(options[1]).toHaveTextContent("user2_only");
   });
 
   it("shows validation error when category is not selected", () => {
@@ -865,5 +866,127 @@ describe("TaskForm", () => {
         screen.getByRole("button", { name: /Criar tarefa/i }),
       ).not.toBeDisabled();
     });
+  });
+});
+
+// ── APRAS-62: the assignee field is a searchable picker ──────────────────
+describe("TaskForm — assignee picker", () => {
+  const mockOnSuccess = vi.fn();
+  const mockOnCancel = vi.fn();
+  const mockCreateMutate = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSimulatedProfile = "MANAGER";
+
+    vi.mocked(useAuth).mockReturnValue({
+      user: { id: "admin-1", is_superuser: true },
+    } as unknown as ReturnType<typeof useAuth>);
+    vi.mocked(useSimulation).mockReturnValue({
+      simulatedRoleIds: [],
+      isSimulating: false,
+      setSimulatedRoleIds: vi.fn(),
+      stopSimulation: vi.fn(),
+    });
+    vi.mocked(useCreateTask).mockReturnValue({
+      mutate: mockCreateMutate,
+      isPending: false,
+      error: null,
+    } as unknown as ReturnType<typeof useCreateTask>);
+    vi.mocked(useUpdateTask).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+      error: null,
+    } as unknown as ReturnType<typeof useUpdateTask>);
+    vi.mocked(useAssignableUsers).mockReturnValue({
+      data: [
+        {
+          id: "user-1",
+          full_name: "Marta Nogueira",
+          email: "marta@apras.test",
+          roles: [{ id: "r1", name: "Síndica" }],
+        },
+        {
+          id: "user-2",
+          full_name: "Marcos Caldeira",
+          email: "marcos@apras.test",
+          roles: [{ id: "r2", name: "Zelador" }],
+        },
+      ],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useAssignableUsers>);
+    vi.mocked(useCategories).mockReturnValue({
+      data: [{ id: "cat-1", name: "Geral", color: "#808080", is_active: true }],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useCategories>);
+    vi.mocked(useRoles).mockReturnValue({
+      data: [{ id: "type-1", name: "Gerente" }],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useRoles>);
+  });
+
+  const fillRequired = () => {
+    fireEvent.change(screen.getByLabelText(/Título/i), {
+      target: { value: "Nova tarefa" },
+    });
+    fireEvent.change(screen.getByLabelText(/Categoria/i), {
+      target: { value: "cat-1" },
+    });
+  };
+
+  it("no longer renders the placeholder helper text", () => {
+    render(<TaskForm onSuccess={mockOnSuccess} onCancel={mockOnCancel} />);
+    expect(
+      screen.queryByText(/será melhorada em versões futuras/i),
+    ).not.toBeInTheDocument();
+  });
+
+  it("renders one option per person, with name and role", () => {
+    render(<TaskForm onSuccess={mockOnSuccess} onCancel={mockOnCancel} />);
+    fireEvent.focus(screen.getByLabelText(/Atribuído a/i));
+
+    const options = within(screen.getByRole("listbox")).getAllByRole("option");
+    expect(options[0]).toHaveTextContent("Marta Nogueira");
+    expect(options[0]).toHaveTextContent("Síndica");
+    expect(options[2]).toHaveTextContent("Deixar sem responsável");
+  });
+
+  it("submits the chosen person's id", () => {
+    render(<TaskForm onSuccess={mockOnSuccess} onCancel={mockOnCancel} />);
+    fillRequired();
+
+    const picker = screen.getByLabelText(/Atribuído a/i);
+    fireEvent.focus(picker);
+    fireEvent.change(picker, { target: { value: "marcos" } });
+    fireEvent.click(
+      within(screen.getByRole("listbox")).getAllByRole("option")[0],
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Criar tarefa/i }));
+
+    expect(mockCreateMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ assigned_to_id: "user-2" }),
+      expect.any(Object),
+    );
+  });
+
+  it("submits a null assignee through the explicit option", () => {
+    render(<TaskForm onSuccess={mockOnSuccess} onCancel={mockOnCancel} />);
+    fillRequired();
+
+    const picker = screen.getByLabelText(/Atribuído a/i);
+    fireEvent.focus(picker);
+    fireEvent.click(
+      within(screen.getByRole("listbox")).getAllByRole("option")[0],
+    );
+    fireEvent.focus(picker);
+    fireEvent.click(
+      screen.getByRole("option", { name: /Deixar sem responsável/ }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Criar tarefa/i }));
+
+    expect(mockCreateMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ assigned_to_id: null }),
+      expect.any(Object),
+    );
   });
 });

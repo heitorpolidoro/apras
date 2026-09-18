@@ -8,6 +8,8 @@ import { getStatusLabel, getPriorityLabel, statusVariant, priorityVariant,  } fr
 import { useEffectiveIdentity } from "../../user-administration/context/useEffectiveIdentity";
 import { useEffectivePermissionSet } from "../../user-administration/access/useCanAccess";
 import { canEditSimulatedTask } from "../utils/simulatedPermissions";
+import HighlightedText from "./HighlightedText";
+import DueDateBadge from "./DueDateBadge";
 
 interface TaskListProps {
   tasks: TaskRead[];
@@ -26,7 +28,7 @@ const TaskList: React.FC<TaskListProps> = ({
   filters,
   onTaskClick,
 }) => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { roleIds, isSimulating } = useEffectiveIdentity();
   const { has } = useEffectivePermissionSet();
   const filteredTasks = useTaskFiltering(tasks, filters, {
@@ -102,7 +104,7 @@ const TaskList: React.FC<TaskListProps> = ({
               <td className="px-6 py-4">
                 <div className="flex flex-col">
                   <span className="font-semibold text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
-                    {task.title}
+                    <HighlightedText text={task.title} search={filters.search} />
                     {isSimulating &&
                       !canEditSimulatedTask(task, has, roleIds) && (
                         <span
@@ -117,7 +119,10 @@ const TaskList: React.FC<TaskListProps> = ({
                   </span>
                   {task.description && (
                     <span className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
-                      {task.description}
+                      <HighlightedText
+                        text={task.description}
+                        search={filters.search}
+                      />
                     </span>
                   )}
                 </div>
@@ -162,11 +167,11 @@ const TaskList: React.FC<TaskListProps> = ({
               </td>
               <td className="px-6 py-4">
                 {task.due_date ? (
-                  <span className="text-sm text-muted-foreground whitespace-nowrap">
-                    {new Date(task.due_date).toLocaleDateString(
-                      i18n.language === "pt" ? "pt-BR" : "en-US",
-                    )}
-                  </span>
+                  <DueDateBadge
+                    dueDate={task.due_date}
+                    status={task.status}
+                    className="text-sm"
+                  />
                 ) : (
                   <span className="text-xs text-muted-foreground italic">
                     -

@@ -1,5 +1,6 @@
+import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import TaskBoard from "../TaskBoard";
 import { TaskStatus, TaskPriority } from "../../types";
 import { useSimulation } from "../../../user-administration/context/SimulationContext";
@@ -341,5 +342,164 @@ describe("TaskBoard", () => {
         screen.queryByTestId("task-readonly-indicator"),
       ).not.toBeInTheDocument();
     });
+  });
+});
+
+// ── APRAS-62: mouse-only dragging between columns ────────────────────────
+describe("TaskBoard — dragging", () => {
+  beforeEach(() => {
+    vi.mocked(useSimulation).mockReturnValue({
+      simulatedRoleIds: [],
+      isSimulating: false,
+      setSimulatedRoleIds: vi.fn(),
+      stopSimulation: vi.fn(),
+    });
+  });
+
+  const renderBoard = (
+    props: Partial<React.ComponentProps<typeof TaskBoard>> = {},
+  ) =>
+    render(
+      <TaskBoard
+        tasks={mockTasks}
+        isLoading={false}
+        isError={false}
+        error={null}
+        filters={{}}
+        {...props}
+      />,
+    );
+
+  const cardOf = (title: string) =>
+    screen.getByText(title).closest("button") as HTMLElement;
+
+  it("makes every card draggable when no status filter is active", () => {
+    renderBoard();
+    expect(cardOf("Task 1")).toHaveAttribute("draggable", "true");
+    expect(cardOf("Task 2")).toHaveAttribute("draggable", "true");
+  });
+
+  it("moves a card dropped on another column, exactly once", () => {
+    const onTaskMove = vi.fn();
+    renderBoard({ onTaskMove });
+
+    fireEvent.dragStart(cardOf("Task 1"));
+    const destination = screen.getByTestId(
+      `task-column-${TaskStatus.IN_PROGRESS}`,
+    );
+    fireEvent.dragOver(destination);
+    fireEvent.drop(destination);
+
+    expect(onTaskMove).toHaveBeenCalledTimes(1);
+    expect(onTaskMove).toHaveBeenCalledWith(
+      "1",
+      TaskStatus.PENDING,
+      TaskStatus.IN_PROGRESS,
+    );
+  });
+
+  it("does nothing when the card is dropped on its own column", () => {
+    const onTaskMove = vi.fn();
+    renderBoard({ onTaskMove });
+
+    fireEvent.dragStart(cardOf("Task 1"));
+    fireEvent.drop(screen.getByTestId(`task-column-${TaskStatus.PENDING}`));
+
+    expect(onTaskMove).not.toHaveBeenCalled();
+  });
+
+  it("does nothing when a drop arrives with no drag in progress", () => {
+    const onTaskMove = vi.fn();
+    renderBoard({ onTaskMove });
+
+    fireEvent.drop(screen.getByTestId(`task-column-${TaskStatus.BLOCKED}`));
+    expect(onTaskMove).not.toHaveBeenCalled();
+  });
+
+  it("highlights the hovered destination and drops the hint on leave", () => {
+    renderBoard({ onTaskMove: vi.fn() });
+
+    fireEvent.dragStart(cardOf("Task 1"));
+    const destination = screen.getByTestId(
+      `task-column-${TaskStatus.IN_PROGRESS}`,
+    );
+    fireEvent.dragOver(destination);
+
+    expect(destination).toHaveAttribute("data-drop-target", "true");
+    expect(screen.getByTestId("task-drop-hint")).toHaveTextContent(
+      "Em andamento",
+    );
+
+    fireEvent.dragLeave(destination);
+    expect(destination).not.toHaveAttribute("data-drop-target", "true");
+    expect(screen.queryByTestId("task-drop-hint")).not.toBeInTheDocument();
+  });
+
+  it("never highlights the origin column", () => {
+    renderBoard({ onTaskMove: vi.fn() });
+
+    fireEvent.dragStart(cardOf("Task 1"));
+    const origin = screen.getByTestId(`task-column-${TaskStatus.PENDING}`);
+    fireEvent.dragOver(origin);
+
+    expect(origin).not.toHaveAttribute("data-drop-target", "true");
+    expect(screen.queryByTestId("task-drop-hint")).not.toBeInTheDocument();
+  });
+
+  it("leaves a dashed gap at the origin while the card is in flight", () => {
+    renderBoard({ onTaskMove: vi.fn() });
+
+    expect(screen.queryByTestId("task-drag-origin-gap")).not.toBeInTheDocument();
+
+    fireEvent.dragStart(cardOf("Task 1"));
+    const gap = screen.getByTestId("task-drag-origin-gap");
+    expect(gap).toBeInTheDocument();
+    expect(gap.className).toContain("border-dashed");
+
+    fireEvent.dragEnd(cardOf("Task 1"));
+    expect(screen.queryByTestId("task-drag-origin-gap")).not.toBeInTheDocument();
+  });
+
+  it("disables dragging and explains why when a status filter is active", () => {
+    const onTaskMove = vi.fn();
+    renderBoard({ onTaskMove, filters: { status: TaskStatus.PENDING } });
+
+    expect(
+      document.querySelectorAll("[data-testid^='task-column-']"),
+    ).toHaveLength(1);
+    expect(cardOf("Task 1")).toHaveAttribute("draggable", "false");
+    expect(screen.queryByTestId("task-card-grip")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Remova o filtro de situação para mover tarefas"),
+    ).toBeInTheDocument();
+
+    fireEvent.drop(screen.getByTestId(`task-column-${TaskStatus.PENDING}`));
+    expect(onTaskMove).not.toHaveBeenCalled();
+  });
+
+  it("shows no hint when there is no status filter", () => {
+    renderBoard();
+    expect(
+      screen.queryByText("Remova o filtro de situação para mover tarefas"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not make a read-only card draggable", () => {
+    vi.mocked(useSimulation).mockReturnValue({
+      simulatedRoleIds: [],
+      isSimulating: true,
+      setSimulatedRoleIds: vi.fn(),
+      stopSimulation: vi.fn(),
+    });
+    renderBoard({ onTaskMove: vi.fn() });
+
+    // Both fixtures are assigned, so both cards are read-only in this view.
+    expect(screen.getAllByTestId("task-readonly-indicator")).toHaveLength(2);
+    expect(cardOf("Task 1")).toHaveAttribute("draggable", "false");
+  });
+
+  it("passes the search text down so the card can highlight it", () => {
+    const { container } = renderBoard({ filters: { search: "task" } });
+    expect(container.querySelectorAll("mark").length).toBeGreaterThan(0);
   });
 });

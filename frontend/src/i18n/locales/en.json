@@ -276,7 +276,19 @@
       "viewBoard": "Board",
       "allCategories": "All categories",
       "allAssignees": "All assignees",
-      "connectionError": "Could not connect to the server"
+      "connectionError": "Could not connect to the server",
+      "searchLabel": "Search tasks",
+      "searchPlaceholder": "Search by title or description",
+      "clearSearch": "Clear search",
+      "summary": "Showing {{visible}} of {{total}} tasks",
+      "overdueCount": "{{count}} overdue",
+      "removeFilter": "Remove filter",
+      "chipStatus": "Status: {{value}}",
+      "chipPriority": "Priority: {{value}}",
+      "chipCategory": "Category: {{value}}",
+      "chipAssignee": "Assignee: {{value}}",
+      "chipSearch": "“{{value}}”",
+      "chipOverdue": "Overdue"
     },
     "list": {
       "loading": "Loading tasks...",
@@ -295,6 +307,21 @@
     "card": {
       "noDescription": "No description"
     },
+    "dueDate": {
+      "overdueOne": "1 day overdue",
+      "overdueMany": "{{days}} days overdue",
+      "today": "due today",
+      "tomorrow": "due tomorrow",
+      "soonOne": "in 1 day",
+      "soonMany": "in {{days}} days"
+    },
+    "board": {
+      "dragDisabledByStatusFilter": "Remove the status filter to move tasks",
+      "dropHint": "Drop to move to “{{status}}”",
+      "moved": "{{title}}: {{from}} to {{to}}",
+      "undo": "Undo",
+      "dismissMove": "Dismiss notice"
+    },
     "form": {
       "editTitle": "Edit Task",
       "newTitle": "New Task",
@@ -308,7 +335,10 @@
       "statusLabel": "Status",
       "assigneeLabel": "Assigned to",
       "unassigned": "Unassigned",
-      "assigneeHelper": "User selection will be improved in future versions.",
+      "assigneeSearchPlaceholder": "Search by name or email",
+      "assigneeNone": "Leave unassigned",
+      "assigneeNoResults": "No one found",
+      "assigneeNoRole": "No role",
       "dueDateLabel": "Due date",
       "cancel": "Cancel",
       "submitSaving": "Saving...",

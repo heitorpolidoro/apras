@@ -1,7 +1,7 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { useTasks, useTask, useCreateTask, useUpdateTask, useTaskHistory, useInvalidateTasks, useDeleteTask, useComments, useCreateComment, useUpdateComment,  } from "../useTasks";
+import { useTasks, useTask, useCreateTask, useUpdateTask, useUpdateTaskStatus, useTaskHistory, useInvalidateTasks, useDeleteTask, useComments, useCreateComment, useUpdateComment,  } from "../useTasks";
 import apiClient from "../../../../api/client";
 import { TaskStatus, TaskPriority } from "../../types";
 
@@ -191,6 +191,99 @@ describe("useTasks hooks", () => {
       await result.current.mutateAsync({ commentId: "c1", content: "Updated" });
 
       expect(apiClient.patch).toHaveBeenCalledWith("/tasks/1/comments/c1", { content: "Updated" });
+    });
+  });
+});
+
+describe("useUpdateTaskStatus (APRAS-62 optimistic drag-and-drop)", () => {
+  const seed = [
+    { id: "1", title: "Task 1", status: TaskStatus.PENDING },
+    { id: "2", title: "Task 2", status: TaskStatus.PENDING },
+  ];
+
+  const setup = () => {
+    // `gcTime` must not be 0 here: these cases seed the cache with no active
+    // observer, and a zero gc time evicts the entry before the assertion.
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: Infinity } },
+    });
+    const key = ["tasks", { status: null }];
+    queryClient.setQueryData(key, seed);
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+    return { queryClient, key, wrapper };
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("patches only the status, once", async () => {
+    vi.mocked(apiClient.patch).mockResolvedValue({ data: {} });
+    const { wrapper } = setup();
+
+    const { result } = renderHook(() => useUpdateTaskStatus(), { wrapper });
+    result.current.mutate({ id: "1", status: TaskStatus.IN_PROGRESS });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(apiClient.patch).toHaveBeenCalledTimes(1);
+    expect(apiClient.patch).toHaveBeenCalledWith("/tasks/1", {
+      status: TaskStatus.IN_PROGRESS,
+    });
+  });
+
+  it("updates the cached lists before the request settles", async () => {
+    let resolvePatch: (value: unknown) => void = () => {};
+    vi.mocked(apiClient.patch).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolvePatch = resolve;
+        }),
+    );
+    const { queryClient, key, wrapper } = setup();
+
+    const { result } = renderHook(() => useUpdateTaskStatus(), { wrapper });
+    result.current.mutate({ id: "1", status: TaskStatus.COMPLETED });
+
+    await waitFor(() => {
+      const cached = queryClient.getQueryData(key) as typeof seed;
+      expect(cached[0].status).toBe(TaskStatus.COMPLETED);
+    });
+    expect((queryClient.getQueryData(key) as typeof seed)[1].status).toBe(
+      TaskStatus.PENDING,
+    );
+
+    resolvePatch({ data: {} });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+  });
+
+  it("rolls the cache back when the request fails", async () => {
+    vi.mocked(apiClient.patch).mockRejectedValue(new Error("boom"));
+    const { queryClient, key, wrapper } = setup();
+
+    const { result } = renderHook(() => useUpdateTaskStatus(), { wrapper });
+    result.current.mutate({ id: "1", status: TaskStatus.COMPLETED });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect((queryClient.getQueryData(key) as typeof seed)[0].status).toBe(
+      TaskStatus.PENDING,
+    );
+  });
+
+  it("leaves a non-list cache entry untouched", async () => {
+    vi.mocked(apiClient.patch).mockResolvedValue({ data: {} });
+    const { queryClient, wrapper } = setup();
+    const detailKey = ["tasks", "1"];
+    queryClient.setQueryData(detailKey, { id: "1", status: TaskStatus.PENDING });
+
+    const { result } = renderHook(() => useUpdateTaskStatus(), { wrapper });
+    result.current.mutate({ id: "1", status: TaskStatus.COMPLETED });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(queryClient.getQueryData(detailKey)).toEqual({
+      id: "1",
+      status: TaskStatus.PENDING,
     });
   });
 });

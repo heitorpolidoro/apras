@@ -284,7 +284,9 @@ describe("TaskList", () => {
 
   it("shows formatted due date when task has a due_date", () => {
     const tasksWithDate = [
-      { ...mockTasks[0], due_date: "2024-06-15T00:00:00Z" },
+      // A distant deadline keeps the absolute date (APRAS-62): a past one
+      // now reads as relative overdue wording instead.
+      { ...mockTasks[0], due_date: "2099-06-15T00:00:00Z" },
     ];
     render(
       <TaskList
@@ -295,7 +297,7 @@ describe("TaskList", () => {
         filters={defaultFilters}
       />,
     );
-    expect(screen.getByText(/2024/)).toBeInTheDocument();
+    expect(screen.getByText(/2099/)).toBeInTheDocument();
   });
 
   it("shows category name with fallback color when category_color is missing", () => {
@@ -320,7 +322,7 @@ describe("TaskList", () => {
       i18n: { language: "en", changeLanguage: vi.fn() },
     } as any);
     const tasksWithDate = [
-      { ...mockTasks[0], due_date: "2024-01-20T12:00:00Z" },
+      { ...mockTasks[0], due_date: "2099-01-20T12:00:00Z" },
     ];
     render(
       <TaskList
@@ -331,7 +333,7 @@ describe("TaskList", () => {
         filters={defaultFilters}
       />,
     );
-    expect(screen.getByText(/2024/)).toBeInTheDocument();
+    expect(screen.getByText(/2099/)).toBeInTheDocument();
   });
 
   it("renders without crashing when task has no description", () => {
@@ -504,5 +506,65 @@ describe("TaskList", () => {
         screen.queryByTestId("task-readonly-indicator"),
       ).not.toBeInTheDocument();
     });
+  });
+});
+
+// ── APRAS-62: search highlight and due-date wording in the list ──────────
+describe("TaskList — APRAS-62", () => {
+  const withText = [
+    {
+      ...mockTasks[0],
+      title: "Revisão da manutenção",
+      description: "Contrato de manutenção anual",
+    },
+  ];
+
+  it("wraps the searched fragment in a mark, in title and description", () => {
+    const { container } = render(
+      <TaskList
+        tasks={withText}
+        isLoading={false}
+        isError={false}
+        error={null}
+        filters={{ search: "manutencao" }}
+      />,
+    );
+    const marks = container.querySelectorAll("mark");
+    expect(marks).toHaveLength(2);
+    expect(marks[0].textContent).toBe("manutenção");
+  });
+
+  it("reads a past-due task as relative time with an icon", () => {
+    render(
+      <TaskList
+        tasks={[{ ...mockTasks[0], due_date: "2020-01-01T00:00:00Z" }]}
+        isLoading={false}
+        isError={false}
+        error={null}
+        filters={defaultFilters}
+      />,
+    );
+    expect(screen.getByTestId("due-date-icon")).toBeInTheDocument();
+    expect(screen.getByText(/em atraso/)).toBeInTheDocument();
+  });
+
+  it("never reports a completed task as overdue", () => {
+    render(
+      <TaskList
+        tasks={[
+          {
+            ...mockTasks[0],
+            status: TaskStatus.COMPLETED,
+            due_date: "2020-01-01T12:00:00Z",
+          },
+        ]}
+        isLoading={false}
+        isError={false}
+        error={null}
+        filters={defaultFilters}
+      />,
+    );
+    expect(screen.queryByText(/em atraso/)).not.toBeInTheDocument();
+    expect(screen.getByText("01/01/2020")).toBeInTheDocument();
   });
 });

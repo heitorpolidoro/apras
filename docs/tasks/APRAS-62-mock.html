@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>APRAS-62 — Acabamento da tela de tarefas</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-50 text-slate-900">
+<div class="max-w-6xl mx-auto p-6 space-y-6">
+
+  <header class="space-y-1">
+    <h1 class="text-2xl font-bold">APRAS-62 — Acabamento da tela de tarefas</h1>
+    <p class="text-sm text-slate-600">
+      <code>/dashboard</code> · <code>frontend/src/features/task-management</code>.
+      Quatro lacunas numa superfície só: busca, arrastar, atraso e responsável.
+      Nenhuma mudança de backend, nenhuma coluna nova, nenhuma dependência npm nova.
+    </p>
+  </header>
+
+  <nav class="flex flex-wrap gap-2 border-b border-slate-200">
+    <button data-tab="search" class="tab px-4 py-2 text-sm font-medium border-b-2 border-slate-900">1 · Busca e chips</button>
+    <button data-tab="drag" class="tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-slate-500">2 · Arrastar</button>
+    <button data-tab="due" class="tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-slate-500">3 · Atraso</button>
+    <button data-tab="assignee" class="tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-slate-500">4 · Responsável</button>
+    <button data-tab="empty" class="tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-slate-500">Resultado vazio</button>
+  </nav>
+
+  <!-- ===================== 1 · BUSCA E CHIPS ===================== -->
+  <section data-panel="search" class="panel space-y-4">
+
+    <div class="rounded-xl border border-slate-200 bg-white shadow-sm p-4 space-y-3">
+      <div class="flex flex-wrap items-center gap-3">
+        <div class="relative flex-1 min-w-[260px]">
+          <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400"></i>
+          <input id="q" value="manutencao" placeholder="Buscar por título ou descrição"
+            class="w-full rounded-md border border-slate-300 pl-9 pr-3 py-2 text-sm focus:border-slate-900 focus:outline-none" />
+        </div>
+        <select class="rounded-md border border-slate-300 px-3 py-2 text-sm"><option>Todos os status</option></select>
+        <select class="rounded-md border border-slate-300 px-3 py-2 text-sm"><option>Alta</option></select>
+        <select class="rounded-md border border-slate-300 px-3 py-2 text-sm"><option>Todas as categorias</option></select>
+        <button onclick="switchTab('due')"
+          class="inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100">
+          <i data-lucide="alert-triangle" class="h-4 w-4"></i> 3 em atraso
+        </button>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs font-medium text-slate-500">Mostrando <strong class="text-slate-900">2</strong> de <strong class="text-slate-900">47</strong> tarefas</span>
+        <span class="mx-1 h-4 w-px bg-slate-200"></span>
+        <span class="chip inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700">
+          <i data-lucide="search" class="h-3 w-3"></i> “manutencao”
+          <button class="rounded-full p-0.5 hover:bg-slate-300" onclick="this.parentElement.remove()"><i data-lucide="x" class="h-3 w-3"></i></button>
+        </span>
+        <span class="chip inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs text-amber-800">
+          Prioridade: Alta
+          <button class="rounded-full p-0.5 hover:bg-amber-200" onclick="this.parentElement.remove()"><i data-lucide="x" class="h-3 w-3"></i></button>
+        </span>
+        <span class="chip inline-flex items-center gap-1.5 rounded-full bg-sky-100 px-3 py-1 text-xs text-sky-800">
+          Responsável: Marta Nogueira
+          <button class="rounded-full p-0.5 hover:bg-sky-200" onclick="this.parentElement.remove()"><i data-lucide="x" class="h-3 w-3"></i></button>
+        </span>
+        <button class="text-xs font-medium text-slate-500 underline hover:text-slate-900">Limpar filtros</button>
+      </div>
+    </div>
+
+    <div class="grid gap-4 md:grid-cols-2">
+      <button class="w-full text-left rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h3 class="font-semibold">Revisão da <mark class="rounded bg-yellow-200 px-0.5">manutenção</mark> do elevador social</h3>
+        <p class="mt-1 text-sm text-slate-500">Contrato anual de <mark class="rounded bg-yellow-200 px-0.5">manutenção</mark> preventiva — bloco A.</p>
+        <div class="mt-3 flex items-center justify-between">
+          <div class="flex gap-2">
+            <span class="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">Em andamento</span>
+            <span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">Alta</span>
+          </div>
+          <span class="inline-flex items-center gap-1 text-xs text-slate-500"><i data-lucide="calendar" class="h-3.5 w-3.5"></i> 12/10/2026</span>
+        </div>
+      </button>
+      <button class="w-full text-left rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h3 class="font-semibold">Orçamento de <mark class="rounded bg-yellow-200 px-0.5">manutenção</mark> da bomba d’água</h3>
+        <p class="mt-1 text-sm text-slate-500">Três cotações para a assembleia.</p>
+        <div class="mt-3 flex items-center justify-between">
+          <div class="flex gap-2">
+            <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">Pendente</span>
+            <span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">Alta</span>
+          </div>
+          <span class="inline-flex items-center gap-1 text-xs font-semibold text-red-700"><i data-lucide="alert-triangle" class="h-3.5 w-3.5"></i> 5 dias em atraso</span>
+        </div>
+      </button>
+    </div>
+
+    <div class="rounded-lg border border-slate-200 bg-white p-4 text-xs text-slate-600 space-y-1">
+      <p><strong>O que este painel mostra.</strong> A busca é <em>client-side</em>, dentro de <code>useTaskFiltering</code>, sobre as tarefas já carregadas: digitar não muda a query key de <code>useTasks</code> e não dispara refetch (debounce ~200&nbsp;ms só para o render).</p>
+      <p>O texto é normalizado (minúsculas + <code>NFD</code> sem diacríticos), por isso <code>manutencao</code> casa com <code>Manutenção</code>, no título <em>ou</em> na descrição. O trecho casado sai dentro de <code>&lt;mark&gt;</code>.</p>
+      <p>Cada filtro ativo vira um chip removível — inclusive a busca e o “em atraso” — e a barra diz <strong>quantas de quantas</strong>.</p>
+    </div>
+  </section>
+
+  <!-- ===================== 2 · ARRASTAR ===================== -->
+  <section data-panel="drag" class="panel hidden space-y-4">
+    <div class="grid gap-4 md:grid-cols-4">
+
+      <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+        <div class="mb-3 flex items-center justify-between border-t-4 border-slate-400 pt-2">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-600">Pendente</span>
+          <span class="rounded-full border border-slate-200 bg-white px-2 text-xs font-bold text-slate-500">2</span>
+        </div>
+        <div class="h-24 rounded-xl border-2 border-dashed border-slate-300 bg-white/40 flex items-center justify-center text-[11px] italic text-slate-400">
+          lacuna da origem
+        </div>
+        <button draggable="true" class="mt-3 w-full text-left rounded-xl border border-slate-200 bg-white p-4 shadow-sm cursor-grab">
+          <div class="flex items-start gap-2">
+            <span aria-hidden="true" class="mt-0.5 p-1 text-slate-300"><i data-lucide="grip-vertical" class="h-4 w-4"></i></span>
+            <h3 class="text-sm font-semibold">Trocar lâmpadas da garagem</h3>
+          </div>
+        </button>
+      </div>
+
+      <div class="rounded-xl border-2 border-blue-500 bg-blue-50 p-3 ring-4 ring-blue-200">
+        <div class="mb-3 flex items-center justify-between border-t-4 border-blue-400 pt-2">
+          <span class="text-xs font-bold uppercase tracking-wider text-blue-700">Em andamento</span>
+          <span class="rounded-full border border-blue-200 bg-white px-2 text-xs font-bold text-blue-600">3</span>
+        </div>
+        <button draggable="true" class="rotate-2 w-full text-left rounded-xl border-2 border-blue-500 bg-white p-4 shadow-xl cursor-grabbing">
+          <div class="flex items-start gap-2">
+            <span aria-hidden="true" class="mt-0.5 p-1 text-blue-400"><i data-lucide="grip-vertical" class="h-4 w-4"></i></span>
+            <div>
+              <h3 class="text-sm font-semibold">Orçamento da bomba d’água</h3>
+              <p class="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-red-700"><i data-lucide="alert-triangle" class="h-3.5 w-3.5"></i> 5 dias em atraso</p>
+            </div>
+          </div>
+        </button>
+        <p class="mt-3 text-center text-[11px] font-medium text-blue-700">solte para mover para “Em andamento”</p>
+      </div>
+
+      <div class="rounded-xl border border-slate-200 bg-amber-50/60 p-3">
+        <div class="mb-3 flex items-center justify-between border-t-4 border-amber-500 pt-2">
+          <span class="text-xs font-bold uppercase tracking-wider text-amber-700">Bloqueada</span>
+          <span class="rounded-full border border-amber-200 bg-white px-2 text-xs font-bold text-amber-600">1</span>
+        </div>
+        <button class="w-full text-left rounded-xl border border-slate-200 bg-white p-4 shadow-sm opacity-70">
+          <div class="flex items-start gap-2">
+            <span class="mt-0.5 p-1 text-slate-300" title="Somente leitura nesta visão simulada"><i data-lucide="lock" class="h-4 w-4"></i></span>
+            <h3 class="text-sm font-semibold">Laudo do AVCB</h3>
+          </div>
+          <p class="mt-2 text-[11px] italic text-slate-400">cartão bloqueado: não arrasta e não aceita soltar</p>
+        </button>
+      </div>
+
+      <div class="rounded-xl border border-slate-200 bg-green-50/60 p-3">
+        <div class="mb-3 flex items-center justify-between border-t-4 border-green-400 pt-2">
+          <span class="text-xs font-bold uppercase tracking-wider text-green-700">Concluída</span>
+          <span class="rounded-full border border-green-200 bg-white px-2 text-xs font-bold text-green-600">8</span>
+        </div>
+        <button draggable="true" class="w-full text-left rounded-xl border border-slate-200 bg-white p-4 shadow-sm cursor-grab">
+          <h3 class="text-sm font-semibold text-slate-500 line-through">Dedetização semestral</h3>
+          <p class="mt-1 text-xs text-slate-400">Entregue em 02/09/2026</p>
+        </button>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+      <span class="inline-flex items-center gap-2 text-sm text-emerald-800">
+        <i data-lucide="check-circle-2" class="h-4 w-4"></i>
+        “Orçamento da bomba d’água” movida de <strong>Pendente</strong> para <strong>Em andamento</strong>.
+      </span>
+      <button onclick="alert('PATCH /api/v1/tasks/{id} { status: \'PENDING\' } — volta ao status anterior')"
+        class="rounded-md border border-emerald-300 bg-white px-3 py-1.5 text-sm font-medium text-emerald-800 hover:bg-emerald-100">Desfazer</button>
+    </div>
+
+    <div class="rounded-lg border border-slate-200 bg-white p-4 text-xs text-slate-600 space-y-1">
+      <p><strong>O que este painel mostra.</strong> HTML5 DnD nativo (<code>draggable</code> + <code>dragstart</code>/<code>dragover</code>/<code>drop</code>) — sem biblioteca nova, e acionável por <code>fireEvent</code> no jsdom.</p>
+      <p>A coluna de destino ganha realce, a origem deixa lacuna tracejada, e o <code>PATCH /api/v1/tasks/{id}</code> sai no <em>drop</em> com atualização otimista do cache (<code>onMutate</code>) e rollback no erro.</p>
+      <p><strong>Arrastar é só de mouse — decisão do operador (18/09/2026).</strong> Não há alça, não há “segurar” por teclado e as setas não movem nada. Quem usa teclado muda a situação como hoje: abre a tarefa e troca o <code>&lt;select&gt;</code> — o arrastar é um atalho novo para o mouse, não a única porta.</p>
+      <p><strong>Estrutura do cartão: inalterada.</strong> Sem alça, a raiz continua o mesmo <code>&lt;button&gt;</code> de hoje, agora com <code>draggable</code> e <code>dragstart</code>/<code>dragend</code> (que precisa chamar <code>dataTransfer.setData</code>, senão o Firefox não inicia o arrasto). O ícone de alça é decorativo (<code>&lt;span aria-hidden&gt;</code>), nunca focável. Nenhum teste existente muda — <code>TaskCard.test.tsx:80</code> fica como está.</p>
+      <p><strong>Com filtro de situação ativo o arrastar é desligado.</strong> O quadro já mostra só a coluna filtrada, então o único destino legal seria a própria coluna (um no-op): os cartões saem sem <code>draggable</code> e o cabeçalho traz a dica “remova o filtro de situação para mover tarefas”.</p>
+      <p>Soltar na coluna de origem não dispara nada. Um cartão <em>readOnly</em> (cadeado da simulação) não arrasta. A tira de confirmação some sozinha em ~8&nbsp;s; <strong>Desfazer</strong> é um novo PATCH para o status anterior, não um replay de cache.</p>
+    </div>
+  </section>
+
+  <!-- ===================== 3 · ATRASO ===================== -->
+  <section data-panel="due" class="panel hidden space-y-4">
+    <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <table class="w-full text-left text-sm">
+        <thead class="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
+          <tr><th class="px-5 py-3">Tarefa</th><th class="px-5 py-3">Status</th><th class="px-5 py-3">Entrega</th></tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <tr><td class="px-5 py-3 font-medium">Orçamento da bomba d’água</td><td class="px-5 py-3"><span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs">Pendente</span></td>
+            <td class="px-5 py-3"><span class="inline-flex items-center gap-1 font-semibold text-red-700"><i data-lucide="alert-triangle" class="h-4 w-4"></i> 5 dias em atraso</span></td></tr>
+          <tr><td class="px-5 py-3 font-medium">Assembleia ordinária</td><td class="px-5 py-3"><span class="rounded-full bg-blue-100 px-2 py-0.5 text-xs">Em andamento</span></td>
+            <td class="px-5 py-3"><span class="inline-flex items-center gap-1 font-semibold text-orange-700"><i data-lucide="clock" class="h-4 w-4"></i> vence hoje</span></td></tr>
+          <tr><td class="px-5 py-3 font-medium">Envio do balancete</td><td class="px-5 py-3"><span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs">Pendente</span></td>
+            <td class="px-5 py-3"><span class="inline-flex items-center gap-1 font-medium text-amber-700"><i data-lucide="clock" class="h-4 w-4"></i> vence amanhã</span></td></tr>
+          <tr><td class="px-5 py-3 font-medium">Revisão do elevador</td><td class="px-5 py-3"><span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs">Pendente</span></td>
+            <td class="px-5 py-3"><span class="inline-flex items-center gap-1 text-slate-600"><i data-lucide="calendar-clock" class="h-4 w-4"></i> em 5 dias</span></td></tr>
+          <tr><td class="px-5 py-3 font-medium">Renovação do seguro predial</td><td class="px-5 py-3"><span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs">Pendente</span></td>
+            <td class="px-5 py-3"><span class="inline-flex items-center gap-1 text-slate-500"><i data-lucide="calendar" class="h-4 w-4"></i> 30/10/2026</span></td></tr>
+          <tr><td class="px-5 py-3 font-medium text-slate-500 line-through">Dedetização semestral</td><td class="px-5 py-3"><span class="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">Concluída</span></td>
+            <td class="px-5 py-3"><span class="inline-flex items-center gap-1 text-slate-500"><i data-lucide="calendar" class="h-4 w-4"></i> 02/09/2026</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="rounded-lg border border-slate-200 bg-white p-4 text-xs text-slate-600 space-y-1">
+      <p><strong>O que este painel mostra.</strong> Cinco estados derivados de um helper puro contra “hoje”: <code>overdue</code>, <code>today</code>, <code>tomorrow</code>, <code>soon</code> (≤ 7 dias) e <code>future</code> — este último mantém a data absoluta de hoje.</p>
+      <p>Cada estado tem <strong>ícone e palavra</strong>, nunca só cor — a última linha mostra que uma tarefa <code>COMPLETED</code>/<code>CANCELED</code> com data passada <em>não</em> conta como atraso.</p>
+      <p>O contador “3 em atraso” da barra superior alterna <code>overdueOnly</code> e aparece como chip removível igual aos outros.</p>
+    </div>
+  </section>
+
+  <!-- ===================== 4 · RESPONSÁVEL ===================== -->
+  <section data-panel="assignee" class="panel hidden space-y-4">
+    <div class="max-w-md rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <label for="assignee" class="block text-sm font-medium text-slate-700">Atribuído a</label>
+      <div class="relative mt-1">
+        <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400"></i>
+        <input id="assignee" value="mar" role="combobox" aria-expanded="true" aria-controls="assignee-list"
+          class="w-full rounded-md border border-slate-900 pl-9 pr-3 py-2 text-sm focus:outline-none" />
+      </div>
+      <ul id="assignee-list" role="listbox" class="mt-1 max-h-64 overflow-auto rounded-md border border-slate-200 bg-white shadow-lg">
+        <li role="option" aria-selected="true" class="flex items-center gap-3 bg-slate-100 px-3 py-2 cursor-pointer">
+          <span class="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-[11px] font-bold text-indigo-700">MN</span>
+          <span class="leading-tight"><span class="block text-sm font-medium">Marta Nogueira</span><span class="block text-xs text-slate-500">Síndica</span></span>
+        </li>
+        <li role="option" aria-selected="false" class="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-slate-50">
+          <span class="flex h-8 w-8 items-center justify-center rounded-full bg-teal-100 text-[11px] font-bold text-teal-700">MC</span>
+          <span class="leading-tight"><span class="block text-sm font-medium">Marcos Caldeira</span><span class="block text-xs text-slate-500">Zelador</span></span>
+        </li>
+        <li role="option" aria-selected="false" class="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-slate-50">
+          <span class="flex h-8 w-8 items-center justify-center rounded-full bg-rose-100 text-[11px] font-bold text-rose-700">AM</span>
+          <span class="leading-tight"><span class="block text-sm font-medium">Ana Marques</span><span class="block text-xs text-slate-500">Conselheira fiscal</span></span>
+        </li>
+        <li role="option" aria-selected="false" class="flex items-center gap-3 border-t border-slate-100 px-3 py-2 cursor-pointer hover:bg-slate-50">
+          <span class="flex h-8 w-8 items-center justify-center rounded-full border border-dashed border-slate-300 text-slate-400"><i data-lucide="user-x" class="h-4 w-4"></i></span>
+          <span class="text-sm text-slate-600">Deixar sem responsável</span>
+        </li>
+      </ul>
+      <p class="mt-2 text-xs text-slate-400 line-through">Seleção de usuário será melhorada em versões futuras.</p>
+      <p class="text-[11px] text-slate-500">↑ a chave <code>tasks.form.assigneeHelper</code> sai de <code>pt.json</code> e <code>en.json</code>.</p>
+    </div>
+
+    <div class="rounded-lg border border-slate-200 bg-white p-4 text-xs text-slate-600 space-y-1">
+      <p><strong>O que este painel mostra.</strong> Combobox sobre a mesma lista de <code>useAssignableUsers</code>: filtra por nome ou e-mail normalizados, uma pessoa por linha com iniciais, nome e papel — e uma opção explícita “deixar sem responsável” que envia <code>assigned_to_id: null</code>.</p>
+      <p>Navegável por <kbd>↑</kbd>/<kbd>↓</kbd>/<kbd>Enter</kbd>/<kbd>Esc</kbd>. O payload do <code>TaskForm</code> não muda. O filtro de responsável da barra superior <em>continua</em> um <code>&lt;select&gt;</code> — está fora do escopo.</p>
+    </div>
+  </section>
+
+  <!-- ===================== RESULTADO VAZIO ===================== -->
+  <section data-panel="empty" class="panel hidden space-y-4">
+    <div class="rounded-xl border border-slate-200 bg-white shadow-sm p-4 space-y-3">
+      <div class="relative">
+        <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400"></i>
+        <input value="elevador panorâmico" class="w-full rounded-md border border-slate-300 pl-9 pr-3 py-2 text-sm" />
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs font-medium text-slate-500">Mostrando <strong class="text-slate-900">0</strong> de <strong class="text-slate-900">47</strong> tarefas</span>
+        <span class="chip inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700">“elevador panorâmico”
+          <button class="rounded-full p-0.5 hover:bg-slate-300" onclick="this.parentElement.remove()"><i data-lucide="x" class="h-3 w-3"></i></button></span>
+        <span class="chip inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1 text-xs text-red-800">Em atraso
+          <button class="rounded-full p-0.5 hover:bg-red-200" onclick="this.parentElement.remove()"><i data-lucide="x" class="h-3 w-3"></i></button></span>
+        <span class="chip inline-flex items-center gap-1.5 rounded-full bg-sky-100 px-3 py-1 text-xs text-sky-800">Responsável: Marta Nogueira
+          <button class="rounded-full p-0.5 hover:bg-sky-200" onclick="this.parentElement.remove()"><i data-lucide="x" class="h-3 w-3"></i></button></span>
+        <button class="text-xs font-medium text-slate-500 underline hover:text-slate-900">Limpar filtros</button>
+      </div>
+    </div>
+
+    <div class="rounded-xl border-2 border-dashed border-slate-300 bg-white py-14 text-center">
+      <i data-lucide="filter-x" class="mx-auto h-8 w-8 text-slate-300"></i>
+      <p class="mt-3 text-sm font-medium text-slate-700">Nenhuma tarefa corresponde aos filtros</p>
+      <p class="mt-1 text-xs text-slate-500">Remova um dos três chips acima — eles continuam na tela justamente para isso.</p>
+    </div>
+
+    <div class="rounded-lg border border-slate-200 bg-white p-4 text-xs text-slate-600">
+      <p><strong>O que este painel mostra.</strong> O beco sem saída de hoje (<code>tasks.list.emptyFiltered</code> sozinho na tela) vira um estado que <em>nomeia</em> o que está escondendo as tarefas: o “0 de 47” e os chips continuam visíveis e cada um se remove sozinho.</p>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  function switchTab(name) {
+    document.querySelectorAll(".panel").forEach((p) => {
+      p.classList.toggle("hidden", p.dataset.panel !== name);
+    });
+    document.querySelectorAll(".tab").forEach((t) => {
+      const on = t.dataset.tab === name;
+      t.classList.toggle("border-slate-900", on);
+      t.classList.toggle("border-transparent", !on);
+      t.classList.toggle("text-slate-500", !on);
+    });
+    lucide.createIcons();
+  }
+  document.querySelectorAll(".tab").forEach((t) => {
+    t.addEventListener("click", () => switchTab(t.dataset.tab));
+  });
+  lucide.createIcons();
+</script>
+</body>
+</html>
