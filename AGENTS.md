@@ -35,28 +35,6 @@ Building administrators and HOA boards juggle dozens of operational tasks — ma
 
 ---
 
-# Running locally
-
-`cp .env.example .env` first — Compose reads `.env` in *every* subcommand, so without
-it `docker compose up` starts the app with no database and `docker compose stop` exits
-`0` without stopping anything.
-
-| Mode | How | Database |
-|---|---|---|
-| standalone (default) | `docker compose up -d` | this repo's bundled one |
-| poli-runner | `poli-runner start apras` | the shared Postgres the runner owns |
-
-**Never name a service on the command line** (`docker compose up -d db`): that
-activates its profile even when `COMPOSE_PROFILES` says otherwise, starting a second
-database that fights the shared one for the port. Run `docker compose up -d` with no
-service name and let the profiles decide.
-
-**In poli-runner mode the local `db` container does not exist**, so
-`docker compose exec db ...` fails there. Reach the shared server directly with
-`docker exec poli-postgres psql -U postgres -d apras` instead.
-
-See "Running a project locally" in the workspace `CLAUDE.md` for the full convention.
-
 # High-level Architecture
 
 ```
