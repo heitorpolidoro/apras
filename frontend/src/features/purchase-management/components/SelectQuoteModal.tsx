@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { X } from "lucide-react";
+import { AlertTriangle, X } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { Textarea } from "../../../components/ui/textarea";
 import type { DecisionFormData, PurchaseQuote } from "../../../types/purchase";
+import { computeGap } from "../utils/comparison";
 import { formatCurrency } from "../utils/formatters";
 
 /** Minimum length the backend enforces on `justification` (APRAS-37). */
@@ -19,6 +20,8 @@ interface SelectQuoteModalProps {
   isOpen: boolean;
   onClose: () => void;
   quote: PurchaseQuote | null;
+  /** The quote carrying the lowest total, or `null` when none is known. */
+  lowestQuote?: PurchaseQuote | null;
   onSubmit: (data: DecisionFormData) => Promise<void>;
   isLoading?: boolean;
 }
@@ -27,6 +30,7 @@ export const SelectQuoteModal: React.FC<SelectQuoteModalProps> = ({
   isOpen,
   onClose,
   quote,
+  lowestQuote = null,
   onSubmit,
   isLoading,
 }) => {
@@ -38,6 +42,7 @@ export const SelectQuoteModal: React.FC<SelectQuoteModalProps> = ({
 
   const trimmed = justification.trim();
   const isTooShort = trimmed.length < MIN_JUSTIFICATION_LENGTH;
+  const gap = computeGap(quote, lowestQuote);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,6 +90,39 @@ export const SelectQuoteModal: React.FC<SelectQuoteModalProps> = ({
               </span>
             </p>
           </div>
+
+          {gap && lowestQuote && (
+            <div
+              data-testid="decision-gap"
+              className="rounded-lg border border-amber-200 bg-amber-50 p-4"
+            >
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                <div className="text-xs text-amber-900">
+                  <p className="font-semibold">
+                    {t(
+                      "purchases.decision.gapTitle",
+                      "Este não é o menor orçamento.",
+                    )}
+                  </p>
+                  <p className="mt-1">
+                    {t("purchases.decision.gapBody", {
+                      supplier: lowestQuote.supplier_name,
+                      lowest: formatCurrency(lowestQuote.total_price),
+                      difference: formatCurrency(gap.difference),
+                      percent: gap.percent.toFixed(1),
+                    })}
+                  </p>
+                  <p className="mt-1 text-amber-700">
+                    {t(
+                      "purchases.decision.gapHint",
+                      "Explique abaixo o que justifica a diferença.",
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div>
             <label

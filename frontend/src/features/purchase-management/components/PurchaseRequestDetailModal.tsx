@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Award, CheckCircle2, Pencil, Plus, Trash2, X } from "lucide-react";
+import { CheckCircle2, Plus, X } from "lucide-react";
 import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
 import type {
@@ -10,8 +10,9 @@ import type {
 } from "../../../types/purchase";
 import { PurchaseRequestStatus } from "../../../types/purchase";
 import { useEffectivePermissionSet } from "../../user-administration/access/useCanAccess";
-import { useAddQuote, useDeleteQuote, usePurchaseRequest, useSelectQuote, useUpdateQuote,  } from "../hooks/usePurchaseRequests";
+import { useAddQuote, useDeleteQuote, useDeleteQuoteAttachment, usePurchaseRequest, useSelectQuote, useUpdateQuote, useUploadQuoteAttachment,  } from "../hooks/usePurchaseRequests";
 import { formatCurrency, formatDateTime } from "../utils/formatters";
+import { QuoteComparisonTable } from "./QuoteComparisonTable";
 import { QuoteFormModal } from "./QuoteFormModal";
 import { SelectQuoteModal } from "./SelectQuoteModal";
 
@@ -38,13 +39,27 @@ export const PurchaseRequestDetailModal: React.FC<
   const updateQuoteMutation = useUpdateQuote();
   const deleteQuoteMutation = useDeleteQuote();
   const selectQuoteMutation = useSelectQuote();
+  const uploadAttachmentMutation = useUploadQuoteAttachment();
+  const deleteAttachmentMutation = useDeleteQuoteAttachment();
 
   if (!isOpen || !requestId) return null;
 
   const canDecide =
     has("purchases:decide");
+  const canEditQuotes = has("purchases:quote_update");
   const isOpenRequest = detail?.status === PurchaseRequestStatus.OPEN;
   const quotesEditable = !!detail && isOpenRequest;
+
+  /**
+   * The quote the comparison is measured against (APRAS-63 D8).
+   *
+   * Read off `is_lowest_price`, which the backend already computes, rather
+   * than recomputed here: one definition of "lowest", and a tie hands back
+   * the first of the tied quotes while both keep the badge and neither is
+   * warned about.
+   */
+  const lowestQuote =
+    detail?.quotes.find((quote) => quote.is_lowest_price) ?? null;
 
   const handleQuoteSubmit = async (data: QuoteFormData) => {
     if (editingQuote) {
@@ -161,111 +176,35 @@ export const PurchaseRequestDetailModal: React.FC<
                   {t("purchases.quote.noQuotes", "Nenhum orçamento registrado neste pedido.")}
                 </p>
               ) : (
-                <div className="space-y-3">
-                  {detail.quotes.map((quote) => (
-                    <div
-                      key={quote.id}
-                      data-testid={`quote-row-${quote.id}`}
-                      className="rounded-lg border border-gray-200 p-4"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-semibold text-gray-900">
-                              {quote.supplier_name}
-                            </span>
-                            {quote.is_lowest_price && (
-                              <Badge variant="active">
-                                {t("purchases.quote.lowestBadge", "Menor preço")}
-                              </Badge>
-                            )}
-                            {quote.is_selected && (
-                              <Badge variant="completed">
-                                {t("purchases.quote.selectedBadge", "Escolhido")}
-                              </Badge>
-                            )}
-                          </div>
-                          {quote.supplier_contact && (
-                            <p className="text-xs text-gray-500 mt-0.5">
-                              {quote.supplier_contact}
-                            </p>
-                          )}
-                          <p className="text-xs text-gray-600 mt-1">
-                            {quote.quantity} × {formatCurrency(quote.unit_price)}
-                          </p>
-                          {quote.notes && (
-                            <p className="text-xs text-gray-600 mt-1">{quote.notes}</p>
-                          )}
-                          {quote.extra_fields.length > 0 && (
-                            <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
-                              {quote.extra_fields.map((field, index) => (
-                                <div key={`${quote.id}-${index}`} className="text-xs">
-                                  <dt className="font-semibold text-gray-700">
-                                    {field.label}
-                                  </dt>
-                                  <dd className="text-gray-600">{field.value}</dd>
-                                </div>
-                              ))}
-                            </dl>
-                          )}
-                        </div>
-
-                        <div className="flex flex-col items-end gap-2 shrink-0">
-                          <span className="text-lg font-bold text-gray-900">
-                            {formatCurrency(quote.total_price)}
-                          </span>
-                          <div className="flex items-center gap-1">
-                            {canDecide &&
-                              detail.status !== PurchaseRequestStatus.CANCELLED && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  title={t(
-                                    "purchases.actions.chooseQuote",
-                                    "Escolher este Orçamento",
-                                  )}
-                                  onClick={() => setDecidingQuote(quote)}
-                                >
-                                  <Award className="w-4 h-4 text-emerald-600" />
-                                </Button>
-                              )}
-                            {quotesEditable && (
-                              <>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  title={t("purchases.actions.editQuote", "Editar Orçamento")}
-                                  onClick={() => {
-                                    setEditingQuote(quote);
-                                    setIsQuoteFormOpen(true);
-                                  }}
-                                >
-                                  <Pencil className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  title={t(
-                                    "purchases.actions.deleteQuote",
-                                    "Excluir Orçamento",
-                                  )}
-                                  onClick={() =>
-                                    deleteQuoteMutation.mutate({
-                                      requestId,
-                                      quoteId: quote.id,
-                                    })
-                                  }
-                                >
-                                  <Trash2 className="w-4 h-4 text-red-500" />
-                                </Button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <QuoteComparisonTable
+                  quotes={detail.quotes}
+                  canChoose={
+                    canDecide && detail.status !== PurchaseRequestStatus.CANCELLED
+                  }
+                  quotesEditable={quotesEditable}
+                  canEditQuotes={canEditQuotes}
+                  onChoose={setDecidingQuote}
+                  onEdit={(quote) => {
+                    setEditingQuote(quote);
+                    setIsQuoteFormOpen(true);
+                  }}
+                  onDelete={(quote) =>
+                    deleteQuoteMutation.mutate({ requestId, quoteId: quote.id })
+                  }
+                  onUpload={(quote, file) =>
+                    uploadAttachmentMutation.mutate({
+                      requestId,
+                      quoteId: quote.id,
+                      file,
+                    })
+                  }
+                  onRemoveAttachment={(quote) =>
+                    deleteAttachmentMutation.mutate({
+                      requestId,
+                      quoteId: quote.id,
+                    })
+                  }
+                />
               )}
             </section>
 
@@ -365,6 +304,7 @@ export const PurchaseRequestDetailModal: React.FC<
         isOpen={!!decidingQuote}
         onClose={() => setDecidingQuote(null)}
         quote={decidingQuote}
+        lowestQuote={lowestQuote}
         onSubmit={handleDecisionSubmit}
         isLoading={selectQuoteMutation.isPending}
       />

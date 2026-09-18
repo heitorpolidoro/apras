@@ -840,3 +840,35 @@ None.
 ## [APRAS-62] Acabamento da tela de tarefas — 2026-09-18 (qa_review round 1)
 - `TaskFilterBar` defines `tasks.dashboard.clearSearch` in both locales but never renders it (the search chip's remove button uses `removeFilter`). Harmless, but it is a key with no consumer; either wire it to a clear-button inside the input or drop it.
 - `HighlightedText.matchRanges` rebuilds the normalised index map for every render of every card; with long descriptions and fast typing this is O(cards x text). A `useMemo` keyed on `(text, needle)` would make the cost proportional to changes rather than renders. Not measurable at current list sizes.
+
+## [APRAS-63] Acabamento da tela de orçamentos — 2026-09-18 (code_review round 1)
+
+- `frontend/src/features/purchase-management/components/QuoteComparisonTable.tsx:336` and `:412` — the two `{!isNarrow && (` / `{isNarrow && (` blocks break the file's indentation (their children sit at the same level as the guard). Cosmetic only; ESLint does not catch it because formatting is not enforced on the frontend, but it is the one place the file reads as machine-edited.
+- `backend/app/services/purchase_service.py:96` — `_delete_stored_attachment` reaches for `getattr(_storage_provider, "base_dir", None)` and silently returns for any provider without one. That is correct today and honest about the non-local stubs, but it means a future S3 provider would silently stop deleting rather than failing loudly. A one-line comment saying so, or an `isinstance(_storage_provider, LocalStorageProvider)` check, would make the silence deliberate rather than incidental.
+- `backend/tests/test_permission_alignment.py:24` — the module docstring still reads "That count is unchanged by APRAS-61, whose three new routes are all D-form" immediately after the 137 → 139 sentence was updated. The claim is now about a count that did move; worth a clause naming APRAS-63.
+- Not this task's to fix, but worth an entry in the suggestions log: `/static/uploads` is an unauthenticated, tenant-agnostic mount. Every supplier document, invoice and logo in the system is readable by URL alone, forever, by anyone — including after the quote is deleted if the delete's best-effort removal failed. A signed-URL or authenticated-proxy route would close it for all five upload paths at once.
+
+
+## [APRAS-63] Acabamento da tela de orçamentos — 2026-09-18 (code_review round 2)
+
+- `_sanitise_attachment_filename` is exactly the helper APRAS-65 will want for
+  the other five call sites. When that task lands, promote it to a shared module
+  (with the type→extension map as a parameter) rather than copying it five
+  times. Not a change for this task — the private-classmethod scoping is
+  correct precisely because the other sites are *not* fixed yet.
+- `ATTACHMENT_EXTENSIONS` and `ATTACHMENT_ALLOWED_MIME_TYPES` are two
+  declarations of the same accepted set; the frozenset could be derived as
+  `frozenset(ATTACHMENT_EXTENSIONS)`. Minor DRY, and the current form does read
+  more explicitly against D2, so either is defensible.
+
+## [APRAS-63] Acabamento da tela de orçamentos — 2026-09-18 (qa_review round 1)
+
+- ER4's wording "the original `attachment_filename`" is satisfied in spirit, not literally: the
+  stored display name is the *sanitised* original (`payload.svg` → `payload.png`). That is what
+  D1 specifies and it is what makes the security fix airtight; worth keeping in mind only because
+  a reader of the expected result alone might expect the byte-for-byte submitted name.
+- The corroboration environment was stale during this review: `apras-backend-1` is **not running**
+  (`docker ps` shows only `apras-db-1` and `apras-frontend-1`), and whatever answers on
+  `http://localhost:8001/openapi.json` does not expose the two new routes. This says nothing about
+  the change — the index-materialized run was the authority throughout — but the dev stack needs a
+  restart before anyone demos this.

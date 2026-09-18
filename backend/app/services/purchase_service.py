@@ -4,8 +4,12 @@ Deliberately isolated: this module knows nothing about Financeiro, Patrimônio
 & Estoque or Obras. Choosing a quote records a justification and nothing else.
 """
 
+import io
+from pathlib import Path
+from typing import ClassVar
 from uuid import UUID
 
+from PIL import Image
 from sqlalchemy import func, or_
 from sqlmodel import Session, select
 
@@ -17,6 +21,8 @@ from app.core.exceptions import (
     PurchaseQuoteNotFoundError,
     PurchaseRequestNotFoundError,
     PurchaseRequestNotOpenError,
+    QuoteAttachmentInvalidFormatError,
+    QuoteAttachmentTooLargeError,
 )
 from app.models.enums import PurchaseRequestStatus
 from app.models.purchase import PurchaseQuote, PurchaseQuoteDecision, PurchaseRequest
@@ -34,6 +40,22 @@ from app.schemas.purchase import (
     PurchaseRequestUpdate,
     PurchaseSummaryRead,
 )
+from app.services.media_service import MAX_FILE_SIZE
+from app.services.storage_service import BaseStorageProvider, LocalStorageProvider
+
+#: The public URL prefix :class:`LocalStorageProvider` mints, and the only
+#: prefix a stored ``attachment_url`` is ever mapped back to a file we own.
+#: Any other value is somebody else's file and is left alone (APRAS-63 D6).
+LOCAL_UPLOAD_URL_PREFIX = "/static/uploads/"
+
+#: The first bytes of every PDF. The declared MIME type is a claim the client
+#: makes; this is the check (APRAS-63 D2).
+_PDF_MAGIC = b"%PDF-"
+
+#: Module level and bound once, exactly like ``tenant_service``: a test (or a
+#: future non-local backend) substitutes this one name rather than threading a
+#: provider through the router.
+_storage_provider: BaseStorageProvider = LocalStorageProvider()
 
 
 def _quote_total(quote: PurchaseQuote) -> float:
@@ -43,6 +65,38 @@ def _quote_total(quote: PurchaseQuote) -> float:
 
 class PurchaseService:
     """Business logic for the purchase-quotation module."""
+
+    #: 5 MiB, **imported** from ``media_service`` rather than re-typed
+    #: (APRAS-63 D2), and mirrored by
+    #: ``QUOTE_ATTACHMENT_MAX_FILE_SIZE_BYTES`` in
+    #: ``frontend/src/api/purchases.ts``, pinned from both sides.
+    ATTACHMENT_MAX_FILE_SIZE = MAX_FILE_SIZE
+
+    #: What a supplier actually sends. ``image/webp`` is out because no
+    #: supplier sends one; ``image/svg+xml`` is out for the same
+    #: active-content reason as APRAS-61 D2 -- an SVG served same-origin from
+    #: ``/static/uploads/`` is a stored-XSS surface without a sanitiser.
+    ATTACHMENT_ALLOWED_MIME_TYPES = frozenset(
+        {"application/pdf", "image/png", "image/jpeg"}
+    )
+
+    #: The one extension each accepted type may ever have **on disk**. The
+    #: submitted name never decides it: ``/static/uploads/`` is served
+    #: unauthenticated by a ``StaticFiles`` mount that guesses the content
+    #: type from the extension, so a valid PNG called ``payload.svg`` would
+    #: otherwise be stored -- and served -- as an SVG, which is exactly the
+    #: active-content surface D2 excludes SVG to avoid.
+    ATTACHMENT_EXTENSIONS: ClassVar[dict[str, str]] = {
+        "application/pdf": ".pdf",
+        "image/png": ".png",
+        "image/jpeg": ".jpg",
+    }
+
+    #: Longest ``attachment_filename`` kept. Display text, not a path.
+    ATTACHMENT_FILENAME_MAX_LENGTH = 128
+
+    #: Used when the client sends no usable name at all.
+    ATTACHMENT_FALLBACK_STEM = "documento"
 
     # ------------------------------------------------------------------ #
     # Guards
@@ -192,6 +246,8 @@ class PurchaseService:
             quantity=quote.quantity,
             notes=quote.notes,
             extra_fields=quote.extra_fields or [],
+            attachment_url=quote.attachment_url,
+            attachment_filename=quote.attachment_filename,
             created_by_id=quote.created_by_id,
             created_by_name=user_names.get(quote.created_by_id),
             is_selected=selected_quote_id is not None and selected_quote_id == quote.id,
@@ -473,6 +529,9 @@ class PurchaseService:
             current_user, purchase_request, session
         )
 
+        # D6: the cascade takes the rows, so this has to take the bytes.
+        for quote in list(purchase_request.quotes):
+            PurchaseService._delete_stored_attachment(quote.attachment_url)
         session.delete(purchase_request)
         session.commit()
 
@@ -576,8 +635,146 @@ class PurchaseService:
         PurchaseService._assert_can_write_quote(current_user, quote, session)
         PurchaseService._assert_quotes_unfrozen(purchase_request)
 
+        # D6: the bytes go with the row. Best-effort and before the delete,
+        # so a provider failure never leaves a row pointing at nothing.
+        PurchaseService._delete_stored_attachment(quote.attachment_url)
         session.delete(quote)
         session.commit()
+
+    # ------------------------------------------------------------------ #
+    # The supplier document (APRAS-63)
+    # ------------------------------------------------------------------ #
+
+    @classmethod
+    def _validate_attachment(cls, file_bytes: bytes, content_type: str) -> None:
+        """Size, then declared MIME, then a content sniff -- in that order.
+
+        A refusal writes **no** file and **no** column (D2), which is why
+        every check runs before ``save_file`` is reached rather than beside
+        it.
+        """
+        if len(file_bytes) > cls.ATTACHMENT_MAX_FILE_SIZE:
+            raise QuoteAttachmentTooLargeError
+        if content_type not in cls.ATTACHMENT_ALLOWED_MIME_TYPES:
+            raise QuoteAttachmentInvalidFormatError
+        if content_type == "application/pdf":
+            if not file_bytes.startswith(_PDF_MAGIC):
+                raise QuoteAttachmentInvalidFormatError
+            return
+        try:
+            Image.open(io.BytesIO(file_bytes)).verify()
+        except Exception as exc:
+            raise QuoteAttachmentInvalidFormatError from exc
+
+    @classmethod
+    def _sanitise_attachment_filename(cls, filename: str, content_type: str) -> str:
+        """The client's name, reduced to something safe to store and to serve.
+
+        Three steps, in this order: take the basename (POSIX *and* Windows
+        separators, since the browser sends whatever the client OS gave it),
+        drop every non-printable character, then force the extension from the
+        already-validated ``content_type``. The last step is the load-bearing
+        one -- :meth:`LocalStorageProvider.save_file` derives the on-disk
+        suffix from the name it is handed, so the name must not be able to
+        name a type the bytes are not.
+        """
+        basename = filename.replace("\\", "/").rsplit("/", 1)[-1]
+        printable = "".join(
+            character for character in basename if character.isprintable()
+        )
+        stem = Path(printable.strip().strip(".").strip()).stem.strip()
+        extension = cls.ATTACHMENT_EXTENSIONS[content_type]
+        stem = stem[: cls.ATTACHMENT_FILENAME_MAX_LENGTH - len(extension)].strip()
+        return f"{stem or cls.ATTACHMENT_FALLBACK_STEM}{extension}"
+
+    @staticmethod
+    def _delete_stored_attachment(url: str | None) -> None:
+        """Best-effort removal of the file a stored ``attachment_url`` names.
+
+        Only a ``/static/uploads/`` value is mapped back to a path, and it is
+        mapped **relative to the provider's own** ``base_dir`` rather than by
+        stripping the leading slash: identical for the production provider
+        and honest for any other one. ``delete_file`` already swallows, so a
+        failure here never fails the request that replaced the document.
+        """
+        if url is None or not url.startswith(LOCAL_UPLOAD_URL_PREFIX):
+            return
+        base = getattr(_storage_provider, "base_dir", None)
+        if base is None:
+            return
+        relative = url[len(LOCAL_UPLOAD_URL_PREFIX) :]
+        _storage_provider.delete_file(str(Path(base) / relative))
+
+    @classmethod
+    def set_quote_attachment(
+        cls,
+        session: Session,
+        current_user: User,
+        request_id: UUID,
+        quote_id: UUID,
+        *,
+        file_bytes: bytes,
+        filename: str,
+        content_type: str,
+    ) -> PurchaseQuoteRead:
+        """Store one supplier document on one quote of one request.
+
+        The same guard ladder as ``update_quote`` -- uploading a supplier's
+        PDF *is* editing that quote (D4) -- so no new permission string
+        exists and a Manager may only touch a quote they may already edit.
+        """
+        cls._assert_can_view(current_user, session, "purchases:quote_update")
+        purchase_request = cls._get_request_or_404(session, request_id)
+        quote = cls._get_quote_or_404(session, request_id, quote_id)
+        cls._assert_can_write_quote(current_user, quote, session)
+        cls._assert_quotes_unfrozen(purchase_request)
+
+        cls._validate_attachment(file_bytes, content_type)
+
+        safe_name = cls._sanitise_attachment_filename(filename, content_type)
+
+        previous = quote.attachment_url
+        _, url = _storage_provider.save_file(file_bytes, safe_name, content_type)
+        quote.attachment_url = url
+        quote.attachment_filename = safe_name
+        quote.updated_at = clock.db_now()
+        session.add(quote)
+        session.commit()
+        session.refresh(quote)
+
+        cls._delete_stored_attachment(previous)
+        user_names = cls._resolve_user_names(session, {quote.created_by_id})
+        return cls._build_quote_read(quote, user_names)
+
+    @classmethod
+    def clear_quote_attachment(
+        cls,
+        session: Session,
+        current_user: User,
+        request_id: UUID,
+        quote_id: UUID,
+    ) -> PurchaseQuoteRead:
+        """Drop the document. Idempotent: an already-null pair is still 200."""
+        cls._assert_can_view(current_user, session, "purchases:quote_update")
+        purchase_request = cls._get_request_or_404(session, request_id)
+        quote = cls._get_quote_or_404(session, request_id, quote_id)
+        cls._assert_can_write_quote(current_user, quote, session)
+        cls._assert_quotes_unfrozen(purchase_request)
+
+        user_names = cls._resolve_user_names(session, {quote.created_by_id})
+        previous = quote.attachment_url
+        if previous is None and quote.attachment_filename is None:
+            return cls._build_quote_read(quote, user_names)
+
+        quote.attachment_url = None
+        quote.attachment_filename = None
+        quote.updated_at = clock.db_now()
+        session.add(quote)
+        session.commit()
+        session.refresh(quote)
+
+        cls._delete_stored_attachment(previous)
+        return cls._build_quote_read(quote, user_names)
 
     # ------------------------------------------------------------------ #
     # Decision

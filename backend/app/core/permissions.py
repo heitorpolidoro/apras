@@ -590,6 +590,17 @@ ROUTE_PERMISSIONS: dict[tuple[str, str], str] = {
         "DELETE",
         "/api/v1/purchase-requests/{request_id}/quotes/{quote_id}",
     ): "purchases:quote_delete",
+    # APRAS-63 D4: attaching the supplier's own document *is* editing that
+    # quote, so both routes reuse `purchases:quote_update` and no new
+    # catalogue string is minted -- `PERMISSIONS` stays 175.
+    (
+        "PUT",
+        "/api/v1/purchase-requests/{request_id}/quotes/{quote_id}/attachment",
+    ): "purchases:quote_update",
+    (
+        "DELETE",
+        "/api/v1/purchase-requests/{request_id}/quotes/{quote_id}/attachment",
+    ): "purchases:quote_update",
     (
         "POST",
         "/api/v1/purchase-requests/{request_id}/decision",

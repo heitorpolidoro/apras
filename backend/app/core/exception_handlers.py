@@ -74,6 +74,8 @@ from app.core.exceptions import (
     PurchaseQuoteNotFoundError,
     PurchaseRequestNotFoundError,
     PurchaseRequestNotOpenError,
+    QuoteAttachmentInvalidFormatError,
+    QuoteAttachmentTooLargeError,
     ReservableSpaceNotFoundError,
     ResidentCPFConflictError,
     ResidentNotFoundError,
@@ -222,6 +224,10 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             # to 400 below and is a published contract.
             TenantLogoInvalidFormatError,
             TenantLogoTooLargeError,
+            # APRAS-63 D3: a refused supplier document on a quote, by the
+            # same precedent and for the same reason.
+            QuoteAttachmentInvalidFormatError,
+            QuoteAttachmentTooLargeError,
         ),
     ):
         status_code = status.HTTP_422_UNPROCESSABLE_ENTITY

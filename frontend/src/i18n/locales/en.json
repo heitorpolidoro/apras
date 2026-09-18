@@ -1356,7 +1356,10 @@
       "decidedBy": "Decided by",
       "supersededTitle": "Previous decisions",
       "current": "Current",
-      "superseded": "Superseded"
+      "superseded": "Superseded",
+      "gapTitle": "This is not the lowest quote.",
+      "gapBody": "The lowest is {{supplier}}, at {{lowest}}. This choice costs {{difference}} more ({{percent}}%).",
+      "gapHint": "Explain below what justifies the difference (warranty, lead time, installation included…)."
     },
     "detail": {
       "title": "Purchase Request",
@@ -1368,6 +1371,34 @@
       "quantity": "Qty.",
       "totalPrice": "Total",
       "actions": "Actions"
+    },
+    "comparison": {
+      "title": "Comparison",
+      "field": "Field",
+      "total": "Total",
+      "unitTimesQuantity": "Unit × qty.",
+      "contact": "Contact",
+      "notes": "Notes",
+      "attachment": "Document",
+      "extraFields": "Extra fields",
+      "actions": "Actions",
+      "notProvided": "Not provided by this supplier",
+      "sortOriginal": "Entry order",
+      "sortAscending": "Total ↑ (lowest first)",
+      "sortDescending": "Total ↓ (highest first)",
+      "sortToggle": "Sort by total"
+    },
+    "attachment": {
+      "label": "Supplier document",
+      "open": "Open the supplier document",
+      "upload": "Attach document",
+      "replace": "Replace",
+      "remove": "Remove",
+      "hint": "PDF, PNG or JPEG · up to 5 MB · one file per quote",
+      "readOnly": "read only",
+      "invalidType": "Unsupported format. Send a PDF, PNG or JPEG of up to 5 MB.",
+      "tooLarge": "File larger than 5 MB. Send a PDF, PNG or JPEG of up to 5 MB.",
+      "rejected": "{{filename}} was not uploaded."
     }
   },
   "tenant": {

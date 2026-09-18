@@ -1,6 +1,6 @@
 """Every mapped route is in a *declared enforcement form* (APRAS-51).
 
-The defect this module closes: `ROUTE_PERMISSIONS` maps 206 routes to one
+The defect this module closes: `ROUTE_PERMISSIONS` maps 208 routes to one
 catalogue permission each, and on 25 of them that permission was never
 consulted anywhere in the request. The map claimed a gate the code did not
 have. Nothing noticed, because `test_permission_registry.py` only asserts a
@@ -21,7 +21,7 @@ Two oracles, both mechanical, both here:
 What the two together prove: every mapped route is in a declared form, and
 every swept route refuses, in a declared shape, a caller who holds everything
 but its mapped permission. What they do **not** prove: that the refusal is
-*caused* by the mapped permission on the 137 in-handler routes.
+*caused* by the mapped permission on the 139 in-handler routes.
 That count is unchanged by APRAS-61, whose three new routes are all D-form. For those the
 sweep is a strong necessary condition, and `REFUSAL_SHAPES` is what stops an
 unrelated 404 or 400 from passing silently -- which is exactly what an earlier
@@ -110,7 +110,14 @@ HARNESS_PATH = BACKEND_ROOT / "tests" / "matrix_world.py"
 #: builds is unchanged, and that is proven rather than asserted -- all five
 #: `tests/data/*.json` baselines stay byte-identical, which is exactly the
 #: property this pin exists to protect.
-HARNESS_SHA256 = "bf443586e1c5c5a6d34f3f06d71d8d7ada5b71d831f4f8df850e443bf846ba38"
+#:
+#: APRAS-63 moved it once more: `REQUEST_BODIES` gains the multipart body of
+#: `PUT /purchase-requests/{id}/quotes/{id}/attachment` (a real `%PDF-` file,
+#: because the service sniffs the marker) and `neutralised_storage` swaps a
+#: fifth module-level provider. Every other route's payload is unchanged, and
+#: that is proven rather than asserted -- all seven `tests/data/*.json`
+#: baselines stay byte-identical.
+HARNESS_SHA256 = "a3190dafd910300e575cd1aa699e0519b5e09c6af964aff39c52b6ff80746f34"
 
 
 # ---------------------------------------------------------------------------
@@ -126,7 +133,7 @@ EXPECTED_MEMBERSHIP_FORM = 3
 #: **E** -- `SERVICE_ENFORCED`, §4.4.
 EXPECTED_SERVICE_FORM = 5
 #: **H** -- derived, never listed: everything else, proven by the sweep.
-EXPECTED_IN_HANDLER_FORM = 137
+EXPECTED_IN_HANDLER_FORM = 139
 
 #: The exception allowlist. It ships **empty** and a future task may not grow
 #: it without deleting `test_no_mapped_route_is_unenforced`'s assertion: a
@@ -410,7 +417,7 @@ def superuser_form() -> set[tuple[str, str]]:
 def in_handler_form() -> set[tuple[str, str]]:
     """**H** is *derived*, deliberately, and never hand-listed.
 
-    A hand list of 137 keys would give a future author somewhere to type a new
+    A hand list of 139 keys would give a future author somewhere to type a new
     unenforced route and call it declared. A derived bucket sends every new
     route straight into the sweep, which cannot be satisfied by typing.
     """
@@ -437,7 +444,7 @@ def success_status(method: str, path: str) -> int:
 
 
 def test_the_five_forms_partition_route_permissions():
-    """56 + 5 + 3 + 5 + 137 == 206, as an equality against the registry."""
+    """56 + 5 + 3 + 5 + 139 == 208, as an equality against the registry."""
     dependency = set(dependency_form())
     superuser = superuser_form()
     membership = set(MEMBERSHIP_GATED)
@@ -458,7 +465,7 @@ def test_the_five_forms_partition_route_permissions():
             + EXPECTED_SERVICE_FORM
             + EXPECTED_IN_HANDLER_FORM
         )
-        == 206
+        == 208
         == len(ROUTE_PERMISSIONS)
     )
 
@@ -601,8 +608,8 @@ def test_the_permission_required_docstring_claims_no_fixed_route_count():
         assert anchor in doc, f"PermissionRequired's docstring does not name {anchor}"
 
 
-def test_the_swept_routes_are_two_hundred_and_six_minus_eight():
-    assert len(SWEPT_ROUTES) == 198
+def test_the_swept_routes_are_two_hundred_and_eight_minus_eight():
+    assert len(SWEPT_ROUTES) == 200
     assert set(SWEPT_ROUTES) == (
         set(ROUTE_PERMISSIONS) - set(MEMBERSHIP_GATED) - set(SERVICE_ENFORCED)
     )

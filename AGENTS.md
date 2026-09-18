@@ -882,7 +882,7 @@ capability columns; there is no role column and no per-user permission.
 
 `backend/app/core/permissions.py` is the vocabulary: **175 strings** in **28
 modules**, spelled `<module>:<action>` (`tasks:read`, `purchases:decide`,
-`gate:checkin`). `ROUTE_PERMISSIONS` maps **206** routes to one permission
+`gate:checkin`). `ROUTE_PERMISSIONS` maps **208** routes to one permission
 each; `UNGUARDED_ROUTES` names the rest. A route in neither fails
 `tests/test_permission_registry.py`, in CI, before it can ship with a hole in
 it.
@@ -892,11 +892,11 @@ model — so it stays importable from Alembic, from a script and from a test
 with no database.
 
 **Every mapped route is now proven enforced** (APRAS-51).
-`backend/tests/test_permission_alignment.py` places all 206 in exactly one
+`backend/tests/test_permission_alignment.py` places all 208 in exactly one
 declared enforcement form — 56 route-level `Depends(require_permission(P))`,
-5 `get_current_superuser`, 3 membership-gated, 5 service-enforced, 137
+5 `get_current_superuser`, 3 membership-gated, 5 service-enforced, 139
 in-handler — with the exception allowlist `UNENFORCED` **empty**, and sweeps
-the other 198 with a real request from a caller holding the whole catalogue
+the other 200 with a real request from a caller holding the whole catalogue
 except the route's own permission, pinning the *shape* of the refusal. Two
 forms are deliberate and are proven per route rather than excused: **five
 routes are enforced in a service** — the two ballot routes, whose
@@ -1224,6 +1224,52 @@ Four decisions carry it:
 new catalogue string. The 12 new parity cells live in the additive
 `backend/tests/data/parity_matrix_baseline_60.json`; the three pre-existing
 baselines stay byte-identical.
+
+### Cotações de compra
+
+`/api/v1/purchase-requests` is one request to buy something, the supplier
+quotes (*orçamentos*) collected against it, and the justified choice of one of
+them. APRAS-63 finished the screen at the point where somebody decides: the
+quotes are read as one comparison table with supplier columns and aligned
+`extra_fields` labels, the decision modal states what a non-lowest choice
+costs against the lowest quote, and a quote can carry the supplier's own
+document.
+
+**The attachment is two columns on `purchase_quote`, not a `MediaAsset` row**
+(D1): `attachment_url` — the public `/static/uploads/…` URL
+`LocalStorageProvider.save_file` mints — and `attachment_filename`, the
+original name used as the link text so the reader sees `orcamento-acme.pdf`
+rather than a uuid. The on-disk path is *derived* from the URL and only when
+it starts with `/static/uploads/`, exactly as APRAS-61 treats the tenant logo:
+an externally hosted or hand-written value is somebody else's file.
+
+* **`application/pdf`, `image/png`, `image/jpeg`, up to 5 MiB** (D2), the cap
+  imported from `media_service.MAX_FILE_SIZE` rather than re-typed. WebP is
+  excluded because no supplier sends one, and `image/svg+xml` for the same
+  active-content reason as APRAS-61 D2. Validation runs size → declared MIME →
+  content sniff (a PDF must start with `%PDF-`; an image must decode with
+  Pillow), so a declared type is a claim and the bytes are the check. Every
+  refusal is a **422** (`QuoteAttachmentTooLargeError`,
+  `QuoteAttachmentInvalidFormatError`) and writes neither a file nor a column;
+  the media pipeline's 400-mapped `Photo*` pair is left alone.
+* **No new permission string** (D4). Both routes —
+  `PUT`/`DELETE /api/v1/purchase-requests/{request_id}/quotes/{quote_id}/attachment`
+  — carry `purchases:quote_update`, because uploading a supplier's PDF *is*
+  editing that quote. Enforcement stays inside `PurchaseService`
+  (`_assert_can_view` → `_assert_can_write_quote` → `_assert_quotes_unfrozen`),
+  so a Manager may only touch quotes they registered. `PERMISSIONS` stays
+  **175** and `ROUTE_PERMISSIONS` goes 206 → **208**, with the 12 new cells in
+  the additive `backend/tests/data/parity_matrix_baseline_63.json`.
+* **Frozen means frozen** (D5). A request whose status is not `OPEN` answers
+  the existing `PurchaseQuoteFrozenError` (**409**) on both the upload and the
+  removal, and the already-stored file stays readable forever — which is the
+  whole point of the accountability trail. A decision therefore never deletes
+  a file.
+* **Deleting deletes the bytes** (D6). `delete_quote` removes the quote's file
+  before `session.delete`, `delete_request` removes every quote's file before
+  deleting the request, and a replacement upload removes the previous one. All
+  three are best-effort (`LocalStorageProvider.delete_file` already swallows)
+  and only ever touch a path derived from a `/static/uploads/` URL.
 
 ### Soft Delete
 

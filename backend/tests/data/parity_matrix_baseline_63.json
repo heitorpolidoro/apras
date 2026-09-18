@@ -1,0 +1,59 @@
+{
+  "_meta": {
+    "cell_count": 12,
+    "generator": "tests/tools/record_parity_baseline.py",
+    "harness": "tests/matrix_world.py",
+    "merge_base_sha": "10377e4ce22985773f14f6933c3547bc21f0c136",
+    "regenerate": "cd backend && POSTGRES_URL=sqlite:// SECRET_KEY=parity-matrix uv run python -m tests.tools.record_parity_baseline --out tests/data/parity_matrix_baseline_63.json --merge-base 10377e4ce22985773f14f6933c3547bc21f0c136 --routes 'PUT /api/v1/purchase-requests/{request_id}/quotes/{quote_id}/attachment' --routes 'DELETE /api/v1/purchase-requests/{request_id}/quotes/{quote_id}/attachment'"
+  },
+  "cells": {
+    "ADMINISTRATOR": {
+      "DELETE": {
+        "/api/v1/purchase-requests/{request_id}/quotes/{quote_id}/attachment": 200
+      },
+      "PUT": {
+        "/api/v1/purchase-requests/{request_id}/quotes/{quote_id}/attachment": 200
+      }
+    },
+    "DIRECTOR": {
+      "DELETE": {
+        "/api/v1/purchase-requests/{request_id}/quotes/{quote_id}/attachment": 200
+      },
+      "PUT": {
+        "/api/v1/purchase-requests/{request_id}/quotes/{quote_id}/attachment": 200
+      }
+    },
+    "GUEST": {
+      "DELETE": {
+        "/api/v1/purchase-requests/{request_id}/quotes/{quote_id}/attachment": 403
+      },
+      "PUT": {
+        "/api/v1/purchase-requests/{request_id}/quotes/{quote_id}/attachment": 403
+      }
+    },
+    "MANAGER": {
+      "DELETE": {
+        "/api/v1/purchase-requests/{request_id}/quotes/{quote_id}/attachment": 403
+      },
+      "PUT": {
+        "/api/v1/purchase-requests/{request_id}/quotes/{quote_id}/attachment": 403
+      }
+    },
+    "PORTEIRO": {
+      "DELETE": {
+        "/api/v1/purchase-requests/{request_id}/quotes/{quote_id}/attachment": 403
+      },
+      "PUT": {
+        "/api/v1/purchase-requests/{request_id}/quotes/{quote_id}/attachment": 403
+      }
+    },
+    "RESIDENT": {
+      "DELETE": {
+        "/api/v1/purchase-requests/{request_id}/quotes/{quote_id}/attachment": 403
+      },
+      "PUT": {
+        "/api/v1/purchase-requests/{request_id}/quotes/{quote_id}/attachment": 403
+      }
+    }
+  }
+}

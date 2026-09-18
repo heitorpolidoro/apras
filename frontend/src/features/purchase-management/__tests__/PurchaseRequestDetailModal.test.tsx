@@ -20,7 +20,24 @@ const hasOf = (profile: string) => (permission: string) =>
     (PERMISSIONS_BY_ROLE[profile] ?? []).includes(permission);
 
 
-vi.mock("../../../api/purchases");
+/**
+ * Mock the *functions* of the client and keep its **constants** real.
+ *
+ * A bare `vi.mock("../../../api/purchases")` automocks every export, which
+ * silently empties `QUOTE_ATTACHMENT_ALLOWED_MIME_TYPES` — and the
+ * comparison table reads it to decide whether a picked file may be sent, so
+ * every upload would be refused by a test artefact rather than by the rule
+ * under test.
+ */
+vi.mock("../../../api/purchases", async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return Object.fromEntries(
+    Object.entries(actual).map(([key, value]) => [
+      key,
+      typeof value === "function" ? vi.fn() : value,
+    ]),
+  );
+});
 
 let mockUserRole: string = "DIRECTOR";
 
@@ -54,6 +71,8 @@ const baseDetail: PurchaseRequestDetail = {
       quantity: 2,
       notes: null,
       extra_fields: [{ label: "Prazo de entrega", value: "15 dias" }],
+      attachment_url: null,
+      attachment_filename: null,
       total_price: 2400,
       created_by_id: "user-1",
       created_by_name: "Gerente Silva",
@@ -71,6 +90,8 @@ const baseDetail: PurchaseRequestDetail = {
       quantity: 2,
       notes: null,
       extra_fields: [],
+      attachment_url: null,
+      attachment_filename: null,
       total_price: 3000,
       created_by_id: "user-2",
       created_by_name: "Diretor Souza",
@@ -153,6 +174,12 @@ describe("PurchaseRequestDetailModal", () => {
     vi.mocked(purchasesApi.deleteQuote).mockResolvedValue(undefined);
     vi.mocked(purchasesApi.selectQuote).mockResolvedValue(
       decidedDetail.decisions[0],
+    );
+    vi.mocked(purchasesApi.uploadQuoteAttachment).mockResolvedValue(
+      baseDetail.quotes[0],
+    );
+    vi.mocked(purchasesApi.deleteQuoteAttachment).mockResolvedValue(
+      baseDetail.quotes[0],
     );
   });
 
@@ -287,6 +314,155 @@ describe("PurchaseRequestDetailModal", () => {
     await waitFor(() => {
       expect(purchasesApi.deleteQuote).toHaveBeenCalledWith("req-1", "quote-cheap");
     });
+  });
+
+  // --- APRAS-63: the comparison, the decision context and the attachment ---
+
+  it("compares the quotes in one table with the extra labels aligned", async () => {
+    renderModal();
+
+    await screen.findByText("Troca das bombas d'água");
+
+    // One column per supplier, the fixed rows, and the union label once —
+    // not once per supplier, which is what the stacked cards used to do.
+    expect(screen.getAllByTestId(/quote-row-/)).toHaveLength(2);
+    expect(screen.getByText("Unitário × qtd.")).toBeInTheDocument();
+    expect(screen.getAllByText("Prazo de entrega")).toHaveLength(1);
+    expect(screen.getByText("15 dias")).toBeInTheDocument();
+
+    // Hidráulica Central filled neither the label nor a contact.
+    expect(
+      screen.getAllByTitle("Não informado por este fornecedor").length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("states the gap against the lowest quote when a dearer one is chosen", async () => {
+    renderModal();
+
+    const chooseButtons = await screen.findAllByTitle("Escolher este Orçamento");
+    // The second column is Hidráulica Central at 3000, against 2400.
+    fireEvent.click(chooseButtons[1]);
+
+    const panel = screen.getByTestId("decision-gap");
+    expect(panel).toHaveTextContent("Este não é o menor orçamento.");
+    expect(panel).toHaveTextContent("Bombas & Cia");
+    expect(panel).toHaveTextContent("R$ 600,00");
+    expect(panel).toHaveTextContent("25.0%");
+  });
+
+  it("renders no gap panel when the lowest quote is the one being chosen", async () => {
+    renderModal();
+
+    const chooseButtons = await screen.findAllByTitle("Escolher este Orçamento");
+    fireEvent.click(chooseButtons[0]);
+
+    expect(screen.queryByTestId("decision-gap")).toBeNull();
+  });
+
+  it("uploads and removes the supplier document through the two routes", async () => {
+    vi.mocked(purchasesApi.uploadQuoteAttachment).mockResolvedValue({
+      ...baseDetail.quotes[0],
+      attachment_url: "/static/uploads/2026/09/abc.pdf",
+      attachment_filename: "orcamento.pdf",
+    });
+    vi.mocked(purchasesApi.deleteQuoteAttachment).mockResolvedValue(
+      baseDetail.quotes[0],
+    );
+    renderModal();
+
+    await screen.findByText("Troca das bombas d'água");
+
+    const file = new File(["%PDF-"], "orcamento.pdf", {
+      type: "application/pdf",
+    });
+    fireEvent.change(screen.getByTestId("attachment-input-quote-cheap"), {
+      target: { files: [file] },
+    });
+
+    await waitFor(() => {
+      expect(purchasesApi.uploadQuoteAttachment).toHaveBeenCalledWith(
+        "req-1",
+        "quote-cheap",
+        file,
+      );
+    });
+  });
+
+  it("links a stored document in the detail and offers removing it", async () => {
+    vi.mocked(purchasesApi.getPurchaseRequestById).mockResolvedValue({
+      ...baseDetail,
+      quotes: [
+        {
+          ...baseDetail.quotes[0],
+          attachment_url: "/static/uploads/2026/09/abc.pdf",
+          attachment_filename: "orcamento-bombas.pdf",
+        },
+        baseDetail.quotes[1],
+      ],
+    });
+    vi.mocked(purchasesApi.deleteQuoteAttachment).mockResolvedValue(
+      baseDetail.quotes[0],
+    );
+    renderModal();
+
+    expect(
+      await screen.findByRole("link", { name: /orcamento-bombas\.pdf/ }),
+    ).toHaveAttribute("href", "/static/uploads/2026/09/abc.pdf");
+
+    fireEvent.click(screen.getByTitle("Remover"));
+    await waitFor(() => {
+      expect(purchasesApi.deleteQuoteAttachment).toHaveBeenCalledWith(
+        "req-1",
+        "quote-cheap",
+      );
+    });
+  });
+
+  it("shows no upload control to a caller without purchases:quote_update", async () => {
+    mockUserRole = "RESIDENT";
+    renderModal();
+
+    await screen.findByText("Troca das bombas d'água");
+    expect(screen.queryAllByTestId(/attachment-input-/)).toHaveLength(0);
+    expect(screen.queryByTitle("Anexar documento")).toBeNull();
+  });
+
+  it("shows the comparison but no choose control without purchases:decide", async () => {
+    mockUserRole = "MANAGER";
+    renderModal();
+
+    await screen.findByText("Troca das bombas d'água");
+    expect(screen.getAllByTestId(/quote-row-/)).toHaveLength(2);
+    expect(screen.queryAllByTitle("Escolher este Orçamento")).toHaveLength(0);
+    // …but a Manager holds `purchases:quote_update`, so the upload stays.
+    expect(screen.queryAllByTestId(/attachment-input-/)).toHaveLength(2);
+  });
+
+  it("shows the frozen document read-only, with no upload control", async () => {
+    vi.mocked(purchasesApi.getPurchaseRequestById).mockResolvedValue({
+      ...decidedDetail,
+      quotes: [
+        {
+          ...decidedDetail.quotes[0],
+          attachment_url: "/static/uploads/2026/09/abc.pdf",
+          attachment_filename: "orcamento-bombas.pdf",
+        },
+        decidedDetail.quotes[1],
+      ],
+    });
+    renderModal();
+
+    expect(
+      await screen.findByRole("link", { name: /orcamento-bombas\.pdf/ }),
+    ).toBeInTheDocument();
+    expect(screen.queryAllByTestId(/attachment-input-/)).toHaveLength(0);
+    expect(screen.getByText("somente leitura")).toBeInTheDocument();
+
+    // The recorded decision is untouched by any of this.
+    expect(
+      screen.getByText("Revisão da diretoria: o mais barato não atende à NBR."),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Diretor Souza/)).toBeInTheDocument();
   });
 
   it("renders nothing when closed or without a request id", () => {

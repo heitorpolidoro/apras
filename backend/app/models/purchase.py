@@ -78,6 +78,16 @@ class PurchaseQuote(SQLModel, table=True):
         default_factory=list,
         sa_column=Column(JSON, nullable=False, server_default="[]"),
     )
+    # The supplier's own document (APRAS-63 D1). Two nullable columns and no
+    # `MediaAsset` row: a document is a property of the quote, exactly as
+    # APRAS-61 treated the tenant logo. `attachment_url` is the public
+    # `/static/uploads/...` URL `LocalStorageProvider.save_file` mints, and
+    # the on-disk path is derived from it -- only when it carries that
+    # prefix -- rather than stored a second time.
+    attachment_url: str | None = Field(default=None, nullable=True)
+    #: The original file name, shown as the link text so the reader sees
+    #: `orcamento-acme.pdf` rather than a uuid.
+    attachment_filename: str | None = Field(default=None, nullable=True)
     created_by_id: UUID = Field(foreign_key="user.id", nullable=False, index=True)
     created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
     updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)

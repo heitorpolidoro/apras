@@ -461,6 +461,40 @@ class TenantLogoTooLargeError(DomainError):
         super().__init__(message)
 
 
+class QuoteAttachmentTooLargeError(DomainError):
+    """Raised when a supplier document on a quote exceeds the 5 MiB cap.
+
+    Its own class rather than :class:`PhotoFileTooLargeError`: that one is
+    mapped to **400** and is the media pipeline's published contract, while
+    APRAS-63 D3 states a refused attachment is a **422** -- the APRAS-61 D5
+    precedent, restated for the purchases module.
+    """
+
+    def __init__(
+        self, message: str = "Arquivo excede o limite máximo permitido de 5MB."
+    ) -> None:
+        super().__init__(message)
+
+
+class QuoteAttachmentInvalidFormatError(DomainError):
+    """Raised when a quote attachment's MIME type is outside the accepted set
+    or its bytes do not match the type it declares.
+
+    WebP is excluded because no supplier sends one; ``image/svg+xml`` is
+    excluded for the same active-content reason as APRAS-61 D2. A PDF must
+    start with ``%PDF-`` and an image must decode with Pillow, so a declared
+    type is a claim and the bytes are the check (APRAS-63 D2).
+    """
+
+    def __init__(
+        self,
+        message: str = (
+            "Formato de arquivo inválido. Formatos aceitos: PDF, PNG, JPEG."
+        ),
+    ) -> None:
+        super().__init__(message)
+
+
 class TenantLogoInvalidFormatError(DomainError):
     """Raised when a logo's MIME type is outside the accepted set or its bytes
     do not decode.

@@ -1356,7 +1356,10 @@
       "decidedBy": "Decidido por",
       "supersededTitle": "Decisões anteriores",
       "current": "Atual",
-      "superseded": "Substituída"
+      "superseded": "Substituída",
+      "gapTitle": "Este não é o menor orçamento.",
+      "gapBody": "O menor é {{supplier}}, com {{lowest}}. A escolha custa {{difference}} a mais ({{percent}}%).",
+      "gapHint": "Explique abaixo o que justifica a diferença (garantia, prazo, instalação inclusa…)."
     },
     "detail": {
       "title": "Pedido de Compra",
@@ -1368,6 +1371,34 @@
       "quantity": "Qtd.",
       "totalPrice": "Total",
       "actions": "Ações"
+    },
+    "comparison": {
+      "title": "Comparação",
+      "field": "Campo",
+      "total": "Total",
+      "unitTimesQuantity": "Unitário × qtd.",
+      "contact": "Contato",
+      "notes": "Observações",
+      "attachment": "Documento",
+      "extraFields": "Campos extras",
+      "actions": "Ações",
+      "notProvided": "Não informado por este fornecedor",
+      "sortOriginal": "Ordem de cadastro",
+      "sortAscending": "Total ↑ (menor primeiro)",
+      "sortDescending": "Total ↓ (maior primeiro)",
+      "sortToggle": "Ordenar por total"
+    },
+    "attachment": {
+      "label": "Documento do fornecedor",
+      "open": "Abrir o documento do fornecedor",
+      "upload": "Anexar documento",
+      "replace": "Substituir",
+      "remove": "Remover",
+      "hint": "PDF, PNG ou JPEG · até 5 MB · um arquivo por orçamento",
+      "readOnly": "somente leitura",
+      "invalidType": "Formato não aceito. Envie PDF, PNG ou JPEG com até 5 MB.",
+      "tooLarge": "Arquivo acima de 5 MB. Envie PDF, PNG ou JPEG com até 5 MB.",
+      "rejected": "{{filename}} não foi enviado."
     }
   },
   "tenant": {

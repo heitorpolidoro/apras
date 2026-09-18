@@ -12,6 +12,37 @@ import type {
   QuoteFormData,
 } from "../types/purchase";
 
+/**
+ * `PurchaseService.ATTACHMENT_MAX_FILE_SIZE` — 5 MiB, the cap the backend
+ * imports from `media_service.MAX_FILE_SIZE` rather than re-typing.
+ *
+ * The three constants below are **one half of a two-sided pin**, the shape
+ * `src/api/tenantProfile.ts` established: neither side can import the other,
+ * so each states the constant and names the other. The backend half is
+ * `backend/tests/test_purchase_quote_attachment.py::test_the_attachment_contract_matches_the_frontend_client`,
+ * which reads `PurchaseService` and `ROUTE_PERMISSIONS` and fails with this
+ * file's name in the message.
+ */
+export const QUOTE_ATTACHMENT_MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+
+/**
+ * `PurchaseService.ATTACHMENT_ALLOWED_MIME_TYPES`.
+ *
+ * `image/webp` is absent because no supplier sends one, and `image/svg+xml`
+ * for the same active-content reason as APRAS-61 D2: an SVG served
+ * same-origin from `/static/uploads/` is a stored-XSS surface without a
+ * sanitiser.
+ */
+export const QUOTE_ATTACHMENT_ALLOWED_MIME_TYPES = [
+  "application/pdf",
+  "image/png",
+  "image/jpeg",
+] as const;
+
+/** The `accept=` of the file input, derived from the set above — never retyped. */
+export const QUOTE_ATTACHMENT_ACCEPT =
+  QUOTE_ATTACHMENT_ALLOWED_MIME_TYPES.join(",");
+
 export const getPurchaseRequests = async (
   params?: PurchaseFilterParams,
 ): Promise<PaginatedPurchaseRequests> => {
@@ -91,6 +122,36 @@ export const deleteQuote = async (
   quoteId: string,
 ): Promise<void> => {
   await apiClient.delete(`/purchase-requests/${requestId}/quotes/${quoteId}`);
+};
+
+/**
+ * Attach the supplier's document to one quote. The response body *is* the
+ * quote, carrying the new `attachment_url` and `attachment_filename`.
+ */
+export const uploadQuoteAttachment = async (
+  requestId: string,
+  quoteId: string,
+  file: File,
+): Promise<PurchaseQuote> => {
+  const formData = new FormData();
+  formData.append("file", file, file.name);
+  const response = await apiClient.put<PurchaseQuote>(
+    `/purchase-requests/${requestId}/quotes/${quoteId}/attachment`,
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  );
+  return response.data;
+};
+
+/** Remove it. Idempotent: a quote with no document is still a 200. */
+export const deleteQuoteAttachment = async (
+  requestId: string,
+  quoteId: string,
+): Promise<PurchaseQuote> => {
+  const response = await apiClient.delete<PurchaseQuote>(
+    `/purchase-requests/${requestId}/quotes/${quoteId}/attachment`,
+  );
+  return response.data;
 };
 
 export const selectQuote = async (

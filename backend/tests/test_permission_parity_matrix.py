@@ -96,6 +96,7 @@ BASELINE_44_PATH = BACKEND_ROOT / "tests" / "data" / "parity_matrix_baseline_44.
 BASELINE_51_PATH = BACKEND_ROOT / "tests" / "data" / "parity_matrix_baseline_51.json"
 BASELINE_60_PATH = BACKEND_ROOT / "tests" / "data" / "parity_matrix_baseline_60.json"
 BASELINE_61_PATH = BACKEND_ROOT / "tests" / "data" / "parity_matrix_baseline_61.json"
+BASELINE_63_PATH = BACKEND_ROOT / "tests" / "data" / "parity_matrix_baseline_63.json"
 LEGACY_BUNDLES_PATH = BACKEND_ROOT / "tests" / "data" / "legacy_role_bundles.json"
 HARNESS_PATH = BACKEND_ROOT / "tests" / "matrix_world.py"
 
@@ -117,12 +118,19 @@ APRAS_60_CELL_COUNT = 12
 #: recorded bundle carries, so five of the six profiles are a plain 403 and
 #: ADMINISTRATOR passes only through the oracle's superuser branch.
 APRAS_61_CELL_COUNT = 18
+#: **An addend** too: APRAS-63's two quote-attachment routes are routes the F2
+#: file never recorded. They mint no permission -- both reuse
+#: `purchases:quote_update` -- so their statuses are exactly the statuses the
+#: sibling `PUT .../quotes/{quote_id}` route already records, profile for
+#: profile.
+APRAS_63_CELL_COUNT = 12
 EXPECTED_CELL_COUNT = (
     F2_CELL_COUNT
     + APRAS_40_CELL_COUNT
     + APRAS_44_CELL_COUNT
     + APRAS_60_CELL_COUNT
     + APRAS_61_CELL_COUNT
+    + APRAS_63_CELL_COUNT
 )
 
 F2_MERGE_BASE_SHA = "02c2025abcda4626569921eafb3863dfc540eb9e"
@@ -184,7 +192,29 @@ APRAS_61_ROUTES = frozenset(
     }
 )
 
-ADDITIVE_ROUTES = APRAS_40_ROUTES | APRAS_44_ROUTES | APRAS_60_ROUTES | APRAS_61_ROUTES
+#: The two routes APRAS-63 adds: the supplier document a purchase quote
+#: carries. Both map to `purchases:quote_update`, the permission the sibling
+#: quote-update route already carries.
+APRAS_63_ROUTES = frozenset(
+    {
+        (
+            "PUT",
+            "/api/v1/purchase-requests/{request_id}/quotes/{quote_id}/attachment",
+        ),
+        (
+            "DELETE",
+            "/api/v1/purchase-requests/{request_id}/quotes/{quote_id}/attachment",
+        ),
+    }
+)
+
+ADDITIVE_ROUTES = (
+    APRAS_40_ROUTES
+    | APRAS_44_ROUTES
+    | APRAS_60_ROUTES
+    | APRAS_61_ROUTES
+    | APRAS_63_ROUTES
+)
 
 #: The three cells APRAS-51 moves, `(profile, method, path) -> (old, new)`.
 #: Spelled out rather than computed, so the diff below is compared against a
@@ -228,7 +258,7 @@ F5_PATH_RENAMES: dict[str, str] = {
 }
 
 WRITE_METHODS = frozenset({"POST", "PUT", "PATCH"})
-EXPECTED_REQUEST_BODY_COUNT = 102
+EXPECTED_REQUEST_BODY_COUNT = 103
 META_KEYS = frozenset(
     {"merge_base_sha", "generator", "harness", "cell_count", "regenerate"}
 )
@@ -372,6 +402,20 @@ NON_ROLE_403: dict[tuple[str, str, str], str] = {
     ("MANAGER", "DELETE", "/api/v1/purchase-requests/{request_id}/quotes/{quote_id}"): (
         "ownership: a MANAGER may only change quotes they registered"
     ),
+    # APRAS-63's two attachment routes reuse `purchases:quote_update` and the
+    # same `_assert_can_write_quote` ladder, so they inherit the same
+    # ownership narrowing as the two cells above -- which is the measured
+    # form of "this task mints no new permission".
+    (
+        "MANAGER",
+        "PUT",
+        "/api/v1/purchase-requests/{request_id}/quotes/{quote_id}/attachment",
+    ): ("ownership: a MANAGER may only change quotes they registered"),
+    (
+        "MANAGER",
+        "DELETE",
+        "/api/v1/purchase-requests/{request_id}/quotes/{quote_id}/attachment",
+    ): ("ownership: a MANAGER may only change quotes they registered"),
     # --- ownership of the reservation (made by the RESIDENT) -------------
     ("MANAGER", "POST", "/api/v1/space-reservations/{reservation_id}/cancel"): (
         "ownership: 'You can only cancel your own reservations'"
@@ -445,6 +489,11 @@ def load_apras_61_baseline() -> dict:
     return load_file(BASELINE_61_PATH)
 
 
+def load_apras_63_baseline() -> dict:
+    """The additive file of APRAS-63, and only ever that."""
+    return load_file(BASELINE_63_PATH)
+
+
 def load_apras_51_baseline() -> dict:
     """The **overriding** file of APRAS-51 §6.2, and only ever that.
 
@@ -482,11 +531,12 @@ def cells_of_51() -> set[tuple[str, str, str]]:
 
 
 def load_union() -> dict[tuple[str, str, str], int]:
-    """The five baselines as one `CELLS`-keyed cell map.
+    """The seven baselines as one `CELLS`-keyed cell map.
 
-    Five of them **partition**: overlap among F2, `_40`, `_44`, `_60` and
-    `_61` is an error, not a merge, because a cell appearing in two would mean
-    one of them had been re-recorded. The sixth, `_51`, is an **overriding layer**: its
+    Six of them **partition**: overlap among F2, `_40`, `_44`, `_60`, `_61`
+    and `_63` is an error, not a merge, because a cell appearing in two would
+    mean one of them had been re-recorded. The seventh, `_51`, is an
+    **overriding layer**: its
     keys must already exist (they are F2's), and for those keys only its value
     wins. `F5_PATH_RENAMES` is applied throughout -- it is the identity on
     every path it does not name, and one keying rule is cheaper to keep true
@@ -499,6 +549,7 @@ def load_union() -> dict[tuple[str, str, str], int]:
         BASELINE_44_PATH,
         BASELINE_60_PATH,
         BASELINE_61_PATH,
+        BASELINE_63_PATH,
     ):
         for role, by_method in load_file(path)["cells"].items():
             for method, by_path in by_method.items():
@@ -1066,6 +1117,76 @@ def test_the_apras_61_baseline_matches_the_predicted_answers():
         assert "tenants:profile_update" not in bundle_of(profile)
 
 
+def test_the_apras_63_baseline_declares_its_provenance():
+    """The same five `_meta` keys, its own merge base, and its own two routes."""
+    meta = load_apras_63_baseline()["_meta"]
+    assert set(meta) == META_KEYS, "no timestamp, hostname or absolute path"
+    assert re.fullmatch(r"[0-9a-f]{40}", meta["merge_base_sha"])
+    assert meta["cell_count"] == APRAS_63_CELL_COUNT == 12
+    assert meta["merge_base_sha"] in meta["regenerate"]
+    assert "git worktree add" not in meta["regenerate"]
+    assert meta["regenerate"].count("--routes") == 2
+    assert BASELINE_63_PATH.name in meta["regenerate"]
+    assert (BACKEND_ROOT / meta["generator"]).exists()
+    assert (BACKEND_ROOT / meta["harness"]).exists()
+    assert meta["merge_base_sha"] != load_apras_61_baseline()["_meta"]["merge_base_sha"]
+
+
+def test_the_apras_63_baseline_carries_no_absolute_path_and_no_timestamp():
+    raw = BASELINE_63_PATH.read_text(encoding="utf-8")
+    assert str(BACKEND_ROOT) not in raw
+    assert not re.search(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}", raw)
+
+
+def test_the_apras_63_baseline_records_only_integer_status_codes():
+    for by_method in load_apras_63_baseline()["cells"].values():
+        for by_path in by_method.values():
+            for status in by_path.values():
+                assert isinstance(status, int)
+
+
+def test_the_apras_63_baseline_matches_the_predicted_answers():
+    """The prediction, written from the permission rather than read back.
+
+    Both routes carry `purchases:quote_update` (APRAS-63 D4) and reuse the
+    sibling quote-update route's guard ladder verbatim, so the prediction is
+    that verdict: ADMINISTRATOR and DIRECTOR answer 200, and the other four
+    answer the plain denial shape.
+
+    MANAGER is the interesting one and is deliberately spelled out. It
+    **holds** `purchases:quote_update`, so its 403 is not the permission gate
+    at all: `_assert_can_write_quote` narrows a Manager to the quotes they
+    themselves registered, and the harness's quote belongs to somebody else.
+    That is exactly the verdict the F2 file already records for
+    `PUT /purchase-requests/{request_id}/quotes/{quote_id}`, which is what
+    makes "no new permission string" a measured statement rather than a claim.
+    """
+    cells = load_apras_63_baseline()["cells"]
+    recorded = {
+        (profile, method, path): status
+        for profile, by_method in cells.items()
+        for method, by_path in by_method.items()
+        for path, status in by_path.items()
+    }
+    passing = {"ADMINISTRATOR", "DIRECTOR"}
+    expected = {
+        (profile, method, path): (200 if profile in passing else 403)
+        for profile in PARITY_PROFILES
+        for method, path in APRAS_63_ROUTES
+    }
+    assert recorded == expected
+
+    sibling = "/api/v1/purchase-requests/{request_id}/quotes/{quote_id}"
+    union = load_union()
+    for profile in PARITY_PROFILES:
+        assert recorded[(profile, "PUT", f"{sibling}/attachment")] == baseline_status(
+            union, profile, "PUT", sibling
+        ), f"{profile} is answered differently from the sibling quote route"
+    for profile in ("ADMINISTRATOR", "DIRECTOR", "MANAGER"):
+        assert "purchases:quote_update" in bundle_of(profile)
+    assert recorded[("MANAGER", "PUT", f"{sibling}/attachment")] == 403
+
+
 def test_the_apras_51_baseline_declares_its_provenance():
     """Its own merge base, and a provenance caveat stronger than `_40`'s.
 
@@ -1194,6 +1315,9 @@ def test_the_three_baselines_partition_route_permissions_exactly():
     sixty_one = {
         (method, path) for _role, method, path in cells_of(load_apras_61_baseline())
     }
+    sixty_three = {
+        (method, path) for _role, method, path in cells_of(load_apras_63_baseline())
+    }
 
     fifty_one = {
         (method, path) for _role, method, path in cells_of(load_apras_51_baseline())
@@ -1219,7 +1343,16 @@ def test_the_three_baselines_partition_route_permissions_exactly():
     assert not (forty & sixty_one), "the APRAS-40 and APRAS-61 baselines overlap"
     assert not (forty_four & sixty_one), "the APRAS-44 and APRAS-61 baselines overlap"
     assert not (sixty & sixty_one), "the APRAS-60 and APRAS-61 baselines overlap"
-    assert f2 | forty | forty_four | sixty | sixty_one == set(ROUTE_PERMISSIONS)
+    assert sixty_three == APRAS_63_ROUTES
+    assert len(sixty_three) == 2
+    assert not (f2 & sixty_three), "the F2 and APRAS-63 baselines overlap"
+    assert not (forty & sixty_three), "the APRAS-40 and APRAS-63 baselines overlap"
+    assert not (forty_four & sixty_three), "the APRAS-44 and APRAS-63 baselines overlap"
+    assert not (sixty & sixty_three), "the APRAS-60 and APRAS-63 baselines overlap"
+    assert not (sixty_one & sixty_three), "the APRAS-61 and APRAS-63 baselines overlap"
+    assert f2 | forty | forty_four | sixty | sixty_one | sixty_three == set(
+        ROUTE_PERMISSIONS
+    )
     assert f2 == set(ROUTE_PERMISSIONS) - ADDITIVE_ROUTES
 
     union = load_union()

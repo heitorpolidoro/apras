@@ -139,7 +139,12 @@ from app.models.tenant import (
 )
 from app.models.visitor import AccessLog, Visitor, VisitorAuthorization
 from app.models.voting import Assembly, LotVoterEligibility, Vote, VoteOption
-from app.services import announcement_service, finance_service, tenant_service
+from app.services import (
+    announcement_service,
+    finance_service,
+    purchase_service,
+    tenant_service,
+)
 from app.services.media_service import media_service
 from app.services.storage_service import BaseStorageProvider
 from tests.conftest import make_user, profile_role
@@ -200,11 +205,12 @@ def _cpf(seed: int) -> str:
 class _NullStorage(BaseStorageProvider):
     """The production storage providers, with their file system amputated.
 
-    The four upload routes in the matrix (`POST /uploads/photo`,
-    `POST /announcements/{id}/media`, `POST /finance/transactions/{id}/invoice`
-    and, since APRAS-61, `PUT /tenant-profile/logo`) reach a module-level
+    The five upload routes in the matrix (`POST /uploads/photo`,
+    `POST /announcements/{id}/media`, `POST /finance/transactions/{id}/invoice`,
+    since APRAS-61 `PUT /tenant-profile/logo` and since APRAS-63
+    `PUT /purchase-requests/{id}/quotes/{id}/attachment`) reach a module-level
     `LocalStorageProvider` that writes under
-    `backend/static/uploads`. The harness swaps all four for this stub while
+    `backend/static/uploads`. The harness swaps all five for this stub while
     the matrix runs: the handlers, the services and the status codes are
     untouched, and no cell can leave a file behind or make the baseline
     depend on a directory. `settings` carries no upload-directory knob, so
@@ -227,10 +233,12 @@ def neutralised_storage() -> Iterator[None]:
     original_announcement = announcement_service._storage_provider
     original_finance = finance_service._storage_provider
     original_tenant = tenant_service._storage_provider
+    original_purchase = purchase_service._storage_provider
     media_service.storage_provider = stub
     announcement_service._storage_provider = stub  # type: ignore[assignment]
     finance_service._storage_provider = stub  # type: ignore[assignment]
     tenant_service._storage_provider = stub  # type: ignore[assignment]
+    purchase_service._storage_provider = stub  # type: ignore[assignment]
     try:
         yield
     finally:
@@ -238,6 +246,7 @@ def neutralised_storage() -> Iterator[None]:
         announcement_service._storage_provider = original_announcement
         finance_service._storage_provider = original_finance
         tenant_service._storage_provider = original_tenant
+        purchase_service._storage_provider = original_purchase
 
 
 # ---------------------------------------------------------------------------
@@ -1004,6 +1013,11 @@ _PNG_BYTES = base64.b64decode(
     "IQAAAABJRU5ErkJggg=="
 )
 
+#: A minimal but real PDF: `PurchaseService._validate_attachment` sniffs the
+#: `%PDF-` marker (APRAS-63 D2), so the recorded cell is the authorization
+#: answer rather than a 422 about the payload.
+_PDF_BYTES = b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n"
+
 BodySpec = Callable[[MatrixWorld], Any]
 
 
@@ -1263,6 +1277,10 @@ REQUEST_BODIES: dict[tuple[str, str], BodySpec] = {
     ("PUT", "/api/v1/purchase-requests/{request_id}/quotes/{quote_id}"): _static(
         {"supplier_name": "Matrix Supplier C"}
     ),
+    (
+        "PUT",
+        "/api/v1/purchase-requests/{request_id}/quotes/{quote_id}/attachment",
+    ): _static(Upload("file", "orcamento.pdf", "application/pdf", content=_PDF_BYTES)),
     ("POST", "/api/v1/purchase-requests/{request_id}/decision"): lambda w: {
         "quote_id": str(w.quote_id),
         "justification": "Matrix decision justification",

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import * as purchasesApi from "../../../api/purchases";
-import { useAddQuote, useCancelPurchaseRequest, useCreatePurchaseRequest, useDeletePurchaseRequest, useDeleteQuote, usePurchaseRequest, usePurchaseRequests, usePurchaseSummary, useSelectQuote, useUpdatePurchaseRequest, useUpdateQuote,  } from "../hooks/usePurchaseRequests";
+import { useAddQuote, useCancelPurchaseRequest, useCreatePurchaseRequest, useDeletePurchaseRequest, useDeleteQuote, useDeleteQuoteAttachment, usePurchaseRequest, usePurchaseRequests, usePurchaseSummary, useSelectQuote, useUpdatePurchaseRequest, useUpdateQuote, useUploadQuoteAttachment,  } from "../hooks/usePurchaseRequests";
 import { PurchaseRequestStatus } from "../../../types/purchase";
 
 vi.mock("../../../api/purchases");
@@ -35,6 +35,8 @@ const quote = {
   quantity: 2,
   notes: null,
   extra_fields: [],
+  attachment_url: null,
+  attachment_filename: null,
   total_price: 20,
   created_by_id: "user-1",
   created_by_name: "Admin",
@@ -94,6 +96,8 @@ describe("usePurchaseRequests hooks", () => {
     vi.mocked(purchasesApi.deleteQuote).mockResolvedValue(undefined);
     vi.mocked(purchasesApi.selectQuote).mockResolvedValue(decision);
     vi.mocked(purchasesApi.cancelPurchaseRequest).mockResolvedValue(request);
+    vi.mocked(purchasesApi.uploadQuoteAttachment).mockResolvedValue(quote);
+    vi.mocked(purchasesApi.deleteQuoteAttachment).mockResolvedValue(quote);
   });
 
   it("fetches the request list, the summary and one detail", async () => {
@@ -172,5 +176,33 @@ describe("usePurchaseRequests hooks", () => {
     const cancel = renderHook(() => useCancelPurchaseRequest(), { wrapper });
     await cancel.result.current.mutateAsync("req-1");
     expect(purchasesApi.cancelPurchaseRequest).toHaveBeenCalledWith("req-1");
+  });
+
+  it("runs the two attachment mutations against the API client", async () => {
+    const file = new File(["%PDF-"], "orcamento.pdf", {
+      type: "application/pdf",
+    });
+
+    const upload = renderHook(() => useUploadQuoteAttachment(), { wrapper });
+    await upload.result.current.mutateAsync({
+      requestId: "req-1",
+      quoteId: "quote-1",
+      file,
+    });
+    expect(purchasesApi.uploadQuoteAttachment).toHaveBeenCalledWith(
+      "req-1",
+      "quote-1",
+      file,
+    );
+
+    const remove = renderHook(() => useDeleteQuoteAttachment(), { wrapper });
+    await remove.result.current.mutateAsync({
+      requestId: "req-1",
+      quoteId: "quote-1",
+    });
+    expect(purchasesApi.deleteQuoteAttachment).toHaveBeenCalledWith(
+      "req-1",
+      "quote-1",
+    );
   });
 });

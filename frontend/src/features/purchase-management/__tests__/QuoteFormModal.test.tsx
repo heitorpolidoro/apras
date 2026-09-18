@@ -12,6 +12,8 @@ const existingQuote: PurchaseQuote = {
   quantity: 3,
   notes: "Frete incluso",
   extra_fields: [{ label: "Prazo", value: "20 dias" }],
+  attachment_url: null,
+  attachment_filename: null,
   total_price: 900,
   created_by_id: "user-1",
   created_by_name: "Gerente",

@@ -3,7 +3,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, Response, status
+from fastapi import APIRouter, Depends, File, Query, Response, UploadFile, status
 from sqlmodel import Session
 
 from app.api import deps
@@ -165,6 +165,49 @@ def delete_quote(
         quote_id=quote_id,
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.put("/{request_id}/quotes/{quote_id}/attachment")
+async def set_quote_attachment(
+    request_id: UUID,
+    quote_id: UUID,
+    file: Annotated[UploadFile, File()],
+    session: Annotated[Session, Depends(deps.get_session)],
+    current_user: Annotated[User, Depends(deps.get_current_user)],
+) -> PurchaseQuoteRead:
+    """Attach the supplier's document to a quote (APRAS-63).
+
+    Guarded by ``purchases:quote_update`` inside ``PurchaseService``, exactly
+    where the sibling quote routes put it: 403 without the permission or on
+    another Manager's quote, 404 on an unknown request or quote, 409 once the
+    request is frozen, 422 on type, size or bytes that belie the type.
+    """
+    file_bytes = await file.read()
+    return PurchaseService.set_quote_attachment(
+        session=session,
+        current_user=current_user,
+        request_id=request_id,
+        quote_id=quote_id,
+        file_bytes=file_bytes,
+        filename=file.filename or "",
+        content_type=file.content_type or "application/octet-stream",
+    )
+
+
+@router.delete("/{request_id}/quotes/{quote_id}/attachment")
+def clear_quote_attachment(
+    request_id: UUID,
+    quote_id: UUID,
+    session: Annotated[Session, Depends(deps.get_session)],
+    current_user: Annotated[User, Depends(deps.get_current_user)],
+) -> PurchaseQuoteRead:
+    """Remove the supplier's document. Idempotent when there is none."""
+    return PurchaseService.clear_quote_attachment(
+        session=session,
+        current_user=current_user,
+        request_id=request_id,
+        quote_id=quote_id,
+    )
 
 
 @router.post("/{request_id}/decision", status_code=status.HTTP_201_CREATED)

@@ -197,13 +197,20 @@ def test_route_count_is_fully_accounted_for():
     taking 226/203/23 to **230/206/24**, with its own 18 cells in
     `tests/data/parity_matrix_baseline_61.json` and exactly one catalogue
     permission added, `tenants:profile_update` (`PERMISSIONS` 174 -> 175).
+
+    APRAS-63 adds **two** permission-guarded routes and no unguarded one --
+    the supplier document a purchase quote carries -- taking 230/206/24 to
+    **232/208/24**, with its own 12 cells in
+    `tests/data/parity_matrix_baseline_63.json` and **no** catalogue
+    permission added: attaching a supplier's PDF is editing that quote, so
+    both routes reuse `purchases:quote_update` and `PERMISSIONS` stays 175.
     """
     total = len(_all_route_keys())
     assert set(ROUTE_PERMISSIONS) & UNGUARDED_ROUTES == set()
     assert len(ROUTE_PERMISSIONS) + len(UNGUARDED_ROUTES) == total
     assert len(UNGUARDED_ROUTES) == 24
     assert len(ROUTE_PERMISSIONS) == total - 24
-    assert len(ROUTE_PERMISSIONS) == 206
+    assert len(ROUTE_PERMISSIONS) == 208
 
 
 def test_every_router_module_has_at_least_one_permission():

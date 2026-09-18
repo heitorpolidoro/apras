@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>APRAS-63 — Acabamento da tela de orçamentos</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-50 text-slate-900">
+<div class="max-w-6xl mx-auto p-6 space-y-6">
+
+  <header class="space-y-1">
+    <h1 class="text-2xl font-bold">APRAS-63 — Cotações de Compra: comparação, contexto e anexo</h1>
+    <p class="text-sm text-slate-600">
+      Detalhe do pedido em <code>/purchases</code>. Os orçamentos passam a ser lidos numa única tabela,
+      a escolha passa a mostrar a diferença para o menor preço, e cada orçamento carrega o documento do fornecedor
+      (<code>PUT /api/v1/purchase-requests/{id}/quotes/{quoteId}/attachment</code>, permissão <code>purchases:quote_update</code>).
+    </p>
+  </header>
+
+  <nav class="flex flex-wrap gap-2 border-b border-slate-200">
+    <button data-tab="compare" class="tab px-4 py-2 text-sm font-medium border-b-2 border-slate-900">Comparação</button>
+    <button data-tab="decide" class="tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-slate-500">Escolha acima do menor</button>
+    <button data-tab="decideLowest" class="tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-slate-500">Escolha do menor</button>
+    <button data-tab="upload" class="tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-slate-500">Anexo recusado (422)</button>
+    <button data-tab="frozen" class="tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-slate-500">Pedido decidido (congelado)</button>
+    <button data-tab="mobile" class="tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-slate-500">Celular</button>
+  </nav>
+
+  <!-- ========================= COMPARAÇÃO ========================= -->
+  <section data-panel="compare" class="panel space-y-4">
+    <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+        <div class="flex items-center gap-3">
+          <i data-lucide="shopping-cart" class="h-5 w-5 text-slate-500"></i>
+          <div>
+            <h2 class="text-lg font-semibold">Troca das 12 luminárias do hall</h2>
+            <p class="text-xs text-slate-500">Aberto por Marina Alves · 4 orçamentos · em aberto</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="sortBtn" onclick="cycleSort()"
+            class="inline-flex items-center gap-1.5 rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium hover:bg-slate-50">
+            <i data-lucide="arrow-up-down" class="h-3.5 w-3.5"></i> <span id="sortLabel">Ordem de cadastro</span>
+          </button>
+          <button class="inline-flex items-center gap-1.5 rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white">
+            <i data-lucide="plus" class="h-3.5 w-3.5"></i> Novo Orçamento
+          </button>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto px-6 py-5">
+        <table class="w-full border-collapse text-sm">
+          <thead id="thead"></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="rounded-lg border border-slate-200 bg-white p-4 text-xs text-slate-600 space-y-1">
+      <p><strong>Anotação.</strong> Os rótulos de <code>extra_fields</code> são a união de todos os orçamentos, na ordem em que aparecem pela primeira vez.
+      Célula que o fornecedor não preencheu mostra <code>—</code> com <code>title</code> traduzido — nunca vazio, que se leria como zero.</p>
+      <p>O menor total mantém a badge "Menor preço"; o botão de ordenação alterna crescente ⇄ decrescente ⇄ ordem de cadastro. Nenhum endpoint muda: <code>is_lowest_price</code> já vem do backend.</p>
+    </div>
+  </section>
+
+  <!-- ========================= DECISÃO ACIMA DO MENOR ========================= -->
+  <section data-panel="decide" class="panel hidden space-y-4">
+    <div class="mx-auto max-w-lg rounded-xl border border-slate-200 bg-white shadow-xl">
+      <div class="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+        <h2 class="text-xl font-bold">Escolher Orçamento</h2>
+        <i data-lucide="x" class="h-5 w-5 text-slate-400"></i>
+      </div>
+      <div class="space-y-4 p-6">
+        <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+          <p class="text-sm font-semibold">Luz &amp; Cia Elétrica</p>
+          <p class="mt-1 text-xs text-slate-600">12 × R$ 289,90 = <span class="font-semibold text-slate-900">R$ 3.478,80</span></p>
+        </div>
+
+        <div class="rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <div class="flex items-start gap-2">
+            <i data-lucide="alert-triangle" class="mt-0.5 h-4 w-4 shrink-0 text-amber-600"></i>
+            <div class="text-xs text-amber-900">
+              <p class="font-semibold">Este não é o menor orçamento.</p>
+              <p class="mt-1">
+                O menor é <strong>Eletro Norte</strong>, com <strong>R$ 2.940,00</strong>.
+                A escolha custa <strong>R$ 538,80 a mais (18,3%)</strong>.
+              </p>
+              <p class="mt-1 text-amber-700">Explique abaixo o que justifica a diferença (garantia, prazo, instalação inclusa…).</p>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase text-slate-700">Justificativa da escolha *</label>
+          <textarea rows="4" class="mt-1 w-full rounded-md border border-slate-300 p-2 text-sm"
+            placeholder="Explique por que este orçamento foi escolhido..."></textarea>
+          <p class="mt-1 text-xs text-amber-600">A justificativa precisa ter ao menos 10 caracteres.</p>
+        </div>
+
+        <div class="flex justify-end gap-3 border-t border-slate-200 pt-4">
+          <button class="rounded-md border border-slate-300 px-4 py-2 text-sm">Cancelar</button>
+          <button class="rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white">Confirmar Escolha</button>
+        </div>
+      </div>
+    </div>
+    <div class="rounded-lg border border-slate-200 bg-white p-4 text-xs text-slate-600">
+      <strong>Anotação.</strong> A diferença é calculada no cliente, a partir dos orçamentos que o detalhe já carregou
+      (<code>is_lowest_price</code> + <code>total_price</code>). Percentual sobre o menor total, uma casa decimal. Empate no menor total: nenhum dos empatados mostra aviso.
+    </div>
+  </section>
+
+  <!-- ========================= DECISÃO DO MENOR ========================= -->
+  <section data-panel="decideLowest" class="panel hidden space-y-4">
+    <div class="mx-auto max-w-lg rounded-xl border border-slate-200 bg-white shadow-xl">
+      <div class="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+        <h2 class="text-xl font-bold">Escolher Orçamento</h2>
+        <i data-lucide="x" class="h-5 w-5 text-slate-400"></i>
+      </div>
+      <div class="space-y-4 p-6">
+        <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+          <div class="flex items-center gap-2">
+            <p class="text-sm font-semibold">Eletro Norte</p>
+            <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Menor preço</span>
+          </div>
+          <p class="mt-1 text-xs text-slate-600">12 × R$ 245,00 = <span class="font-semibold text-slate-900">R$ 2.940,00</span></p>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase text-slate-700">Justificativa da escolha *</label>
+          <textarea rows="4" class="mt-1 w-full rounded-md border border-slate-300 p-2 text-sm"
+            placeholder="Explique por que este orçamento foi escolhido..."></textarea>
+        </div>
+        <div class="flex justify-end gap-3 border-t border-slate-200 pt-4">
+          <button class="rounded-md border border-slate-300 px-4 py-2 text-sm">Cancelar</button>
+          <button class="rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white">Confirmar Escolha</button>
+        </div>
+      </div>
+    </div>
+    <div class="rounded-lg border border-slate-200 bg-white p-4 text-xs text-slate-600">
+      <strong>Anotação.</strong> Escolhendo o menor, nenhum painel âmbar é renderizado: o fluxo é exatamente o que existe hoje,
+      inclusive o mínimo de 10 caracteres (<code>MIN_JUSTIFICATION_LENGTH</code>, APRAS-37).
+    </div>
+  </section>
+
+  <!-- ========================= ANEXO ========================= -->
+  <section data-panel="upload" class="panel hidden space-y-4">
+    <div class="grid gap-4 md:grid-cols-2">
+      <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">Anexo aceito</h2>
+        <div class="flex items-center justify-between rounded-lg border border-slate-200 p-3">
+          <a class="inline-flex items-center gap-2 text-sm font-medium text-sky-700 hover:underline" href="#">
+            <i data-lucide="file-text" class="h-4 w-4"></i> orcamento-eletro-norte.pdf
+          </a>
+          <div class="flex gap-1">
+            <button title="Substituir" class="rounded-md p-1.5 hover:bg-slate-100"><i data-lucide="upload" class="h-4 w-4 text-slate-500"></i></button>
+            <button title="Remover" class="rounded-md p-1.5 hover:bg-red-50"><i data-lucide="trash-2" class="h-4 w-4 text-red-500"></i></button>
+          </div>
+        </div>
+        <p class="text-xs text-slate-500">PDF, PNG ou JPEG · até 5 MB · um arquivo por orçamento</p>
+        <button onclick="document.getElementById('picker').click()"
+          class="inline-flex items-center gap-2 rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white">
+          <i data-lucide="paperclip" class="h-4 w-4"></i> Anexar documento
+        </button>
+        <input id="picker" type="file" class="hidden" accept="application/pdf,image/png,image/jpeg" />
+      </div>
+
+      <div class="rounded-xl border border-red-200 bg-white p-6 shadow-sm space-y-3">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-red-600">Arquivo recusado</h2>
+        <div class="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+          <p class="font-semibold">planilha-comparativa.xlsx não foi enviado.</p>
+          <p class="mt-1">Formato não aceito. Envie PDF, PNG ou JPEG com até 5 MB.</p>
+        </div>
+        <ul class="space-y-1 text-xs text-slate-600">
+          <li>• Tipo fora do conjunto → recusado <strong>no cliente</strong>, sem requisição.</li>
+          <li>• Acima de 5 MB → idem.</li>
+          <li>• Conteúdo que não bate com o tipo declarado (PDF sem <code>%PDF-</code>, imagem que o Pillow não decodifica) → <strong>422</strong> no backend, sem gravar arquivo nem coluna.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="rounded-lg border border-slate-200 bg-white p-4 text-xs text-slate-600">
+      <strong>Anotação.</strong> Mesmo padrão de APRAS-53 e APRAS-61: <code>LocalStorageProvider.save_file</code>,
+      arquivo em <code>/static/uploads/&lt;ano&gt;/&lt;mês&gt;/&lt;uuid&gt;.pdf</code>, URL gravada em <code>purchase_quote.attachment_url</code>
+      e nome original em <code>attachment_filename</code>. Sem <code>MediaAsset</code>, sem moderação, sem miniatura.
+      Substituir apaga o arquivo anterior; apagar o orçamento (ou o pedido) apaga os arquivos.
+      As duas colunas nascem <strong>dentro da 0001_initial_schema.py</strong> — nenhuma revisão 0002.
+    </div>
+  </section>
+
+  <!-- ========================= CONGELADO ========================= -->
+  <section data-panel="frozen" class="panel hidden space-y-4">
+    <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+      <div class="flex items-center gap-2">
+        <span class="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">Decidido</span>
+        <h2 class="text-lg font-semibold">Troca das 12 luminárias do hall</h2>
+      </div>
+      <p class="text-xs text-slate-500">Os orçamentos deste pedido estão congelados.</p>
+
+      <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm">
+        <p class="font-semibold text-emerald-900">Escolhido: Luz &amp; Cia Elétrica — R$ 3.478,80</p>
+        <p class="mt-1 text-xs text-emerald-800">
+          "Garantia de 36 meses e instalação inclusa; o menor preço não cobre instalação, orçada à parte em R$ 900."
+        </p>
+        <p class="mt-2 text-[11px] text-emerald-700">Decidido por Roberto Lima · 17/09/2026 14:22</p>
+      </div>
+
+      <div class="grid gap-2 sm:grid-cols-2">
+        <div class="flex items-center justify-between rounded-lg border border-slate-200 p-3">
+          <a class="inline-flex items-center gap-2 text-sm text-sky-700 hover:underline" href="#"><i data-lucide="file-text" class="h-4 w-4"></i> orcamento-luz-e-cia.pdf</a>
+          <span class="inline-flex items-center gap-1 text-[11px] text-slate-400"><i data-lucide="lock" class="h-3.5 w-3.5"></i> somente leitura</span>
+        </div>
+        <div class="flex items-center justify-between rounded-lg border border-slate-200 p-3">
+          <a class="inline-flex items-center gap-2 text-sm text-sky-700 hover:underline" href="#"><i data-lucide="file-text" class="h-4 w-4"></i> orcamento-eletro-norte.pdf</a>
+          <span class="inline-flex items-center gap-1 text-[11px] text-slate-400"><i data-lucide="lock" class="h-3.5 w-3.5"></i> somente leitura</span>
+        </div>
+      </div>
+    </div>
+    <div class="rounded-lg border border-slate-200 bg-white p-4 text-xs text-slate-600">
+      <strong>Anotação.</strong> Congelado = <code>status != OPEN</code>. Enviar ou remover anexo responde <strong>409</strong>
+      (<code>PurchaseQuoteFrozenError</code>, já existente), e o arquivo guardado continua legível — é justamente a prestação de contas.
+      Nenhum controle de envio é renderizado; o link permanece.
+    </div>
+  </section>
+
+  <!-- ========================= CELULAR ========================= -->
+  <section data-panel="mobile" class="panel hidden space-y-4">
+    <div class="mx-auto w-[360px] rounded-2xl border border-slate-300 bg-white p-4 shadow-sm space-y-3">
+      <h2 class="text-sm font-bold">Orçamentos (4)</h2>
+      <div id="mobileList" class="space-y-3"></div>
+    </div>
+    <div class="rounded-lg border border-slate-200 bg-white p-4 text-xs text-slate-600">
+      <strong>Anotação.</strong> Abaixo de <code>md</code> a tabela transpõe: um bloco por fornecedor, rótulos na coluna da esquerda,
+      a mesma união de rótulos e o mesmo <code>—</code> nas células vazias.
+    </div>
+  </section>
+
+</div>
+
+<script>
+  const QUOTES = [
+    { id: "q1", supplier: "Eletro Norte", contact: "(11) 98812-4410", unit: 245.0, qty: 12, notes: "Entrega parcelada em 2 lotes",
+      file: "orcamento-eletro-norte.pdf", lowest: true, selected: false,
+      extra: { "Garantia": "12 meses", "Prazo de entrega": "15 dias", "Frete": "Incluso" } },
+    { id: "q2", supplier: "Luz & Cia Elétrica", contact: "(11) 3322-7788", unit: 289.9, qty: 12, notes: "Instalação inclusa",
+      file: "orcamento-luz-e-cia.pdf", lowest: false, selected: false,
+      extra: { "Garantia": "36 meses", "Prazo de entrega": "10 dias", "Instalação": "Inclusa", "Forma de pagamento": "30/60 dias" } },
+    { id: "q3", supplier: "Iluminatta", contact: "contato@iluminatta.com.br", unit: 268.5, qty: 12, notes: null,
+      file: null, lowest: false, selected: false,
+      extra: { "Garantia": "24 meses", "Frete": "R$ 180,00", "Forma de pagamento": "À vista" } },
+    { id: "q4", supplier: "Deposito Central", contact: null, unit: 312.0, qty: 12, notes: "Modelo superior (LED 4000K)",
+      file: "proposta-deposito-central.pdf", lowest: false, selected: false,
+      extra: { "Prazo de entrega": "5 dias", "Garantia": "24 meses" } },
+  ];
+
+  const brl = (v) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const total = (q) => Math.round(q.unit * q.qty * 100) / 100;
+
+  // union of extra_fields labels, first-seen order
+  const LABELS = [];
+  QUOTES.forEach((q) => Object.keys(q.extra).forEach((l) => { if (!LABELS.includes(l)) LABELS.push(l); }));
+
+  let sortMode = 0; // 0 = source order, 1 = asc, 2 = desc
+  const SORT_LABELS = ["Ordem de cadastro", "Total ↑ (menor primeiro)", "Total ↓ (maior primeiro)"];
+
+  function ordered() {
+    const c = [...QUOTES];
+    if (sortMode === 1) c.sort((a, b) => total(a) - total(b));
+    if (sortMode === 2) c.sort((a, b) => total(b) - total(a));
+    return c;
+  }
+
+  function badge(q) {
+    return q.lowest
+      ? '<span class="ml-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Menor preço</span>'
+      : "";
+  }
+
+  function cell(v) {
+    return v === null || v === undefined || v === ""
+      ? '<span class="text-slate-300" title="Este fornecedor não informou este campo">—</span>'
+      : v;
+  }
+
+  function fileCell(q) {
+    if (q.file) {
+      return '<a href="#" class="inline-flex items-center gap-1 text-sky-700 hover:underline"><i data-lucide="file-text" class="h-3.5 w-3.5"></i>' + q.file + "</a>";
+    }
+    return '<button class="inline-flex items-center gap-1 rounded-md border border-dashed border-slate-300 px-2 py-1 text-xs text-slate-500 hover:bg-slate-50"><i data-lucide="paperclip" class="h-3.5 w-3.5"></i> Anexar</button>';
+  }
+
+  function render() {
+    const qs = ordered();
+    document.getElementById("sortLabel").textContent = SORT_LABELS[sortMode];
+
+    document.getElementById("thead").innerHTML =
+      "<tr>" +
+      '<th class="w-44 border-b border-slate-200 p-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Campo</th>' +
+      qs.map((q) =>
+        '<th data-testid="quote-row-' + q.id + '" class="border-b border-slate-200 p-2 text-left align-top ' +
+          (q.lowest ? "bg-emerald-50/60" : "") + '">' +
+          '<div class="font-semibold text-slate-900">' + q.supplier + badge(q) + "</div>" +
+          '<div class="text-[11px] font-normal text-slate-500">' + cell(q.contact) + "</div>" +
+        "</th>").join("") +
+      "</tr>";
+
+    const rows = [
+      ["Total", (q) => '<span class="text-base font-bold ' + (q.lowest ? "text-emerald-700" : "text-slate-900") + '">' + brl(total(q)) + "</span>"],
+      ["Unitário × qtd.", (q) => brl(q.unit) + " × " + q.qty],
+      ["Observações", (q) => cell(q.notes)],
+      ["Documento", (q) => fileCell(q)],
+    ];
+
+    let html = rows.map(([label, fn]) =>
+      '<tr class="border-b border-slate-100">' +
+      '<td class="p-2 text-xs font-semibold text-slate-600">' + label + "</td>" +
+      qs.map((q) => '<td class="p-2 text-sm ' + (q.lowest ? "bg-emerald-50/40" : "") + '">' + fn(q) + "</td>").join("") +
+      "</tr>").join("");
+
+    html += '<tr><td colspan="' + (qs.length + 1) + '" class="pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Campos extras</td></tr>';
+    html += LABELS.map((label) =>
+      '<tr class="border-b border-slate-100">' +
+      '<td class="p-2 text-xs font-semibold text-slate-600">' + label + "</td>" +
+      qs.map((q) => '<td class="p-2 text-sm ' + (q.lowest ? "bg-emerald-50/40" : "") + '">' + cell(q.extra[label]) + "</td>").join("") +
+      "</tr>").join("");
+
+    html += '<tr>' +
+      '<td class="p-2"></td>' +
+      qs.map(() =>
+        '<td class="p-2"><div class="flex gap-1">' +
+        '<button title="Escolher este Orçamento" class="rounded-md p-1.5 hover:bg-emerald-50"><i data-lucide="award" class="h-4 w-4 text-emerald-600"></i></button>' +
+        '<button title="Editar" class="rounded-md p-1.5 hover:bg-slate-100"><i data-lucide="pencil" class="h-4 w-4 text-slate-500"></i></button>' +
+        '<button title="Excluir" class="rounded-md p-1.5 hover:bg-red-50"><i data-lucide="trash-2" class="h-4 w-4 text-red-500"></i></button>' +
+        "</div></td>").join("") + "</tr>";
+
+    document.getElementById("tbody").innerHTML = html;
+
+    document.getElementById("mobileList").innerHTML = ordered().map((q) =>
+      '<div class="rounded-lg border ' + (q.lowest ? "border-emerald-300 bg-emerald-50/40" : "border-slate-200") + ' p-3">' +
+        '<div class="flex items-center justify-between"><span class="text-sm font-semibold">' + q.supplier + badge(q) + "</span>" +
+        '<span class="text-sm font-bold">' + brl(total(q)) + "</span></div>" +
+        '<dl class="mt-2 space-y-1">' +
+        [["Unitário × qtd.", brl(q.unit) + " × " + q.qty], ["Observações", cell(q.notes)], ["Documento", q.file || "—"]]
+          .concat(LABELS.map((l) => [l, cell(q.extra[l])]))
+          .map(([k, v]) => '<div class="flex justify-between gap-3 text-xs"><dt class="text-slate-500">' + k + '</dt><dd class="text-right text-slate-800">' + v + "</dd></div>").join("") +
+        "</dl></div>").join("");
+
+    lucide.createIcons();
+  }
+
+  function cycleSort() { sortMode = (sortMode + 1) % 3; render(); }
+
+  function switchTab(name) {
+    document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("hidden", p.dataset.panel !== name));
+    document.querySelectorAll(".tab").forEach((t) => {
+      const on = t.dataset.tab === name;
+      t.classList.toggle("border-slate-900", on);
+      t.classList.toggle("border-transparent", !on);
+      t.classList.toggle("text-slate-500", !on);
+    });
+    lucide.createIcons();
+  }
+  document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => switchTab(t.dataset.tab)));
+  document.getElementById("picker").addEventListener("change", () => switchTab("upload"));
+
+  render();
+</script>
+</body>
+</html>

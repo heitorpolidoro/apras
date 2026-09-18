@@ -20,6 +20,14 @@ export interface PurchaseQuote {
   quantity: number;
   notes: string | null;
   extra_fields: QuoteExtraField[];
+  /**
+   * The supplier's own document (APRAS-63 D1): the public
+   * `/static/uploads/...` URL and the original file name used as the link
+   * text. Two columns on `purchase_quote`, never a `MediaAsset` row, and
+   * absent from `QuoteFormData` — the file only ever travels as multipart.
+   */
+  attachment_url: string | null;
+  attachment_filename: string | null;
   total_price: number;
   created_by_id: string;
   created_by_name?: string | null;

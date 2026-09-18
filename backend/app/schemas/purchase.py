@@ -123,6 +123,11 @@ class PurchaseQuoteRead(BaseModel):
     quantity: int
     notes: str | None = None
     extra_fields: list[QuoteExtraField] = Field(default_factory=list)
+    # The supplier document (APRAS-63 D1). Read-only: `PurchaseQuoteCreate`
+    # and `PurchaseQuoteUpdate` deliberately carry neither, because the file
+    # only ever arrives as multipart on the two attachment routes.
+    attachment_url: str | None = None
+    attachment_filename: str | None = None
     total_price: float = 0.0
     created_by_id: UUID
     created_by_name: str | None = None

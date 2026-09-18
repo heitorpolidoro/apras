@@ -292,7 +292,7 @@ def test_the_route_is_unguarded_by_permission_and_superuser_guarded():
     # unguarded one -- its self-scoped read -- taking 203/23 -> 206/24, with
     # its 18 cells in the additive `parity_matrix_baseline_61.json`.
     assert len(UNGUARDED_ROUTES) == 24
-    assert len(ROUTE_PERMISSIONS) == 206
+    assert len(ROUTE_PERMISSIONS) == 208
 
     route = next(
         r
