@@ -11,6 +11,11 @@ The failure is reproduced here without a read-only mount: a regular *file*
 named ``static`` makes ``mkdir(parents=True)`` raise ``OSError``
 (``FileExistsError`` / ``NotADirectoryError`` are subclasses). The import runs
 in a subprocess so the module-level code executes fresh, from that cwd.
+
+APRAS-65 added a second tree, ``static/generated``. The two mounts stand or
+fall **together**: a filesystem that refuses one refuses the other, and a
+half-mounted pair would serve generated output from the tree that forces
+downloads. So both names are asserted in both directions here.
 """
 
 import os
@@ -32,7 +37,12 @@ def _import_app_main_from(cwd: Path) -> subprocess.CompletedProcess[str]:
         [
             sys.executable,
             "-c",
-            "import app.main as m; print('mounted' if any(getattr(r, 'name', None) == 'uploads' for r in m.app.routes) else 'unmounted')",
+            (
+                "import app.main as m; "
+                "print(','.join(sorted(n for n in ("
+                "getattr(r, 'name', None) for r in m.app.routes"
+                ") if n in ('uploads', 'generated'))) or 'unmounted')"
+            ),
         ],
         cwd=cwd,
         env=env,
@@ -52,9 +62,25 @@ def test_import_survives_an_uncreatable_uploads_dir(tmp_path: Path) -> None:
     assert result.stdout.strip() == "unmounted"
 
 
-def test_uploads_are_mounted_when_the_dir_is_creatable(tmp_path: Path) -> None:
+def test_both_mounts_are_skipped_together(tmp_path: Path) -> None:
+    """``static/uploads`` exists but ``static/generated`` cannot be created.
+
+    Neither mount may survive: serving uploads while the generated tree is
+    missing would 404 every minute and every works report.
+    """
+    (tmp_path / "static" / "uploads").mkdir(parents=True)
+    (tmp_path / "static" / "generated").write_text("not a directory")
+
     result = _import_app_main_from(tmp_path)
 
     assert result.returncode == 0, result.stderr
-    assert result.stdout.strip() == "mounted"
+    assert result.stdout.strip() == "unmounted"
+
+
+def test_both_trees_are_mounted_when_the_dirs_are_creatable(tmp_path: Path) -> None:
+    result = _import_app_main_from(tmp_path)
+
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "generated,uploads"
     assert (tmp_path / "static" / "uploads").is_dir()
+    assert (tmp_path / "static" / "generated").is_dir()

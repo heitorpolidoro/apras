@@ -623,3 +623,29 @@ def test_svg_is_deliberately_outside_the_accepted_set():
     sanitiser is a stored-XSS surface, and a sanitiser is a task of its own.
     """
     assert "image/svg+xml" not in TenantService.LOGO_ALLOWED_MIME_TYPES
+
+
+def test_a_hostile_logo_name_cannot_choose_the_stored_extension(
+    tenant_client: TestClient, session: Session, storage: LocalStorageProvider
+):
+    """APRAS-65: valid PNG bytes offered as `payload.svg` are stored `.png`.
+
+    `/static/uploads` is unauthenticated and its content type used to be
+    guessed from this extension, so an `.svg` here was script execution in
+    this origin.
+    """
+    response = _upload(
+        tenant_client,
+        _member(session, permissions=[PERMISSION]),
+        content=_png(),
+        filename="payload.svg",
+        content_type="image/png",
+    )
+
+    assert response.status_code == 200
+    url = response.json()["logo_url"]
+    assert url.endswith(".png")
+    stored = _stored_path(storage, url)
+    assert stored.suffix == ".png"
+    assert stored.exists()
+    assert not list(storage.base_dir.rglob("*.svg"))

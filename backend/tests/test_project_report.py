@@ -922,14 +922,16 @@ def storage_fixture(tmp_path: Path, monkeypatch):
     """A real `LocalStorageProvider` rooted in `tmp_path`.
 
     Real, not a fake: §13 asserts that a refused caller writes **no file**,
-    and an in-memory double could not tell the difference.
+    and an in-memory double could not tell the difference. APRAS-65 moved
+    generated output off the upload tree, so the seam is now the
+    `generated_storage_provider` factory rather than the provider class.
     """
-    base = tmp_path / "uploads"
+    base = tmp_path / "generated"
 
     def _provider() -> LocalStorageProvider:
-        return LocalStorageProvider(base_dir=base)
+        return LocalStorageProvider(base_dir=base, url_prefix="/static/generated")
 
-    monkeypatch.setattr(report, "LocalStorageProvider", _provider)
+    monkeypatch.setattr(report, "generated_storage_provider", _provider)
     return base
 
 
@@ -1035,3 +1037,80 @@ def test_save_report_asserts_before_it_renders(session: Session):
         session.exec(select(DocumentFolder).where(DocumentFolder.name == "Obras")).all()
         == []
     )
+
+
+# ---------------------------------------------------------------------------
+# APRAS-65 -- generated output lives off the hardened upload mount
+# ---------------------------------------------------------------------------
+
+
+def test_the_saved_report_lands_in_the_generated_tree(
+    client: TestClient, session: Session, storage: Path
+):
+    """§D4: `/static/generated/YYYY/MM/<uuid>.html`, and nothing in uploads.
+
+    The report is HTML the server rendered, and the Document Center opens it
+    in a tab. `/static/uploads` now forces a download for `.html` because a
+    client can write there; the generated tree exists so this file does not
+    have to pay for that.
+    """
+    _project(session, title="Obra")
+    admin = _user(session)
+    uploads = Path("static/uploads")
+    before = set(uploads.rglob("*")) if uploads.exists() else set()
+
+    response = client.post(SAVE_URL, headers=_auth(admin))
+
+    assert response.status_code == 201
+    file_url = response.json()["file_url"]
+    assert re.fullmatch(
+        r"/static/generated/\d{4}/\d{2}/[0-9a-f-]{36}\.html", file_url
+    ), file_url
+    written = [path for path in storage.rglob("*") if path.is_file()]
+    assert len(written) == 1
+    assert written[0].suffix == ".html"
+    assert re.fullmatch(r"\d{4}", written[0].parent.parent.name)
+    assert re.fullmatch(r"\d{2}", written[0].parent.name)
+    assert (set(uploads.rglob("*")) if uploads.exists() else set()) == before
+
+
+def test_regenerating_adds_a_generated_row_and_leaves_a_legacy_row_alone(
+    client: TestClient, session: Session, storage: Path
+):
+    """D5: no migration. The old row keeps its `/static/uploads/…` URL.
+
+    A report saved before this change is indistinguishable from a file a
+    director planted, so nothing may rewrite it. Re-generating is the remedy,
+    and it must add a row rather than touch the old one.
+    """
+    _project(session, title="Obra")
+    admin = _user(session)
+    folder_id = report._find_or_create_obras_folder(session)
+    legacy = AssociationDocument(
+        folder_id=folder_id,
+        title="Relatório de Obras — legado",
+        file_url="/static/uploads/2025/01/legacy.html",
+        file_size_bytes=10,
+        mime_type="text/html",
+        uploaded_by_id=admin.id,
+        publication_year=2025,
+        publication_month=1,
+    )
+    session.add(legacy)
+    session.commit()
+    session.refresh(legacy)
+    legacy_id, legacy_url, legacy_updated = (
+        legacy.id,
+        legacy.file_url,
+        legacy.updated_at,
+    )
+
+    response = client.post(SAVE_URL, headers=_auth(admin))
+
+    assert response.status_code == 201
+    assert response.json()["file_url"].startswith("/static/generated/")
+    assert response.json()["id"] != str(legacy_id)
+    session.expire_all()
+    reread = session.get(AssociationDocument, legacy_id)
+    assert reread.file_url == legacy_url
+    assert reread.updated_at == legacy_updated

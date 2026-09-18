@@ -926,3 +926,83 @@ after the run is byte-identical to the one at the start.
   use `min="0"`. That matches the backend's `gt=0` and predates this task, but a
   one-line comment would stop a future reader from "fixing" it into a mismatch
   with the API.
+
+## [APRAS-65] Sanear nome de arquivo em todos os uploads — 2026-09-18 (spec_review round 1)
+
+- ER1's "the `save_file` signature is unchanged" is worth keeping, but consider
+  also documenting in `save_file`'s docstring that `filename` is display
+  metadata only. Six call sites will keep passing a name that no longer
+  influences anything, and the next reader will otherwise re-derive the same
+  confusion APRAS-63 did.
+- D2 says the shared `sanitise_upload_filename` reproduces APRAS-63's behaviour
+  "exactly", but APRAS-63 indexes `ATTACHMENT_EXTENSIONS[content_type]`
+  directly and so raises `KeyError` on an unmapped type, while D1 gives
+  `canonical_extension` a `.bin` fallback. Today the difference is unobservable
+  (the only caller validates first), but the spec should say which of the two
+  the shared function does, so the implementer does not have to guess.
+- Pre-existing and out of scope, but worth recording somewhere: the `.webp`
+  `else` branch at `storage_service.py:56` means extensionless PDF uploads are
+  already on disk as `.webp`. They stay inline-safe under the new mount so
+  nothing breaks, and D1 fixes it going forward — but no migration touches them.
+- `media_service.py:108-112` passes the *original* `mime_type` for the thumbnail
+  while the thumbnail bytes may have been re-encoded to JPEG by the
+  `save_format` fallback at `:100`. After D1 the on-disk extension follows the
+  declared type, so a re-encoded thumbnail could carry a mismatched extension.
+  Both types are inline-safe, so this is cosmetic, not a security issue.
+
+## [APRAS-65] Sanear nome de arquivo em todos os uploads — 2026-09-18 (spec_review round 2)
+
+- D5's consequence paragraph should also name the legacy non-canonical-extension
+  case (a `.jfif`-named JPEG already on disk now serves as an attachment and
+  breaks in an `<img>` tag), so the residual is stated rather than discovered.
+- ER 9's "left byte-identical by the whole test suite" reads oddly for a
+  database row; "the test re-reads the row and finds `file_url` and `mime_type`
+  unchanged" says the same thing without the ambiguity.
+- D4/Files-touched: the `test_project_report.py` `storage` fixture will need to
+  pass `url_prefix="/static/generated"` as well as `base_dir`, or the rewritten
+  URL assertions cannot pass. Worth one clause so the developer does not have to
+  rediscover it.
+
+## [APRAS-65] Sanear nome de arquivo em todos os uploads — 2026-09-18 (spec_review round 3)
+
+- ER 8's second clause ("the only occurrences of the literal `static/generated`
+  ... are in ...") inherits its directory scope from the sentence's opening "no
+  file in `backend/app` or `backend/scripts`". Read without that inheritance it
+  would be falsified by artefacts two sibling results mandate: ER 12 requires
+  `.gitignore` to list `static/generated/`, and ER 5 requires tests that assert
+  on `static/generated` paths. The scoped reading is the only one consistent
+  with the list as a whole, so this is not blocking, but repeating the scope
+  inside the clause ("the only occurrences ... under `backend/app` and
+  `backend/scripts` are ...") would remove the inference a verifier currently
+  has to make.
+- Consider naming, in the Test criteria, the concrete greps a verifier should
+  run for the absence half of ER 8 (file-move calls and `file_url` assignment),
+  so round-4 QA does not have to invent them.
+
+## [APRAS-65] Sanear nome de arquivo em todos os uploads — 2026-09-18 (code_review round 1)
+
+- `test_no_module_moves_a_file_between_the_two_trees` greps raw source text for `.rename(`
+  across all of `app/` and `scripts/`. A future, entirely unrelated `Path.rename` or a
+  dataframe `.rename(` would fail this test with a message that does not explain itself.
+  Consider narrowing the scan to modules that also mention `static/`, or asserting on the
+  AST rather than the text.
+- The five service allowlists compare `content_type` by exact string, so
+  `image/png; charset=utf-8` is a 400 rather than an upload. That is fail-closed and fine,
+  but `app.core.uploads._normalise` now exists and could be reused at those checks if the
+  400s ever prove annoying in the field.
+- `media_service` re-encodes the thumbnail to JPEG when Pillow reports a format outside
+  `("JPEG","PNG","WEBP")` while still storing it under the declared type's extension, so
+  e.g. GIF bytes declared `image/png` yield a `.png` holding JPEG. Harmless here (both are
+  inline-safe raster types and `nosniff` is on — it just fails to render), and the spec puts
+  sniffing validation out of scope. Worth a line in a future hardening task.
+- `Content-Disposition: attachment` carries no `filename=` parameter, so the browser names
+  the download after the UUID in the URL. Correct and safest; a `filename*=` derived from a
+  persisted display name would be friendlier if that ever matters.
+- `HardenedStaticFiles.__init__(self, *args, force_download: bool = False, **kwargs)` is
+  untyped on the passthrough. Both call sites use keywords only; a narrower
+  `(self, *, directory: str, force_download: bool = False)` would document the contract.
+
+## [APRAS-65] Sanear nome de arquivo em todos os uploads — 2026-09-18 (qa_review round 1)
+
+- `Content-Disposition: attachment` carries no `filename=` parameter, so a downloaded legacy file lands under its UUID name. Harmless for the security property; only a UX nicety if these ever get downloaded in anger.
+- `save_file` will still mint `.html` for a caller that passes `text/html`, which is only safe because the two generators that do so use the generated-tree provider and no user-facing allowlist admits that type. An assertion in `LocalStorageProvider` that `text/html` is only accepted when `url_prefix` is the generated one would make that invariant local rather than a property of the call graph.

@@ -23,6 +23,7 @@ from sqlmodel import Session
 
 from app.core.permissions import ROUTE_PERMISSIONS
 from app.core.security import create_access_token
+from app.core.uploads import sanitise_upload_filename
 from app.models.role import Role
 from app.models.tenant import DEFAULT_TENANT_ID
 from app.models.user import User
@@ -569,13 +570,25 @@ def test_directory_components_are_stripped_from_the_stored_name(
 
 
 def test_control_characters_are_dropped_from_the_stored_name() -> None:
-    """Unit level: the multipart encoder escapes these before the wire."""
+    """Unit level: the multipart encoder escapes these before the wire.
+
+    APRAS-65 moved the body to `app.core.uploads`; the purchase call site
+    passes its own two constants, so what this asserts is unchanged.
+    """
     assert (
-        PurchaseService._sanitise_attachment_filename(
-            "or\ncamento\x00\tacme.pdf", "application/pdf"
+        sanitise_upload_filename(
+            "or\ncamento\x00\tacme.pdf",
+            "application/pdf",
+            max_length=PurchaseService.ATTACHMENT_FILENAME_MAX_LENGTH,
+            fallback_stem=PurchaseService.ATTACHMENT_FALLBACK_STEM,
         )
         == "orcamentoacme.pdf"
     )
+
+
+def test_the_private_sanitiser_is_gone() -> None:
+    """APRAS-65: one sanitiser, in `app.core.uploads`, not a copy per service."""
+    assert not hasattr(PurchaseService, "_sanitise_attachment_filename")
 
 
 def test_a_windows_style_path_is_reduced_to_its_basename(

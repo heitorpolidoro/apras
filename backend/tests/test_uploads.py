@@ -16,6 +16,7 @@ from app.main import app
 from app.models.enums import EntityType
 from app.models.user import User
 from app.services import media_service as media_service_module
+from app.services.storage_service import LocalStorageProvider
 from tests.conftest import make_user
 
 
@@ -303,3 +304,47 @@ def test_the_upload_contract_matches_the_infraction_uploader():
         "stricter than the server and hides a control the route would accept. "
         f"Either restore the guard or drop the gate in {_FRONTEND_TWIN}."
     )
+
+
+@pytest.fixture(name="storage")
+def storage_fixture(tmp_path, monkeypatch: pytest.MonkeyPatch):
+    """Point the singleton service's provider at a temporary tree.
+
+    A real `LocalStorageProvider`: the claim under test is what the *file on
+    disk* is called, which no in-memory double could answer.
+    """
+    provider = LocalStorageProvider(tmp_path / "uploads")
+    monkeypatch.setattr(
+        media_service_module.media_service, "storage_provider", provider
+    )
+    return provider
+
+
+def test_a_hostile_photo_name_cannot_choose_either_stored_extension(
+    client: TestClient, resident_token: str, storage
+):
+    """APRAS-65: the photo *and* its thumbnail follow the declared type.
+
+    The thumbnail is the second call site: it used to be saved as
+    `thumb_{filename}`, carrying the client's chosen suffix one call further.
+    """
+    headers = {"Authorization": f"Bearer {resident_token}"}
+    files = {
+        "file": ("payload.svg", create_test_image_bytes(format="PNG"), "image/png")
+    }
+
+    response = client.post(
+        "/api/v1/uploads/photo",
+        headers=headers,
+        files=files,
+        data={"entity_type": "VISITOR"},
+    )
+
+    assert response.status_code == status.HTTP_201_CREATED
+    body = response.json()
+    assert body["url"].endswith(".png")
+    assert body["thumbnail_url"].endswith(".png")
+    written = sorted(path for path in storage.base_dir.rglob("*") if path.is_file())
+    assert len(written) == 2
+    assert {path.suffix for path in written} == {".png"}
+    assert not any(path.name.startswith("thumb_") for path in written)

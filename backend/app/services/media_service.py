@@ -108,9 +108,12 @@ class MediaService:
         file_path, url = self.storage_provider.save_file(
             file_bytes, filename, mime_type
         )
-        thumb_filename = f"thumb_{filename}"
+        # The thumbnail used to be saved as `thumb_{filename}` -- the client's
+        # raw name, prefixed. `save_file` now derives the suffix from
+        # `mime_type` and names the file after a UUID, so the prefix bought
+        # nothing and only carried an attacker-chosen string one call further.
         _, thumbnail_url = self.storage_provider.save_file(
-            thumb_bytes, thumb_filename, mime_type
+            thumb_bytes, filename, mime_type
         )
 
         # 6. Auto-approval policy

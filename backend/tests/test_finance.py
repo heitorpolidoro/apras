@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import date
+from pathlib import Path
 
 import pytest
 from fastapi import status
@@ -12,6 +13,8 @@ from app.core.security import create_access_token, get_password_hash
 from app.models.enums import TransactionType
 from app.models.finance import BudgetLine, FinanceCategory, FinancialTransaction
 from app.models.user import User
+from app.services import finance_service
+from app.services.storage_service import LocalStorageProvider
 from tests.conftest import make_user
 
 
@@ -1020,3 +1023,48 @@ def test_category_transaction_drilldown_includes_invoice_url(
     body = resp.json()
     assert body["total"] == 1
     assert body["items"][0]["invoice_file_url"] is not None
+
+
+@pytest.fixture(name="storage")
+def storage_fixture(tmp_path, monkeypatch: pytest.MonkeyPatch):
+    """A real `LocalStorageProvider` rooted in `tmp_path`."""
+    provider = LocalStorageProvider(tmp_path / "uploads")
+    monkeypatch.setattr(finance_service, "_storage_provider", provider)
+    return provider
+
+
+def test_a_hostile_invoice_name_cannot_choose_the_stored_extension(
+    client: TestClient,
+    admin_headers: dict,
+    admin_user: User,
+    expense_category: FinanceCategory,
+    session: Session,
+    storage,
+):
+    """APRAS-65: a PDF offered as `payload.svg` is stored and served `.pdf`."""
+    txn = FinancialTransaction(
+        type=TransactionType.EXPENSE,
+        category_id=expense_category.id,
+        description="Nota hostil",
+        amount=10.0,
+        transaction_date=date(2026, 4, 1),
+        created_by_id=admin_user.id,
+    )
+    session.add(txn)
+    session.commit()
+    session.refresh(txn)
+
+    response = client.post(
+        f"/api/v1/finance/transactions/{txn.id}/invoice",
+        headers=admin_headers,
+        files={"file": ("payload.svg", _make_pdf_bytes(), "application/pdf")},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["invoice_file_url"].endswith(".pdf")
+    written = [path for path in storage.base_dir.rglob("*") if path.is_file()]
+    assert [path.suffix for path in written] == [".pdf"]
+    session.expire_all()
+    assert Path(session.get(FinancialTransaction, txn.id).invoice_file_path).suffix == (
+        ".pdf"
+    )

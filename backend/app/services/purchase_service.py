@@ -7,7 +7,6 @@ Deliberately isolated: this module knows nothing about Financeiro, Patrimônio
 import io
 from decimal import Decimal
 from pathlib import Path
-from typing import ClassVar
 from uuid import UUID
 
 from PIL import Image
@@ -26,6 +25,7 @@ from app.core.exceptions import (
     QuoteAttachmentTooLargeError,
 )
 from app.core.money import ZERO, quantize_money
+from app.core.uploads import sanitise_upload_filename
 from app.models.enums import PurchaseRequestStatus
 from app.models.purchase import PurchaseQuote, PurchaseQuoteDecision, PurchaseRequest
 from app.models.user import User
@@ -81,18 +81,6 @@ class PurchaseService:
     ATTACHMENT_ALLOWED_MIME_TYPES = frozenset(
         {"application/pdf", "image/png", "image/jpeg"}
     )
-
-    #: The one extension each accepted type may ever have **on disk**. The
-    #: submitted name never decides it: ``/static/uploads/`` is served
-    #: unauthenticated by a ``StaticFiles`` mount that guesses the content
-    #: type from the extension, so a valid PNG called ``payload.svg`` would
-    #: otherwise be stored -- and served -- as an SVG, which is exactly the
-    #: active-content surface D2 excludes SVG to avoid.
-    ATTACHMENT_EXTENSIONS: ClassVar[dict[str, str]] = {
-        "application/pdf": ".pdf",
-        "image/png": ".png",
-        "image/jpeg": ".jpg",
-    }
 
     #: Longest ``attachment_filename`` kept. Display text, not a path.
     ATTACHMENT_FILENAME_MAX_LENGTH = 128
@@ -671,27 +659,6 @@ class PurchaseService:
         except Exception as exc:
             raise QuoteAttachmentInvalidFormatError from exc
 
-    @classmethod
-    def _sanitise_attachment_filename(cls, filename: str, content_type: str) -> str:
-        """The client's name, reduced to something safe to store and to serve.
-
-        Three steps, in this order: take the basename (POSIX *and* Windows
-        separators, since the browser sends whatever the client OS gave it),
-        drop every non-printable character, then force the extension from the
-        already-validated ``content_type``. The last step is the load-bearing
-        one -- :meth:`LocalStorageProvider.save_file` derives the on-disk
-        suffix from the name it is handed, so the name must not be able to
-        name a type the bytes are not.
-        """
-        basename = filename.replace("\\", "/").rsplit("/", 1)[-1]
-        printable = "".join(
-            character for character in basename if character.isprintable()
-        )
-        stem = Path(printable.strip().strip(".").strip()).stem.strip()
-        extension = cls.ATTACHMENT_EXTENSIONS[content_type]
-        stem = stem[: cls.ATTACHMENT_FILENAME_MAX_LENGTH - len(extension)].strip()
-        return f"{stem or cls.ATTACHMENT_FALLBACK_STEM}{extension}"
-
     @staticmethod
     def _delete_stored_attachment(url: str | None) -> None:
         """Best-effort removal of the file a stored ``attachment_url`` names.
@@ -736,7 +703,16 @@ class PurchaseService:
 
         cls._validate_attachment(file_bytes, content_type)
 
-        safe_name = cls._sanitise_attachment_filename(filename, content_type)
+        # Display metadata only -- `save_file` derives the on-disk suffix from
+        # `content_type` itself (APRAS-65) -- but `attachment_filename` is
+        # persisted and rendered, so it is still sanitised, by the one shared
+        # implementation rather than a copy living here.
+        safe_name = sanitise_upload_filename(
+            filename,
+            content_type,
+            max_length=cls.ATTACHMENT_FILENAME_MAX_LENGTH,
+            fallback_stem=cls.ATTACHMENT_FALLBACK_STEM,
+        )
 
         previous = quote.attachment_url
         _, url = _storage_provider.save_file(file_bytes, safe_name, content_type)

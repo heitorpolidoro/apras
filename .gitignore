@@ -82,6 +82,12 @@ venv.bak/
 backend/static/uploads/
 static/uploads/
 
+# Server-rendered output: assembly minutes and works reports (APRAS-65).
+# Its own tree because its mount serves HTML inline, which static/uploads --
+# where a client can write -- must never do.
+backend/static/generated/
+static/generated/
+
 # Python standalone builds (symlinks)
 cpython-*
 poetry_python

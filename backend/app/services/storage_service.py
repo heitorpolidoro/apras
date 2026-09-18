@@ -4,6 +4,7 @@ import uuid
 from pathlib import Path
 
 from app.core import clock
+from app.core.uploads import canonical_extension
 
 
 class BaseStorageProvider(abc.ABC):
@@ -30,38 +31,61 @@ class BaseStorageProvider(abc.ABC):
         """
 
 
-class LocalStorageProvider(BaseStorageProvider):
-    """Local disk storage provider saving to static/uploads/{year}/{month}/."""
+#: Where user-supplied uploads live, and the prefix the mount serving them
+#: answers on. That mount forces a download for anything outside
+#: ``INLINE_SAFE_EXTENSIONS``.
+DEFAULT_UPLOAD_BASE_DIR = "static/uploads"
+DEFAULT_UPLOAD_URL_PREFIX = "/static/uploads"
 
-    def __init__(self, base_dir: str | Path = "static/uploads") -> None:
+#: Where output **this application renders itself** lives, and its prefix. The
+#: mount serving it renders inline, which is only safe because nothing a client
+#: supplies is ever written here -- see :func:`generated_storage_provider`.
+GENERATED_BASE_DIR = "static/generated"
+GENERATED_URL_PREFIX = "/static/generated"
+
+
+class LocalStorageProvider(BaseStorageProvider):
+    """Local disk storage provider saving to {base_dir}/{year}/{month}/."""
+
+    def __init__(
+        self,
+        base_dir: str | Path = DEFAULT_UPLOAD_BASE_DIR,
+        url_prefix: str = DEFAULT_UPLOAD_URL_PREFIX,
+    ) -> None:
+        """``url_prefix`` is paired with ``base_dir``: it is what the mount
+        serving that directory answers on, and both default to the upload
+        tree so every existing caller mints exactly the URL it minted before.
+        """
         self.base_dir = Path(base_dir)
+        self.url_prefix = url_prefix.rstrip("/")
 
     def save_file(
-        self, file_bytes: bytes, filename: str, content_type: str
+        self,
+        file_bytes: bytes,
+        filename: str,  # noqa: ARG002  # part of `BaseStorageProvider.save_file`; deliberately unused here (APRAS-65)
+        content_type: str,
     ) -> tuple[str, str]:
+        """Write the bytes under a UUID name whose suffix comes from the type.
+
+        ``filename`` is **display metadata and nothing else**: it does not
+        reach the disk. The suffix is derived from the already-validated
+        ``content_type`` instead, because the static mount guesses what it
+        serves from the extension and the client must not get to choose it
+        (APRAS-65). An unmapped type yields an inert ``.bin``.
+        """
         now = clock.db_now()
         year_month_subfolder = f"{now.year}/{now.month:02d}"
         target_dir = self.base_dir / year_month_subfolder
         target_dir.mkdir(parents=True, exist_ok=True)
 
-        ext = Path(filename).suffix.lower()
-        if not ext:
-            ext = (
-                ".jpg"
-                if content_type == "image/jpeg"
-                else ".png"
-                if content_type == "image/png"
-                else ".webp"
-            )
-
-        unique_name = f"{uuid.uuid4()}{ext}"
+        unique_name = f"{uuid.uuid4()}{canonical_extension(content_type)}"
         relative_path = os.path.join(year_month_subfolder, unique_name)
         full_path = target_dir / unique_name
 
         with open(full_path, "wb") as f:
             f.write(file_bytes)
 
-        url = f"/static/uploads/{relative_path}"
+        url = f"{self.url_prefix}/{relative_path}"
         return str(full_path), url
 
     def delete_file(self, file_path: str) -> bool:
@@ -72,6 +96,21 @@ class LocalStorageProvider(BaseStorageProvider):
             return True
         except Exception:  # noqa: BLE001  # best-effort side effect; a failure here must not fail the request
             return False
+
+
+def generated_storage_provider() -> LocalStorageProvider:
+    """The provider the assembly-minutes and works-report generators use.
+
+    Server-rendered HTML has to be served inline to be of any use, and the
+    upload mount refuses to do that for a good reason. So generated output
+    gets its own tree and its own mount. This factory is the **only** way any
+    service reaches that tree: no call site names the directory itself, so
+    "what can land next to inline-rendered HTML" stays answerable by reading
+    this one function's callers.
+    """
+    return LocalStorageProvider(
+        base_dir=GENERATED_BASE_DIR, url_prefix=GENERATED_URL_PREFIX
+    )
 
 
 class VercelBlobStorageProvider(BaseStorageProvider):

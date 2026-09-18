@@ -72,7 +72,10 @@ from app.schemas.voting import (
     VoteUpdate,
 )
 from app.services import document_service
-from app.services.storage_service import BaseStorageProvider, LocalStorageProvider
+from app.services.storage_service import (
+    BaseStorageProvider,
+    generated_storage_provider,
+)
 
 MINUTES_FOLDER_NAME = "Atas de Assembleia"
 
@@ -1164,7 +1167,10 @@ def save_minutes(
     minutes_html = render_minutes_html(session, assembly)
     payload = minutes_html.encode("utf-8")
 
-    provider = storage_provider or LocalStorageProvider()
+    # Server-rendered HTML: it goes to the generated tree, which the mount
+    # serving it renders inline. Never `static/uploads`, which forces a
+    # download for `.html` precisely because a client can write there.
+    provider = storage_provider or generated_storage_provider()
     _file_path, url = provider.save_file(
         payload, f"minuta-{assembly.id}.html", "text/html"
     )

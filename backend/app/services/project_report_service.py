@@ -4,7 +4,7 @@ One self-contained document for the acting tenant: one ``div.page`` per
 project, in ``created_at`` order, with no tenant totals header and no
 aggregate page. It is modelled verbatim on the assembly-minutes precedent
 (``voting_service.render_minutes_html`` / ``save_minutes``) -- same rendering
-shape, same ``LocalStorageProvider`` + ``document_service.create_document``
+shape, same storage provider + ``document_service.create_document``
 storage path, same "folder created on demand" behaviour -- and it adds **no
 dependency**: the PDF is produced by the browser's Print dialog against the
 print CSS below, because Vercel's serverless runtime cannot carry WeasyPrint's
@@ -61,7 +61,10 @@ from app.models.role import Role
 from app.models.tenant import DEFAULT_TENANT_ID, Tenant
 from app.schemas.document import AssociationDocumentCreate
 from app.services import document_service
-from app.services.storage_service import BaseStorageProvider, LocalStorageProvider
+from app.services.storage_service import (
+    BaseStorageProvider,
+    generated_storage_provider,
+)
 
 if TYPE_CHECKING:  # pragma: no cover
     from datetime import date, datetime
@@ -74,9 +77,10 @@ if TYPE_CHECKING:  # pragma: no cover
 OBRAS_FOLDER_NAME = "Obras"
 
 #: The report's own file name. ``LocalStorageProvider.save_file`` discards it
-#: and writes ``f"{uuid4()}{ext}"``, so only the suffix survives -- which is
-#: exactly why ``AssociationDocument.file_url`` is the field that is
-#: guaranteed distinct between two saves and ``title`` is not.
+#: entirely -- since APRAS-65 not even the suffix survives, which is derived
+#: from the ``text/html`` passed beside it -- so this is display metadata and
+#: ``AssociationDocument.file_url`` remains the field guaranteed distinct
+#: between two saves where ``title`` is not.
 REPORT_FILENAME = "relatorio-obras.html"
 
 #: pt-BR month names, indexed 1..12. The report is a Brazilian condominium
@@ -712,7 +716,10 @@ def save_report(
     report_html = render_report_html(session, user)
     payload = report_html.encode("utf-8")
 
-    provider = storage_provider or LocalStorageProvider()
+    # Server-rendered HTML: it goes to the generated tree, which the mount
+    # serving it renders inline. Never `static/uploads`, which forces a
+    # download for `.html` precisely because a client can write there.
+    provider = storage_provider or generated_storage_provider()
     _file_path, url = provider.save_file(payload, REPORT_FILENAME, "text/html")
 
     generated_at = clock.db_now()

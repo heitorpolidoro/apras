@@ -4,6 +4,9 @@ Covers backend test 12 of `docs/tasks/APRAS-33-spec.md` §Testing and the
 "GET /{id}/minutes antes do fechamento devolve 400" complement.
 """
 
+import re
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
@@ -15,7 +18,7 @@ from app.core.exceptions import (
 )
 from app.models.document import AssociationDocument, DocumentFolder
 from app.services import voting_service
-from app.services.storage_service import BaseStorageProvider
+from app.services.storage_service import BaseStorageProvider, LocalStorageProvider
 from tests.voting_helpers import (
     auth_headers,
     link_user_to_lot,
@@ -177,7 +180,9 @@ def test_minutes_endpoints_end_to_end(
     client: TestClient, session: Session, monkeypatch
 ):
     admin, assembly = _closed_assembly_with_delinquent_lot(session)
-    monkeypatch.setattr(voting_service, "LocalStorageProvider", FakeStorageProvider)
+    monkeypatch.setattr(
+        voting_service, "generated_storage_provider", FakeStorageProvider
+    )
     headers = auth_headers(client, admin)
 
     rendered = client.get(f"/api/v1/assemblies/{assembly.id}/minutes", headers=headers)
@@ -191,3 +196,33 @@ def test_minutes_endpoints_end_to_end(
     assert saved.status_code == 201
     assert saved.json()["mime_type"] == "text/html"
     assert saved.json()["folder_name"] == "Atas de Assembleia"
+
+
+def test_saved_minutes_land_in_the_generated_tree(session: Session, tmp_path):
+    """APRAS-65 §D4: `/static/generated/YYYY/MM/<uuid>.html`, never uploads.
+
+    A real provider, because the claim is about where bytes land on disk.
+    """
+    admin, assembly = _closed_assembly_with_delinquent_lot(session)
+    provider = LocalStorageProvider(
+        base_dir=tmp_path / "generated", url_prefix="/static/generated"
+    )
+    uploads = Path("static/uploads")
+    before = set(uploads.rglob("*")) if uploads.exists() else set()
+
+    document = voting_service.save_minutes(session, admin, assembly, provider)
+
+    assert re.fullmatch(
+        r"/static/generated/\d{4}/\d{2}/[0-9a-f-]{36}\.html", document.file_url
+    ), document.file_url
+    written = [path for path in (tmp_path / "generated").rglob("*") if path.is_file()]
+    assert len(written) == 1
+    assert written[0].suffix == ".html"
+    assert re.fullmatch(r"\d{4}", written[0].parent.parent.name)
+    assert re.fullmatch(r"\d{2}", written[0].parent.name)
+    assert (set(uploads.rglob("*")) if uploads.exists() else set()) == before
+
+
+def test_the_default_minutes_provider_is_the_generated_one(session: Session):
+    """No caller passes a provider in production; the default has to be right."""
+    assert voting_service.generated_storage_provider().url_prefix == "/static/generated"

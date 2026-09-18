@@ -13,6 +13,7 @@ from app.core.security import create_access_token, get_password_hash
 from app.models.announcement import AnnouncementReadReceipt
 from app.models.user import User
 from app.services import announcement_service
+from app.services.storage_service import LocalStorageProvider
 from tests.conftest import make_user
 
 
@@ -468,3 +469,31 @@ def test_service_layer_direct_calls(
 
     receipts = announcement_service.list_read_receipts(session, admin_user, created.id)
     assert receipts == []
+
+
+@pytest.fixture(name="storage")
+def storage_fixture(tmp_path, monkeypatch: pytest.MonkeyPatch):
+    """A real `LocalStorageProvider` rooted in `tmp_path`."""
+    provider = LocalStorageProvider(tmp_path / "uploads")
+    monkeypatch.setattr(announcement_service, "_storage_provider", provider)
+    return provider
+
+
+def test_a_hostile_media_name_cannot_choose_the_stored_extension(
+    client: TestClient, admin_headers, storage
+):
+    """APRAS-65: a PNG announced as `payload.svg` is stored and served `.png`."""
+    ann_id = _create_announcement(client, admin_headers)["id"]
+    buffer = io.BytesIO()
+    Image.new("RGB", (8, 8), color="green").save(buffer, format="PNG")
+
+    response = client.post(
+        f"/api/v1/announcements/{ann_id}/media",
+        headers=admin_headers,
+        files={"file": ("payload.svg", buffer.getvalue(), "image/png")},
+    )
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.json()["url"].endswith(".png")
+    written = [path for path in storage.base_dir.rglob("*") if path.is_file()]
+    assert [path.suffix for path in written] == [".png"]
