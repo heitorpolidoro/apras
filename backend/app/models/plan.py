@@ -7,12 +7,14 @@ plan is this condominium on" a comparable answer across the install.
 """
 
 from datetime import datetime
+from decimal import Decimal
 from uuid import UUID, uuid4
 
 from sqlalchemy import JSON, Column
 from sqlmodel import Field, SQLModel
 
 from app.core import clock
+from app.core.money import Money
 
 
 class Plan(SQLModel, table=True):
@@ -24,12 +26,13 @@ class Plan(SQLModel, table=True):
 
     **Every price field is INERT**: it is displayed and summed for display and
     never charges anything, because no payment provider exists for this
-    project (§1.2). Money is ``float``, following
-    ``finance.FinancialTransaction.amount`` and ``BudgetLine.planned_amount``;
-    the usual binary-float objection does not bite precisely because nothing
-    is charged -- the values never enter an arithmetic that must balance to
-    the cent. A follow-up provider task changes the column type in its own
-    migration.
+    project (§1.2). ``base_price`` is nonetheless ``Decimal`` backed by
+    ``NUMERIC(12, 2)`` since APRAS-64, following
+    ``finance.FinancialTransaction.amount`` and ``BudgetLine.planned_amount``
+    -- money has one type in this codebase and an inert price is no reason
+    for a second. ``module_prices`` stays a portable ``JSON`` dict of floats
+    (JSON has no decimal type); ``subscription_service`` reads each value back
+    as ``Decimal(str(value))`` so no expression mixes the two.
     """
 
     __tablename__ = "plan"
@@ -46,7 +49,7 @@ class Plan(SQLModel, table=True):
         sa_column=Column(JSON, nullable=False, server_default="[]"),
     )
     #: INERT. Monthly base price of the plan.
-    base_price: float = Field(default=0.0, nullable=False)
+    base_price: Money = Field(default=Decimal("0.00"), nullable=False)
     #: INERT. `{module: monthly price}` for the modules this plan lets a
     #: tenant contract. A module in `included_modules` with no entry here is
     #: bundled at no extra cost. Keys must be a subset of `included_modules`

@@ -626,3 +626,114 @@ def test_the_global_uniques_stay_global(isolated_pg_engine):
             name == table and f"({column})" in definition
             for name, definition in unique_definitions
         ), f"{table}.{column} is no longer globally unique"
+
+
+# ---------------------------------------------------------------------------
+# Money is NUMERIC, at the precision the migration declares (APRAS-64).
+#
+# This is the **sole** precision check in the task. It reads the schema the
+# migration actually created, not the Python annotation and not
+# `Table.columns[...].type`: SQLModel emits a bare `NUMERIC` with no precision
+# for a *nullable* money column, so the metadata is not an oracle here. Six of
+# the twelve are nullable, and nullability does not weaken the assertion --
+# the check reads the database.
+# ---------------------------------------------------------------------------
+
+#: ``(table, column, precision, scale)`` for the twelve monetary columns.
+#: ``fine_amount`` lives on ``infraction_stage``: :class:`Infraction` carries
+#: no fine, its **append-only history** does (APRAS-44 §2 decision 5).
+MONEY_COLUMNS = (
+    ("budget_line", "planned_amount", 12, 2),
+    ("financial_transaction", "amount", 12, 2),
+    ("infraction_policy_step", "fine_fixed_amount", 12, 2),
+    ("infraction_policy_step", "fine_fee_multiplier", 8, 4),
+    ("infraction_stage", "fine_amount", 12, 2),
+    ("infraction_settings", "condo_fee_amount", 12, 2),
+    ("construction_project", "total_budget", 12, 2),
+    ("construction_project", "executed_budget", 12, 2),
+    ("project_update", "cost_impact", 12, 2),
+    ("purchase_quote", "unit_price", 12, 2),
+    ("plan", "base_price", 12, 2),
+    ("asset", "acquisition_value", 12, 2),
+)
+
+
+def test_the_twelve_money_columns_are_numeric_at_the_declared_precision(
+    migrated_pg_engine,
+):
+    with migrated_pg_engine.connect() as conn:
+        rows = conn.execute(
+            text(
+                "SELECT table_name, column_name, data_type, numeric_precision, "
+                "numeric_scale FROM information_schema.columns "
+                "WHERE table_schema = 'public'"
+            )
+        ).all()
+    live = {
+        (row.table_name, row.column_name): (
+            row.data_type,
+            row.numeric_precision,
+            row.numeric_scale,
+        )
+        for row in rows
+    }
+
+    observed = {}
+    for table, column, _, _ in MONEY_COLUMNS:
+        assert (table, column) in live, f"{table}.{column} is not in the schema"
+        observed[(table, column)] = live[(table, column)]
+
+    expected = {
+        (table, column): ("numeric", precision, scale)
+        for table, column, precision, scale in MONEY_COLUMNS
+    }
+    assert observed == expected
+
+
+def test_a_decimal_round_trips_through_postgres_including_func_sum(
+    isolated_pg_engine,
+):
+    """Insert, select and ``SUM`` return an equal ``Decimal``, exactly.
+
+    ``SUM`` over ``NUMERIC`` is exact arithmetic in PostgreSQL; over
+    ``double precision`` it is not. That difference is the whole point of the
+    column type, so it is asserted rather than assumed.
+    """
+    from decimal import Decimal
+
+    project_a = uuid.uuid4()
+    project_b = uuid.uuid4()
+    with isolated_pg_engine.begin() as conn:
+        for project_id, budget in (
+            (project_a, "1234.56"),
+            (project_b, "0.07"),
+        ):
+            conn.execute(
+                text(
+                    "INSERT INTO construction_project "
+                    "(id, tenant_id, title, total_budget, executed_budget, "
+                    "physical_progress_pct, status, created_at, updated_at) "
+                    "VALUES (:id, :tenant, :title, :budget, 0, 0, 'PLANNED', "
+                    "NOW(), NOW())"
+                ),
+                {
+                    "id": project_id,
+                    "tenant": DEFAULT_TENANT_ID,
+                    "title": f"Obra {project_id}",
+                    "budget": Decimal(budget),
+                },
+            )
+
+    with isolated_pg_engine.connect() as conn:
+        one = conn.execute(
+            text("SELECT total_budget FROM construction_project WHERE id = :id"),
+            {"id": project_a},
+        ).scalar_one()
+        total = conn.execute(
+            text("SELECT SUM(total_budget) FROM construction_project")
+        ).scalar_one()
+
+    assert isinstance(one, Decimal)
+    assert one == Decimal("1234.56")
+    assert isinstance(total, Decimal)
+    assert total == Decimal("1234.63")

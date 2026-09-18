@@ -606,6 +606,43 @@ def test_fixed_and_multiple_fine_values(client: TestClient, staff: User, world: 
     assert _next_step(client, staff, two["id"])["fine_amount"] == 500.0
 
 
+def test_a_multiple_fine_rounds_half_up_not_half_even(
+    client: TestClient, staff: User, world: dict
+):
+    """APRAS-64: the fine-pricing regression, on a legal document.
+
+    ``0.5 * 1200.01`` is exactly ``600.005``. The old float path answered
+    ``600.0`` -- ``round()`` over a float is half-to-even *and* rounds the
+    binary representation. Brazilian commercial practice, and the arithmetic
+    a resident does by hand to check the fine, is half away from zero:
+    ``600.01``.
+    """
+    client.put(
+        "/api/v1/infraction-settings",
+        json={"condo_fee_amount": 1200.01},
+        headers=headers(staff),
+    )
+    rule_id = create_rule(
+        client,
+        staff,
+        article="art. 64",
+        origin="CONVENCAO",
+        steps=[
+            {
+                "step_order": 1,
+                "action": "MULTA",
+                "fine_mode": "MULTIPLE",
+                "fine_fee_multiplier": 0.5,
+            }
+        ],
+    )
+    infraction = create_infraction(
+        client, staff, rule_id=rule_id, lot=world["lot"], resident=world["resident"]
+    )
+
+    assert _next_step(client, staff, infraction["id"])["fine_amount"] == 600.01
+
+
 def test_suggestion_is_stable_across_days(client: TestClient, staff: User, world: dict):
     """§6.2 property 2: the window is anchored on `occurred_on`, not on today.
 

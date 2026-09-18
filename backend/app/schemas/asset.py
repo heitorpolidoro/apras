@@ -5,6 +5,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.core.money import Money, MoneyIn
 from app.models.enums import AssetCategory, AssetCondition, MovementType
 
 
@@ -17,7 +18,7 @@ class AssetBase(BaseModel):
     asset_tag: str | None = Field(default=None, max_length=100)
     location: str = Field(..., min_length=1, max_length=255)
     acquisition_date: date | None = None
-    acquisition_value: float | None = Field(default=None, ge=0)
+    acquisition_value: MoneyIn | None = Field(default=None, ge=0)
     condition: AssetCondition = AssetCondition.BOM
     is_consumable: bool = False
     current_quantity: int = Field(default=1, ge=0)
@@ -39,7 +40,7 @@ class AssetUpdate(BaseModel):
     asset_tag: str | None = Field(default=None, max_length=100)
     location: str | None = Field(default=None, min_length=1, max_length=255)
     acquisition_date: date | None = None
-    acquisition_value: float | None = Field(default=None, ge=0)
+    acquisition_value: MoneyIn | None = Field(default=None, ge=0)
     condition: AssetCondition | None = None
     is_consumable: bool | None = None
     min_quantity: int | None = Field(default=None, ge=0)
@@ -50,6 +51,10 @@ class AssetUpdate(BaseModel):
 class AssetRead(AssetBase):
     """Schema for reading an asset."""
 
+    # Redeclared as `Money`: `AssetBase` carries `MoneyIn` so a `POST` with
+    # three decimals is still accepted (Decision 4); what is read back is a
+    # quantized two-decimal amount.
+    acquisition_value: Money | None = None
     id: UUID
     is_low_stock: bool = False
     created_at: datetime
@@ -136,4 +141,4 @@ class AssetSummaryRead(BaseModel):
     total_assets: int
     total_consumables: int
     low_stock_count: int
-    total_patrimonial_value: float
+    total_patrimonial_value: Money

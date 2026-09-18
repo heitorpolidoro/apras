@@ -416,3 +416,27 @@ def test_quotes_are_frozen_on_a_cancelled_request(
         f"/api/v1/purchase-requests/{request_id}/cancel", headers=_headers(admin)
     )
     assert _add_quote(client, admin, request_id).status_code == 409
+
+
+def test_a_third_decimal_is_accepted_and_rounded_half_up(
+    client: TestClient, admin: User, purchase_request: dict
+) -> None:
+    """APRAS-64: the multiplication regression, pinned where it lives.
+
+    ``2.675`` is **not** a 422 (Decision 4 -- the API accepts today what it
+    accepted yesterday; the screen is what stops a third decimal being typed).
+    The old float path answered ``2.67`` here, because ``round()`` rounds the
+    binary representation of ``2.675``, which is just below the midpoint.
+    """
+    res = _add_quote(
+        client,
+        admin,
+        purchase_request["id"],
+        unit_price=2.675,
+        quantity=1,
+    )
+
+    assert res.status_code == 201, res.text
+    body = res.json()
+    assert body["unit_price"] == 2.68
+    assert body["total_price"] == 2.68

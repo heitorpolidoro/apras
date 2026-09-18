@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>APRAS-64 — Money inputs limited to two decimals</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+  </head>
+  <body class="bg-gray-50 text-gray-800">
+    <div class="mx-auto max-w-4xl p-6 space-y-6">
+      <header>
+        <h1 class="text-xl font-bold">APRAS-64 — Decision 5</h1>
+        <p class="text-sm text-gray-600">
+          Money inputs truncate entry to two decimals. Try typing or pasting
+          <code class="rounded bg-gray-200 px-1">2,675</code> — the third digit
+          never lands. The fine multiplier keeps four decimals.
+        </p>
+      </header>
+
+      <div class="flex gap-2 border-b border-gray-200">
+        <button
+          data-tab="forms"
+          class="tab-btn border-b-2 border-blue-600 px-3 py-2 text-sm font-semibold text-blue-700"
+        >
+          Money forms
+        </button>
+        <button
+          data-tab="payload"
+          class="tab-btn border-b-2 border-transparent px-3 py-2 text-sm font-semibold text-gray-500"
+        >
+          Request payload
+        </button>
+      </div>
+
+      <section id="tab-forms" class="grid gap-4 md:grid-cols-2"></section>
+
+      <section id="tab-payload" class="hidden">
+        <div class="rounded-lg border border-gray-200 bg-white p-4">
+          <p class="mb-2 text-sm text-gray-600">
+            What the API receives, live from the fields on the other tab. No
+            value ever carries a third decimal, so the backend's
+            <code>quantize_money</code> never has to round a typed value.
+          </p>
+          <pre
+            id="payload"
+            class="overflow-auto rounded bg-gray-900 p-3 text-xs text-green-300"
+          ></pre>
+        </div>
+      </section>
+
+      <div class="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm">
+        <strong>Backend unchanged.</strong> <code>MoneyIn</code> still accepts
+        three decimals from curl or an older client and
+        <code>quantize_money</code> still rounds them
+        <code>ROUND_HALF_UP</code> (<code>2.675 → 2.68</code>). This screen only
+        prevents the case from being produced by a human.
+        <p class="mt-2 text-xs text-amber-800">
+          Mock detail: these demo fields are <code>type="text"</code> so the
+          pt-BR comma reads naturally. The real inputs keep
+          <code>type="number"</code>; only the <code>onChange</code> guard is
+          being demonstrated.
+        </p>
+      </div>
+    </div>
+
+    <script>
+      const MONEY_DECIMALS = 2;
+      const RATIO_DECIMALS = 4;
+
+      // The helper this mock is demonstrating: frontend/src/lib/money.ts
+      function limitDecimals(raw, places) {
+        const match = /^(-?\d*)([.,])(\d*)$/.exec(raw);
+        if (!match) return raw;
+        const [, intPart, sep, frac] = match;
+        if (frac.length <= places) return raw;
+        return `${intPart}${sep}${frac.slice(0, places)}`;
+      }
+
+      const FIELDS = [
+        { key: "amount", label: "Transação — Valor (R$)", domain: "Finanças", places: MONEY_DECIMALS, step: "0.01", value: "1200,00" },
+        { key: "planned_amount", label: "Orçamento — Valor previsto (R$)", domain: "Finanças", places: MONEY_DECIMALS, step: "0.01", value: "8500,00" },
+        { key: "unit_price", label: "Cotação — Preço unitário (R$)", domain: "Compras", places: MONEY_DECIMALS, step: "0.01", value: "2,67" },
+        { key: "condo_fee_amount", label: "Infrações — Taxa condominial (R$)", domain: "Infrações", places: MONEY_DECIMALS, step: "0.01", value: "1200,01" },
+        { key: "fine_fixed_amount", label: "Infrações — Multa fixa (R$)", domain: "Infrações", places: MONEY_DECIMALS, step: "0.01", value: "350,00" },
+        { key: "fine_fee_multiplier", label: "Infrações — Multiplicador da multa (ratio, 4 casas)", domain: "Infrações", places: RATIO_DECIMALS, step: "0.0001", value: "0,125" },
+        { key: "total_budget", label: "Obra — Orçamento total (R$)", domain: "Obras", places: MONEY_DECIMALS, step: "0.01", value: "150000,00" },
+        { key: "executed_budget", label: "Obra — Orçamento executado (R$)", domain: "Obras", places: MONEY_DECIMALS, step: "0.01", value: "42310,50" },
+        { key: "cost_impact", label: "Obra — Impacto de custo (R$)", domain: "Obras", places: MONEY_DECIMALS, step: "0.01", value: "-1200,00" },
+        { key: "acquisition_value", label: "Ativo — Valor de aquisição (R$)", domain: "Ativos", places: MONEY_DECIMALS, step: "0.01", value: "990,90" },
+        { key: "base_price", label: "Plano — Preço base (R$)", domain: "Planos", places: MONEY_DECIMALS, step: "0.01", value: "299,00" },
+        { key: "module_prices.finance", label: "Plano — Preço do módulo (R$)", domain: "Planos", places: MONEY_DECIMALS, step: "0.01", value: "49,90" },
+      ];
+
+      const state = Object.fromEntries(FIELDS.map((f) => [f.key, f.value]));
+
+      const forms = document.getElementById("tab-forms");
+      forms.innerHTML = FIELDS.map(
+        (f) => `
+        <label class="rounded-lg border ${f.places === RATIO_DECIMALS ? "border-purple-300 bg-purple-50" : "border-gray-200 bg-white"} p-3 block">
+          <span class="block text-xs font-semibold uppercase tracking-wide text-gray-500">${f.domain}</span>
+          <span class="block text-sm text-gray-800">${f.label}</span>
+          <input
+            data-key="${f.key}"
+            data-places="${f.places}"
+            type="text"
+            inputmode="decimal"
+            step="${f.step}"
+            min="0"
+            value="${f.value}"
+            class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <span class="mt-1 block text-xs text-gray-500">máx. ${f.places} casas decimais</span>
+        </label>`,
+      ).join("");
+
+      function renderPayload() {
+        document.getElementById("payload").textContent = JSON.stringify(
+          Object.fromEntries(
+            Object.entries(state).map(([k, v]) => [k, v.replace(",", ".")]),
+          ),
+          null,
+          2,
+        );
+      }
+
+      forms.addEventListener("input", (event) => {
+        const input = event.target;
+        if (!input.dataset.key) return;
+        const places = Number(input.dataset.places);
+        const next = limitDecimals(input.value, places);
+        if (next !== input.value) input.value = next;
+        state[input.dataset.key] = next;
+        renderPayload();
+      });
+
+      document.querySelectorAll(".tab-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll(".tab-btn").forEach((b) => {
+            const on = b === btn;
+            b.className = `tab-btn border-b-2 px-3 py-2 text-sm font-semibold ${
+              on
+                ? "border-blue-600 text-blue-700"
+                : "border-transparent text-gray-500"
+            }`;
+          });
+          document.getElementById("tab-forms").classList.toggle("hidden", btn.dataset.tab !== "forms");
+          document.getElementById("tab-forms").classList.toggle("grid", btn.dataset.tab === "forms");
+          document.getElementById("tab-payload").classList.toggle("hidden", btn.dataset.tab !== "payload");
+        });
+      });
+
+      renderPayload();
+      if (window.lucide) window.lucide.createIcons();
+    </script>
+  </body>
+</html>

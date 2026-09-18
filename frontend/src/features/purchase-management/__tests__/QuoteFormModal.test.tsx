@@ -185,3 +185,40 @@ describe("QuoteFormModal", () => {
     expect(await screen.findByText("409 congelado")).toBeInTheDocument();
   });
 });
+
+describe("QuoteFormModal money input (APRAS-64, Decision 5)", () => {
+  it("never lets a third decimal into the unit price, typed or pasted", () => {
+    render(<QuoteFormModal isOpen onClose={vi.fn()} quote={null} onSubmit={vi.fn()} />);
+
+    const unitPrice = screen.getByLabelText("Preço unitário (R$) *");
+
+    // A `change` is what a keystroke and a paste both produce on a
+    // controlled input, so one assertion covers both routes.
+    fireEvent.change(unitPrice, { target: { value: "2.675" } });
+
+    expect(unitPrice).toHaveValue(2.67);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryByText(/decim/i)).not.toBeInTheDocument();
+  });
+
+  it("truncates rather than rounds, and leaves two decimals alone", () => {
+    render(<QuoteFormModal isOpen onClose={vi.fn()} quote={null} onSubmit={vi.fn()} />);
+
+    const unitPrice = screen.getByLabelText("Preço unitário (R$) *");
+
+    fireEvent.change(unitPrice, { target: { value: "2.999" } });
+    expect(unitPrice).toHaveValue(2.99);
+
+    fireEvent.change(unitPrice, { target: { value: "1200.50" } });
+    expect(unitPrice).toHaveValue(1200.5);
+  });
+
+  it("leaves the non-money quantity input unconstrained", () => {
+    render(<QuoteFormModal isOpen onClose={vi.fn()} quote={null} onSubmit={vi.fn()} />);
+
+    const quantity = screen.getByLabelText("Quantidade *");
+    fireEvent.change(quantity, { target: { value: "125" } });
+
+    expect(quantity).toHaveValue(125);
+  });
+});

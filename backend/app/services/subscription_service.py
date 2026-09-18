@@ -22,6 +22,7 @@ to: it loads :class:`~app.models.tenant.Tenant` from the session directly.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from sqlmodel import Session, select
@@ -35,6 +36,7 @@ from app.core.exceptions import (
     TenantNotFoundError,
     UnknownModuleError,
 )
+from app.core.money import ZERO, quantize_money
 from app.core.permissions import CORE_MODULES, MODULES, TOGGLEABLE_MODULES
 from app.models.enums import SubscriptionChangeKind
 from app.models.plan import Plan
@@ -184,9 +186,7 @@ class SubscriptionService:
                     in_plan=in_plan,
                     courtesy=courtesy,
                     can_contract=(ent.managed and module in ent.all and not is_core),
-                    monthly_price=(
-                        None if ent.plan is None else ent.plan.module_prices.get(module)
-                    ),
+                    monthly_price=cls._module_price(ent.plan, module),
                     source=cls._source(
                         is_core=is_core,
                         is_active=is_active,
@@ -199,10 +199,20 @@ class SubscriptionService:
 
         total = None
         if ent.plan is not None:
-            total = ent.plan.base_price + sum(
-                ent.plan.module_prices.get(module, 0.0)
-                for module in active & TOGGLEABLE_MODULES
-                if module not in ent.courtesy
+            # `module_prices` is a portable JSON dict of floats -- JSON has
+            # no decimal type (APRAS-64, Out of Scope). Each value is read back
+            # through `Decimal(str(...))` so the total is exact and no
+            # expression mixes the two numeric types.
+            total = quantize_money(
+                ent.plan.base_price
+                + sum(
+                    (
+                        Decimal(str(ent.plan.module_prices.get(module, 0)))
+                        for module in active & TOGGLEABLE_MODULES
+                        if module not in ent.courtesy
+                    ),
+                    ZERO,
+                )
             )
 
         return SubscriptionRead(
@@ -217,6 +227,19 @@ class SubscriptionService:
             estimated_monthly_total=total,
             currency=None if ent.plan is None else ent.plan.currency,
         )
+
+    @staticmethod
+    def _module_price(plan: Plan | None, module: str) -> Decimal | None:
+        """One module's monthly price, as `Decimal`.
+
+        `module_prices` is a portable JSON dict of floats, so the value is
+        read back through `Decimal(str(...))` -- `Decimal(0.49)` would carry
+        the float's binary tail into a money field.
+        """
+        if plan is None:
+            return None
+        price = plan.module_prices.get(module)
+        return None if price is None else quantize_money(Decimal(str(price)))
 
     @staticmethod
     def _source(

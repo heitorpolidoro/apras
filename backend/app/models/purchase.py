@@ -7,6 +7,7 @@ from sqlalchemy import JSON, Column
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.core import clock
+from app.core.money import Money
 from app.models.enums import PurchaseRequestStatus
 from app.models.tenant import tenant_id_field
 
@@ -66,7 +67,7 @@ class PurchaseQuote(SQLModel, table=True):
     )
     supplier_name: str = Field(nullable=False, index=True)
     supplier_contact: str | None = Field(default=None, nullable=True)
-    unit_price: float = Field(nullable=False)
+    unit_price: Money = Field(nullable=False)
     quantity: int = Field(nullable=False)
     notes: str | None = Field(default=None, nullable=True)
     # Caller-defined extra fields, stored as an ordered list of

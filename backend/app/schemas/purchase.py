@@ -1,10 +1,12 @@
 """Pydantic schemas for purchase requests, quotes and decisions (APRAS-37)."""
 
 from datetime import datetime
+from decimal import Decimal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.core.money import Money, MoneyIn, quantize_money
 from app.models.enums import PurchaseRequestStatus
 
 MAX_EXTRA_FIELDS = 20
@@ -66,7 +68,7 @@ class PurchaseQuoteCreate(BaseModel):
 
     supplier_name: str = Field(..., min_length=1, max_length=255)
     supplier_contact: str | None = Field(default=None, max_length=255)
-    unit_price: float = Field(..., ge=0)
+    unit_price: MoneyIn = Field(..., ge=0)
     quantity: int = Field(..., gt=0)
     notes: str | None = Field(default=None, max_length=4000)
     extra_fields: list[QuoteExtraField] = Field(default_factory=list)
@@ -82,7 +84,7 @@ class PurchaseQuoteUpdate(BaseModel):
 
     supplier_name: str | None = Field(default=None, min_length=1, max_length=255)
     supplier_contact: str | None = Field(default=None, max_length=255)
-    unit_price: float | None = Field(default=None, ge=0)
+    unit_price: MoneyIn | None = Field(default=None, ge=0)
     quantity: int | None = Field(default=None, gt=0)
     notes: str | None = Field(default=None, max_length=4000)
     extra_fields: list[QuoteExtraField] | None = None
@@ -119,7 +121,7 @@ class PurchaseQuoteRead(BaseModel):
     purchase_request_id: UUID
     supplier_name: str
     supplier_contact: str | None = None
-    unit_price: float
+    unit_price: Money
     quantity: int
     notes: str | None = None
     extra_fields: list[QuoteExtraField] = Field(default_factory=list)
@@ -128,7 +130,7 @@ class PurchaseQuoteRead(BaseModel):
     # only ever arrives as multipart on the two attachment routes.
     attachment_url: str | None = None
     attachment_filename: str | None = None
-    total_price: float = 0.0
+    total_price: Money = Decimal("0.00")
     created_by_id: UUID
     created_by_name: str | None = None
     is_selected: bool = False
@@ -140,7 +142,7 @@ class PurchaseQuoteRead(BaseModel):
 
     @model_validator(mode="after")
     def _compute_total(self) -> "PurchaseQuoteRead":
-        self.total_price = round(self.unit_price * self.quantity, 2)
+        self.total_price = quantize_money(self.unit_price * self.quantity)
         return self
 
 
@@ -150,7 +152,7 @@ class PurchaseDecisionRead(BaseModel):
     id: UUID
     quote_id: UUID
     quote_supplier_name: str | None = None
-    quote_total_price: float | None = None
+    quote_total_price: Money | None = None
     justification: str
     decided_by_id: UUID
     decided_by_name: str | None = None
@@ -171,9 +173,9 @@ class PurchaseRequestRead(BaseModel):
     requested_by_id: UUID
     requested_by_name: str | None = None
     quote_count: int = 0
-    lowest_quote_total: float | None = None
+    lowest_quote_total: Money | None = None
     selected_quote_id: UUID | None = None
-    selected_quote_total: float | None = None
+    selected_quote_total: Money | None = None
     decision_justification: str | None = None
     decided_at: datetime | None = None
     created_at: datetime
@@ -205,4 +207,4 @@ class PurchaseSummaryRead(BaseModel):
     open_count: int
     decided_count: int
     cancelled_count: int
-    total_selected_value: float
+    total_selected_value: Money

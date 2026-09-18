@@ -10,6 +10,7 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
+from app.core.money import Money
 from app.models.enums import SubscriptionChangeKind, SubscriptionStatus
 from app.schemas.plan import PlanRead
 
@@ -33,7 +34,7 @@ class ModuleEntitlementRead(BaseModel):
     can_contract: bool
     #: INERT. `ent.plan.module_prices.get(module)`; None when the tenant is
     #: unmanaged or the module is bundled at no extra cost.
-    monthly_price: float | None
+    monthly_price: Money | None
     #: One of CORE / UNMANAGED / PLAN / COURTESY / OVERRIDE, or None when the
     #: module is not active (§4.7's priority order).
     source: str | None
@@ -50,7 +51,7 @@ class SubscriptionRead(BaseModel):
     #: One row per `MODULES` entry, sorted by `module`.
     modules: list[ModuleEntitlementRead]
     #: INERT (§6.4). None when the tenant has no subscription.
-    estimated_monthly_total: float | None
+    estimated_monthly_total: Money | None
     currency: str | None
 
 

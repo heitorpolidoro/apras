@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { limitDecimals, MONEY_DECIMALS } from "../../../lib/money";
 import { Plus, Trash2, X } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
@@ -205,8 +206,11 @@ export const QuoteFormModal: React.FC<QuoteFormModalProps> = ({
                 type="number"
                 min={0}
                 step="0.01"
+                inputMode="decimal"
                 value={unitPrice}
-                onChange={(e) => setUnitPrice(e.target.value)}
+                onChange={(e) =>
+                  setUnitPrice(limitDecimals(e.target.value, MONEY_DECIMALS))
+                }
               />
             </div>
             <div>

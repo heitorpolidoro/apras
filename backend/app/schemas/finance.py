@@ -5,6 +5,7 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.core.money import Money, MoneyIn, SignedMoney
 from app.models.enums import TransactionType
 
 
@@ -40,14 +41,14 @@ class BudgetLineCreate(BaseModel):
 
     category_id: uuid.UUID
     fiscal_year: int = Field(..., ge=2000, le=2100)
-    planned_amount: float = Field(..., ge=0.0)
+    planned_amount: MoneyIn = Field(..., ge=0)
     notes: str | None = None
 
 
 class BudgetLineUpdate(BaseModel):
     """Schema for updating a budget line."""
 
-    planned_amount: float | None = Field(None, ge=0.0)
+    planned_amount: MoneyIn | None = Field(None, ge=0)
     notes: str | None = None
 
 
@@ -59,7 +60,7 @@ class BudgetLineRead(BaseModel):
     category_name: str
     category_type: TransactionType
     fiscal_year: int
-    planned_amount: float
+    planned_amount: Money
     notes: str | None = None
     created_at: datetime
     updated_at: datetime
@@ -73,7 +74,7 @@ class FinancialTransactionCreate(BaseModel):
     type: TransactionType
     category_id: uuid.UUID
     description: str = Field(..., min_length=1)
-    amount: float = Field(..., gt=0.0)
+    amount: MoneyIn = Field(..., gt=0)
     transaction_date: date
     payment_method: str | None = None
 
@@ -84,7 +85,7 @@ class FinancialTransactionUpdate(BaseModel):
     type: TransactionType | None = None
     category_id: uuid.UUID | None = None
     description: str | None = Field(None, min_length=1)
-    amount: float | None = Field(None, gt=0.0)
+    amount: MoneyIn | None = Field(None, gt=0)
     transaction_date: date | None = None
     payment_method: str | None = None
 
@@ -102,7 +103,7 @@ class FinancialTransactionRead(BaseModel):
     category_id: uuid.UUID
     category_name: str
     description: str
-    amount: float
+    amount: Money
     transaction_date: date
     payment_method: str | None = None
     invoice_file_url: str | None = None
@@ -129,9 +130,9 @@ class CashBalanceRead(BaseModel):
     """Schema for the cash balance summary."""
 
     as_of_date: date
-    total_income: float
-    total_expense: float
-    balance: float
+    total_income: Money
+    total_expense: Money
+    balance: SignedMoney
 
 
 class MonthlyStatementEntry(BaseModel):
@@ -139,10 +140,10 @@ class MonthlyStatementEntry(BaseModel):
 
     year: int
     month: int
-    income: float
-    expense: float
-    net: float
-    running_balance: float
+    income: Money
+    expense: Money
+    net: SignedMoney
+    running_balance: SignedMoney
 
 
 class FinancialStatementRead(BaseModel):
@@ -150,8 +151,8 @@ class FinancialStatementRead(BaseModel):
 
     start_date: date
     end_date: date
-    opening_balance: float
-    closing_balance: float
+    opening_balance: SignedMoney
+    closing_balance: SignedMoney
     entries: list[MonthlyStatementEntry]
 
 
@@ -161,9 +162,9 @@ class BudgetVsActualRow(BaseModel):
     category_id: uuid.UUID
     category_name: str
     category_type: TransactionType
-    planned_amount: float
-    executed_amount: float
-    variance_amount: float
+    planned_amount: Money
+    executed_amount: Money
+    variance_amount: SignedMoney
     variance_pct: float | None = None
     transaction_count: int
 
@@ -173,5 +174,5 @@ class BudgetVsActualRead(BaseModel):
 
     fiscal_year: int
     rows: list[BudgetVsActualRow]
-    total_planned: float
-    total_executed: float
+    total_planned: Money
+    total_executed: Money

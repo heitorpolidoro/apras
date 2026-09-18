@@ -7,9 +7,12 @@ the ERs pin **400** (APRAS-39 §6.3's rule).
 """
 
 from datetime import datetime
+from decimal import Decimal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
+
+from app.core.money import Money, SignedMoneyIn
 
 
 class PlanCreate(BaseModel):
@@ -18,7 +21,9 @@ class PlanCreate(BaseModel):
     name: str
     description: str | None = None
     included_modules: list[str] = []
-    base_price: float = 0.0
+    #: `SignedMoneyIn`, not `MoneyIn`: a negative base price must stay the
+    #: service's **400** and never become a schema 422 (§6.3's rule).
+    base_price: SignedMoneyIn = Decimal("0.00")
     module_prices: dict[str, float] = {}
     currency: str = "BRL"
 
@@ -34,7 +39,7 @@ class PlanUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
     included_modules: list[str] | None = None
-    base_price: float | None = None
+    base_price: SignedMoneyIn | None = None
     module_prices: dict[str, float] | None = None
     currency: str | None = None
     is_active: bool | None = None
@@ -49,7 +54,7 @@ class PlanRead(BaseModel):
     name: str
     description: str | None
     included_modules: list[str]
-    base_price: float
+    base_price: Money
     module_prices: dict[str, float]
     currency: str
     is_active: bool

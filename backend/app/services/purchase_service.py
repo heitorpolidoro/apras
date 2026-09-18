@@ -5,6 +5,7 @@ Deliberately isolated: this module knows nothing about Financeiro, Patrimônio
 """
 
 import io
+from decimal import Decimal
 from pathlib import Path
 from typing import ClassVar
 from uuid import UUID
@@ -24,6 +25,7 @@ from app.core.exceptions import (
     QuoteAttachmentInvalidFormatError,
     QuoteAttachmentTooLargeError,
 )
+from app.core.money import ZERO, quantize_money
 from app.models.enums import PurchaseRequestStatus
 from app.models.purchase import PurchaseQuote, PurchaseQuoteDecision, PurchaseRequest
 from app.models.user import User
@@ -58,9 +60,9 @@ _PDF_MAGIC = b"%PDF-"
 _storage_provider: BaseStorageProvider = LocalStorageProvider()
 
 
-def _quote_total(quote: PurchaseQuote) -> float:
-    """Total price of a quote (unit price times quantity, rounded to cents)."""
-    return round(quote.unit_price * quote.quantity, 2)
+def _quote_total(quote: PurchaseQuote) -> Decimal:
+    """Total price of a quote (unit price times quantity, quantized to cents)."""
+    return quantize_money(quote.unit_price * quote.quantity)
 
 
 class PurchaseService:
@@ -233,7 +235,7 @@ class PurchaseService:
     def _build_quote_read(
         quote: PurchaseQuote,
         user_names: dict[UUID, str],
-        lowest_total: float | None = None,
+        lowest_total: Decimal | None = None,
         selected_quote_id: UUID | None = None,
     ) -> PurchaseQuoteRead:
         total = _quote_total(quote)
@@ -401,7 +403,7 @@ class PurchaseService:
                 decision
             )
 
-        total_selected_value = 0.0
+        total_selected_value = ZERO
         for purchase_request in requests:
             if purchase_request.status != PurchaseRequestStatus.DECIDED:
                 continue
@@ -415,7 +417,7 @@ class PurchaseService:
             open_count=counts[PurchaseRequestStatus.OPEN],
             decided_count=counts[PurchaseRequestStatus.DECIDED],
             cancelled_count=counts[PurchaseRequestStatus.CANCELLED],
-            total_selected_value=round(total_selected_value, 2),
+            total_selected_value=quantize_money(total_selected_value),
         )
 
     @staticmethod
@@ -575,6 +577,7 @@ class PurchaseService:
 
         now = clock.db_now()
         data = quote_in.model_dump()
+        data["unit_price"] = quantize_money(data["unit_price"])
         extra_fields = data.pop("extra_fields", [])
         quote = PurchaseQuote(
             **data,
@@ -610,6 +613,8 @@ class PurchaseService:
         PurchaseService._assert_quotes_unfrozen(purchase_request)
 
         update_data = quote_in.model_dump(exclude_unset=True)
+        if update_data.get("unit_price") is not None:
+            update_data["unit_price"] = quantize_money(update_data["unit_price"])
         if "extra_fields" in update_data and update_data["extra_fields"] is None:
             update_data.pop("extra_fields")
         for key, value in update_data.items():

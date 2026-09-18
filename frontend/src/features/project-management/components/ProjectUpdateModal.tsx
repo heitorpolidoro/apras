@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { limitDecimals, MONEY_DECIMALS } from '../../../lib/money';
 import { X } from 'lucide-react';
 import type { ProjectUpdateCreatePayload } from '../../../types/project';
 import { Button } from '../../../components/ui/button';
@@ -115,10 +116,12 @@ export const ProjectUpdateModal: React.FC<ProjectUpdateModalProps> = ({
               type="number"
               min="0"
               step="0.01"
+              inputMode="decimal"
               value={costImpact}
-              onChange={(e) =>
-                setCostImpact(e.target.value === '' ? '' : Number(e.target.value))
-              }
+              onChange={(e) => {
+                const limited = limitDecimals(e.target.value, MONEY_DECIMALS);
+                setCostImpact(limited === '' ? '' : Number(limited));
+              }}
             />
           </div>
 

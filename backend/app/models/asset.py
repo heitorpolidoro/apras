@@ -7,6 +7,7 @@ from sqlalchemy import Index
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.core import clock
+from app.core.money import Money
 from app.models.enums import AssetCategory, AssetCondition, MovementType
 from app.models.tenant import tenant_id_field
 
@@ -31,7 +32,7 @@ class Asset(SQLModel, table=True):
     asset_tag: str | None = Field(default=None, nullable=True, index=True)
     location: str = Field(nullable=False, index=True)
     acquisition_date: date | None = Field(default=None, nullable=True)
-    acquisition_value: float | None = Field(default=None, nullable=True)
+    acquisition_value: Money | None = Field(default=None, nullable=True)
     condition: AssetCondition = Field(
         default=AssetCondition.BOM, nullable=False, index=True
     )

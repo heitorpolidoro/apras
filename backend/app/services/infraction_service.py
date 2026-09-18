@@ -49,6 +49,7 @@ from app.core.exceptions import (
     InfractionValidationError,
     OccurrenceNotFoundError,
 )
+from app.core.money import ZERO, quantize_money, quantize_ratio
 from app.models.enums import (
     InfractionFineMode,
     InfractionStageFilter,
@@ -92,6 +93,7 @@ from app.schemas.package import LotSummaryRead
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Sequence
+    from decimal import Decimal
     from uuid import UUID
 
     from app.models.user import User
@@ -355,8 +357,16 @@ class InfractionService:
                     action=step.action,
                     defense_deadline_days=step.defense_deadline_days,
                     fine_mode=step.fine_mode,
-                    fine_fixed_amount=step.fine_fixed_amount,
-                    fine_fee_multiplier=step.fine_fee_multiplier,
+                    fine_fixed_amount=(
+                        None
+                        if step.fine_fixed_amount is None
+                        else quantize_money(step.fine_fixed_amount)
+                    ),
+                    fine_fee_multiplier=(
+                        None
+                        if step.fine_fee_multiplier is None
+                        else quantize_ratio(step.fine_fee_multiplier)
+                    ),
                     note=step.note,
                 )
             )
@@ -375,7 +385,7 @@ class InfractionService:
         return session.exec(select(InfractionSettings)).first()
 
     @classmethod
-    def _condo_fee(cls, session: Session) -> float | None:
+    def _condo_fee(cls, session: Session) -> Decimal | None:
         row = cls._settings_row(session)
         return row.condo_fee_amount if row is not None else None
 
@@ -414,7 +424,11 @@ class InfractionService:
         row = cls._settings_row(session)
         if row is None:
             row = InfractionSettings()
-        row.condo_fee_amount = settings_in.condo_fee_amount
+        row.condo_fee_amount = (
+            None
+            if settings_in.condo_fee_amount is None
+            else quantize_money(settings_in.condo_fee_amount)
+        )
         row.updated_by_id = current_user.id
         row.updated_at = clock.db_now()
         session.add(row)
@@ -929,7 +943,7 @@ class InfractionService:
     @classmethod
     def _price(
         cls, session: Session, step: InfractionPolicyStep | None
-    ) -> tuple[float | None, str | None]:
+    ) -> tuple[Decimal | None, str | None]:
         """``(amount, unavailable_reason)`` for one step (§6.3)."""
         if step is None or step.action is not InfractionStepAction.MULTA:
             return None, None
@@ -938,7 +952,7 @@ class InfractionService:
         fee = cls._condo_fee(session)
         if fee is None:
             return None, CONDO_FEE_NOT_SET
-        return round((step.fine_fee_multiplier or 0.0) * fee, 2), None
+        return quantize_money((step.fine_fee_multiplier or ZERO) * fee), None
 
     @classmethod
     def suggest_next_step(
@@ -1095,7 +1109,7 @@ class InfractionService:
         overridden = False
         if action is InfractionStepAction.MULTA:
             if stage_in.fine_amount is not None:
-                fine_amount, overridden = stage_in.fine_amount, True
+                fine_amount, overridden = quantize_money(stage_in.fine_amount), True
             else:
                 fine_amount, unavailable = cls._price(session, step)
                 if unavailable == CONDO_FEE_NOT_SET:

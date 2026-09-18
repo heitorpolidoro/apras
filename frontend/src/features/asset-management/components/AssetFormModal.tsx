@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
+import { limitDecimals, MONEY_DECIMALS } from "../../../lib/money";
 import { Button } from "../../../components/ui/button";
 import type { Asset, AssetFormData } from "../../../types/asset";
 import { AssetCategory, AssetCondition } from "../../../types/asset";
@@ -312,19 +313,21 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                 type="number"
                 step="0.01"
                 min="0"
+                inputMode="decimal"
                 value={
                   formData.acquisition_value !== undefined &&
                   formData.acquisition_value !== null
                     ? formData.acquisition_value
                     : ""
                 }
-                onChange={(e) =>
+                onChange={(e) => {
+                  const limited = limitDecimals(e.target.value, MONEY_DECIMALS);
                   setFormData((prev) => ({
                     ...prev,
                     acquisition_value:
-                      e.target.value === "" ? undefined : Number(e.target.value),
-                  }))
-                }
+                      limited === "" ? undefined : Number(limited),
+                  }));
+                }}
                 placeholder="0.00"
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />

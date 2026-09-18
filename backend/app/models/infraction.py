@@ -35,8 +35,9 @@ scoped alongside ``infraction_rule`` and ``infraction``.
 therefore carry **no** ``tenant_id``: duplicating it would create a second,
 forgeable source of truth that can disagree with the parent.
 
-Money is ``float`` (``FinancialTransaction.amount``'s type) and enums are
-``sa.String()``, never a Postgres ``ENUM`` type -- migration ``0027``'s
+Money is ``Decimal`` backed by ``NUMERIC(12, 2)`` (``FinancialTransaction.amount``'s
+type since APRAS-64; ``fine_fee_multiplier`` is a ratio, ``NUMERIC(8, 4)``) and
+enums are ``sa.String()``, never a Postgres ``ENUM`` type -- migration ``0027``'s
 convention. They carry **no** ``server_default``, and deliberately: none of
 the three has a Python-side default either, and migration ``0035``'s precedent
 is to add one only where the model has one. That is what keeps the schema
@@ -56,6 +57,7 @@ from sqlalchemy import Index, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.core import clock
+from app.core.money import Money, Ratio
 from app.models.enums import (
     InfractionFineMode,
     InfractionRuleOrigin,
@@ -137,8 +139,8 @@ class InfractionPolicyStep(SQLModel, table=True):
     action: InfractionStepAction = Field(nullable=False)
     defense_deadline_days: int | None = Field(default=None, nullable=True)
     fine_mode: InfractionFineMode | None = Field(default=None, nullable=True)
-    fine_fixed_amount: float | None = Field(default=None, nullable=True)
-    fine_fee_multiplier: float | None = Field(default=None, nullable=True)
+    fine_fixed_amount: Money | None = Field(default=None, nullable=True)
+    fine_fee_multiplier: Ratio | None = Field(default=None, nullable=True)
     note: str | None = Field(default=None, nullable=True)
 
     rule: "InfractionRule" = Relationship(back_populates="steps")
@@ -248,7 +250,7 @@ class InfractionStage(SQLModel, table=True):
     actor_id: UUID = Field(
         foreign_key="user.id", ondelete="RESTRICT", nullable=False, index=True
     )
-    fine_amount: float | None = Field(default=None, nullable=True)
+    fine_amount: Money | None = Field(default=None, nullable=True)
     fine_amount_overridden: bool = Field(default=False, nullable=False)
     defense_due_on: date | None = Field(default=None, nullable=True)
     defense_deadline_overridden: bool = Field(default=False, nullable=False)
@@ -360,7 +362,7 @@ class InfractionSettings(SQLModel, table=True):
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     tenant_id: UUID = tenant_id_field()
-    condo_fee_amount: float | None = Field(default=None, nullable=True)
+    condo_fee_amount: Money | None = Field(default=None, nullable=True)
     updated_by_id: UUID | None = Field(
         default=None,
         foreign_key="user.id",

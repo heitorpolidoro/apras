@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { limitDecimals, MONEY_DECIMALS } from "../../../lib/money";
 import {
   useCreatePlan,
   usePlans,
@@ -97,7 +98,10 @@ const PlansAdminPage: React.FC = () => {
     setSaved(false);
     setDraft((previous) => ({
       ...previous,
-      module_prices: { ...previous.module_prices, [module]: Number(value) },
+      module_prices: {
+        ...previous.module_prices,
+        [module]: Number(limitDecimals(value, MONEY_DECIMALS)),
+      },
     }));
   };
 
@@ -208,9 +212,17 @@ const PlansAdminPage: React.FC = () => {
           <input
             id="plan-base-price"
             type="number"
+            min="0"
+            step="0.01"
+            inputMode="decimal"
             value={draft.base_price}
             onChange={(event) =>
-              setDraft({ ...draft, base_price: Number(event.target.value) })
+              setDraft({
+                ...draft,
+                base_price: Number(
+                  limitDecimals(event.target.value, MONEY_DECIMALS),
+                ),
+              })
             }
           />
         </label>
@@ -255,6 +267,9 @@ const PlansAdminPage: React.FC = () => {
               {draft.included_modules.includes(module) && (
                 <input
                   type="number"
+                  min="0"
+                  step="0.01"
+                  inputMode="decimal"
                   aria-label={`${t("plans.modulePrices")} ${t(
                     `modules.names.${module}`,
                   )}`}

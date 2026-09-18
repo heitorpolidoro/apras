@@ -1,6 +1,7 @@
 """Service layer for the Association Financial Area & Dashboard (APRAS-22)."""
 
 from datetime import date, timedelta
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlmodel import Session, func, select
@@ -16,6 +17,7 @@ from app.core.exceptions import (
     InvalidInvoiceFormatError,
     InvoiceFileTooLargeError,
 )
+from app.core.money import ZERO, quantize_money
 from app.models.enums import TransactionType
 from app.models.finance import BudgetLine, FinanceCategory, FinancialTransaction
 from app.models.user import User
@@ -35,6 +37,9 @@ from app.schemas.finance import (
     MonthlyStatementEntry,
 )
 from app.services.storage_service import BaseStorageProvider, LocalStorageProvider
+
+if TYPE_CHECKING:  # pragma: no cover
+    from decimal import Decimal
 
 #: Rolling the month cursor over into January.
 DECEMBER = 12
@@ -198,7 +203,7 @@ class FinanceService:
         budget_line = BudgetLine(
             category_id=category.id,
             fiscal_year=budget_in.fiscal_year,
-            planned_amount=budget_in.planned_amount,
+            planned_amount=quantize_money(budget_in.planned_amount),
             notes=budget_in.notes,
             created_at=clock.db_now(),
             updated_at=clock.db_now(),
@@ -227,7 +232,7 @@ class FinanceService:
         budget_line = cls.get_budget_line_by_id(session, budget_line_id)
 
         if budget_in.planned_amount is not None:
-            budget_line.planned_amount = budget_in.planned_amount
+            budget_line.planned_amount = quantize_money(budget_in.planned_amount)
         if budget_in.notes is not None:
             budget_line.notes = budget_in.notes
 
@@ -295,7 +300,7 @@ class FinanceService:
             type=transaction_in.type,
             category_id=transaction_in.category_id,
             description=transaction_in.description,
-            amount=transaction_in.amount,
+            amount=quantize_money(transaction_in.amount),
             transaction_date=transaction_in.transaction_date,
             payment_method=transaction_in.payment_method,
             created_by_id=created_by_id,
@@ -336,6 +341,9 @@ class FinanceService:
             category = cls.get_category_by_id(session, new_category_id)
             if new_type != category.type:
                 raise FinanceCategoryTypeMismatchError
+
+        if update_data.get("amount") is not None:
+            update_data["amount"] = quantize_money(update_data["amount"])
 
         for key, value in update_data.items():
             setattr(transaction, key, value)
@@ -416,13 +424,13 @@ class FinanceService:
         as_of = as_of or clock.today_utc()
 
         total_income = session.exec(
-            select(func.coalesce(func.sum(FinancialTransaction.amount), 0.0)).where(
+            select(func.coalesce(func.sum(FinancialTransaction.amount), ZERO)).where(
                 FinancialTransaction.type == TransactionType.INCOME,
                 FinancialTransaction.transaction_date <= as_of,
             )
         ).one()
         total_expense = session.exec(
-            select(func.coalesce(func.sum(FinancialTransaction.amount), 0.0)).where(
+            select(func.coalesce(func.sum(FinancialTransaction.amount), ZERO)).where(
                 FinancialTransaction.type == TransactionType.EXPENSE,
                 FinancialTransaction.transaction_date <= as_of,
             )
@@ -430,9 +438,9 @@ class FinanceService:
 
         return CashBalanceRead(
             as_of_date=as_of,
-            total_income=float(total_income or 0.0),
-            total_expense=float(total_expense or 0.0),
-            balance=float((total_income or 0.0) - (total_expense or 0.0)),
+            total_income=quantize_money(total_income or ZERO),
+            total_expense=quantize_money(total_expense or ZERO),
+            balance=quantize_money((total_income or ZERO) - (total_expense or ZERO)),
         )
 
     @classmethod
@@ -451,11 +459,11 @@ class FinanceService:
             )
         ).all()
 
-        monthly: dict[tuple[int, int], dict[str, float]] = {}
+        monthly: dict[tuple[int, int], dict[str, Decimal]] = {}
         cursor = date(start_date.year, start_date.month, 1)
         end_marker = date(end_date.year, end_date.month, 1)
         while cursor <= end_marker:
-            monthly[(cursor.year, cursor.month)] = {"income": 0.0, "expense": 0.0}
+            monthly[(cursor.year, cursor.month)] = {"income": ZERO, "expense": ZERO}
             if cursor.month == DECEMBER:
                 cursor = date(cursor.year + 1, 1, 1)
             else:
@@ -463,7 +471,7 @@ class FinanceService:
 
         for txn in transactions:
             key = (txn.transaction_date.year, txn.transaction_date.month)
-            bucket = monthly.setdefault(key, {"income": 0.0, "expense": 0.0})
+            bucket = monthly.setdefault(key, {"income": ZERO, "expense": ZERO})
             if txn.type == TransactionType.INCOME:
                 bucket["income"] += txn.amount
             else:
@@ -504,7 +512,7 @@ class FinanceService:
             select(BudgetLine).where(BudgetLine.fiscal_year == fiscal_year)
         ).all()
 
-        planned_by_category: dict[UUID, float] = {
+        planned_by_category: dict[UUID, Decimal] = {
             bl.category_id: bl.planned_amount for bl in budget_lines
         }
 
@@ -518,24 +526,26 @@ class FinanceService:
             category_ids.add(txn.category_id)
 
         rows: list[BudgetVsActualRow] = []
-        total_planned = 0.0
-        total_executed = 0.0
+        total_planned = ZERO
+        total_executed = ZERO
 
         for category_id in category_ids:
             category = session.get(FinanceCategory, category_id)
             if category is None:
                 continue
 
-            planned_amount = planned_by_category.get(category_id, 0.0)
+            planned_amount = planned_by_category.get(category_id, ZERO)
             category_transactions = [
                 t for t in transactions_in_year if t.category_id == category_id
             ]
-            executed_amount = sum(t.amount for t in category_transactions)
+            executed_amount = sum((t.amount for t in category_transactions), ZERO)
             transaction_count = len(category_transactions)
 
             variance_amount = executed_amount - planned_amount
             variance_pct = (
-                (variance_amount / planned_amount * 100) if planned_amount > 0 else None
+                float(variance_amount / planned_amount * 100)
+                if planned_amount > 0
+                else None
             )
 
             total_planned += planned_amount

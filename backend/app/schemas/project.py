@@ -2,9 +2,11 @@
 
 import uuid
 from datetime import date, datetime
+from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.core.money import Money, MoneyIn, SignedMoney, SignedMoneyIn
 from app.models.enums import MilestoneStatus, ProjectStatus
 
 
@@ -14,8 +16,8 @@ class ProjectBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=255)
     description: str | None = None
     contractor_name: str | None = None
-    total_budget: float = Field(default=0.0, ge=0.0)
-    executed_budget: float = Field(default=0.0, ge=0.0)
+    total_budget: MoneyIn = Field(default=Decimal("0.00"), ge=0)
+    executed_budget: MoneyIn = Field(default=Decimal("0.00"), ge=0)
     physical_progress_pct: float = Field(default=0.0, ge=0.0, le=100.0)
     start_date: date | None = None
     estimated_completion_date: date | None = None
@@ -34,8 +36,8 @@ class ProjectUpdateSchema(BaseModel):
     title: str | None = Field(None, min_length=1, max_length=255)
     description: str | None = None
     contractor_name: str | None = None
-    total_budget: float | None = Field(None, ge=0.0)
-    executed_budget: float | None = Field(None, ge=0.0)
+    total_budget: MoneyIn | None = Field(None, ge=0)
+    executed_budget: MoneyIn | None = Field(None, ge=0)
     physical_progress_pct: float | None = Field(None, ge=0.0, le=100.0)
     start_date: date | None = None
     estimated_completion_date: date | None = None
@@ -87,7 +89,7 @@ class ProjectUpdateCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=255)
     content: str = Field(..., min_length=1)
     photos: list[str] = Field(default_factory=list)
-    cost_impact: float | None = 0.0
+    cost_impact: SignedMoneyIn | None = Decimal("0.00")
 
 
 class AuthorSummary(BaseModel):
@@ -110,7 +112,7 @@ class ProjectUpdateRead(BaseModel):
     title: str
     content: str
     photos: list[str] = Field(default_factory=list)
-    cost_impact: float | None = 0.0
+    cost_impact: SignedMoney | None = Decimal("0.00")
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -119,6 +121,11 @@ class ProjectUpdateRead(BaseModel):
 class ProjectRead(ProjectBase):
     """Schema for reading basic project info in lists."""
 
+    # Redeclared as `Money`: `ProjectBase` carries `MoneyIn` so a `POST` with
+    # three decimals is still accepted (Decision 4), but what is *read back*
+    # is always a quantized two-decimal amount.
+    total_budget: Money
+    executed_budget: Money
     id: uuid.UUID
     created_at: datetime
     updated_at: datetime

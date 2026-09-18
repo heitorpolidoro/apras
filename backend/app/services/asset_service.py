@@ -13,6 +13,7 @@ from app.core.exceptions import (
     AssetTagAlreadyExistsError,
     InsufficientStockError,
 )
+from app.core.money import ZERO, quantize_money
 from app.models.asset import Asset, InventoryMovement
 from app.models.enums import AssetCategory, AssetCondition, MovementType
 from app.models.user import User
@@ -51,6 +52,10 @@ class AssetService:
 
         now = clock.db_now()
         asset_data = asset_in.model_dump()
+        if asset_data.get("acquisition_value") is not None:
+            asset_data["acquisition_value"] = quantize_money(
+                asset_data["acquisition_value"]
+            )
         asset = Asset(
             **asset_data,
             created_at=now,
@@ -152,16 +157,19 @@ class AssetService:
             and a.current_quantity <= a.min_quantity
         )
         total_patrimonial_value = sum(
-            (a.acquisition_value or 0.0)
-            for a in all_assets
-            if not a.is_consumable and a.condition != AssetCondition.BAIXADO
+            (
+                (a.acquisition_value or ZERO)
+                for a in all_assets
+                if not a.is_consumable and a.condition != AssetCondition.BAIXADO
+            ),
+            ZERO,
         )
 
         return AssetSummaryRead(
             total_assets=total_assets,
             total_consumables=total_consumables,
             low_stock_count=low_stock_count,
-            total_patrimonial_value=round(total_patrimonial_value, 2),
+            total_patrimonial_value=quantize_money(total_patrimonial_value),
         )
 
     @staticmethod
@@ -236,6 +244,10 @@ class AssetService:
                 raise AssetTagAlreadyExistsError(asset_in.asset_tag)
 
         update_data = asset_in.model_dump(exclude_unset=True)
+        if update_data.get("acquisition_value") is not None:
+            update_data["acquisition_value"] = quantize_money(
+                update_data["acquisition_value"]
+            )
         for key, value in update_data.items():
             setattr(asset, key, value)
 

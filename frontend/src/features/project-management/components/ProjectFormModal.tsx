@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { limitDecimals, MONEY_DECIMALS } from '../../../lib/money';
 import { X } from 'lucide-react';
 import type {
   ConstructionProject,
@@ -151,12 +152,12 @@ const ProjectFormInner: React.FC<ProjectFormInnerProps> = ({
               type="number"
               min="0"
               step="0.01"
+              inputMode="decimal"
               value={totalBudget}
-              onChange={(e) =>
-                setTotalBudget(
-                  e.target.value === '' ? '' : Number(e.target.value)
-                )
-              }
+              onChange={(e) => {
+                const limited = limitDecimals(e.target.value, MONEY_DECIMALS);
+                setTotalBudget(limited === '' ? '' : Number(limited));
+              }}
             />
           </div>
 
@@ -172,12 +173,12 @@ const ProjectFormInner: React.FC<ProjectFormInnerProps> = ({
               type="number"
               min="0"
               step="0.01"
+              inputMode="decimal"
               value={executedBudget}
-              onChange={(e) =>
-                setExecutedBudget(
-                  e.target.value === '' ? '' : Number(e.target.value)
-                )
-              }
+              onChange={(e) => {
+                const limited = limitDecimals(e.target.value, MONEY_DECIMALS);
+                setExecutedBudget(limited === '' ? '' : Number(limited));
+              }}
             />
           </div>
 

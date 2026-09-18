@@ -872,3 +872,57 @@ None.
   `http://localhost:8001/openapi.json` does not expose the two new routes. This says nothing about
   the change — the index-materialized run was the authority throughout — but the dev stack needs a
   restart before anyone demos this.
+
+## [APRAS-64] Dinheiro em Decimal/Numeric — 2026-09-18 (code_review round 1)
+- `backend/app/models/project.py:121` — `ProjectUpdate.cost_impact` is annotated `Money`
+  (which carries `ge=0`), while the request/response schemas for the same value use
+  `SignedMoneyIn`/`SignedMoney` (`backend/app/schemas/project.py:92,115`), and
+  `app/core/money.py:76` names "a cost impact that is a credit" as the motivating case
+  for `SignedMoney`. There is no runtime effect — SQLModel `table=True` classes do not
+  validate on assignment, and the read schema is signed — but the table model is the one
+  place where the annotation says the opposite of the design note. `SignedMoney` there
+  would make the three agree.
+- `frontend/src/lib/money.ts:44` — `limitDecimals` picks the separator with
+  `Math.max(indexOf("."), indexOf(","))`, i.e. the *last* separator present. This is
+  correct for every shape these `type="number"` inputs can produce and for both pt-BR
+  and en-US grouped input, but the choice is load-bearing and is not stated in the
+  docstring. One sentence would pin it.
+- `backend/tests/test_money_typing.py:_numbers_only` flags any JSON string that
+  `Decimal()` accepts. `Decimal` also accepts `"nan"`, `"inf"` and `"Infinity"`, so a
+  future payload containing one of those words as a plain string field would produce a
+  confusing false positive. Excluding non-finite spellings would harden it.
+- `inputMode="decimal"` and `min="0"` were added to the money inputs beyond the letter
+  of Decision 5 (which only names the guard and `step`). Both are inert widget hints and
+  consistent with the spec's own reasoning about `step`; noted only so the widening is
+  on the record.
+
+---
+
+# What I reviewed and how
+
+Staged diff: 43 files, +1961/-182 (`git diff --cached --stat`).
+
+Because the task's acceptance condition is "a materialized copy of the index ALONE
+passes", I did not test the working tree. I materialized the index with
+`git checkout-index -a -f --prefix=<scratchpad>/idx/` (which writes the index's version
+of every tracked file, and nothing else), linked in `.venv`/`node_modules`, copied
+`backend/.env`, and ran every gate inside that copy. A second identical copy (`mut/`)
+was used for mutation testing, and a third (`head/`) materialized from `git archive HEAD`
+for the ESLint baseline. The real repository was never modified; `git status --short`
+after the run is byte-identical to the one at the start.
+
+
+## [APRAS-64] Dinheiro em Decimal/Numeric — 2026-09-18 (qa_review round 1)
+
+- `tests/test_migrations_postgres.py::test_a_decimal_round_trips_through_postgres_including_func_sum`
+  asserts the round trip with `text("SELECT SUM(total_budget) ...")`, which
+  exercises psycopg's numeric adaptation but not SQLAlchemy's `func.sum` result
+  processing — the thing its own name promises and the thing
+  `finance_service.py:427,433` actually calls. I ran the `func.sum` form myself
+  and it returns an exact `Decimal`, so nothing is broken; swapping the raw SQL
+  for `select(func.sum(ConstructionProject.total_budget))` would make the test
+  cover the code path the service uses.
+- `TransactionFormModal`'s amount input keeps `min="0.01"` where the other eleven
+  use `min="0"`. That matches the backend's `gt=0` and predates this task, but a
+  one-line comment would stop a future reader from "fixing" it into a mismatch
+  with the API.

@@ -44,6 +44,7 @@ from __future__ import annotations
 import html
 import json
 import re
+from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 from sqlmodel import Session, select
@@ -51,6 +52,7 @@ from sqlmodel import Session, select
 from app.api.deps import has_permission
 from app.core import clock
 from app.core.exceptions import ForbiddenError
+from app.core.money import ZERO
 from app.core.tenant_context import acting_tenant_id
 from app.models.document import DocumentFolder
 from app.models.enums import MilestoneStatus, ProjectStatus
@@ -239,9 +241,9 @@ body { background:#fff; }
 # ---------------------------------------------------------------------------
 
 
-def _brl(value: float | None) -> str:
-    """``1200000.0`` -> ``"R$ 1.200.000,00"``. ``None`` reads as zero."""
-    amount = float(value or 0.0)
+def _brl(value: Decimal | float | None) -> str:
+    """``Decimal("1200000.00")`` -> ``"R$ 1.200.000,00"``. ``None`` is zero."""
+    amount = Decimal(str(value or 0))
     return "R$ " + f"{amount:,.2f}".replace(",", "X").replace(".", ",").replace(
         "X", "."
     )
@@ -505,11 +507,12 @@ def _hero_html(project: ConstructionProject, number: int) -> str:
 
 
 def _budget_html(project: ConstructionProject) -> str:
-    total = float(project.total_budget or 0.0)
-    executed = float(project.executed_budget or 0.0)
+    total = project.total_budget or ZERO
+    executed = project.executed_budget or ZERO
     balance = total - executed
-    # Defined as 0 for a zero budget: never a division, never a `NaN`.
-    executed_pct = (executed / total * 100) if total else 0.0
+    # Defined as 0 for a zero budget: never a division, never a `NaN`. The
+    # percentage is a ratio, not money, so it leaves `Decimal` here.
+    executed_pct = float(executed / total * 100) if total else 0.0
     remaining_pct = 100.0 - executed_pct
     return (
         '<section class="section">'

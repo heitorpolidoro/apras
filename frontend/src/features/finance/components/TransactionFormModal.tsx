@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { limitDecimals, MONEY_DECIMALS } from "../../../lib/money";
 import { X } from "lucide-react";
 import type {
   FinanceCategory,
@@ -141,10 +142,12 @@ const TransactionFormInner: React.FC<
               type="number"
               min="0.01"
               step="0.01"
+              inputMode="decimal"
               value={amount}
-              onChange={(e) =>
-                setAmount(e.target.value === "" ? "" : Number(e.target.value))
-              }
+              onChange={(e) => {
+                const limited = limitDecimals(e.target.value, MONEY_DECIMALS);
+                setAmount(limited === "" ? "" : Number(limited));
+              }}
               required
             />
           </div>

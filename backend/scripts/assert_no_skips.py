@@ -23,8 +23,11 @@ MODULE_CLASSNAME = "tests.test_migrations_postgres"
 #: after APRAS-58 squashed the 39-revision history into one, verified against
 #: a real Postgres run rather than counted by eye. A later task that adds a
 #: case must not have to touch this file, while a task that deletes the module
-#: -- or silences it by deselecting cases -- cannot pass.
-MIN_CASES = 20
+#: -- or silences it by deselecting cases -- cannot pass. Raised from 20 to
+#: 22 by APRAS-64, which added the money-column precision case and the
+#: `Decimal` round-trip: `test_the_floor_is_the_modules_real_case_count`
+#: collects the module for real and pins the floor to that count.
+MIN_CASES = 22
 
 
 def _verdict(collected: int, skipped: list[str]) -> list[str]:

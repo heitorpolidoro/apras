@@ -145,6 +145,42 @@ describe("InfractionRulesPage", () => {
     expect(screen.getByLabelText("Multiplicador")).toBeInTheDocument();
   });
 
+  it("keeps four decimals on the fine multiplier and two on the amount", async () => {
+    // The multiplier is the one input of APRAS-64 Decision 5 that is *not*
+    // limited to two places: it is a ratio stored NUMERIC(8, 4), so a bylaw
+    // can say 12,5% of the condo fee.
+    renderPage();
+    await screen.findByTestId("rule-row-rule-1");
+    fireEvent.click(screen.getByTestId("edit-policy-rule-1"));
+
+    const [firstAction] = screen.getAllByLabelText("Ação");
+    fireEvent.change(firstAction, { target: { value: "MULTA" } });
+    fireEvent.change(screen.getByLabelText("Modo da multa"), {
+      target: { value: "MULTIPLE" },
+    });
+
+    const multiplier = screen.getByLabelText("Multiplicador");
+    fireEvent.change(multiplier, { target: { value: "0.12345" } });
+    expect(multiplier).toHaveValue(0.1234);
+
+    fireEvent.change(screen.getByLabelText("Modo da multa"), {
+      target: { value: "FIXED" },
+    });
+    const amount = screen.getByLabelText("Valor");
+    fireEvent.change(amount, { target: { value: "2.675" } });
+    expect(amount).toHaveValue(2.67);
+  });
+
+  it("limits the condominium-fee reference to two decimals", async () => {
+    renderPage();
+    await screen.findByTestId("rule-row-rule-1");
+
+    const fee = screen.getByLabelText("Valor da taxa");
+    fireEvent.change(fee, { target: { value: "1200.019" } });
+
+    expect(fee).toHaveValue(1200.01);
+  });
+
   it("writes the condominium-fee reference", async () => {
     vi.mocked(api.writeInfractionSettings).mockResolvedValue({
       condo_fee_amount: 850,

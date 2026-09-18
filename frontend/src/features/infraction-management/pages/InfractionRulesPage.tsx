@@ -1,5 +1,10 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
+import {
+  limitDecimals,
+  MONEY_DECIMALS,
+  RATIO_DECIMALS,
+} from "../../../lib/money";
 import { Button } from "../../../components/ui/button";
 import {
   useCreateInfractionRule,
@@ -103,10 +108,15 @@ export const InfractionRulesPage: React.FC = () => {
             </span>
             <input
               type="number"
+              min="0"
+              step="0.01"
+              inputMode="decimal"
               className="mt-1 w-40 rounded-lg border border-gray-200 p-2 text-sm"
               aria-label={t("infractions.settings.condoFee")}
               value={fee !== "" ? fee : (settings?.condo_fee_amount ?? "")}
-              onChange={(event) => setFee(event.target.value)}
+              onChange={(event) =>
+                setFee(limitDecimals(event.target.value, MONEY_DECIMALS))
+              }
             />
           </label>
           <Button
@@ -329,12 +339,20 @@ export const InfractionRulesPage: React.FC = () => {
                           {step.fine_mode === "FIXED" && (
                             <input
                               type="number"
+                              min="0"
+                              step="0.01"
+                              inputMode="decimal"
                               className="w-28 rounded-lg border border-gray-200 p-1 text-sm"
                               aria-label={t("infractions.fields.fineAmount")}
                               value={step.fine_fixed_amount ?? ""}
                               onChange={(event) =>
                                 updateStep(index, {
-                                  fine_fixed_amount: Number(event.target.value),
+                                  fine_fixed_amount: Number(
+                                    limitDecimals(
+                                      event.target.value,
+                                      MONEY_DECIMALS,
+                                    ),
+                                  ),
                                 })
                               }
                             />
@@ -342,13 +360,21 @@ export const InfractionRulesPage: React.FC = () => {
                           {step.fine_mode === "MULTIPLE" && (
                             <input
                               type="number"
+                              min="0"
+                              step="0.0001"
+                              inputMode="decimal"
                               className="w-28 rounded-lg border border-gray-200 p-1 text-sm"
                               aria-label={t("infractions.fields.fineMultiplier")}
                               value={step.fine_fee_multiplier ?? ""}
                               onChange={(event) =>
                                 updateStep(index, {
+                                  // A ratio, not money: NUMERIC(8, 4), so a
+                                  // bylaw can express 12,5% (0.125).
                                   fine_fee_multiplier: Number(
-                                    event.target.value,
+                                    limitDecimals(
+                                      event.target.value,
+                                      RATIO_DECIMALS,
+                                    ),
                                   ),
                                 })
                               }

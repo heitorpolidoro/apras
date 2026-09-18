@@ -8,12 +8,14 @@ for the primary tenant, plus a secondary tenant with minimal data for switching.
 import argparse
 import json
 from datetime import timedelta
+from decimal import Decimal
 from uuid import UUID
 
 from sqlmodel import Session, create_engine, select
 
 from app.core import clock
 from app.core.config import settings
+from app.core.money import quantize_money
 from app.core.permissions import PERMISSIONS, TOGGLEABLE_MODULES
 from app.core.security import get_password_hash
 from app.models.access_control import AccessDevice, FacialAccessEvent
@@ -92,6 +94,15 @@ from app.services.tenant_service import TenantService
 
 DEMO_PASSWORD = "demo1234"  # noqa: S105  # demo seed credential, not a real secret
 SECONDARY_TENANT_ID = UUID("00000000-0000-0000-0000-000000000002")
+
+
+def _money(value: float | str) -> Decimal:
+    """A seed literal as money: `Decimal` at two decimal places.
+
+    Via `str`, never `Decimal(float)`, so `3840.50` does not carry the binary
+    tail of its float literal into a `NUMERIC(12, 2)` column.
+    """
+    return quantize_money(Decimal(str(value)))
 
 
 def _ensure_role_permissions(session: Session, tenant_id: UUID) -> dict[str, Role]:
@@ -438,7 +449,7 @@ def _seed_plans_and_subscriptions(session: Session, t1_id: UUID, t2_id: UUID) ->
             plan = Plan(
                 name=p_spec["name"],
                 description=p_spec["description"],
-                base_price=p_spec["base_price"],
+                base_price=_money(p_spec["base_price"]),
                 included_modules=p_spec["included_modules"],
                 module_prices=p_spec["module_prices"],
                 currency="BRL",
@@ -1137,7 +1148,7 @@ def _seed_primary_tenant_data(  # noqa: PLR0912, PLR0915  # comprehensive popula
                         type=t_type,
                         category_id=fc.id,
                         description=desc,
-                        amount=amount,
+                        amount=_money(amount),
                         transaction_date=t_date,
                         payment_method="BOLETO"
                         if t_type == TransactionType.EXPENSE
@@ -1439,8 +1450,8 @@ def _seed_primary_tenant_data(  # noqa: PLR0912, PLR0915  # comprehensive popula
                 title=p_spec["title"],
                 description=p_spec["desc"],
                 contractor_name=p_spec["contractor"],
-                total_budget=p_spec["total_budget"],
-                executed_budget=p_spec["executed_budget"],
+                total_budget=_money(p_spec["total_budget"]),
+                executed_budget=_money(p_spec["executed_budget"]),
                 physical_progress_pct=p_spec["progress"],
                 status=p_spec["status"],
                 start_date=p_spec["start"],
@@ -1642,7 +1653,7 @@ def _seed_primary_tenant_data(  # noqa: PLR0912, PLR0915  # comprehensive popula
         session.add(
             InfractionSettings(
                 tenant_id=tenant_id,
-                condo_fee_amount=650.0,
+                condo_fee_amount=Decimal("650.00"),
                 updated_by_id=sindico_user.id,
             )
         )
@@ -1686,7 +1697,7 @@ def _seed_primary_tenant_data(  # noqa: PLR0912, PLR0915  # comprehensive popula
                 action=InfractionStepAction.NOTIFICACAO,
                 defense_deadline_days=10,
                 fine_mode=InfractionFineMode.FIXED,
-                fine_fixed_amount=200.0,
+                fine_fixed_amount=Decimal("200.00"),
                 note="Notificação formal com aplicação de multa leve",
             )
         )
@@ -1697,7 +1708,7 @@ def _seed_primary_tenant_data(  # noqa: PLR0912, PLR0915  # comprehensive popula
                 action=InfractionStepAction.MULTA,
                 defense_deadline_days=15,
                 fine_mode=InfractionFineMode.MULTIPLE,
-                fine_fee_multiplier=1.0,
+                fine_fee_multiplier=Decimal("1.0000"),
                 note="Multa por reincidência equivalente a 1 cota condominial",
             )
         )
@@ -1741,7 +1752,7 @@ def _seed_primary_tenant_data(  # noqa: PLR0912, PLR0915  # comprehensive popula
                 action=InfractionStepAction.NOTIFICACAO,
                 defense_deadline_days=10,
                 fine_mode=InfractionFineMode.FIXED,
-                fine_fixed_amount=150.0,
+                fine_fixed_amount=Decimal("150.00"),
                 note="Notificação com multa de vaga de garagem",
             )
         )
@@ -1787,7 +1798,7 @@ def _seed_primary_tenant_data(  # noqa: PLR0912, PLR0915  # comprehensive popula
                 infraction_id=inf1.id,
                 action=InfractionStepAction.NOTIFICACAO,
                 applied_on=today - timedelta(days=2),
-                fine_amount=200.0,
+                fine_amount=Decimal("200.00"),
                 defense_due_on=today + timedelta(days=8),
                 note=("Notificação com multa de R$ 200,00 após reincidência de ruído."),
                 actor_id=sindico_user.id,
@@ -2040,7 +2051,7 @@ def _seed_primary_tenant_data(  # noqa: PLR0912, PLR0915  # comprehensive popula
                 category=a_data["cat"],
                 asset_tag=a_data["tag"],
                 location=a_data["loc"],
-                acquisition_value=a_data["val"],
+                acquisition_value=_money(a_data["val"]),
                 acquisition_date=today - timedelta(days=180),
                 condition=a_data["cond"],
                 is_consumable=a_data["consumable"],
@@ -2113,7 +2124,7 @@ def _seed_primary_tenant_data(  # noqa: PLR0912, PLR0915  # comprehensive popula
                 purchase_request_id=req1.id,
                 supplier_name="SegurMax Soluções em Segurança",
                 supplier_contact="(11) 3456-7890 - Carlos Vendas",
-                unit_price=1450.0,
+                unit_price=Decimal("1450.00"),
                 quantity=4,
                 notes="Entrega em 5 dias úteis. Garantia estendida de 2 anos inclusa.",
                 created_by_id=sindico_user.id,
@@ -2124,7 +2135,7 @@ def _seed_primary_tenant_data(  # noqa: PLR0912, PLR0915  # comprehensive popula
                 purchase_request_id=req1.id,
                 supplier_name="CFTV Express Distribuidora",
                 supplier_contact="(11) 4567-8901 - Amanda",
-                unit_price=1620.0,
+                unit_price=Decimal("1620.00"),
                 quantity=4,
                 notes="Inclui suportes de parede e conectores blindados de brinde.",
                 created_by_id=sindico_user.id,
@@ -2159,7 +2170,7 @@ def _seed_primary_tenant_data(  # noqa: PLR0912, PLR0915  # comprehensive popula
             purchase_request_id=req2.id,
             supplier_name="Piscinas Cristalinas Manutenção Ltda",
             supplier_contact="(11) 98888-2233 - Roberto",
-            unit_price=2800.0,
+            unit_price=Decimal("2800.00"),
             quantity=1,
             notes=(
                 "Serviço completo incluindo remoção de carga antiga, areia e crepinas."

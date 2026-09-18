@@ -20,6 +20,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.core.money import Money, MoneyIn, Ratio, RatioIn
 from app.models.enums import (
     InfractionFineMode,
     InfractionRuleOrigin,
@@ -107,8 +108,8 @@ class InfractionPolicyStepWrite(BaseModel):
     action: InfractionStepAction
     defense_deadline_days: int | None = Field(default=None, gt=0)
     fine_mode: InfractionFineMode | None = None
-    fine_fixed_amount: float | None = Field(default=None, ge=0)
-    fine_fee_multiplier: float | None = Field(default=None, ge=0)
+    fine_fixed_amount: MoneyIn | None = Field(default=None, ge=0)
+    fine_fee_multiplier: RatioIn | None = Field(default=None, ge=0)
     note: str | None = None
 
 
@@ -123,6 +124,12 @@ class InfractionPolicyStepRead(InfractionPolicyStepWrite):
 
     model_config = ConfigDict(from_attributes=True)
 
+    # Redeclared: the `Write` parent carries the request-side annotations,
+    # which have no scale bound so a three-decimal body is still accepted
+    # (Decision 4). What is read back is `NUMERIC(12, 2)` money and a
+    # `NUMERIC(8, 4)` ratio.
+    fine_fixed_amount: Money | None = None
+    fine_fee_multiplier: Ratio | None = None
     id: UUID
 
 
@@ -156,7 +163,7 @@ class InfractionRuleSummaryRead(BaseModel):
 class InfractionSettingsRead(BaseModel):
     """``GET /api/v1/infraction-settings``. Never 404s: an absent row is nulls."""
 
-    condo_fee_amount: float | None = None
+    condo_fee_amount: Money | None = None
     updated_at: datetime | None = None
     updated_by: InfractionActorRead | None = None
 
@@ -164,7 +171,7 @@ class InfractionSettingsRead(BaseModel):
 class InfractionSettingsWrite(BaseModel):
     """``PUT /api/v1/infraction-settings``. ``None`` clears the reference."""
 
-    condo_fee_amount: float | None = Field(default=None, ge=0)
+    condo_fee_amount: MoneyIn | None = Field(default=None, ge=0)
 
 
 # ---------------------------------------------------------------------------
@@ -218,7 +225,7 @@ class InfractionStageCreate(BaseModel):
 
     action: InfractionStepAction | None = None
     note: str = Field(min_length=1)
-    fine_amount: float | None = Field(default=None, ge=0)
+    fine_amount: MoneyIn | None = Field(default=None, ge=0)
     defense_deadline_days: int | None = Field(default=None, gt=0)
     evidence_urls: list[str] = Field(default_factory=list)
 
@@ -276,7 +283,7 @@ class NextStepRead(BaseModel):
     suggested_action: InfractionStepAction | None = None
     reason: NextStepReason
     defense_deadline_days: int | None = None
-    fine_amount: float | None = None
+    fine_amount: Money | None = None
     fine_amount_unavailable_reason: str | None = None
     is_saturated: bool
 
@@ -294,7 +301,7 @@ class InfractionTimelineEntryRead(BaseModel):
     actor: InfractionActorRead | None = None
     action: InfractionStepAction | None = None
     note: str | None = None
-    fine_amount: float | None = None
+    fine_amount: Money | None = None
     fine_amount_overridden: bool | None = None
     defense_due_on: date | None = None
     defense_deadline_overridden: bool | None = None

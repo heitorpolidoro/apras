@@ -13,6 +13,7 @@ from app.core.exceptions import (
     ProjectNotFoundError,
     ProjectUpdateNotFoundError,
 )
+from app.core.money import ZERO, quantize_money
 from app.models.enums import MilestoneStatus, ProjectStatus
 from app.models.project import ConstructionProject, ProjectMilestone, ProjectUpdate
 from app.models.user import User
@@ -67,8 +68,8 @@ class ProjectService:
             title=project_in.title,
             description=project_in.description,
             contractor_name=project_in.contractor_name,
-            total_budget=project_in.total_budget,
-            executed_budget=project_in.executed_budget,
+            total_budget=quantize_money(project_in.total_budget),
+            executed_budget=quantize_money(project_in.executed_budget),
             physical_progress_pct=project_in.physical_progress_pct,
             start_date=project_in.start_date,
             estimated_completion_date=project_in.estimated_completion_date,
@@ -172,6 +173,9 @@ class ProjectService:
     ) -> ConstructionProject:
         """Updates project details and metrics."""
         update_data = project_in.model_dump(exclude_unset=True)
+        for money_field in ("total_budget", "executed_budget"):
+            if update_data.get(money_field) is not None:
+                update_data[money_field] = quantize_money(update_data[money_field])
         for key, value in update_data.items():
             if value is not None:
                 setattr(project, key, value)
@@ -284,13 +288,15 @@ class ProjectService:
             title=update_in.title,
             content=update_in.content,
             photos_json=photos_json,
-            cost_impact=update_in.cost_impact or 0.0,
+            cost_impact=quantize_money(update_in.cost_impact or ZERO),
             created_at=clock.db_now(),
         )
         session.add(update)
 
         if update_in.cost_impact and update_in.cost_impact > 0:
-            project.executed_budget += update_in.cost_impact
+            project.executed_budget = quantize_money(
+                project.executed_budget + update_in.cost_impact
+            )
             project.updated_at = clock.db_now()
             session.add(project)
 

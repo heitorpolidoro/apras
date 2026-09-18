@@ -2,12 +2,14 @@
 
 import uuid
 from datetime import date, datetime
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Index, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.core import clock
+from app.core.money import Money
 from app.models.enums import TransactionType
 from app.models.tenant import tenant_id_field
 
@@ -63,7 +65,7 @@ class BudgetLine(SQLModel, table=True):
         index=True,
     )
     fiscal_year: int = Field(nullable=False, index=True)
-    planned_amount: float = Field(default=0.0, nullable=False)
+    planned_amount: Money = Field(default=Decimal("0.00"), nullable=False)
     notes: str | None = Field(default=None, nullable=True)
     created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
     updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
@@ -101,7 +103,7 @@ class FinancialTransaction(SQLModel, table=True):
         index=True,
     )
     description: str = Field(nullable=False)
-    amount: float = Field(nullable=False)  # always > 0; sign implied by `type`
+    amount: Money = Field(nullable=False)  # always > 0; sign implied by `type`
     transaction_date: date = Field(nullable=False, index=True)
     payment_method: str | None = Field(default=None, nullable=True)
     invoice_file_path: str | None = Field(default=None, nullable=True)

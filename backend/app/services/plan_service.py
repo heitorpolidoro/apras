@@ -23,10 +23,12 @@ from app.core.exceptions import (
     PlanNotFoundError,
     UnknownModuleError,
 )
+from app.core.money import quantize_money
 from app.core.permissions import CORE_MODULES, MODULES, TOGGLEABLE_MODULES
 from app.models.plan import Plan
 
 if TYPE_CHECKING:  # pragma: no cover
+    from decimal import Decimal
     from uuid import UUID
 
     from app.schemas.plan import PlanCreate, PlanUpdate
@@ -79,10 +81,10 @@ class PlanService:
         return currency
 
     @staticmethod
-    def _validate_base_price(base_price: float) -> float:
+    def _validate_base_price(base_price: Decimal) -> Decimal:
         if base_price < 0:
             raise InvalidPlanPriceError("The base price cannot be negative")
-        return float(base_price)
+        return quantize_money(base_price)
 
     @staticmethod
     def list_plans(*, session: Session) -> list[Plan]:

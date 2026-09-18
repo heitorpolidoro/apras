@@ -2,12 +2,14 @@
 
 import uuid
 from datetime import date, datetime
+from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import JSON, Column
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.core import clock
+from app.core.money import Money
 from app.models.enums import MilestoneStatus, ProjectStatus
 from app.models.tenant import tenant_id_field
 
@@ -28,8 +30,8 @@ class ConstructionProject(SQLModel, table=True):
     title: str = Field(nullable=False, index=True)
     description: str | None = Field(default=None, nullable=True)
     contractor_name: str | None = Field(default=None, nullable=True)
-    total_budget: float = Field(default=0.0, nullable=False)
-    executed_budget: float = Field(default=0.0, nullable=False)
+    total_budget: Money = Field(default=Decimal("0.00"), nullable=False)
+    executed_budget: Money = Field(default=Decimal("0.00"), nullable=False)
     physical_progress_pct: float = Field(default=0.0, nullable=False)
     start_date: date | None = Field(default=None, nullable=True)
     estimated_completion_date: date | None = Field(default=None, nullable=True)
@@ -116,7 +118,7 @@ class ProjectUpdate(SQLModel, table=True):
     title: str = Field(nullable=False)
     content: str = Field(nullable=False)
     photos_json: str | None = Field(default=None, nullable=True)  # JSON list of urls
-    cost_impact: float | None = Field(default=0.0, nullable=True)
+    cost_impact: Money | None = Field(default=Decimal("0.00"), nullable=True)
     created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
 
     # Relationships
