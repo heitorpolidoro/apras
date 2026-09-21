@@ -50,6 +50,7 @@ from sqlalchemy import JSON, Column, UniqueConstraint, text
 from sqlmodel import Field, SQLModel
 
 from app.core import clock
+from app.core.slug import SLUG_MAX_LENGTH, slugify
 
 # The well-known, fixed id of the tenant every pre-existing row is migrated
 # into. It is a literal (never generated) so the migration's backfill, the
@@ -94,12 +95,36 @@ class Tenant(SQLModel, table=True):
     no ``DELETE /api/v1/tenants/{id}``, both because the scoped foreign keys
     are ``RESTRICT`` and because deactivation is the intended operation.
     Nothing consumes ``is_active`` in this slice — APRAS-42 does.
+
+    ``slug`` (APRAS-66) is the condominium's stable address, the ``<slug>`` of
+    the ``/c/<slug>`` entry APRAS-69 will route. It is **editable** after
+    creation, through ``PATCH /api/v1/tenant-profile`` under the same
+    ``tenants:profile_update`` the rest of that screen carries, and there is
+    deliberately **no history table**: changing it breaks every bookmark that
+    used the old address, with no redirect and no grace period, a cost the
+    operator accepted explicitly (D-F). Derivation from the name happens
+    exactly **once**, when the row is constructed — renaming a condominium
+    never regenerates it (D-C.2), so a hand-picked slug needs no protecting
+    flag.
     """
 
     __tablename__ = "tenant"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     name: str = Field(index=True, unique=True, nullable=False)
+    # ``VARCHAR(64)``: 60 characters of derived base plus room for the
+    # ``-<n>`` uniqueness suffix. Unique across the installation, because the
+    # address space is the installation's. The index is what actually
+    # arbitrates a collision -- ``TenantService``'s suffix walk computes a
+    # candidate, and an ``IntegrityError`` from this constraint is never
+    # silently swallowed.
+    slug: str = Field(
+        default="",
+        max_length=SLUG_MAX_LENGTH,
+        nullable=False,
+        unique=True,
+        index=True,
+    )
     is_active: bool = Field(default=True, nullable=False)
     # Modules explicitly turned off for this tenant (APRAS-39). Negative
     # storage on purpose: ``[]`` is "every module active", so the column's
@@ -122,6 +147,20 @@ class Tenant(SQLModel, table=True):
     logo_url: str | None = Field(default=None, nullable=True)
     created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
     updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+
+    def __init__(self, **data: Any) -> None:
+        """Fill an absent ``slug`` from the name, without touching the database.
+
+        A ``default_factory`` cannot see a sibling field, and a table model
+        runs no pydantic validators, so the derivation lives here. It is a
+        *convenience*, not the authority: ``TenantService`` resolves
+        collisions (D-B) and the unique index arbitrates. Because it needs no
+        session, every direct ``Tenant(name=...)`` in ``tests/`` and in
+        ``seed_demo.py`` keeps working unchanged.
+        """
+        if not data.get("slug"):
+            data["slug"] = slugify(data.get("name") or "")
+        super().__init__(**data)
 
 
 class UserTenantLink(SQLModel, table=True):

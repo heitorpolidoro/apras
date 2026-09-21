@@ -13,9 +13,14 @@ import { useSimulation } from "../context/SimulationContext";
 import { useRoles } from "../../../hooks/useRoles";
 import { ROUTE_ACCESS } from "../access/routeAccess";
 import {
+  SLUG_MAX_LENGTH,
+  SLUG_MIN_LENGTH,
+  SLUG_PATTERN,
   TENANT_LOGO_ALLOWED_MIME_TYPES,
   TENANT_LOGO_MAX_FILE_SIZE_BYTES,
   TENANT_PROFILE_PERMISSION,
+  isValidSlug,
+  slugifyName,
 } from "../../../api/tenantProfile";
 import type { User, Role } from "../../../types/auth";
 
@@ -58,6 +63,7 @@ const mockedDelete = vi.mocked(apiClient.delete);
 const PROFILE = {
   id: "8f1c0f2e-5e5c-4a0f-9c1e-1c2a3b4d5e6f",
   name: "Residencial Altos da Serra VI",
+  slug: "residencial-altos-da-serra-vi",
   is_active: true,
   logo_url: null as string | null,
 };
@@ -241,6 +247,206 @@ describe("TenantProfilePage", () => {
     expect(
       await screen.findByText(t("tenantProfile.errors.conflict")),
     ).toBeInTheDocument();
+  });
+});
+
+describe("TenantProfilePage — the slug (APRAS-66)", () => {
+  const slugInput = async () =>
+    await screen.findByLabelText(t("tenantProfile.slugLabel"));
+
+  const retype = async (user: ReturnType<typeof userEvent.setup>, value: string) => {
+    const input = await slugInput();
+    await user.clear(input);
+    if (value) await user.type(input, value);
+    return input;
+  };
+
+  it("renders the slug in an editable field behind a /c/ prefix", async () => {
+    serve(null);
+    renderPage();
+
+    expect(await slugInput()).toHaveValue(PROFILE.slug);
+    expect(screen.getByText("/c/")).toBeInTheDocument();
+    expect(await slugInput()).not.toHaveAttribute("readonly");
+  });
+
+  it("warns that changing the address breaks existing links", async () => {
+    serve(null);
+    renderPage();
+
+    expect(
+      await screen.findByText(t("tenantProfile.slugWarning")),
+    ).toBeInTheDocument();
+  });
+
+  it("fills the field from the name when asked to suggest one", async () => {
+    serve(null);
+    renderPage();
+
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: t("tenantProfile.slugSuggest") }),
+    );
+
+    // Derived from the *name*, not from the current slug, and the person
+    // still has to submit it: nothing is sent by the suggestion itself.
+    expect(await slugInput()).toHaveValue(slugifyName(PROFILE.name));
+    expect(apiClient.patch).not.toHaveBeenCalled();
+  });
+
+  it("blocks Save and shows an inline message while the value is malformed", async () => {
+    serve(null);
+    renderPage();
+
+    const user = userEvent.setup();
+    await retype(user, "Altos da Serra");
+
+    expect(
+      await screen.findByText(t("tenantProfile.errors.slugInvalid")),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: t("tenantProfile.save") }),
+    ).toBeDisabled();
+    expect(apiClient.patch).not.toHaveBeenCalled();
+  });
+
+  it("asks for confirmation naming both addresses before saving a change", async () => {
+    serve(null);
+    vi.mocked(apiClient.patch).mockResolvedValue({
+      data: { ...PROFILE, slug: "solar-da-serra" },
+    } as never);
+    renderPage();
+
+    const user = userEvent.setup();
+    await retype(user, "solar-da-serra");
+    await user.click(screen.getByRole("button", { name: t("tenantProfile.save") }));
+
+    // The dialog is a client-side guard: nothing has been sent yet.
+    expect(
+      await screen.findByText(t("tenantProfile.slugConfirmTitle")),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/\/c\/residencial-altos-da-serra-vi/)).toBeInTheDocument();
+    expect(screen.getByText(/\/c\/solar-da-serra/)).toBeInTheDocument();
+    expect(apiClient.patch).not.toHaveBeenCalled();
+
+    await user.click(
+      screen.getByRole("button", { name: t("tenantProfile.slugConfirmCta") }),
+    );
+
+    await waitFor(() =>
+      expect(apiClient.patch).toHaveBeenCalledWith("/tenant-profile", {
+        name: PROFILE.name,
+        slug: "solar-da-serra",
+      }),
+    );
+  });
+
+  it("sends nothing when the confirmation is cancelled", async () => {
+    serve(null);
+    renderPage();
+
+    const user = userEvent.setup();
+    await retype(user, "solar-da-serra");
+    await user.click(screen.getByRole("button", { name: t("tenantProfile.save") }));
+    await user.click(
+      screen.getByRole("button", { name: t("tenantProfile.slugConfirmCancel") }),
+    );
+
+    expect(apiClient.patch).not.toHaveBeenCalled();
+    expect(
+      screen.queryByText(t("tenantProfile.slugConfirmTitle")),
+    ).not.toBeInTheDocument();
+  });
+
+  it("saves a name-only change with no dialog and no slug in the body", async () => {
+    serve(null);
+    vi.mocked(apiClient.patch).mockResolvedValue({
+      data: { ...PROFILE, name: "Novo Nome" },
+    } as never);
+    renderPage();
+
+    const user = userEvent.setup();
+    const input = await screen.findByDisplayValue(PROFILE.name);
+    await user.clear(input);
+    await user.type(input, "Novo Nome");
+    await user.click(screen.getByRole("button", { name: t("tenantProfile.save") }));
+
+    // D-C.2: a rename never carries the slug, so it can never regenerate it.
+    await waitFor(() =>
+      expect(apiClient.patch).toHaveBeenCalledWith("/tenant-profile", {
+        name: "Novo Nome",
+      }),
+    );
+    expect(
+      screen.queryByText(t("tenantProfile.slugConfirmTitle")),
+    ).not.toBeInTheDocument();
+  });
+
+  it("renders a field-level message when the server answers 409", async () => {
+    serve(null);
+    vi.mocked(apiClient.patch).mockRejectedValue({ response: { status: 409 } });
+    renderPage();
+
+    const user = userEvent.setup();
+    await retype(user, "altos-da-serra");
+    await user.click(screen.getByRole("button", { name: t("tenantProfile.save") }));
+    await user.click(
+      screen.getByRole("button", { name: t("tenantProfile.slugConfirmCta") }),
+    );
+
+    expect(
+      await screen.findByText(t("tenantProfile.errors.slugTaken")),
+    ).toBeInTheDocument();
+  });
+
+  it("renders the format message when the server answers 422 on a slug", async () => {
+    serve(null);
+    vi.mocked(apiClient.patch).mockRejectedValue({ response: { status: 422 } });
+    renderPage();
+
+    const user = userEvent.setup();
+    await retype(user, "outro-endereco");
+    await user.click(screen.getByRole("button", { name: t("tenantProfile.save") }));
+    await user.click(
+      screen.getByRole("button", { name: t("tenantProfile.slugConfirmCta") }),
+    );
+
+    expect(
+      await screen.findByText(t("tenantProfile.errors.slugInvalid")),
+    ).toBeInTheDocument();
+  });
+
+  it("mirrors the server's rule, and only mirrors it", () => {
+    // The third side of the pin: the backend's `app/core/slug.py` is the
+    // enforcer, these constants exist for inline feedback. Their twin is
+    // `backend/tests/test_tenant_profile.py::test_the_profile_contract_matches_the_frontend_client`.
+    expect(SLUG_MIN_LENGTH).toBe(3);
+    expect(SLUG_MAX_LENGTH).toBe(64);
+    expect(SLUG_PATTERN.source).toBe("^[a-z0-9]+(-[a-z0-9]+)*$");
+
+    for (const good of ["altos-da-serra", "bloco-2", "abc", "a".repeat(64)]) {
+      expect(isValidSlug(good)).toBe(true);
+    }
+    for (const bad of [
+      "",
+      "ab",
+      "a".repeat(65),
+      "Altos",
+      "altos da serra",
+      "altos--da-serra",
+      "-altos",
+      "altos-",
+      "altos_da_serra",
+      "condomínio",
+    ]) {
+      expect(isValidSlug(bad)).toBe(false);
+    }
+
+    expect(slugifyName("Condomínio Padrão")).toBe("condominio-padrao");
+    expect(slugifyName("Res.  Altos da Serra VI!")).toBe("res-altos-da-serra-vi");
+    expect(slugifyName("AB")).toBe("condominio");
+    expect(slugifyName("!!!")).toBe("condominio");
+    expect(isValidSlug(slugifyName("東京"))).toBe(true);
   });
 });
 

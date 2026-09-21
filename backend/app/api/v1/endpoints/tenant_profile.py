@@ -43,7 +43,7 @@ def get_tenant_profile(
     tenant: Annotated[Tenant, Depends(api_deps.get_current_tenant)],
     _: Annotated[User, Depends(api_deps.get_current_active_user)],
 ) -> TenantProfileRead:
-    """The acting condominium's name, id, active flag and logo.
+    """The acting condominium's name, id, slug, active flag and logo.
 
     Unguarded by design (D6): it is self-scoped to the acting tenant and
     returns data the caller already holds — ``/auth/me`` carries the tenant
@@ -61,7 +61,22 @@ def update_tenant_profile(
     tenant: Annotated[Tenant, Depends(api_deps.get_current_tenant)],
     _: Annotated[User, Depends(_require_profile_update)],
 ) -> TenantProfileRead:
-    """Rename the acting condominium. 409 when another tenant holds the name."""
+    """Rename the acting condominium and/or move its address.
+
+    409 when another tenant holds the name, and 409 (``SlugAlreadyTakenError``)
+    when another holds the submitted ``slug`` -- never a ``-<n>`` suffix, which
+    would store an address nobody typed. A malformed slug is 422
+    (``InvalidSlugError``). Both errors reach their status through the ordinary
+    ``DomainError`` handler; nothing here catches them.
+
+    The slug rides the **existing** ``tenants:profile_update`` guard bound
+    above (APRAS-66 D-C.1): no new route, no new permission string, no
+    ``ROUTE_PERMISSIONS`` entry and therefore no parity-matrix baseline
+    change. A stricter grant would restrict nobody who can reach this screen
+    -- a tenant admin already holds the whole catalogue -- while the blast
+    radius of a slug change (broken bookmarks) is no larger than that of the
+    rename this permission already authorises.
+    """
     updated = TenantService.update_profile(session, tenant, profile_in)
     return TenantProfileRead.model_validate(updated)
 

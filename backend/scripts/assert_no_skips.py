@@ -27,7 +27,14 @@ MODULE_CLASSNAME = "tests.test_migrations_postgres"
 #: 22 by APRAS-64, which added the money-column precision case and the
 #: `Decimal` round-trip: `test_the_floor_is_the_modules_real_case_count`
 #: collects the module for real and pins the floor to that count.
-MIN_CASES = 22
+#:
+#: Raised from 22 to 26 by APRAS-66, which added the second revision
+#: (`0002_tenant_slug`) and with it four cases: the `no app import` guard on
+#: the new revision, the backfilled `condominio-padrao`, the NOT NULL unique
+#: index on `tenant.slug`, and the pre-upgrade row whose two-character name
+#: must come back inside the 3-64 rule. The two rewritten history cases
+#: replaced their predecessors one for one, so they add nothing here.
+MIN_CASES = 26
 
 
 def _verdict(collected: int, skipped: list[str]) -> list[str]:

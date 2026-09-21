@@ -47,6 +47,7 @@ from app.core.exceptions import (
     InvalidFolderHierarchyError,
     InvalidInvoiceFormatError,
     InvalidPhotoFormatError,
+    InvalidSlugError,
     InvoiceFileTooLargeError,
     LotAlreadyVotedError,
     LotNotFoundError,
@@ -79,6 +80,7 @@ from app.core.exceptions import (
     ReservableSpaceNotFoundError,
     ResidentCPFConflictError,
     ResidentNotFoundError,
+    SlugAlreadyTakenError,
     SpaceReservationConflictError,
     SpaceReservationNotFoundError,
     SubscriptionNotFoundError,
@@ -197,6 +199,10 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             PurchaseQuoteFrozenError,
             TenantAlreadyExistsError,
             TenantMembershipAlreadyExistsError,
+            # APRAS-66 D-C.3: a typed slug another tenant holds. Never a
+            # suffix walk -- that rule exists only where the *system* invents
+            # the value.
+            SlugAlreadyTakenError,
             # APRAS-40 §6.1
             PlanAlreadyExistsError,
             # APRAS-44: the duplicate article, and the three states in
@@ -228,6 +234,9 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             # same precedent and for the same reason.
             QuoteAttachmentInvalidFormatError,
             QuoteAttachmentTooLargeError,
+            # APRAS-66 D-C.4: a typed slug outside `^[a-z0-9]+(-[a-z0-9]+)*$`
+            # or the 3-64 bound. Refused, never folded into a valid one.
+            InvalidSlugError,
         ),
     ):
         status_code = status.HTTP_422_UNPROCESSABLE_ENTITY

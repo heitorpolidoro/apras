@@ -1905,6 +1905,14 @@
     "remove": "Remover logo",
     "nameLabel": "Nome do condomínio",
     "nameHint": "Único em toda a instalação: um nome já usado responde 409.",
+    "slugLabel": "Endereço do condomínio",
+    "slugHint": "Letras minúsculas, números e hífens, de 3 a 64 caracteres. Sugerido a partir do nome na criação.",
+    "slugWarning": "Ao alterar o endereço, os links já salvos com o endereço antigo deixam de funcionar. Não há redirecionamento.",
+    "slugSuggest": "Sugerir a partir do nome",
+    "slugConfirmTitle": "Alterar o endereço do condomínio?",
+    "slugConfirmBody": "O endereço mudará de /c/{{from}} para /c/{{to}}. Todos os links salvos, impressos ou compartilhados com o endereço antigo deixarão de funcionar. Não há redirecionamento.",
+    "slugConfirmCta": "Alterar mesmo assim",
+    "slugConfirmCancel": "Cancelar",
     "idLabel": "Identificador",
     "save": "Salvar",
     "saved": "Perfil atualizado",
@@ -1918,7 +1926,9 @@
       "rejected": "O servidor recusou o arquivo: o conteúdo não é uma imagem PNG, JPEG ou WebP válida.",
       "conflict": "Já existe um condomínio com esse nome.",
       "forbidden": "Você não tem permissão para alterar o perfil do condomínio.",
-      "generic": "Não foi possível salvar. Tente novamente."
+      "generic": "Não foi possível salvar. Tente novamente.",
+      "slugTaken": "Esse endereço já está em uso por outro condomínio.",
+      "slugInvalid": "Endereço inválido: use de 3 a 64 caracteres, apenas letras minúsculas, números e hífens simples."
     }
   }
 }

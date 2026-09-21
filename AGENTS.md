@@ -163,7 +163,13 @@ cd backend && uv run ruff format . && uv run ruff check . --fix
    against production. The formatter is excluded from them by
    `[tool.ruff.format] exclude`, and a narrow `per-file-ignores` entry covers
    the cosmetic rules — the linter still reads them, so a genuinely new
-   problem still fails the gate.
+   problem still fails the gate. "Frozen" is also why a revision **imports
+   nothing from `app/`**: a live import silently rewrites what a replay
+   produces the day the imported code changes. `0001` re-declares
+   `DEFAULT_TENANT_ID` and `LEGACY_ROLE_NAMES` as local literals and
+   `0002_tenant_slug` carries its own copy of `app/core/slug.py`'s
+   derivation, both deliberately — `tests/test_migrations_postgres.py`
+   asserts the absence of an `app` import by `ast`.
 3. **`app/core/clock.py` is the only clock.** `utc_now()` for a value that
    never reaches a column (JWT `iat`/`exp`), `db_now()` for one that does, and
    `today_utc()` for a date. Every dated column in this database is naive
@@ -1013,6 +1019,20 @@ into a single `0001_initial_schema` generated from the models, so
 with a retired revision has to be reset (`DROP SCHEMA public CASCADE; CREATE
 SCHEMA public;`) before it can be migrated again, and its superuser re-created
 by signup plus `UPDATE "user" SET is_superuser = true`.
+
+**The history is no longer a single revision.** Production applied `0001` on
+2026-09-19 (APRAS-59), and that is what ended the "declare the new column
+inside `0001`" rule: editing an applied revision puts the deployed database
+out of step with its own history and costs another reset. Since APRAS-66 the
+history is a **line** — `0001_initial_schema` → `0002_tenant_slug` — and a
+new column is an ordinary new revision on top of the head, added nullable,
+backfilled, then constrained. `tests/test_migrations_postgres.py` holds the
+shape in `EXPECTED_HISTORY` (one root, each entry's `down_revision` its
+predecessor, every slug inside `alembic_version.version_num`'s 32
+characters); adding a revision means appending to that tuple, moving
+`HEAD_REVISION`, and re-pinning `MIN_CASES` in
+`backend/scripts/assert_no_skips.py` if the module's collected case count
+moves with it.
 
 A fresh install therefore starts at the default tenant with its six
 `permissions = []` roles, and `python -m app.seed` is what puts usable data in

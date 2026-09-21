@@ -1905,6 +1905,14 @@
     "remove": "Remove logo",
     "nameLabel": "Condominium name",
     "nameHint": "Unique across the whole installation: a name already in use answers 409.",
+    "slugLabel": "Condominium address",
+    "slugHint": "Lowercase letters, digits and hyphens, 3 to 64 characters. Suggested from the name at creation.",
+    "slugWarning": "Changing the address stops every link already saved with the old one from working. There is no redirect.",
+    "slugSuggest": "Suggest from the name",
+    "slugConfirmTitle": "Change the condominium address?",
+    "slugConfirmBody": "The address will change from /c/{{from}} to /c/{{to}}. Every link saved, printed or shared with the old address will stop working. There is no redirect.",
+    "slugConfirmCta": "Change it anyway",
+    "slugConfirmCancel": "Cancel",
     "idLabel": "Identifier",
     "save": "Save",
     "saved": "Profile updated",
@@ -1918,7 +1926,9 @@
       "rejected": "The server rejected the file: its content is not a valid PNG, JPEG or WebP image.",
       "conflict": "A condominium with that name already exists.",
       "forbidden": "You do not have permission to change the condominium profile.",
-      "generic": "Could not save. Please try again."
+      "generic": "Could not save. Please try again.",
+      "slugTaken": "That address is already in use by another condominium.",
+      "slugInvalid": "Invalid address: use 3 to 64 characters, lowercase letters, digits and single hyphens only."
     }
   }
 }

@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>APRAS-66 — Slug do condomínio (editável)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-50 text-slate-900">
+<div class="max-w-4xl mx-auto p-6 space-y-6">
+
+  <header class="space-y-1">
+    <h1 class="text-2xl font-bold">APRAS-66 — Slug do condomínio</h1>
+    <p class="text-sm text-slate-600">
+      Campo <strong>editável</strong> na tela <strong>Sistema → Perfil do condomínio</strong>
+      (<code>/admin/tenant-profile</code>, APRAS-61). Lido de
+      <code>GET /api/v1/tenant-profile</code>, gravado pelo mesmo
+      <code>PATCH /api/v1/tenant-profile</code> sob a permissão já existente
+      <code>tenants:profile_update</code>. Nenhuma rota nova, nenhuma permissão nova.
+    </p>
+    <p class="text-sm font-medium text-rose-700">
+      Decisão do operador (2026-09-21): o slug é editável e <strong>não</strong> haverá tabela de
+      histórico. Links antigos simplesmente param de funcionar — custo aceito.
+    </p>
+  </header>
+
+  <nav class="flex flex-wrap gap-2 border-b border-slate-200">
+    <button data-tab="normal" class="tab px-4 py-2 text-sm font-medium border-b-2 border-slate-900">Gerado</button>
+    <button data-tab="edited" class="tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-slate-500">Editado + confirmação</button>
+    <button data-tab="invalid" class="tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-slate-500">Formato inválido (422)</button>
+    <button data-tab="taken" class="tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-slate-500">Já em uso (409)</button>
+    <button data-tab="long" class="tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-slate-500">Nome longo / acentos</button>
+  </nav>
+
+  <section data-panel="normal" class="panel space-y-4"></section>
+  <section data-panel="edited" class="panel hidden space-y-4"></section>
+  <section data-panel="invalid" class="panel hidden space-y-4"></section>
+  <section data-panel="taken" class="panel hidden space-y-4"></section>
+  <section data-panel="long" class="panel hidden space-y-4"></section>
+
+</div>
+
+<!-- ===== Diálogo de confirmação (D-G) ===== -->
+<div id="dlg" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 p-4">
+  <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+    <div class="flex items-start gap-3">
+      <i data-lucide="alert-triangle" class="mt-0.5 h-5 w-5 text-amber-500"></i>
+      <div>
+        <h3 class="text-base font-semibold">Alterar o endereço do condomínio?</h3>
+        <p class="mt-2 text-sm text-slate-600">
+          O endereço mudará de <code class="font-mono text-slate-900">/c/condominio-solar-da-serra</code>
+          para <code class="font-mono text-slate-900">/c/solar-da-serra</code>.
+        </p>
+        <p class="mt-2 text-sm text-slate-600">
+          <strong>Todos os links salvos, impressos ou compartilhados com o endereço antigo deixarão de
+          funcionar.</strong> Não há redirecionamento.
+        </p>
+      </div>
+    </div>
+    <div class="mt-6 flex justify-end gap-2">
+      <button onclick="closeDlg()" class="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">Cancelar</button>
+      <button onclick="closeDlg()" class="rounded-md bg-rose-600 px-4 py-2 text-sm font-medium text-white">Alterar mesmo assim</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+
+  const STATES = {
+    normal: {
+      name: "Residencial Altos da Serra VI",
+      slug: "residencial-altos-da-serra-vi",
+      error: null,
+      notes: [
+        "Derivação inicial: minúsculas, acentos removidos (NFKD → ASCII), qualquer sequência fora de [a-z0-9] vira um único hífen, hífens das pontas caem.",
+        "Editável sob <code>tenants:profile_update</code> — a mesma permissão do nome e do logo. Sem permissão nova: o tenant admin já detém o catálogo inteiro (APRAS-47), então uma permissão mais estrita não restringiria ninguém.",
+        "Renomear o condomínio <strong>não</strong> regenera o slug. O slug só muda quando o campo é enviado explicitamente."
+      ]
+    },
+    edited: {
+      name: "Condomínio Solar da Serra",
+      slug: "solar-da-serra",
+      original: "condominio-solar-da-serra",
+      error: null,
+      showDialogHint: true,
+      notes: [
+        "Salvar um slug <em>alterado</em> abre o diálogo de confirmação nomeando o endereço antigo e o novo (clique em Salvar).",
+        "Guarda apenas de cliente: a API não tem parâmetro de confirmação.",
+        "Reenviar o próprio slug atual é no-op (200), não 409."
+      ]
+    },
+    invalid: {
+      name: "Condomínio Solar da Serra",
+      slug: "Solar da Serra",
+      error: "Use apenas letras minúsculas, números e hífens (ex.: solar-da-serra). Entre 3 e 64 caracteres, sem hífen no início, no fim ou duplicado.",
+      notes: [
+        "O servidor <strong>não</strong> normaliza o que foi digitado: fora de <code>^[a-z0-9]+(-[a-z0-9]+)*$</code> ou de 3–64 caracteres responde <code>422 SLUG_INVALID</code>.",
+        "Salvar silenciosamente um valor diferente do digitado é o bug clássico — alguém imprimiria o endereço que viu aceito.",
+        "O botão Salvar fica desabilitado enquanto o campo é inválido; a ação <em>Sugerir a partir do nome</em> preenche <code>solar-da-serra</code> sem salvar."
+      ]
+    },
+    taken: {
+      name: "Condomínio Solar da Serra",
+      slug: "altos-da-serra",
+      error: "Este endereço já está em uso por outro condomínio. Escolha outro.",
+      notes: [
+        "Colisão de valor digitado responde <code>409 SLUG_ALREADY_TAKEN</code>. A regra de sufixo <code>-2</code> vale só para o slug <em>gerado</em> na criação, nunca para o que uma pessoa digitou.",
+        "O índice único em <code>tenant.slug</code> continua sendo o árbitro real; um IntegrityError aqui vira o mesmo 409.",
+        "Nenhum valor é gravado: o slug anterior permanece."
+      ]
+    },
+    long: {
+      name: "Condomínio Residencial Jardim das Acácias Fase II — Bloco Central",
+      slug: "condominio-residencial-jardim-das-acacias-fase-ii-bloco-cent",
+      error: null,
+      notes: [
+        "Base cortada em 60 caracteres e o hífen final removido, então nunca termina em hífen. Coluna <code>VARCHAR(64)</code>: 60 de base + espaço para o sufixo.",
+        "Aqui o campo editável é o melhor argumento a favor da decisão: a pessoa encurta para <code>jardim-das-acacias</code> à mão.",
+        "Nome que reduz a nada (só emoji ou pontuação) usa a base literal <code>condominio</code>, e a regra de colisão faz o resto."
+      ]
+    }
+  };
+
+  function panelHtml(s) {
+    const bad = !!s.error;
+    return `
+    <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div class="flex items-center gap-3 border-b border-slate-100 px-6 py-4">
+        <i data-lucide="landmark" class="h-5 w-5 text-slate-500"></i>
+        <div>
+          <h2 class="text-lg font-semibold">Perfil do condomínio</h2>
+          <p class="text-xs text-slate-500">Dados exibidos nos documentos gerados pelo sistema.</p>
+        </div>
+      </div>
+
+      <div class="grid gap-8 px-6 py-6 md:grid-cols-[200px_1fr]">
+        <div class="space-y-3">
+          <span class="text-xs font-semibold uppercase tracking-wide text-slate-500">Logo</span>
+          <div class="flex h-32 w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 text-slate-400">
+            <i data-lucide="image" class="h-6 w-6"></i>
+            <span class="text-xs">Nenhum logo enviado</span>
+          </div>
+          <p class="text-[11px] text-slate-400">Inalterado por esta task (APRAS-61).</p>
+        </div>
+
+        <div class="space-y-5">
+          <div>
+            <label class="block text-sm font-medium text-slate-900">Nome do condomínio</label>
+            <input value="${s.name}"
+              class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm" />
+            <p class="mt-1 text-xs text-slate-500">Editável. Salvar renomeia o condomínio — e não mexe no endereço abaixo.</p>
+          </div>
+
+          <div class="rounded-lg border ${bad ? "border-rose-300 bg-rose-50" : "border-slate-200 bg-slate-50"} p-4">
+            <div class="flex items-center justify-between">
+              <label class="flex items-center gap-2 text-sm font-medium text-slate-900">
+                <i data-lucide="link-2" class="h-4 w-4 text-slate-400"></i>
+                Endereço do condomínio
+              </label>
+              <button class="flex items-center gap-1 text-xs font-medium text-slate-600 hover:text-slate-900">
+                <i data-lucide="wand-2" class="h-3.5 w-3.5"></i> Sugerir a partir do nome
+              </button>
+            </div>
+            <div class="mt-2 flex items-stretch">
+              <span class="inline-flex items-center rounded-l-md border border-r-0 ${bad ? "border-rose-300" : "border-slate-300"} bg-slate-100 px-3 font-mono text-sm text-slate-500">/c/</span>
+              <input value="${s.slug}"
+                class="w-full rounded-r-md border ${bad ? "border-rose-400 bg-white text-rose-900" : "border-slate-300 bg-white"} px-3 py-2 font-mono text-sm" />
+            </div>
+            ${bad
+              ? `<p class="mt-2 flex items-start gap-1.5 text-xs font-medium text-rose-700">
+                   <i data-lucide="x-circle" class="mt-0.5 h-3.5 w-3.5 shrink-0"></i>
+                   <span>${s.error}</span>
+                 </p>`
+              : `<p class="mt-2 text-xs text-slate-500">
+                   Letras minúsculas, números e hífens, de 3 a 64 caracteres. Sugerido a partir do nome na criação.
+                 </p>`}
+            <p class="mt-2 flex items-start gap-1.5 rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
+              <i data-lucide="alert-triangle" class="mt-0.5 h-3.5 w-3.5 shrink-0"></i>
+              <span>Ao alterar o endereço, os links já salvos com o endereço antigo deixam de funcionar. Não há redirecionamento.</span>
+            </p>
+          </div>
+
+          <div class="flex gap-2">
+            <button ${bad ? "disabled" : `onclick="openDlg()"`}
+              class="rounded-md px-4 py-2 text-sm font-medium text-white ${bad ? "cursor-not-allowed bg-slate-300" : "bg-slate-900"}">Salvar</button>
+            <button class="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rounded-lg border-l-4 border-amber-400 bg-amber-50 p-4">
+      <p class="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-amber-800">
+        <i data-lucide="sticky-note" class="h-4 w-4"></i> Anotações
+      </p>
+      <ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-amber-900">
+        ${s.notes.map((n) => `<li>${n}</li>`).join("")}
+      </ul>
+    </div>
+
+    <div class="rounded-lg border border-dashed border-slate-300 bg-white p-4 text-xs text-slate-500">
+      <span class="font-semibold text-slate-700">Fora de escopo, por decisão:</span>
+      tabela de histórico de slugs e redirecionamento 301. Se a dor aparecer, vira uma task futura
+      (<code>tenant_slug_history</code> + resolução no <code>/c/&lt;slug&gt;</code>, depende da APRAS-69).
+      <code>/c/&lt;slug&gt;</code> ainda não existe; chega na APRAS-69.
+    </div>`;
+  }
+
+  function openDlg() { const d = document.getElementById("dlg"); d.classList.remove("hidden"); d.classList.add("flex"); lucide.createIcons(); }
+  function closeDlg() { const d = document.getElementById("dlg"); d.classList.add("hidden"); d.classList.remove("flex"); }
+
+  function switchTab(name) {
+    document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("hidden", p.dataset.panel !== name));
+    document.querySelectorAll(".tab").forEach((t) => {
+      const on = t.dataset.tab === name;
+      t.classList.toggle("border-slate-900", on);
+      t.classList.toggle("border-transparent", !on);
+      t.classList.toggle("text-slate-500", !on);
+    });
+    lucide.createIcons();
+  }
+
+  document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => switchTab(t.dataset.tab)));
+  Object.keys(STATES).forEach((k) => {
+    document.querySelector(`[data-panel="${k}"]`).innerHTML = panelHtml(STATES[k]);
+  });
+  lucide.createIcons();
+</script>
+</body>
+</html>

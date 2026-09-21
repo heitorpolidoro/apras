@@ -5,6 +5,7 @@ import {
   patchTenantProfile,
   putTenantLogo,
   type TenantProfile,
+  type TenantProfileUpdate,
 } from "../api/tenantProfile";
 
 /**
@@ -39,8 +40,17 @@ const useProfileMutation = <TVariables>(
   });
 };
 
-export const useRenameTenant = () =>
-  useProfileMutation((name: string) => patchTenantProfile(name));
+/**
+ * The one write behind the name **and** the slug (APRAS-66).
+ *
+ * One mutation rather than two, because it is one `PATCH`: the server treats
+ * an absent field as "leave it alone", which is exactly how a rename is kept
+ * from touching the slug (D-C.2). The caller decides what to include.
+ */
+export const useUpdateTenantProfile = () =>
+  useProfileMutation((update: TenantProfileUpdate) =>
+    patchTenantProfile(update),
+  );
 
 export const useSetTenantLogo = () =>
   useProfileMutation((logo: File) => putTenantLogo(logo));

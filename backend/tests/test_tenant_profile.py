@@ -26,6 +26,7 @@ from sqlmodel import Session
 
 from app.core.permissions import ROUTE_PERMISSIONS, UNGUARDED_ROUTES
 from app.core.security import create_access_token, get_password_hash
+from app.core.slug import SLUG_MAX_LENGTH, SLUG_MIN_LENGTH, SLUG_PATTERN
 from app.models.project import ConstructionProject
 from app.models.role import Role
 from app.models.tenant import DEFAULT_TENANT_ID, Tenant, UserTenantLink
@@ -244,6 +245,211 @@ def test_an_empty_or_over_long_name_is_422(
     )
 
     assert response.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# The slug (APRAS-66): read, edited, refused, and never regenerated
+# ---------------------------------------------------------------------------
+
+
+def _slug_of(session: Session, tenant_id: uuid.UUID = DEFAULT_TENANT_ID) -> str:
+    session.expire_all()
+    return session.get(Tenant, tenant_id).slug
+
+
+def test_the_read_carries_the_slug(tenant_client: TestClient, session: Session):
+    """ER-11: `GET` returns it, so the screen can render `/c/<slug>`."""
+    caller = _member(session, permissions=[])
+
+    response = tenant_client.get(PROFILE_URL, headers=_auth(caller, DEFAULT_TENANT_ID))
+
+    assert response.status_code == 200
+    assert response.json()["slug"] == "condominio-padrao"
+
+
+def test_a_holder_edits_the_slug_and_reads_it_back(
+    tenant_client: TestClient, session: Session
+):
+    """A valid, free slug is a 200 on the **existing** route and permission."""
+    caller = _member(session, permissions=[PERMISSION])
+    headers = _auth(caller, DEFAULT_TENANT_ID)
+
+    response = tenant_client.patch(
+        PROFILE_URL, json={"slug": "solar-da-serra"}, headers=headers
+    )
+
+    assert response.status_code == 200
+    assert response.json()["slug"] == "solar-da-serra"
+    assert _slug_of(session) == "solar-da-serra"
+    assert tenant_client.get(PROFILE_URL, headers=headers).json()["slug"] == (
+        "solar-da-serra"
+    )
+
+
+@pytest.mark.parametrize(
+    "slug",
+    [
+        "Altos da Serra",  # uppercase and spaces, the mock's 422 state
+        "Altos",
+        "altos_da_serra",
+        "altos--da-serra",
+        "-altos",
+        "altos-",
+        "condomínio",
+        "ab",
+        "a" * 65,
+        "",
+    ],
+)
+def test_a_malformed_slug_is_422_and_stores_nothing(
+    tenant_client: TestClient, session: Session, slug: str
+):
+    """Never quietly folded into a valid one (D-C.4): what a person sees
+    accepted must be what is stored."""
+    caller = _member(session, permissions=[PERMISSION])
+    before = _slug_of(session)
+
+    response = tenant_client.patch(
+        PROFILE_URL, json={"slug": slug}, headers=_auth(caller, DEFAULT_TENANT_ID)
+    )
+
+    assert response.status_code == 422
+    assert _slug_of(session) == before
+
+
+def test_a_malformed_slug_refuses_the_name_riding_with_it(
+    tenant_client: TestClient, session: Session
+):
+    """ "Stores nothing" means nothing at all, not "the valid half"."""
+    caller = _member(session, permissions=[PERMISSION])
+    name_before = session.get(Tenant, DEFAULT_TENANT_ID).name
+
+    response = tenant_client.patch(
+        PROFILE_URL,
+        json={"name": "Nome Novo", "slug": "Altos da Serra"},
+        headers=_auth(caller, DEFAULT_TENANT_ID),
+    )
+
+    assert response.status_code == 422
+    session.expire_all()
+    assert session.get(Tenant, DEFAULT_TENANT_ID).name == name_before
+
+
+def test_a_slug_another_tenant_holds_is_409_with_no_suffix_applied(
+    tenant_client: TestClient, session: Session, tenant_b: Tenant
+):
+    """D-C.3: the `-2` walk is for generated slugs only. A typed collision is
+    refused so the person chooses another value."""
+    caller = _member(session, permissions=[PERMISSION])
+    before = _slug_of(session)
+
+    response = tenant_client.patch(
+        PROFILE_URL,
+        json={"slug": tenant_b.slug},
+        headers=_auth(caller, DEFAULT_TENANT_ID),
+    )
+
+    assert response.status_code == 409
+    assert _slug_of(session) == before
+    assert _slug_of(session, tenant_b.id) == tenant_b.slug
+    assert not _slug_of(session).endswith("-2")
+
+
+def test_resubmitting_the_tenants_own_current_slug_is_a_200_no_op(
+    tenant_client: TestClient, session: Session
+):
+    caller = _member(session, permissions=[PERMISSION])
+    current = _slug_of(session)
+
+    response = tenant_client.patch(
+        PROFILE_URL, json={"slug": current}, headers=_auth(caller, DEFAULT_TENANT_ID)
+    )
+
+    assert response.status_code == 200
+    assert response.json()["slug"] == current
+    assert _slug_of(session) == current
+
+
+def test_renaming_never_regenerates_a_generated_slug(
+    tenant_client: TestClient, session: Session
+):
+    """D-C.2: derivation happens once, at creation. There is no
+    regenerate-on-rename path at all."""
+    caller = _member(session, permissions=[PERMISSION])
+    before = _slug_of(session)
+
+    response = tenant_client.patch(
+        PROFILE_URL,
+        json={"name": "Residencial Altos da Serra VI"},
+        headers=_auth(caller, DEFAULT_TENANT_ID),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["slug"] == before
+    assert _slug_of(session) == before
+
+
+def test_a_hand_picked_slug_survives_a_subsequent_rename(
+    tenant_client: TestClient, session: Session
+):
+    """The reason no `slug_customized` flag is needed: nothing regenerates."""
+    caller = _member(session, permissions=[PERMISSION])
+    headers = _auth(caller, DEFAULT_TENANT_ID)
+
+    tenant_client.patch(
+        PROFILE_URL, json={"slug": "endereco-escolhido"}, headers=headers
+    )
+    response = tenant_client.patch(
+        PROFILE_URL, json={"name": "Outro Nome Completamente"}, headers=headers
+    )
+
+    assert response.status_code == 200
+    assert response.json()["slug"] == "endereco-escolhido"
+    assert _slug_of(session) == "endereco-escolhido"
+
+
+def test_a_caller_without_the_permission_is_403_on_a_slug_only_patch(
+    tenant_client: TestClient, session: Session
+):
+    """ER-6: the slug rides the **existing** guard, no stricter one."""
+    caller = _member(session, permissions=["tenants:read"])
+    before = _slug_of(session)
+
+    response = tenant_client.patch(
+        PROFILE_URL,
+        json={"slug": "endereco-proibido"},
+        headers=_auth(caller, DEFAULT_TENANT_ID),
+    )
+
+    assert response.status_code == 403
+    assert _slug_of(session) == before
+
+
+def test_a_tenant_admin_without_an_explicit_grant_edits_the_slug(
+    tenant_client: TestClient, session: Session
+):
+    """APRAS-47's whole-catalogue short-circuit, with no special case here."""
+    caller = _member(session, permissions=[], is_tenant_admin=True)
+
+    response = tenant_client.patch(
+        PROFILE_URL,
+        json={"slug": "endereco-do-sindico"},
+        headers=_auth(caller, DEFAULT_TENANT_ID),
+    )
+
+    assert response.status_code == 200
+    assert _slug_of(session) == "endereco-do-sindico"
+
+
+def test_the_slug_adds_no_route_and_no_permission_string():
+    """D-D: no new `ROUTE_PERMISSIONS` entry, no new catalogue string, so the
+    parity-matrix baseline is untouched -- the matrix records route x role
+    reachability, not request or response bodies."""
+    from app.core.permissions import PERMISSIONS
+
+    assert ROUTE_PERMISSIONS[("PATCH", PROFILE_URL)] == PERMISSION
+    assert not [p for p in PERMISSIONS if "slug" in p]
+    assert not [key for key in ROUTE_PERMISSIONS if "slug" in key[1]]
 
 
 def test_is_active_is_not_writable_here(tenant_client: TestClient, session: Session):
@@ -612,6 +818,16 @@ def test_the_profile_contract_matches_the_frontend_client():
     assert LOGO_URL == "/api/v1/tenant-profile/logo", (
         f"the route path changed; {_FRONTEND_CLIENT} calls it as "
         "`/tenant-profile/logo` on the shared client."
+    )
+    assert (SLUG_MIN_LENGTH, SLUG_MAX_LENGTH) == (3, 64), (
+        "the slug bounds changed. `SLUG_MIN_LENGTH`/`SLUG_MAX_LENGTH` in "
+        f"{_FRONTEND_CLIENT} mirror them for inline feedback, and the "
+        "`tenantProfile.slugHint` copy spells them out; update all three."
+    )
+    assert SLUG_PATTERN.pattern == "^[a-z0-9]+(-[a-z0-9]+)*$", (
+        f"the slug pattern changed. `SLUG_PATTERN` in {_FRONTEND_CLIENT} is "
+        "the same literal, asserted from the other side in "
+        "`TenantProfilePage.test.tsx`; update it."
     )
 
 

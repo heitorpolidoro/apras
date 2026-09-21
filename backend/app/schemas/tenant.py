@@ -31,9 +31,16 @@ class TenantUpdate(BaseModel):
 
 
 class TenantRead(TenantBase):
-    """Schema for reading tenant data."""
+    """Schema for reading tenant data.
+
+    ``slug`` is here as well as on :class:`TenantProfileRead` (APRAS-66 D-D):
+    this is the body of ``POST``/``PATCH``/``GET {id}`` on ``/tenants``, which
+    APRAS-67 reads back after creating a condominium to learn the address the
+    system derived for it.
+    """
 
     id: UUID
+    slug: str
     is_active: bool
     created_at: datetime
     updated_at: datetime
@@ -51,6 +58,8 @@ class TenantProfileRead(BaseModel):
 
     id: UUID
     name: str
+    #: The condominium's address, the ``<slug>`` of ``/c/<slug>`` (APRAS-66).
+    slug: str
     is_active: bool
     logo_url: str | None = None
 
@@ -63,9 +72,18 @@ class TenantProfileUpdate(BaseModel):
     ``is_active`` is absent on purpose (APRAS-61): deactivating a condominium
     stays a superuser act on ``PATCH /api/v1/tenants/{tenant_id}``. The bounds
     are ``TenantUpdate``'s, not a second opinion about them.
+
+    ``slug`` (APRAS-66 D-C) carries **no** ``pattern`` and no length bound
+    here on purpose: the 3-64 rule is expressed once, in
+    ``app.core.slug.is_valid_slug``, which also binds generated slugs, so the
+    two cannot disagree. A malformed value therefore reaches
+    ``TenantService`` and comes back as ``InvalidSlugError`` -- still a 422,
+    but from the single judge. The field being **absent** is what leaves the
+    slug untouched: a rename alone never regenerates it (D-C.2).
     """
 
     name: str | None = Field(None, min_length=1, max_length=120)
+    slug: str | None = None
 
 
 class ModuleStateRead(BaseModel):

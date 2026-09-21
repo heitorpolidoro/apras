@@ -1,15 +1,19 @@
 """Tenant service layer for business logic (APRAS-41)."""
 
 import io
+import itertools
 from pathlib import Path
 from uuid import UUID
 
 from PIL import Image
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
 from app.core import clock
 from app.core.exceptions import (
     CoreModuleCannotBeDisabledError,
+    InvalidSlugError,
+    SlugAlreadyTakenError,
     TenantAlreadyExistsError,
     TenantLogoInvalidFormatError,
     TenantLogoTooLargeError,
@@ -19,6 +23,7 @@ from app.core.exceptions import (
     UnknownModuleError,
 )
 from app.core.permissions import CORE_MODULES, MODULES
+from app.core.slug import SLUG_MAX_LENGTH, is_valid_slug, slugify
 from app.core.tenant_context import acting_tenant_scope
 from app.models.enums import SubscriptionChangeKind
 from app.models.role import Role
@@ -67,6 +72,14 @@ LEGACY_ROLE_NAMES: tuple[str, ...] = (
 #: replacement and on removal (APRAS-61).
 LOCAL_UPLOAD_URL_PREFIX = "/static/uploads/"
 
+#: How many times ``create_tenant`` recomputes a generated slug after the
+#: unique index refuses its candidate (APRAS-66 D-B). The index is the real
+#: arbiter, so a concurrent insert that took the value between the read and
+#: the write is an ordinary race, retried with a recomputed suffix. Bounded,
+#: because a create that cannot settle must fail loudly rather than loop.
+SLUG_INSERT_ATTEMPTS = 5
+
+
 #: Module level, and bound once, exactly like ``announcement_service`` and
 #: ``finance_service``: the logo is written through the *existing* provider,
 #: and a test (or a future non-local backend) substitutes this one name rather
@@ -103,19 +116,97 @@ class TenantService:
         ).first()
         return link is not None
 
+    # -- The slug (APRAS-66) ------------------------------------------------
+    #
+    # Two paths that must never be confused, which is why they are two
+    # methods and not one with a flag:
+    #
+    # * ``generated_slug`` -- the **system** invents a value nobody asked
+    #   for, so a collision is resolved with the smallest free ``-<n>``
+    #   (D-B). Used at creation, from the name, exactly once in a tenant's
+    #   life: no rename ever re-enters here (D-C.2).
+    # * ``validated_slug`` -- a **person** typed a value, so a collision is a
+    #   409 and a malformed value a 422, never a quiet rewrite (D-C.3/4).
+
+    @staticmethod
+    def first_free_slug(base: str, taken: set[str]) -> str:
+        """``base`` if free, else ``base-<n>`` for the smallest free ``n >= 2``.
+
+        The smallest *free* integer, not a counter: a suffix released by an
+        edit is handed out again. ``base`` is trimmed when the suffix would
+        push the value past the 64-character column, which only bites past
+        ``-999`` beside a full 60-character base, and the trim strips a
+        trailing hyphen so the result still satisfies ``is_valid_slug``.
+        """
+        if base not in taken:
+            return base
+        for n in itertools.count(2):
+            suffix = f"-{n}"
+            head = base[: SLUG_MAX_LENGTH - len(suffix)].rstrip("-")
+            candidate = f"{head}{suffix}"
+            if candidate not in taken:
+                return candidate
+        raise AssertionError  # pragma: no cover - `itertools.count` is infinite
+
+    @classmethod
+    def generated_slug(cls, session: Session, name: str) -> str:
+        """The collision-resolved slug for a **new** tenant's name (D-A + D-B).
+
+        The candidate set is read from the slugs already stored; the unique
+        index remains the arbiter, and ``create_tenant`` retries on it.
+        """
+        taken = set(session.exec(select(Tenant.slug)).all())
+        return cls.first_free_slug(slugify(name), taken)
+
+    @staticmethod
+    def validated_slug(session: Session, tenant: Tenant, value: str) -> str:
+        """Check a **typed** slug and return it unchanged, or raise (D-C.3/4).
+
+        Format first, then uniqueness excluding the acting tenant, and both
+        **before** anything is written: a refused slug stores nothing.
+        Resubmitting one's own current slug is a no-op, not a conflict.
+        """
+        if not is_valid_slug(value):
+            raise InvalidSlugError(value)
+        if value == tenant.slug:
+            return value
+        collision = session.exec(select(Tenant).where(Tenant.slug == value)).first()
+        if collision is not None and collision.id != tenant.id:
+            raise SlugAlreadyTakenError(value)
+        return value
+
     @classmethod
     def create_tenant(cls, session: Session, tenant_in: TenantCreate) -> Tenant:
-        """Create a tenant, rejecting a duplicate (globally unique) name."""
+        """Create a tenant, rejecting a duplicate (globally unique) name.
+
+        The duplicate *name* is refused before a slug is computed at all, so
+        a rejected create never consumes a suffix.
+        """
         existing = session.exec(
             select(Tenant).where(Tenant.name == tenant_in.name)
         ).first()
         if existing:
             raise TenantAlreadyExistsError(tenant_in.name)
 
-        tenant = Tenant(name=tenant_in.name, is_active=tenant_in.is_active)
-        session.add(tenant)
-        session.commit()
-        session.refresh(tenant)
+        for _attempt in range(SLUG_INSERT_ATTEMPTS):
+            tenant = Tenant(
+                name=tenant_in.name,
+                is_active=tenant_in.is_active,
+                slug=cls.generated_slug(session, tenant_in.name),
+            )
+            session.add(tenant)
+            try:
+                session.commit()
+            except IntegrityError:
+                # Someone took the candidate between the read and the write.
+                # Recompute rather than guess the next integer: the walk is
+                # cheap and the index has just told us the truth.
+                session.rollback()
+                continue
+            session.refresh(tenant)
+            break
+        else:
+            raise SlugAlreadyTakenError(slugify(tenant_in.name))
 
         cls.ensure_legacy_roles(session, tenant.id)
 
@@ -476,17 +567,51 @@ class TenantService:
     def update_profile(
         cls, session: Session, tenant: Tenant, profile_in: TenantProfileUpdate
     ) -> Tenant:
-        """Rename the acting tenant, reusing ``update_tenant``'s rules.
+        """Rename the acting tenant and/or move its address (APRAS-66 D-C).
 
-        The uniqueness check is not re-implemented here: one definition of
-        "a tenant name is globally unique", one ``TenantAlreadyExistsError``
-        (409), one place a future task has to change.
+        The name's uniqueness check is not re-implemented here: one
+        definition of "a tenant name is globally unique", one
+        ``TenantAlreadyExistsError`` (409), one place a future task has to
+        change. ``slug`` is handled here rather than in ``update_tenant``
+        because it is this screen's field: ``TenantUpdate`` (the superuser
+        ``/tenants/{id}`` body) deliberately does not carry it.
+
+        Both slug checks run **before** any write, so a refused slug stores
+        nothing -- not even the name that rode along with it. And the slug
+        moves **only** when the field is present in the payload: a name-only
+        rename leaves it exactly as it was, whether it was generated or
+        typed by hand (D-C.2).
         """
-        return cls.update_tenant(
-            session,
-            tenant.id,
-            TenantUpdate(**profile_in.model_dump(exclude_unset=True)),
-        )
+        payload = profile_in.model_dump(exclude_unset=True)
+        new_slug = payload.pop("slug", None)
+        if new_slug is not None:
+            new_slug = cls.validated_slug(session, tenant, new_slug)
+
+        updated = cls.update_tenant(session, tenant.id, TenantUpdate(**payload))
+
+        if new_slug is None or new_slug == updated.slug:
+            return updated
+        return cls._write_slug(session, updated, new_slug)
+
+    @staticmethod
+    def _write_slug(session: Session, tenant: Tenant, slug: str) -> Tenant:
+        """Store an already-validated slug, letting the index have the last word.
+
+        ``validated_slug`` read the table a moment ago; the unique index is
+        what actually decides. A racing writer that took the value in between
+        surfaces as the **same** 409 the read would have raised -- never as a
+        suffix walk, which would save an address nobody typed.
+        """
+        tenant.slug = slug
+        tenant.updated_at = clock.db_now()
+        session.add(tenant)
+        try:
+            session.commit()
+        except IntegrityError as exc:
+            session.rollback()
+            raise SlugAlreadyTakenError(slug) from exc
+        session.refresh(tenant)
+        return tenant
 
     @classmethod
     def set_logo(

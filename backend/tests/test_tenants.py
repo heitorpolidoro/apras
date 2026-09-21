@@ -63,6 +63,70 @@ def test_create_tenant_returns_201(client: TestClient, admin: User):
     assert body["updated_at"]
 
 
+def test_create_tenant_derives_and_returns_the_slug(client: TestClient, admin: User):
+    """APRAS-66 D-D: `TenantRead` carries the slug, which is what APRAS-67
+    reads back after creating a condominium."""
+    response = client.post(
+        "/api/v1/tenants",
+        json={"name": "Condomínio Altos da Serra"},
+        headers=_headers(admin),
+    )
+
+    assert response.status_code == 201
+    assert response.json()["slug"] == "condominio-altos-da-serra"
+
+
+def test_three_tenants_sharing_a_base_get_the_smallest_free_suffix(
+    client: TestClient, admin: User
+):
+    """The API-level statement of D-B: `x`, `x-2`, `x-3`, never a counter."""
+    slugs = [
+        client.post(
+            "/api/v1/tenants", json={"name": name}, headers=_headers(admin)
+        ).json()["slug"]
+        for name in ("Altos da Serra", "Altos  da  Serra!", "altos da serra.")
+    ]
+
+    assert slugs == ["altos-da-serra", "altos-da-serra-2", "altos-da-serra-3"]
+
+
+def test_renaming_a_tenant_never_regenerates_its_slug(client: TestClient, admin: User):
+    """D-C.2, on the superuser route too: `TenantUpdate` carries no `slug`."""
+    created = client.post(
+        "/api/v1/tenants", json={"name": "Altos da Serra"}, headers=_headers(admin)
+    ).json()
+
+    response = client.patch(
+        f"/api/v1/tenants/{created['id']}",
+        json={"name": "Baixos da Serra"},
+        headers=_headers(admin),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["name"] == "Baixos da Serra"
+    assert response.json()["slug"] == "altos-da-serra"
+
+
+def test_the_superuser_route_ignores_a_slug_in_the_body(
+    client: TestClient, admin: User
+):
+    """`slug` is the profile screen's field (D-C.1). `/tenants/{id}` takes
+    `TenantUpdate`, which does not declare it, so a stray one is dropped
+    rather than written."""
+    created = client.post(
+        "/api/v1/tenants", json={"name": "Altos da Serra"}, headers=_headers(admin)
+    ).json()
+
+    response = client.patch(
+        f"/api/v1/tenants/{created['id']}",
+        json={"slug": "endereco-pela-porta-dos-fundos"},
+        headers=_headers(admin),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["slug"] == "altos-da-serra"
+
+
 def test_create_tenant_rejects_duplicate_name_with_409(client: TestClient, admin: User):
     client.post("/api/v1/tenants", json={"name": "Dup"}, headers=_headers(admin))
     response = client.post(

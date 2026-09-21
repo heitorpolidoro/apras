@@ -1006,3 +1006,134 @@ after the run is byte-identical to the one at the start.
 
 - `Content-Disposition: attachment` carries no `filename=` parameter, so a downloaded legacy file lands under its UUID name. Harmless for the security property; only a UX nicety if these ever get downloaded in anger.
 - `save_file` will still mint `.html` for a caller that passes `text/html`, which is only safe because the two generators that do so use the generated-tree provider and no user-facing allowlist admits that type. An assertion in `LocalStorageProvider` that `text/html` is only accepted when `url_prefix` is the generated one would make that invariant local rather than a property of the call graph.
+
+## [APRAS-66] Slug do condomínio — 2026-09-21 (spec_review round 1)
+
+- **Collision-suffix overflow is undefined.** Base is capped at 60 and the
+  column is `VARCHAR(64)`, so `-2` … `-999` fit and `-1000` (65 chars) does
+  not. Practically unreachable, but the rule is stated as total; one sentence
+  (truncate the base further, or let the bounded retry fail loudly) closes it.
+- **Name both `AGENTS.md` places.** The spec's Files-touched row says "the
+  migration section". Besides `AGENTS.md:161-166`, `AGENTS.md:1009-1012`
+  ("Migrating an existing install") asserts the history is a single
+  `0001_initial_schema`; that paragraph also needs the update.
+- **Also stale prose:** the `test_migrations_postgres.py` module docstring
+  (lines 1-28) and the `assert_no_skips.py:22-29` comment both narrate a
+  one-revision history.
+- **Say that `test_tenant_context.py` / `test_tenant_models.py` are
+  deliberately untouched** — both read `0001` by `ast`, but only for
+  `_TENANT_SCOPED_TABLES`, and `tenant` is not scoped. A reader of the spec
+  will otherwise assume they were missed.
+- **Garbled sentence in Test criteria:** "the third is created after the
+  second is deleted-free — the smallest free integer, not a counter" does not
+  parse. State the actual case (delete `x-2`, create a fourth tenant, expect
+  `x-2` back) or drop the clause.
+
+## [APRAS-66] Slug do condomínio — 2026-09-21 (spec_review round 2)
+- D-E slightly recontextualises `0001`'s shadowing note. In `0001` that comment
+  explains why *tests* read `_TENANT_SCOPED_TABLES` out of the file with `ast`
+  instead of importing it; D-E cites it as a reason a migration should not
+  import. Both are consequences of the same packaging fact and the sentence is
+  not false, but the implementer may find the original comment does not say
+  quite what D-E implies it says. Not blocking.
+
+## [APRAS-66] Slug do condomínio — 2026-09-21 (spec_review round 3)
+
+- D-A/D-B: state the suffix budget explicitly — the base is truncated so that
+  base + `-<n>` stays within 64. At 60 characters of base the walk fits up to
+  `-999`; `-1000` is 65 characters and would hit the column. Unreachable in
+  practice (999 tenants sharing one 60-character base), but naming the
+  invariant costs one clause and removes a latent `DataError`.
+- D-C.2 says `PATCH /api/v1/tenants/{id}` changes `slug` "only when `slug` is
+  present in the request body", while D-D exposes `slug` for writing on
+  `TenantProfileUpdate` only and the files table changes
+  `backend/app/schemas/tenant.py` accordingly. The two read consistently if
+  `TenantUpdate` never carries `slug`, but saying so in one clause would stop
+  an implementer adding a second, superuser-facing write path with its own
+  validation and collision semantics.
+- The "own current slug is a no-op" rule would read more precisely if it said
+  the comparison is against the stored value *before* validation ordering is
+  decided — see the blocking finding; whichever way that is resolved, fixing
+  the order explicitly is cheap.
+
+## [APRAS-66] Slug do condomínio — 2026-09-21 (spec_review round 4)
+
+- **Trim the base to fit the suffix (non-blocking, refinement).** The
+  generated path could exceed the 64-character column if a base truncated to 60
+  characters ever needed a suffix of `-1000` or higher (65 characters). This is
+  not a genuine correctness problem at any plausible scale — it needs 999
+  tenants sharing one 60-character base, and it fails loudly rather than
+  storing something wrong — but a one-line guarantee in the producer ("shorten
+  the base so base + suffix stays <= 64") removes the edge for free. A
+  competent developer would settle this at implementation time; it does not
+  warrant spending round 5.
+- The `MIN_CASES` re-pin criterion adds a migration test case (the
+  two-character backfill row); the "measured, not counted by eye" instruction
+  already covers it, so no change needed — just noting the count moves for a
+  second reason now.
+
+## [APRAS-66] Slug do condomínio — 2026-09-21 (code_review round 1)
+
+1. **`slugErrorKeyOf` can misattribute a *name* 409 to the slug field.**
+   `frontend/src/features/user-administration/pages/TenantProfilePage.tsx:68-74`
+   maps any error on a slug-carrying submit by status alone. When the person
+   changes the **name** and the **slug** in the same Save and the *name*
+   collides, the server answers 409 (`TenantAlreadyExistsError`) and the UI
+   renders `tenantProfile.errors.slugTaken` beside the slug field — the wrong
+   field and the wrong sentence. The repo-wide `{"detail": ...}` envelope is
+   what makes the two 409s indistinguishable by status. Cheapest fix without
+   touching the envelope: when both fields changed, fall back to the
+   page-level banner (`errorKeyOf`) for 409 and keep the field-level message
+   only for a slug-only change. Non-blocking: the spec's own test criteria
+   only exercise the slug-only path, and the message is wrong rather than the
+   write.
+
+2. **`slugifyName` and `slugify` diverge on ASCII control characters.**
+   `frontend/src/api/tenantProfile.ts:64-67` strips everything outside
+   `[\x20-\x7e]`, so a tab or newline in the name vanishes; Python's
+   `slugify` (`backend/app/core/slug.py:76-79`) keeps them through
+   `encode("ascii", "ignore")` and the separator run turns them into a `-`.
+   `"a\tb"` therefore suggests `ab` in the browser and would derive `a-b` on
+   the server. Only the "suggest from name" affordance is affected, both
+   outputs satisfy `is_valid_slug`, and the server never folds a typed value,
+   so nothing can be stored wrong. Replacing the strip with a fold to `-`
+   would close it.
+
+3. **`update_profile` writes the name and the slug in two commits.**
+   `backend/app/services/tenant_service.py` — `update_profile` delegates the
+   name to `update_tenant` (which commits) and then calls `_write_slug`
+   (which commits again). Both slug *checks* do run before any write, as the
+   docstring says, but on the race path the `IntegrityError` in `_write_slug`
+   surfaces as 409 **after** the name change has already been committed. The
+   docstring's "a refused slug stores nothing -- not even the name that rode
+   along with it" is exact for the 422/409 pre-check paths and slightly
+   optimistic for the race. Either narrow the sentence or wrap the pair in
+   one transaction.
+
+4. **`Tenant.slug` carries `default=""`.** `backend/app/models/tenant.py`
+   — `__init__` always fills an absent slug, so the default is unreachable
+   through construction, but a future `Tenant.model_construct(...)` or a
+   direct ORM path that bypasses `__init__` would get `""`, which is
+   `NOT NULL`-clean and uniquely indexable exactly once. Nothing in the tree
+   does this today (grepped: no `Tenant.model_validate`, no
+   `Tenant.model_construct`, no `Tenant(**...)`), so it is latent only.
+
+5. **Spec erratum worth recording.** See "Developer flags" below: the spec's
+   test-criteria line listing `"A. B"` as an under-floor name contradicts
+   D-A's own steps. Amending that parenthetical in
+   `docs/tasks/APRAS-66-spec.md:247` would stop the next reader from
+   re-litigating it.
+
+---
+
+
+## [APRAS-66] Slug do condomínio — 2026-09-21 (qa_review round 1)
+- `tenant.slug` has a unique index but no `CHECK` constraint for the 3-64 / character rule. Every
+  application path is covered (I could not break it through one), but a future `psql` hotfix or an
+  out-of-band script could still write `AB`. A `CHECK (slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$' AND
+  char_length(slug) BETWEEN 3 AND 64)` in a later revision would make the database itself the last
+  judge. Non-blocking: nothing in the expected results asks for it.
+- `TenantService.create_tenant` exhausting `SLUG_INSERT_ATTEMPTS` raises `SlugAlreadyTakenError`,
+  which the handler maps to 409 — a reasonable status, but the message names a slug the caller
+  never typed. A distinct exception (or a message about retrying) would read better in that very
+  rare path. Non-blocking.

@@ -905,6 +905,39 @@ class TenantAlreadyExistsError(DomainError):
         super().__init__(f"Tenant with name '{name}' already exists")
 
 
+class SlugAlreadyTakenError(DomainError):
+    """Raised when the submitted condominium slug belongs to another tenant.
+
+    A **409**, never a silent rename (APRAS-66 D-C.3). The ``-2`` walk that
+    resolves a *generated* collision is deliberately not applied to a value a
+    person typed: saving something different from what was accepted is the
+    classic silent-corruption bug -- someone prints ``/c/altos-da-serra`` on a
+    notice board having seen it accepted, while the row holds
+    ``altos-da-serra-2``. Submitting the tenant's own current slug is a
+    no-op, not a conflict.
+    """
+
+    def __init__(self, slug: str) -> None:
+        super().__init__(f"O endereço '{slug}' já está em uso por outro condomínio.")
+
+
+class InvalidSlugError(DomainError):
+    """Raised when a typed condominium slug is outside the accepted set.
+
+    A **422**, and never a quiet fold of ``Altos da Serra`` into
+    ``altos-da-serra`` (APRAS-66 D-C.4), for the same reason as
+    :class:`SlugAlreadyTakenError`: what a person sees accepted must be what
+    is stored. The judge is ``app.core.slug.is_valid_slug``, the single
+    expression of the 3-64 rule that also binds generated slugs.
+    """
+
+    def __init__(self, slug: str) -> None:
+        super().__init__(
+            f"O endereço '{slug}' é inválido: use de 3 a 64 caracteres, "
+            "apenas letras minúsculas, números e hífens simples."
+        )
+
+
 class TenantMembershipAlreadyExistsError(DomainError):
     """Raised when a user is already linked to the given tenant.
 
