@@ -58,12 +58,18 @@ def scenario(client: TestClient, admin: User) -> dict:
 
     cheap = client.post(
         f"/api/v1/purchase-requests/{request_id}/quotes",
-        json={"supplier_name": "Barato", "unit_price": 100.0, "quantity": 2},
+        json={
+            "supplier_name": "Barato",
+            "items": [{"description": "Serviço", "quantity": 2, "unit_price": 100.0}],
+        },
         headers=_headers(admin),
     ).json()
     expensive = client.post(
         f"/api/v1/purchase-requests/{request_id}/quotes",
-        json={"supplier_name": "Caro", "unit_price": 300.0, "quantity": 3},
+        json={
+            "supplier_name": "Caro",
+            "items": [{"description": "Serviço", "quantity": 3, "unit_price": 300.0}],
+        },
         headers=_headers(admin),
     ).json()
     return {"request_id": request_id, "cheap": cheap, "expensive": expensive}

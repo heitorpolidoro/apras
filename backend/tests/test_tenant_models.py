@@ -66,6 +66,12 @@ INHERITED_TABLES = {
     "project_milestone": "construction_project",
     "project_update": "construction_project",
     "purchase_quote": "purchase_request",
+    # APRAS-73 D1/D2: the two sides of the comparison grid. Both are
+    # rewritten wholesale with the row that owns them and are reached only
+    # through it, so a `tenant_id` of their own would be a second, forgeable
+    # source of truth.
+    "purchase_request_item": "purchase_request",
+    "purchase_quote_item": "purchase_quote",
     "purchase_quote_decision": "purchase_request",
     "vote_option": "vote",
     "ballot": "vote",
@@ -230,7 +236,7 @@ def test_scoped_tables_have_a_not_null_tenant_id_fk(scoped_tables):
 
 
 def test_inherited_tables_have_no_tenant_id_but_a_not_null_parent_fk():
-    """The 24 inherited tables must NOT be denormalised with a `tenant_id`;
+    """The 26 inherited tables must NOT be denormalised with a `tenant_id`;
     each proves its scope through a NOT NULL FK to its listed parent."""
     for name, parent in INHERITED_TABLES.items():
         table = SQLModel.metadata.tables[name]
@@ -247,16 +253,16 @@ def test_inherited_tables_have_no_tenant_id_but_a_not_null_parent_fk():
 
 
 def test_partition_of_metadata_is_exhaustive(scoped_tables):
-    """direct + inherited + unscoped == every table: 32 + 24 + 5 == 61."""
+    """direct + inherited + unscoped == every table: 32 + 26 + 5 == 63."""
     direct = set(scoped_tables)
     partition = direct | set(INHERITED_TABLES) | UNSCOPED_TABLES
     assert partition == set(SQLModel.metadata.tables)
     assert not direct & set(INHERITED_TABLES)
     assert not direct & UNSCOPED_TABLES
     assert len(direct) == 32
-    assert len(INHERITED_TABLES) == 24
+    assert len(INHERITED_TABLES) == 26
     assert len(UNSCOPED_TABLES) == 5
-    assert len(direct) + len(INHERITED_TABLES) + len(UNSCOPED_TABLES) == 61
+    assert len(direct) + len(INHERITED_TABLES) + len(UNSCOPED_TABLES) == 63
 
 
 def test_user_stays_global():

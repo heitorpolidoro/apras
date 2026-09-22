@@ -40,6 +40,7 @@ const mockRequest: PurchaseRequest = {
   status: PurchaseRequestStatus.OPEN,
   requested_by_id: "user-1",
   requested_by_name: "Gerente Silva",
+  items: [],
   quote_count: 2,
   lowest_quote_total: 2400,
   selected_quote_id: null,

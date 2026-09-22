@@ -77,8 +77,9 @@ describe("purchases api client", () => {
 
     const payload = {
       supplier_name: "Fornecedor",
-      unit_price: 10,
-      quantity: 2,
+      items: [
+        { description: "Bomba", quantity: 2, unit_price: 10 },
+      ],
       extra_fields: [{ label: "Prazo", value: "15 dias" }],
     };
     const created = await addQuote("req-1", payload);
@@ -88,10 +89,15 @@ describe("purchases api client", () => {
       payload,
     );
 
-    await updateQuote("req-1", "quote-1", { quantity: 5 });
+    const replacement = {
+      items: [
+        { description: "Bomba", quantity: 5, unit_price: 10 },
+      ],
+    };
+    await updateQuote("req-1", "quote-1", replacement);
     expect(apiClient.put).toHaveBeenCalledWith(
       "/purchase-requests/req-1/quotes/quote-1",
-      { quantity: 5 },
+      replacement,
     );
 
     await deleteQuote("req-1", "quote-1");

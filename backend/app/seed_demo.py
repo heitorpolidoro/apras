@@ -78,7 +78,9 @@ from app.models.project import ConstructionProject, ProjectMilestone, ProjectUpd
 from app.models.purchase import (
     PurchaseQuote,
     PurchaseQuoteDecision,
+    PurchaseQuoteItem,
     PurchaseRequest,
+    PurchaseRequestItem,
 )
 from app.models.reservation import ReservableSpace, SpaceReservation
 from app.models.resident import Resident
@@ -2119,28 +2121,82 @@ def _seed_primary_tenant_data(  # noqa: PLR0912, PLR0915  # comprehensive popula
         session.commit()
         session.refresh(req1)
 
-        session.add(
-            PurchaseQuote(
-                purchase_request_id=req1.id,
-                supplier_name="SegurMax Soluções em Segurança",
-                supplier_contact="(11) 3456-7890 - Carlos Vendas",
+        # APRAS-73: the request enumerates the lines and each quote prices
+        # them. The demo deliberately shows all three states the grid has --
+        # a line one supplier skipped, a supplier's own extra line, and an
+        # offered model that differs between columns.
+        req1.items = [
+            PurchaseRequestItem(
+                description="Câmera Speed Dome IP 4MP", quantity=4, position=0
+            ),
+            PurchaseRequestItem(
+                description="Instalação e configuração", quantity=1, position=1
+            ),
+            PurchaseRequestItem(
+                description="Cabo UTP CAT6 (rolo de 100 m)", quantity=2, position=2
+            ),
+        ]
+        session.commit()
+        session.refresh(req1)
+        camera, install, cable = req1.items
+
+        complete_quote = PurchaseQuote(
+            purchase_request_id=req1.id,
+            supplier_name="SegurMax Soluções em Segurança",
+            supplier_contact="(11) 3456-7890 - Carlos Vendas",
+            notes="Entrega em 5 dias úteis. Garantia estendida de 2 anos inclusa.",
+            created_by_id=sindico_user.id,
+        )
+        complete_quote.items = [
+            PurchaseQuoteItem(
+                request_item_id=camera.id,
+                model="Intelbras VIP 5432 SD IA",
                 unit_price=Decimal("1450.00"),
-                quantity=4,
-                notes="Entrega em 5 dias úteis. Garantia estendida de 2 anos inclusa.",
-                created_by_id=sindico_user.id,
-            )
+                position=0,
+            ),
+            PurchaseQuoteItem(
+                request_item_id=install.id,
+                unit_price=Decimal("1200.00"),
+                position=1,
+            ),
+            PurchaseQuoteItem(
+                request_item_id=cable.id,
+                model="Furukawa CAT6 U/UTP",
+                unit_price=Decimal("480.00"),
+                position=2,
+            ),
+        ]
+        session.add(complete_quote)
+
+        partial_quote = PurchaseQuote(
+            purchase_request_id=req1.id,
+            supplier_name="CFTV Express Distribuidora",
+            supplier_contact="(11) 4567-8901 - Amanda",
+            notes="Inclui suportes de parede e conectores blindados de brinde.",
+            created_by_id=sindico_user.id,
         )
-        session.add(
-            PurchaseQuote(
-                purchase_request_id=req1.id,
-                supplier_name="CFTV Express Distribuidora",
-                supplier_contact="(11) 4567-8901 - Amanda",
+        partial_quote.items = [
+            PurchaseQuoteItem(
+                request_item_id=camera.id,
+                model="Hikvision DS-2DE4A425IW",
                 unit_price=Decimal("1620.00"),
-                quantity=4,
-                notes="Inclui suportes de parede e conectores blindados de brinde.",
-                created_by_id=sindico_user.id,
-            )
-        )
+                position=0,
+            ),
+            PurchaseQuoteItem(
+                request_item_id=cable.id,
+                unit_price=Decimal("440.00"),
+                position=1,
+            ),
+            # The supplier's own line: no `request_item_id`, so it counts
+            # toward the total and never toward coverage.
+            PurchaseQuoteItem(
+                description="Nobreak 1,2 kVA para o rack",
+                quantity=1,
+                unit_price=Decimal("890.00"),
+                position=2,
+            ),
+        ]
+        session.add(partial_quote)
         session.commit()
 
     req2 = session.exec(
@@ -2166,17 +2222,32 @@ def _seed_primary_tenant_data(  # noqa: PLR0912, PLR0915  # comprehensive popula
         session.commit()
         session.refresh(req2)
 
+        req2.items = [
+            PurchaseRequestItem(
+                description="Troca da carga de areia e das crepinas",
+                quantity=1,
+                position=0,
+            )
+        ]
+        session.commit()
+        session.refresh(req2)
+
         chosen_q = PurchaseQuote(
             purchase_request_id=req2.id,
             supplier_name="Piscinas Cristalinas Manutenção Ltda",
             supplier_contact="(11) 98888-2233 - Roberto",
-            unit_price=Decimal("2800.00"),
-            quantity=1,
             notes=(
                 "Serviço completo incluindo remoção de carga antiga, areia e crepinas."
             ),
             created_by_id=zelador_user.id,
         )
+        chosen_q.items = [
+            PurchaseQuoteItem(
+                request_item_id=req2.items[0].id,
+                unit_price=Decimal("2800.00"),
+                position=0,
+            )
+        ]
         session.add(chosen_q)
         session.commit()
         session.refresh(chosen_q)

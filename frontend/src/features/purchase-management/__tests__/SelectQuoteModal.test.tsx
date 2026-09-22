@@ -9,8 +9,20 @@ const quote: PurchaseQuote = {
   purchase_request_id: "req-1",
   supplier_name: "Hidráulica Central",
   supplier_contact: null,
-  unit_price: 1200,
-  quantity: 2,
+  items: [
+    {
+      id: "qi-1",
+      request_item_id: "ri-1",
+      model: null,
+      unit_price: 1200,
+      description: "Bomba submersa",
+      quantity: 2,
+      position: 0,
+      line_total: 2400,
+    },
+  ],
+  quoted_item_count: 1,
+  is_complete: true,
   notes: null,
   extra_fields: [],
   attachment_url: null,
@@ -28,8 +40,6 @@ const lowestQuote: PurchaseQuote = {
   ...quote,
   id: "quote-lowest",
   supplier_name: "Eletro Norte",
-  unit_price: 245,
-  quantity: 12,
   total_price: 2940,
   is_lowest_price: true,
 };
@@ -38,8 +48,6 @@ const dearerQuote: PurchaseQuote = {
   ...quote,
   id: "quote-dearer",
   supplier_name: "Luz & Cia Elétrica",
-  unit_price: 289.9,
-  quantity: 12,
   total_price: 3478.8,
   is_lowest_price: false,
 };
@@ -68,6 +76,13 @@ describe("computeGap", () => {
     const gap = computeGap(dearerQuote, lowestQuote);
     expect(gap?.difference).toBeCloseTo(538.8, 2);
     expect(gap?.percent).toBeCloseTo(18.3, 1);
+  });
+
+  it("is null for an incomplete quote, however it compares (APRAS-73 D10)", () => {
+    // A partial offer's distance from a full one is not a price
+    // difference: the modal states the coverage instead.
+    const partial = { ...dearerQuote, is_complete: false };
+    expect(computeGap(partial, lowestQuote)).toBeNull();
   });
 });
 
@@ -192,6 +207,56 @@ describe("SelectQuoteModal", () => {
       />,
     );
     expect(screen.queryByTestId("decision-gap")).toBeNull();
+  });
+
+  it("warns about coverage, and renders no gap, for an incomplete quote", () => {
+    render(
+      <SelectQuoteModal
+        isOpen
+        onClose={vi.fn()}
+        quote={{ ...dearerQuote, is_complete: false, quoted_item_count: 2 }}
+        lowestQuote={lowestQuote}
+        requestItemCount={3}
+        onSubmit={vi.fn()}
+      />,
+    );
+
+    const panel = screen.getByTestId("decision-coverage-warning");
+    expect(panel).toHaveTextContent("Este orçamento cobre 2 de 3 itens.");
+    expect(panel).toHaveTextContent("não atende o pedido inteiro");
+    expect(screen.queryByTestId("decision-gap")).toBeNull();
+  });
+
+  it("renders the gap and no coverage warning for a complete quote", () => {
+    render(
+      <SelectQuoteModal
+        isOpen
+        onClose={vi.fn()}
+        quote={dearerQuote}
+        lowestQuote={lowestQuote}
+        requestItemCount={1}
+        onSubmit={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId("decision-gap")).toBeInTheDocument();
+    expect(screen.queryByTestId("decision-coverage-warning")).toBeNull();
+  });
+
+  it("prints the coverage and the total in the head panel", () => {
+    render(
+      <SelectQuoteModal
+        isOpen
+        onClose={vi.fn()}
+        quote={quote}
+        requestItemCount={1}
+        onSubmit={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Hidráulica Central")).toBeInTheDocument();
+    expect(screen.getByText(/Cobertura: 1 de 1 itens/)).toBeInTheDocument();
+    expect(screen.getByText("R$ 2.400,00")).toBeInTheDocument();
   });
 
   it("closes without submitting when cancelled", () => {

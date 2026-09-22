@@ -53,6 +53,14 @@ const baseDetail: PurchaseRequestDetail = {
   status: PurchaseRequestStatus.OPEN,
   requested_by_id: "user-1",
   requested_by_name: "Gerente Silva",
+  items: [
+    {
+      id: "ri-pump",
+      description: "Bomba submersa",
+      quantity: 2,
+      position: 0,
+    },
+  ],
   quote_count: 2,
   lowest_quote_total: 2400,
   selected_quote_id: null,
@@ -67,8 +75,20 @@ const baseDetail: PurchaseRequestDetail = {
       purchase_request_id: "req-1",
       supplier_name: "Bombas & Cia",
       supplier_contact: "(11) 3333-0000",
-      unit_price: 1200,
-      quantity: 2,
+      items: [
+        {
+          id: "qi-cheap",
+          request_item_id: "ri-pump",
+          model: null,
+          unit_price: 1200,
+          description: "Bomba submersa",
+          quantity: 2,
+          position: 0,
+          line_total: 2400,
+        },
+      ],
+      quoted_item_count: 1,
+      is_complete: true,
       notes: null,
       extra_fields: [{ label: "Prazo de entrega", value: "15 dias" }],
       attachment_url: null,
@@ -86,8 +106,20 @@ const baseDetail: PurchaseRequestDetail = {
       purchase_request_id: "req-1",
       supplier_name: "Hidráulica Central",
       supplier_contact: null,
-      unit_price: 1500,
-      quantity: 2,
+      items: [
+        {
+          id: "qi-expensive",
+          request_item_id: "ri-pump",
+          model: null,
+          unit_price: 1500,
+          description: "Bomba submersa",
+          quantity: 2,
+          position: 0,
+          line_total: 3000,
+        },
+      ],
+      quoted_item_count: 1,
+      is_complete: true,
       notes: null,
       extra_fields: [],
       attachment_url: null,
@@ -284,7 +316,7 @@ describe("PurchaseRequestDetailModal", () => {
     fireEvent.change(screen.getByLabelText("Fornecedor *"), {
       target: { value: "Terceiro Fornecedor" },
     });
-    fireEvent.change(screen.getByLabelText("Preço unitário (R$) *"), {
+    fireEvent.change(screen.getByTestId("quote-line-price-ri-pump"), {
       target: { value: "500" },
     });
     fireEvent.submit(screen.getByTestId("quote-form"));
@@ -297,8 +329,8 @@ describe("PurchaseRequestDetailModal", () => {
     });
 
     fireEvent.click(screen.getAllByTitle("Editar Orçamento")[0]);
-    fireEvent.change(screen.getByLabelText("Quantidade *"), {
-      target: { value: "5" },
+    fireEvent.change(screen.getByTestId("quote-line-price-ri-pump"), {
+      target: { value: "1100" },
     });
     fireEvent.submit(screen.getByTestId("quote-form"));
 
@@ -306,7 +338,11 @@ describe("PurchaseRequestDetailModal", () => {
       expect(purchasesApi.updateQuote).toHaveBeenCalledWith(
         "req-1",
         "quote-cheap",
-        expect.objectContaining({ quantity: 5 }),
+        expect.objectContaining({
+          items: [
+            { request_item_id: "ri-pump", model: null, unit_price: 1100 },
+          ],
+        }),
       );
     });
 
@@ -326,7 +362,15 @@ describe("PurchaseRequestDetailModal", () => {
     // One column per supplier, the fixed rows, and the union label once —
     // not once per supplier, which is what the stacked cards used to do.
     expect(screen.getAllByTestId(/quote-row-/)).toHaveLength(2);
-    expect(screen.getByText("Unitário × qtd.")).toBeInTheDocument();
+    // APRAS-73 D9: the single-price row is gone; the items grid has
+    // one row per request line and one cell per supplier instead.
+    expect(screen.queryByText("Unitário × qtd.")).toBeNull();
+    // Twice on purpose: the request's own line list at the top of the
+    // detail, and the grid row the suppliers are compared across.
+    expect(screen.getAllByText("2 × Bomba submersa")).toHaveLength(2);
+    expect(
+      screen.getByTestId("grid-cell-ri-pump-quote-cheap"),
+    ).toHaveAttribute("data-quoted", "true");
     expect(screen.getAllByText("Prazo de entrega")).toHaveLength(1);
     expect(screen.getByText("15 dias")).toBeInTheDocument();
 

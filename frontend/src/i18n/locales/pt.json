@@ -1320,8 +1320,6 @@
       "supplierNamePlaceholder": "Ex: Hidráulica Central Ltda",
       "supplierContact": "Contato do fornecedor",
       "supplierContactPlaceholder": "Telefone, e-mail ou vendedor",
-      "unitPrice": "Preço unitário (R$) *",
-      "quantity": "Quantidade *",
       "quantityInvalid": "A quantidade deve ser maior que zero.",
       "unitPriceInvalid": "O preço unitário não pode ser negativo.",
       "total": "Total do orçamento",
@@ -1360,7 +1358,9 @@
       "superseded": "Substituída",
       "gapTitle": "Este não é o menor orçamento.",
       "gapBody": "O menor é {{supplier}}, com {{lowest}}. A escolha custa {{difference}} a mais ({{percent}}%).",
-      "gapHint": "Explique abaixo o que justifica a diferença (garantia, prazo, instalação inclusa…)."
+      "gapHint": "Explique abaixo o que justifica a diferença (garantia, prazo, instalação inclusa…).",
+      "coverageTitle": "Este orçamento cobre {{quoted}} de {{total}} itens.",
+      "coverageBody": "Ele não atende o pedido inteiro, então não há comparação de preço com os orçamentos completos."
     },
     "detail": {
       "title": "Pedido de Compra",
@@ -1368,8 +1368,6 @@
       "description": "Descrição",
       "quotes": "Orçamentos",
       "supplier": "Fornecedor",
-      "unitPrice": "Preço unitário",
-      "quantity": "Qtd.",
       "totalPrice": "Total",
       "actions": "Ações"
     },
@@ -1377,7 +1375,6 @@
       "title": "Comparação",
       "field": "Campo",
       "total": "Total",
-      "unitTimesQuantity": "Unitário × qtd.",
       "contact": "Contato",
       "notes": "Observações",
       "attachment": "Documento",
@@ -1400,6 +1397,34 @@
       "invalidType": "Formato não aceito. Envie PDF, PNG ou JPEG com até 5 MB.",
       "tooLarge": "Arquivo acima de 5 MB. Envie PDF, PNG ou JPEG com até 5 MB.",
       "rejected": "{{filename}} não foi enviado."
+    },
+    "items": {
+      "addExtra": "Adicionar item",
+      "addLine": "Adicionar item",
+      "atLeastOne": "Informe o preço de ao menos um item para salvar o orçamento.",
+      "coverage": "Cobertura: {{quoted}} de {{total}} itens",
+      "description": "Descrição",
+      "descriptionPlaceholder": "Ex: Nobreak 1,2 kVA",
+      "descriptionRequired": "Todo item avulso precisa de uma descrição.",
+      "extraBadge": "Extra",
+      "extraTitle": "Itens avulsos do fornecedor",
+      "gridTitle": "Itens",
+      "gridTitleNarrow": "Itens ({{count}})",
+      "lockedHint": "Os itens de um pedido decidido ou cancelado não podem ser alterados.",
+      "model": "Modelo ofertado",
+      "modelPlaceholder": "Modelo ofertado (opcional)",
+      "notQuoted": "Não cotado",
+      "quantity": "Quantidade",
+      "quoteHint": "Preencha o preço dos itens que este fornecedor cota. Deixe em branco o que ele não atende — não será somado.",
+      "quoteTitle": "Itens do pedido",
+      "removalWarning": "Ao remover este item, os preços já lançados por {{count}} orçamento(s) para ele serão apagados.",
+      "removeExtra": "Remover item",
+      "removeLine": "Remover item",
+      "requestHasNone": "Este pedido não enumerou itens. Adicione abaixo o que o fornecedor está cotando.",
+      "requestHint": "Enumere o que será comprado. Cada orçamento preenche o modelo e o preço de cada item.",
+      "requestPlaceholder": "Ex: Câmeras IP 4MP",
+      "requestTitle": "Itens do pedido",
+      "unitPrice": "Preço unitário"
     }
   },
   "tenant": {

@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>APRAS-73 — Itens do pedido, preços por orçamento</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-50 text-slate-900">
+<div class="max-w-6xl mx-auto p-6 space-y-6">
+
+  <header class="space-y-1">
+    <h1 class="text-2xl font-bold">APRAS-73 — Itens do pedido, preços por orçamento</h1>
+    <p class="text-sm text-slate-600">
+      O item passa a ser do <strong>pedido</strong>: quem abre a compra enumera as linhas
+      (descrição + quantidade) e cada orçamento preenche, por linha, o <strong>modelo ofertado
+      (opcional)</strong> e o <strong>preço unitário</strong>. A comparação vira uma grade —
+      linhas = itens do pedido, colunas = orçamentos.
+      <code>purchase_quote.unit_price</code> e <code>purchase_quote.quantity</code> saem da tabela.
+    </p>
+  </header>
+
+  <nav class="flex flex-wrap gap-2 border-b border-slate-200">
+    <button data-tab="request" class="tab px-4 py-2 text-sm font-medium border-b-2 border-slate-900">1. Itens do pedido</button>
+    <button data-tab="quote" class="tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-slate-500">2. Orçamento preenche</button>
+    <button data-tab="compare" class="tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-slate-500">3. Grade de comparação</button>
+    <button data-tab="decide" class="tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-slate-500">4. Decisão</button>
+    <button data-tab="narrow" class="tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-slate-500">Celular</button>
+    <button data-tab="migration" class="tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-slate-500">Migração</button>
+  </nav>
+
+  <!-- ==================== 1. ITENS DO PEDIDO ==================== -->
+  <section data-panel="request" class="panel space-y-4">
+    <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+        <h2 class="text-lg font-semibold">Editar Pedido de Compra</h2>
+        <i data-lucide="x" class="h-5 w-5 text-slate-400"></i>
+      </div>
+      <div class="space-y-5 px-6 py-5">
+        <label class="block">
+          <span class="text-xs font-semibold text-slate-600">Título *</span>
+          <input value="Instalação de CFTV no perímetro" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+        </label>
+
+        <div class="rounded-lg border border-slate-200">
+          <div class="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-4 py-3">
+            <h3 class="text-sm font-semibold">Itens do pedido <span class="text-slate-400">(3 de 50)</span></h3>
+            <button id="add-request-item" class="inline-flex items-center gap-1 rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white">
+              <i data-lucide="plus" class="h-3.5 w-3.5"></i> Adicionar item
+            </button>
+          </div>
+          <p class="px-4 pt-3 text-xs text-slate-500">
+            Descreva o que será comprado e quantos. Cada orçamento vai preencher, para cada item,
+            o modelo ofertado e o preço unitário. O pedido <strong>não</strong> tem preço.
+          </p>
+          <div id="request-items" class="divide-y divide-slate-100">
+            <div class="grid grid-cols-12 items-end gap-3 px-4 py-3">
+              <label class="col-span-8 block">
+                <span class="text-xs font-semibold text-slate-600">Descrição *</span>
+                <input value="Câmeras IP 4MP bullet" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+              </label>
+              <label class="col-span-3 block">
+                <span class="text-xs font-semibold text-slate-600">Quantidade *</span>
+                <input type="number" value="4" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+              </label>
+              <button class="col-span-1 mb-2 justify-self-center text-slate-400 hover:text-red-600" onclick="warnRemoval(this, 3)">
+                <i data-lucide="trash-2" class="h-4 w-4"></i>
+              </button>
+            </div>
+            <div class="grid grid-cols-12 items-end gap-3 px-4 py-3">
+              <label class="col-span-8 block">
+                <span class="text-xs font-semibold text-slate-600">Descrição *</span>
+                <input value="Gravador NVR 8 canais" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+              </label>
+              <label class="col-span-3 block">
+                <span class="text-xs font-semibold text-slate-600">Quantidade *</span>
+                <input type="number" value="1" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+              </label>
+              <button class="col-span-1 mb-2 justify-self-center text-slate-400 hover:text-red-600" onclick="warnRemoval(this, 2)">
+                <i data-lucide="trash-2" class="h-4 w-4"></i>
+              </button>
+            </div>
+            <div class="grid grid-cols-12 items-end gap-3 px-4 py-3">
+              <label class="col-span-8 block">
+                <span class="text-xs font-semibold text-slate-600">Descrição *</span>
+                <input value="Instalação e configuração" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+              </label>
+              <label class="col-span-3 block">
+                <span class="text-xs font-semibold text-slate-600">Quantidade *</span>
+                <input type="number" value="1" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+              </label>
+              <button class="col-span-1 mb-2 justify-self-center text-slate-400 hover:text-red-600" onclick="warnRemoval(this, 3)">
+                <i data-lucide="trash-2" class="h-4 w-4"></i>
+              </button>
+            </div>
+          </div>
+          <div id="removal-warning" class="hidden border-t border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+            <i data-lucide="alert-triangle" class="inline h-3.5 w-3.5"></i>
+            Ao remover este item, os preços já lançados por <strong>3 orçamento(s)</strong> para ele serão apagados.
+            <button class="ml-2 underline" onclick="document.getElementById('removal-warning').classList.add('hidden')">entendi</button>
+          </div>
+        </div>
+
+        <p class="text-xs text-slate-500">
+          Um pedido pode ficar <strong>sem itens</strong> — é o caso dos pedidos antigos e das compras
+          em que cada fornecedor monta o próprio escopo. Nesse caso o orçamento lança linhas próprias.
+        </p>
+      </div>
+      <div class="flex justify-end gap-2 border-t border-slate-100 px-6 py-4">
+        <button class="rounded-md border border-slate-300 px-4 py-2 text-sm">Cancelar</button>
+        <button class="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">Salvar</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 2. ORÇAMENTO PREENCHE ==================== -->
+  <section data-panel="quote" class="panel hidden space-y-4">
+    <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+        <h2 class="text-lg font-semibold">Editar Orçamento</h2>
+        <i data-lucide="x" class="h-5 w-5 text-slate-400"></i>
+      </div>
+      <div class="space-y-5 px-6 py-5">
+        <div class="grid gap-4 md:grid-cols-2">
+          <label class="block">
+            <span class="text-xs font-semibold text-slate-600">Fornecedor *</span>
+            <input value="Vigiar Sistemas" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+          </label>
+          <label class="block">
+            <span class="text-xs font-semibold text-slate-600">Contato</span>
+            <input value="(11) 4002-8922" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+          </label>
+        </div>
+
+        <div class="rounded-lg border border-slate-200">
+          <div class="border-b border-slate-100 bg-slate-50 px-4 py-3">
+            <h3 class="text-sm font-semibold">Itens do pedido</h3>
+            <p class="mt-1 text-xs text-slate-500">
+              A descrição e a quantidade vêm do pedido e não são editáveis aqui.
+              O <strong>modelo é opcional</strong> — preencha só quando o fornecedor ofertar algo específico.
+              Se ele não cotar um item, deixe o preço em branco: a linha fica
+              <strong>vazia na comparação</strong>, não vira R$ 0,00.
+            </p>
+          </div>
+          <div class="divide-y divide-slate-100">
+
+            <div class="quote-line px-4 py-3" data-total="3960">
+              <div class="grid grid-cols-12 items-end gap-3">
+                <div class="col-span-4">
+                  <p class="text-sm font-medium">4 × Câmeras IP 4MP bullet</p>
+                  <p class="text-xs text-slate-400">item do pedido</p>
+                </div>
+                <label class="col-span-3 block">
+                  <span class="text-xs font-semibold text-slate-600">Modelo <span class="font-normal text-slate-400">(opcional)</span></span>
+                  <input value="Hikvision DS-2CD1043" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+                </label>
+                <label class="col-span-3 block">
+                  <span class="text-xs font-semibold text-slate-600">Preço unitário</span>
+                  <input class="price mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value="990,00" />
+                </label>
+                <div class="col-span-2 pb-2 text-right">
+                  <p class="text-xs text-slate-400">total da linha</p>
+                  <p class="line-total text-sm font-semibold">R$ 3.960,00</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="quote-line bg-slate-50/60 px-4 py-3" data-total="0">
+              <div class="grid grid-cols-12 items-end gap-3">
+                <div class="col-span-4">
+                  <p class="text-sm font-medium">1 × Gravador NVR 8 canais</p>
+                  <p class="text-xs text-slate-400">item do pedido</p>
+                </div>
+                <label class="col-span-3 block">
+                  <span class="text-xs font-semibold text-slate-600">Modelo <span class="font-normal text-slate-400">(opcional)</span></span>
+                  <input placeholder="—" class="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm" />
+                </label>
+                <label class="col-span-3 block">
+                  <span class="text-xs font-semibold text-slate-600">Preço unitário</span>
+                  <input class="price mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm" placeholder="não cotado" value="" />
+                </label>
+                <div class="col-span-2 pb-2 text-right">
+                  <p class="text-xs text-slate-400">total da linha</p>
+                  <p class="line-total text-sm font-semibold text-slate-400">não cotado</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="quote-line px-4 py-3" data-total="1800">
+              <div class="grid grid-cols-12 items-end gap-3">
+                <div class="col-span-4">
+                  <p class="text-sm font-medium">1 × Instalação e configuração</p>
+                  <p class="text-xs text-slate-400">item do pedido</p>
+                </div>
+                <label class="col-span-3 block">
+                  <span class="text-xs font-semibold text-slate-600">Modelo <span class="font-normal text-slate-400">(opcional)</span></span>
+                  <input placeholder="—" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+                </label>
+                <label class="col-span-3 block">
+                  <span class="text-xs font-semibold text-slate-600">Preço unitário</span>
+                  <input class="price mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value="1.800,00" />
+                </label>
+                <div class="col-span-2 pb-2 text-right">
+                  <p class="text-xs text-slate-400">total da linha</p>
+                  <p class="line-total text-sm font-semibold">R$ 1.800,00</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between border-y border-slate-100 bg-slate-50 px-4 py-3">
+            <h3 class="text-sm font-semibold">Itens extras deste fornecedor</h3>
+            <button id="add-extra" class="inline-flex items-center gap-1 rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium">
+              <i data-lucide="plus" class="h-3.5 w-3.5"></i> Adicionar item extra
+            </button>
+          </div>
+          <p class="px-4 pt-3 text-xs text-slate-500">
+            Para o que o fornecedor ofereceu e o pedido não pediu. Aparece na grade como uma linha
+            própria, vazia nas colunas dos outros orçamentos.
+          </p>
+          <div id="extra-lines" class="divide-y divide-slate-100">
+            <div class="quote-line px-4 py-3" data-total="890">
+              <div class="grid grid-cols-12 items-end gap-3">
+                <label class="col-span-3 block">
+                  <span class="text-xs font-semibold text-slate-600">Descrição *</span>
+                  <input value="No-break 1200VA" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+                </label>
+                <label class="col-span-1 block">
+                  <span class="text-xs font-semibold text-slate-600">Qtd *</span>
+                  <input type="number" value="1" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+                </label>
+                <label class="col-span-3 block">
+                  <span class="text-xs font-semibold text-slate-600">Modelo <span class="font-normal text-slate-400">(opcional)</span></span>
+                  <input value="SMS Net4+" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+                </label>
+                <label class="col-span-3 block">
+                  <span class="text-xs font-semibold text-slate-600">Preço unitário</span>
+                  <input class="price mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value="890,00" />
+                </label>
+                <div class="col-span-2 pb-2 text-right">
+                  <p class="text-xs text-slate-400">total da linha</p>
+                  <p class="line-total text-sm font-semibold">R$ 890,00</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-4 py-3">
+            <span class="text-xs text-slate-500">Cobertura: <strong>2 de 3 itens do pedido</strong> · 1 item extra</span>
+            <span class="text-sm font-semibold">Total do orçamento: <span id="quote-total">R$ 6.650,00</span></span>
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 border-t border-slate-100 px-6 py-4">
+        <button class="rounded-md border border-slate-300 px-4 py-2 text-sm">Cancelar</button>
+        <button class="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">Salvar Orçamento</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 3. GRADE DE COMPARAÇÃO ==================== -->
+  <section data-panel="compare" class="panel hidden space-y-4">
+    <div class="rounded-lg border border-slate-200 bg-white p-4 text-xs text-slate-600">
+      <strong>D9.</strong> As linhas da grade são os <strong>itens do pedido</strong> — o alinhamento é
+      por identidade da linha, não por texto livre. Cada célula traz o modelo ofertado
+      (<strong>só quando existe</strong>: modelo vazio não desenha nada, nem traço nem placeholder),
+      o unitário e o total da linha. Item que o fornecedor não cotou mostra
+      <strong>«Não cotado»</strong>, nunca R$ 0,00. Os itens extras de cada fornecedor vêm depois,
+      marcados como <strong>Extra</strong> e vazios nas outras colunas.
+    </div>
+
+    <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-xs text-emerald-900">
+      <strong>D10 — o menor preço é disputado só entre orçamentos completos.</strong>
+      Um orçamento incompleto é mais barato <em>porque entrega menos</em>: chamá-lo de menor preço
+      compara coisas diferentes e aponta a escolha errada bem na tela feita para escolher. Por isso a
+      Vigiar (R$ 6.650,00, 2 de 3) <strong>não</strong> leva o selo e <strong>não</strong> é a base do
+      percentual, embora continue visível com sua cobertura. O selo fica com a
+      <strong>Acme</strong> (R$ 7.480,00, 3 de 3), o menor entre os completos. Se nenhum orçamento
+      fosse completo, não haveria selo em coluna nenhuma e <code>lowest_quote_total</code> seria
+      <code>None</code>. Isto <strong>muda</strong> o contrato da APRAS-63 (mínimo puro sobre totais).
+    </div>
+
+    <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+      <table class="min-w-full text-sm">
+        <thead>
+          <tr class="border-b border-slate-200 bg-slate-50 text-left">
+            <th class="w-56 px-4 py-3 text-xs font-semibold uppercase text-slate-500">Item do pedido</th>
+            <th class="px-4 py-3">
+              <div class="flex items-center gap-2">
+                <span class="font-semibold">Acme Segurança</span>
+                <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Menor preço</span>
+              </div>
+              <div class="mt-1 text-xs text-slate-500">Cobertura: 3 de 3 itens</div>
+            </th>
+            <th class="px-4 py-3">
+              <div class="font-semibold">Vigiar Sistemas</div>
+              <div class="mt-1 text-xs font-semibold text-amber-700">Cobertura: 2 de 3 itens · fora da disputa de menor preço</div>
+            </th>
+            <th class="px-4 py-3">
+              <div class="font-semibold">Guardião Tec</div>
+              <div class="mt-1 text-xs text-slate-500">Cobertura: 3 de 3 itens</div>
+            </th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <tr>
+            <td class="px-4 py-3 align-top text-xs font-semibold text-slate-600">4 × Câmeras IP 4MP bullet</td>
+            <td class="px-4 py-3 align-top" data-quoted="true">
+              <div class="text-xs text-slate-500">Intelbras VIP 3230</div>
+              <div>R$ 1.180,00 <span class="text-xs text-slate-400">/un.</span></div>
+              <div class="text-sm font-semibold">R$ 4.720,00</div>
+            </td>
+            <td class="px-4 py-3 align-top" data-quoted="true">
+              <div class="text-xs text-slate-500">Hikvision DS-2CD1043</div>
+              <div>R$ 990,00 <span class="text-xs text-slate-400">/un.</span></div>
+              <div class="text-sm font-semibold">R$ 3.960,00</div>
+            </td>
+            <td class="px-4 py-3 align-top" data-quoted="true">
+              <div>R$ 1.240,00 <span class="text-xs text-slate-400">/un.</span></div>
+              <div class="text-sm font-semibold">R$ 4.960,00</div>
+            </td>
+          </tr>
+          <tr>
+            <td class="px-4 py-3 align-top text-xs font-semibold text-slate-600">1 × Gravador NVR 8 canais</td>
+            <td class="px-4 py-3 align-top" data-quoted="true">
+              <div class="text-xs text-slate-500">Intelbras NVD 1408</div>
+              <div>R$ 1.260,00 <span class="text-xs text-slate-400">/un.</span></div>
+              <div class="text-sm font-semibold">R$ 1.260,00</div>
+            </td>
+            <td class="bg-amber-50/60 px-4 py-3 align-top" data-quoted="false">
+              <span class="text-sm italic text-slate-400">Não cotado</span>
+            </td>
+            <td class="px-4 py-3 align-top" data-quoted="true">
+              <div class="text-xs text-slate-500">Dahua NVR4108</div>
+              <div>R$ 1.390,00 <span class="text-xs text-slate-400">/un.</span></div>
+              <div class="text-sm font-semibold">R$ 1.390,00</div>
+            </td>
+          </tr>
+          <tr>
+            <td class="px-4 py-3 align-top text-xs font-semibold text-slate-600">1 × Instalação e configuração</td>
+            <td class="px-4 py-3 align-top" data-quoted="true">
+              <div>R$ 1.500,00 <span class="text-xs text-slate-400">/un.</span></div>
+              <div class="text-sm font-semibold">R$ 1.500,00</div>
+            </td>
+            <td class="px-4 py-3 align-top" data-quoted="true">
+              <div>R$ 1.800,00 <span class="text-xs text-slate-400">/un.</span></div>
+              <div class="text-sm font-semibold">R$ 1.800,00</div>
+            </td>
+            <td class="px-4 py-3 align-top" data-quoted="true">
+              <div>R$ 1.350,00 <span class="text-xs text-slate-400">/un.</span></div>
+              <div class="text-sm font-semibold">R$ 1.350,00</div>
+            </td>
+          </tr>
+          <tr class="bg-slate-50/50">
+            <td class="px-4 py-3 align-top text-xs font-semibold text-slate-600">
+              1 × No-break 1200VA
+              <span class="ml-1 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-600">Extra</span>
+            </td>
+            <td class="px-4 py-3 align-top" data-quoted="false"></td>
+            <td class="px-4 py-3 align-top" data-quoted="true">
+              <div class="text-xs text-slate-500">SMS Net4+</div>
+              <div>R$ 890,00 <span class="text-xs text-slate-400">/un.</span></div>
+              <div class="text-sm font-semibold">R$ 890,00</div>
+            </td>
+            <td class="px-4 py-3 align-top" data-quoted="false"></td>
+          </tr>
+
+          <tr class="border-t-2 border-slate-300 bg-slate-50">
+            <td class="px-4 py-3 text-xs font-semibold uppercase text-slate-500">Total</td>
+            <td class="px-4 py-3 text-base font-bold text-emerald-700">R$ 7.480,00</td>
+            <td class="px-4 py-3 text-base font-bold text-slate-500">R$ 6.650,00</td>
+            <td class="px-4 py-3 text-base font-bold">R$ 7.700,00</td>
+          </tr>
+          <tr>
+            <td class="px-4 py-3 text-xs font-semibold uppercase text-slate-500">Contato</td>
+            <td class="px-4 py-3">(11) 3555-1020</td>
+            <td class="px-4 py-3">(11) 4002-8922</td>
+            <td class="px-4 py-3">(11) 2891-7744</td>
+          </tr>
+          <tr>
+            <td class="px-4 py-3 text-xs font-semibold uppercase text-slate-500">Observações</td>
+            <td class="px-4 py-3 text-slate-600">Garantia de 24 meses.</td>
+            <td class="px-4 py-3 text-slate-600">Não trabalha com gravador.</td>
+            <td class="px-4 py-3 text-slate-600">Prazo de 30 dias.</td>
+          </tr>
+          <tr>
+            <td class="px-4 py-3 text-xs font-semibold uppercase text-slate-500">Documento</td>
+            <td class="px-4 py-3"><span class="text-sky-700 underline">orcamento-acme.pdf</span></td>
+            <td class="px-4 py-3"><span class="text-sky-700 underline">vigiar-proposta.pdf</span></td>
+            <td class="px-4 py-3 text-slate-400">Não informado</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ==================== 4. DECISÃO ==================== -->
+  <section data-panel="decide" class="panel hidden space-y-4">
+    <div class="mx-auto max-w-xl rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+        <h2 class="text-lg font-semibold">Escolher Orçamento</h2>
+        <i data-lucide="x" class="h-5 w-5 text-slate-400"></i>
+      </div>
+      <div class="space-y-4 px-6 py-5">
+        <div class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+          <p class="text-sm font-semibold">Guardião Tec</p>
+          <p class="text-xs text-slate-500">Cobertura: 3 de 3 itens do pedido</p>
+          <p class="mt-1 text-xl font-bold">R$ 7.700,00</p>
+        </div>
+
+        <div data-testid="decision-gap" class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <p><i data-lucide="trending-up" class="inline h-4 w-4"></i>
+            <strong>R$ 220,00 (2,9%)</strong> acima do menor orçamento completo — Acme Segurança,
+            R$ 7.480,00.</p>
+        </div>
+
+        <p class="text-xs text-slate-500">
+          A base do percentual é a <strong>Acme</strong>, e não a Vigiar (R$ 6.650,00): a Vigiar não
+          cobre todos os itens, então a diferença contra ela não compararia o mesmo escopo.
+        </p>
+
+        <label class="block">
+          <span class="text-xs font-semibold text-slate-600">Justificativa *</span>
+          <textarea rows="3" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm">Único fornecedor que cotou o gravador; preço total menor que contratar dois fornecedores.</textarea>
+        </label>
+      </div>
+      <div class="flex justify-end gap-2 border-t border-slate-100 px-6 py-4">
+        <button class="rounded-md border border-slate-300 px-4 py-2 text-sm">Cancelar</button>
+        <button class="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">Confirmar escolha</button>
+      </div>
+    </div>
+
+    <div class="mx-auto max-w-xl rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+        <h2 class="text-lg font-semibold">Escolher Orçamento <span class="text-xs font-normal text-slate-500">— segundo estado: escolhendo um orçamento incompleto</span></h2>
+        <i data-lucide="x" class="h-5 w-5 text-slate-400"></i>
+      </div>
+      <div class="space-y-4 px-6 py-5">
+        <div class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+          <p class="text-sm font-semibold">Vigiar Sistemas</p>
+          <p class="text-xs font-semibold text-amber-700">Cobertura: 2 de 3 itens do pedido</p>
+          <p class="mt-1 text-xl font-bold">R$ 6.650,00</p>
+        </div>
+
+        <div data-testid="decision-coverage-warning" class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+          <p><i data-lucide="alert-triangle" class="inline h-4 w-4"></i>
+            Este orçamento <strong>não cobre todos os itens do pedido</strong> (2 de 3): o total abaixo
+            não pode ser comparado com o de um orçamento completo.</p>
+        </div>
+
+        <p class="text-xs text-slate-500">
+          Sem <code>decision-gap</code> aqui: os dois painéis são mutuamente exclusivos.
+        </p>
+
+        <label class="block">
+          <span class="text-xs font-semibold text-slate-600">Justificativa *</span>
+          <textarea rows="3" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm">Único fornecedor que atendeu o prazo; o gravador será comprado à parte.</textarea>
+        </label>
+      </div>
+      <div class="flex justify-end gap-2 border-t border-slate-100 px-6 py-4">
+        <button class="rounded-md border border-slate-300 px-4 py-2 text-sm">Cancelar</button>
+        <button class="rounded-md bg-slate-900 px-4 py-2 text-sm text-white">Confirmar escolha</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== CELULAR ==================== -->
+  <section data-panel="narrow" class="panel hidden space-y-4">
+    <p class="text-xs text-slate-600">
+      Sem tabela: um cartão por fornecedor, com os mesmos itens do pedido na mesma ordem.
+    </p>
+    <div class="mx-auto max-w-sm space-y-3">
+      <div class="rounded-xl border border-emerald-300 bg-white p-4 shadow-sm">
+        <div class="flex items-center justify-between">
+          <p class="font-semibold">Acme Segurança <span class="ml-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Menor preço</span></p>
+          <p class="font-bold">R$ 7.480,00</p>
+        </div>
+        <dl class="mt-3 space-y-2 text-sm">
+          <div><dt class="text-xs font-semibold text-slate-500">4 × Câmeras IP 4MP bullet</dt>
+            <dd class="text-slate-700">Intelbras VIP 3230 · R$ 1.180,00/un. · R$ 4.720,00</dd></div>
+          <div><dt class="text-xs font-semibold text-slate-500">1 × Gravador NVR 8 canais</dt>
+            <dd class="text-slate-700">Intelbras NVD 1408 · R$ 1.260,00/un. · R$ 1.260,00</dd></div>
+          <div><dt class="text-xs font-semibold text-slate-500">1 × Instalação e configuração</dt>
+            <dd class="text-slate-700">R$ 1.500,00/un. · R$ 1.500,00</dd></div>
+          <div><dt class="text-xs font-semibold text-slate-500">Cobertura</dt>
+            <dd class="text-slate-700">3 de 3 itens</dd></div>
+        </dl>
+      </div>
+      <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div class="flex items-center justify-between">
+          <p class="font-semibold">Vigiar Sistemas</p>
+          <p class="font-bold">R$ 6.650,00</p>
+        </div>
+        <dl class="mt-3 space-y-2 text-sm">
+          <div><dt class="text-xs font-semibold text-slate-500">4 × Câmeras IP 4MP bullet</dt>
+            <dd class="text-slate-700">Hikvision DS-2CD1043 · R$ 990,00/un. · R$ 3.960,00</dd></div>
+          <div><dt class="text-xs font-semibold text-slate-500">1 × Gravador NVR 8 canais</dt>
+            <dd class="italic text-slate-400">Não cotado</dd></div>
+          <div><dt class="text-xs font-semibold text-slate-500">1 × Instalação e configuração</dt>
+            <dd class="text-slate-700">R$ 1.800,00/un. · R$ 1.800,00</dd></div>
+          <div><dt class="text-xs font-semibold text-slate-500">1 × No-break 1200VA <span class="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-600">Extra</span></dt>
+            <dd class="text-slate-700">SMS Net4+ · R$ 890,00/un. · R$ 890,00</dd></div>
+          <div><dt class="text-xs font-semibold text-amber-700">Cobertura</dt>
+            <dd class="font-semibold text-amber-700">2 de 3 itens</dd></div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== MIGRAÇÃO ==================== -->
+  <section data-panel="migration" class="panel hidden space-y-4">
+    <div class="rounded-xl border border-slate-200 bg-white p-5 text-sm shadow-sm">
+      <h2 class="text-base font-semibold">&lt;NNNN&gt;_purchase_line_items — encadeada pela cabeça real da árvore</h2>
+      <p class="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">
+        O número <strong>não</strong> é reservado antes da árvore. Na implementação, releia a cabeça
+        real de <code>backend/alembic/versions/</code> e encadeie depois dela. Hoje a cabeça é
+        <code>0003_tenant_invitation</code>, então esta revisão é
+        <strong><code>0004_purchase_line_items</code> com <code>down_revision =
+        "0003_tenant_invitation"</code></strong>. Quem entrar depois (APRAS-68 / APRAS-71 / APRAS-73)
+        renumera e reaponta a <em>sua própria</em> revisão.
+      </p>
+      <p class="mt-2 text-slate-600">
+        Revisão nova e ordinária — a <code>0001_initial_schema.py</code> <strong>não</strong> é editada
+        (produção aplicou a 0001 em 2026-09-19). Não importa nada de <code>app/</code>.
+      </p>
+      <h3 class="mt-4 text-sm font-semibold">upgrade</h3>
+      <ul class="mt-1 list-disc space-y-1 pl-5 text-slate-700">
+        <li>cria <code>purchase_request_item</code> e <code>purchase_quote_item</code>;</li>
+        <li>cada orçamento existente vira <strong>uma linha própria do orçamento</strong>
+          (<code>request_item_id IS NULL</code>) com o <code>unit_price</code> e a
+          <code>quantity</code> atuais e, como descrição, o título do pedido
+          <strong>truncado em 255</strong> —
+          <code>left(COALESCE(NULLIF(btrim(pr.title), ''), 'Item do orçamento'), 255)</code>, porque
+          <code>purchase_request.title</code> não tem <code>max_length</code> e um título longo
+          quebraria o <code>INSERT ... SELECT</code> no meio do upgrade;</li>
+        <li><strong>nenhum item de pedido é criado</strong>: o esquema antigo não registra enumeração
+          compartilhada, e inventar uma exigiria escolher uma quantidade entre orçamentos que podem
+          divergir. Assim todo total antigo continua <strong>idêntico</strong>;</li>
+        <li>derruba <code>purchase_quote.unit_price</code> e <code>purchase_quote.quantity</code>.</li>
+      </ul>
+      <h3 class="mt-4 text-sm font-semibold text-red-700">downgrade — com perda</h3>
+      <div class="mt-1 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-900">
+        Recria as duas colunas a partir da linha de menor <code>position</code> e apaga as duas tabelas.
+        Isso <strong>descarta as linhas 1..N-1 de todo orçamento com várias linhas</strong> — o orçamento
+        de R$ 7.480,00 desta maquete cai para R$ 4.720,00 — e <strong>destrói a enumeração de itens do
+        pedido</strong>. A docstring de <code>downgrade()</code> diz isso com as palavras
+        <em>perda</em> e <em>backup</em>. Recuperação só por <strong>restore de backup anterior ao
+        upgrade</strong>.
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+  const parseBRL = (t) => {
+    const clean = String(t).replace(/\./g, "").replace(",", ".").trim();
+    const n = Number.parseFloat(clean);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const fmt = (n) =>
+    "R$ " + n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  // --- tabs ---
+  document.querySelectorAll(".tab").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab").forEach((b) => {
+        b.classList.remove("border-slate-900");
+        b.classList.add("border-transparent", "text-slate-500");
+      });
+      btn.classList.add("border-slate-900");
+      btn.classList.remove("border-transparent", "text-slate-500");
+      document.querySelectorAll(".panel").forEach((p) => p.classList.add("hidden"));
+      document.querySelector(`[data-panel="${btn.dataset.tab}"]`).classList.remove("hidden");
+      window.lucide && lucide.createIcons();
+    });
+  });
+
+  // --- request items ---
+  window.warnRemoval = (btn, quoteCount) => {
+    const warn = document.getElementById("removal-warning");
+    warn.querySelector("strong").textContent = `${quoteCount} orçamento(s)`;
+    warn.classList.remove("hidden");
+    window.lucide && lucide.createIcons();
+  };
+
+  document.getElementById("add-request-item").addEventListener("click", () => {
+    const row = document.createElement("div");
+    row.className = "grid grid-cols-12 items-end gap-3 px-4 py-3";
+    row.innerHTML = `
+      <label class="col-span-8 block">
+        <span class="text-xs font-semibold text-slate-600">Descrição *</span>
+        <input placeholder="Ex.: Cabo UTP cat6 (metros)" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+      </label>
+      <label class="col-span-3 block">
+        <span class="text-xs font-semibold text-slate-600">Quantidade *</span>
+        <input type="number" value="1" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+      </label>
+      <button class="col-span-1 mb-2 justify-self-center text-slate-400 hover:text-red-600"><i data-lucide="trash-2" class="h-4 w-4"></i></button>`;
+    row.querySelector("button").addEventListener("click", () => row.remove());
+    document.getElementById("request-items").appendChild(row);
+    window.lucide && lucide.createIcons();
+  });
+
+  // --- quote lines: live totals ---
+  const recomputeQuote = () => {
+    let total = 0;
+    document.querySelectorAll(".quote-line").forEach((line) => {
+      const priceEl = line.querySelector(".price");
+      const qtyText = line.querySelector('input[type="number"]')
+        ? line.querySelector('input[type="number"]').value
+        : (line.textContent.match(/(\d+)\s*×/) || [0, 1])[1];
+      const qty = Number.parseInt(qtyText, 10) || 0;
+      const raw = priceEl.value.trim();
+      const out = line.querySelector(".line-total");
+      if (raw === "") {
+        out.textContent = "não cotado";
+        out.classList.add("text-slate-400");
+        return;
+      }
+      const lineTotal = Math.round(parseBRL(raw) * qty * 100) / 100;
+      out.textContent = fmt(lineTotal);
+      out.classList.remove("text-slate-400");
+      total += lineTotal;
+    });
+    document.getElementById("quote-total").textContent = fmt(total);
+  };
+  document.addEventListener("input", (e) => {
+    if (e.target.closest(".quote-line")) recomputeQuote();
+  });
+
+  document.getElementById("add-extra").addEventListener("click", () => {
+    const row = document.createElement("div");
+    row.className = "quote-line px-4 py-3";
+    row.innerHTML = `
+      <div class="grid grid-cols-12 items-end gap-3">
+        <label class="col-span-3 block"><span class="text-xs font-semibold text-slate-600">Descrição *</span>
+          <input placeholder="Ex.: Suporte de parede" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" /></label>
+        <label class="col-span-1 block"><span class="text-xs font-semibold text-slate-600">Qtd *</span>
+          <input type="number" value="1" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" /></label>
+        <label class="col-span-3 block"><span class="text-xs font-semibold text-slate-600">Modelo <span class="font-normal text-slate-400">(opcional)</span></span>
+          <input class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" /></label>
+        <label class="col-span-3 block"><span class="text-xs font-semibold text-slate-600">Preço unitário</span>
+          <input class="price mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" placeholder="0,00" /></label>
+        <div class="col-span-2 pb-2 text-right"><p class="text-xs text-slate-400">total da linha</p>
+          <p class="line-total text-sm font-semibold text-slate-400">não cotado</p></div>
+      </div>`;
+    document.getElementById("extra-lines").appendChild(row);
+    recomputeQuote();
+    window.lucide && lucide.createIcons();
+  });
+
+  window.lucide && lucide.createIcons();
+</script>
+</body>
+</html>

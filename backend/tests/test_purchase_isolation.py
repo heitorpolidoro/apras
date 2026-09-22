@@ -252,8 +252,13 @@ def test_full_flow_writes_nothing_into_finance_inventory_assets_or_projects(
         f"/api/v1/purchase-requests/{request_id}/quotes",
         json={
             "supplier_name": "Hidráulica Central",
-            "unit_price": 1500.0,
-            "quantity": 2,
+            "items": [
+                {
+                    "description": "Bomba submersa",
+                    "quantity": 2,
+                    "unit_price": 1500.0,
+                }
+            ],
             "extra_fields": [{"label": "Prazo", "value": "20 dias"}],
         },
         headers=_headers(board_user),
@@ -261,7 +266,16 @@ def test_full_flow_writes_nothing_into_finance_inventory_assets_or_projects(
     assert first.status_code == 201
     second = client.post(
         f"/api/v1/purchase-requests/{request_id}/quotes",
-        json={"supplier_name": "Bombas & Cia", "unit_price": 1200.0, "quantity": 2},
+        json={
+            "supplier_name": "Bombas & Cia",
+            "items": [
+                {
+                    "description": "Bomba submersa",
+                    "quantity": 2,
+                    "unit_price": 1200.0,
+                }
+            ],
+        },
         headers=_headers(board_user),
     )
     assert second.status_code == 201

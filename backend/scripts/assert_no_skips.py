@@ -44,7 +44,20 @@ MODULE_CLASSNAME = "tests.test_migrations_postgres"
 #: `uv run pytest tests/test_migrations_postgres.py --collect-only -q`,
 #: never typed from memory -- `test_the_floor_is_the_modules_real_case_count`
 #: compares this number to the real collection by **equality**.
-MIN_CASES = 29
+#:
+#: Raised from 29 to 33 by APRAS-73, which added the fourth revision
+#: (`0005_purchase_line_items`, on `0003_tenant_invitation`) and with it four
+#: cases: the two `purchase_quote` price columns gone at head, the fold of a
+#: pre-upgrade quote into exactly one quote-owned line, the over-long and
+#: blank request titles that fold has to survive, and the **lossy**
+#: downgrade, whose surviving `position = 0` row and whose `perda`/`backup`
+#: docstring are both pinned. Appending the revision to `EXPECTED_HISTORY`
+#: added no case -- the history cases loop over the tuple.
+#:
+#: Measured after the change, against the index this commit carries and not
+#: against a worktree that also holds another task's in-flight revision:
+#: `uv run pytest tests/test_migrations_postgres.py --collect-only -q`.
+MIN_CASES = 33
 
 
 def _verdict(collected: int, skipped: list[str]) -> list[str]:

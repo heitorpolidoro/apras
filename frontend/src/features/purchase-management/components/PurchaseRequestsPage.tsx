@@ -316,6 +316,7 @@ export const PurchaseRequestsPage: React.FC = () => {
           setEditingRequest(null);
         }}
         request={editingRequest}
+        quoteCount={editingRequest?.quote_count ?? 0}
         onSubmit={handleFormSubmit}
         isLoading={createMutation.isPending || updateMutation.isPending}
       />
