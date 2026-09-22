@@ -647,6 +647,27 @@ def test_forged_tenant_id_in_the_body_is_ignored(
     assert row.tenant_id == tenant_b.id
 
 
+#: The one Create/Update schema allowed to name a tenant, with the reason.
+#:
+#: `InvitationCreate` (APRAS-71) is the body of a **global**, superuser-only
+#: route: the tenant is the operator's chosen *subject*, exactly as
+#: `{tenant_id}` is on `/api/v1/tenants/{tenant_id}/modules`, and it reaches
+#: no stamped write -- `tenant_invitation` is an unscoped table, so there is
+#: neither an acting tenant to forge against nor a `before_flush` stamp to
+#: override. The rule this case protects is about *tenant-scoped* writes,
+#: where a body-supplied tenant would be a second, forgeable source of
+#: truth; that situation does not arise here.
+TENANT_ID_SCHEMA_ALLOWLIST = frozenset({"invitation.InvitationCreate"})
+
+#: Pinned, like every other allowlist in this suite (`UNGUARDED_ROUTES`,
+#: `UNSCOPED_TABLES`, `INHERITED_TABLES`, `GLOBAL_ROUTES`,
+#: `FULLY_UNGUARDED_TAGS`): growing it has to be a deliberate, visible edit
+#: and not a one-line append no test notices.
+assert len(TENANT_ID_SCHEMA_ALLOWLIST) == 1, (
+    "a second schema naming a tenant needs its own justification, not an append"
+)
+
+
 def test_no_create_or_update_schema_declares_tenant_id():
     """Belt and braces on ER-3: the schema surface never accepts a tenant_id."""
     offenders = []
@@ -659,7 +680,9 @@ def test_no_create_or_update_schema_declares_tenant_id():
                 and name.endswith(("Create", "Update"))
                 and "tenant_id" in obj.model_fields
             ):
-                offenders.append(f"{module_info.name}.{name}")
+                qualified = f"{module_info.name}.{name}"
+                if qualified not in TENANT_ID_SCHEMA_ALLOWLIST:
+                    offenders.append(qualified)
     assert not offenders, offenders
 
 

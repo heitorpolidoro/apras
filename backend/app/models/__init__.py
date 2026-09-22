@@ -84,6 +84,7 @@ from .tenant import (
     Tenant,
     UserTenantLink,
 )
+from .tenant_invitation import TenantInvitation
 from .user import User
 from .visitor import AccessLog, Visitor, VisitorAuthorization
 from .voting import (
@@ -185,6 +186,7 @@ __all__ = [
     "TaskPriority",
     "TaskStatus",
     "Tenant",
+    "TenantInvitation",
     "TenantSubscription",
     "TransactionType",
     "User",

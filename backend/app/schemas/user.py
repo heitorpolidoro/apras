@@ -21,6 +21,10 @@ CPF_DIGITS = 11
 CPF_CHECK_REMAINDER_FLOOR = 2
 
 
+#: `UserCreate`'s password floor, shared so no second path can set a lower one.
+PASSWORD_MIN_LENGTH = 8
+
+
 def _validate_cpf_digits(cpf_digits: str) -> bool:
     """Return True if the 11-digit CPF string passes the check-digit algorithm."""
     if len(cpf_digits) != CPF_DIGITS or not cpf_digits.isdigit():
@@ -39,6 +43,41 @@ def _validate_cpf_digits(cpf_digits: str) -> bool:
     return d2 == int(cpf_digits[10])
 
 
+def normalize_cpf(value: str) -> str:
+    """The one CPF rule: strip formatting, check the digits, return the digits.
+
+    Every path that mints a `User` calls this, directly or through
+    `UserCreate.validate_cpf`, so the stored spelling is always 11 digits and
+    a duplicate-CPF lookup by equality cannot miss because one caller kept
+    the dots and another did not.
+    """
+    digits = re.sub(r"\D", "", value)
+    if len(digits) != CPF_DIGITS:
+        raise ValueError("CPF must have exactly 11 digits")
+    if not _validate_cpf_digits(digits):
+        raise ValueError("Invalid CPF")
+    return digits
+
+
+def validate_password_strength(value: str) -> str:
+    """The one password rule: 8+ characters with a letter, a digit and a symbol.
+
+    Shared for the same reason as `normalize_cpf`: a second copy of the rule
+    is a second rule, and the weaker of the two is the one that decides.
+    """
+    if len(value) < PASSWORD_MIN_LENGTH:
+        raise ValueError(
+            f"Password must have at least {PASSWORD_MIN_LENGTH} characters"
+        )
+    if not re.search(r"[A-Za-z]", value):
+        raise ValueError("Password must contain at least one letter")
+    if not re.search(r"\d", value):
+        raise ValueError("Password must contain at least one number")
+    if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", value):
+        raise ValueError("Password must contain at least one symbol")
+    return value
+
+
 class UserBase(BaseModel):
     email: EmailStr
     full_name: str
@@ -47,29 +86,21 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
-    password: str = Field(..., min_length=8)
+    """The one account-minting body. Signup posts it; the invitation accept
+    path (APRAS-71) builds it, so neither can create what the other refuses."""
+
+    password: str = Field(..., min_length=PASSWORD_MIN_LENGTH)
     cpf: str
 
     @field_validator("cpf")
     @classmethod
     def validate_cpf(cls, v: str) -> str:
-        digits = re.sub(r"\D", "", v)
-        if len(digits) != CPF_DIGITS:
-            raise ValueError("CPF must have exactly 11 digits")
-        if not _validate_cpf_digits(digits):
-            raise ValueError("Invalid CPF")
-        return digits
+        return normalize_cpf(v)
 
     @field_validator("password")
     @classmethod
     def password_complexity(cls, v: str) -> str:
-        if not re.search(r"[A-Za-z]", v):
-            raise ValueError("Password must contain at least one letter")
-        if not re.search(r"\d", v):
-            raise ValueError("Password must contain at least one number")
-        if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", v):
-            raise ValueError("Password must contain at least one symbol")
-        return v
+        return validate_password_strength(v)
 
 
 class UserRead(UserBase):
@@ -135,14 +166,8 @@ class UserUpdate(BaseModel):
     @field_validator("cpf")
     @classmethod
     def validate_cpf(cls, v: str | None) -> str | None:
-        if v is None:
-            return v
-        digits = re.sub(r"\D", "", v)
-        if len(digits) != CPF_DIGITS:
-            raise ValueError("CPF must have exactly 11 digits")
-        if not _validate_cpf_digits(digits):
-            raise ValueError("Invalid CPF")
-        return digits
+        """The same rule `UserCreate` applies, not a second copy of it."""
+        return None if v is None else normalize_cpf(v)
 
 
 class SuperuserUpdate(BaseModel):

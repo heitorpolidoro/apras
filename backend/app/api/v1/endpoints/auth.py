@@ -1,15 +1,13 @@
 """Authentication API endpoints."""
 
-import os
 from typing import Annotated
 
-import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session, select
 
 from app.api import deps as api_deps
-from app.core import security
+from app.core import mail, security
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.db import get_session
@@ -258,41 +256,15 @@ async def forgot_password(
     origin = request.headers.get("origin") or "http://localhost:5173"
     reset_url = f"{origin}/reset-password?token={token}"
 
-    resend_api_key = os.getenv("RESEND_API_KEY")
-    if resend_api_key:
-        try:
-            async with httpx.AsyncClient() as client:
-                email_payload = {
-                    "from": os.getenv("EMAIL_FROM", "onboarding@resend.dev"),
-                    "to": user.email,
-                    "subject": "Recuperação de Senha - APRAS",
-                    "html": f"""
-                    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
-                      <h2 style="color: #059669; margin-top: 0;">APRAS</h2>
-                      <p>Olá, {user.full_name or "usuário"}!</p>
-                      <p>Recebemos uma solicitação para redefinir sua senha. Clique no botão abaixo para escolher uma nova:</p>
-                      <div style="margin: 24px 0;">
-                        <a href="{reset_url}" style="background-color: #059669; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Redefinir Senha</a>
-                      </div>
-                      <p style="color: #6b7280; font-size: 14px;">Se você não solicitou isso, pode ignorar este e-mail com segurança.</p>
-                      <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
-                      <p style="color: #9ca3af; font-size: 12px;">Este link irá expirar em 15 minutos.</p>
-                    </div>
-                    """,
-                }
-                headers = {
-                    "Authorization": f"Bearer {resend_api_key}",
-                    "Content-Type": "application/json",
-                }
-                response = await client.post(
-                    "https://api.resend.com/emails", json=email_payload, headers=headers
-                )
-                response.raise_for_status()
-        except Exception as e:  # noqa: BLE001  # best-effort side effect; a failure here must not fail the request
-            print(f"Failed to send email via Resend: {e}")
-            print(f"[AUTH] Password reset requested for user: {user.email}")
-            print(f"[AUTH] Reset URL: {reset_url}")
-    else:
+    # APRAS-71 D10: one sender for both flows. The two printed lines below
+    # are byte-for-byte what this handler always printed, in both the
+    # no-key and the failed-call branches.
+    sent = await mail.send_email(
+        user.email,
+        "Recuperação de Senha - APRAS",
+        mail.password_reset_html(user.full_name, reset_url),
+    )
+    if not sent:
         print(f"[AUTH] Password reset requested for user: {user.email}")
         print(f"[AUTH] Reset URL: {reset_url}")
 

@@ -399,8 +399,9 @@ def test_the_routes_are_unguarded_and_global():
     # 206 since APRAS-61's three mapped condominium-profile writes, on top of
     # APRAS-60's two mapped report routes. None of the five is global.
     assert len(ROUTE_PERMISSIONS) == 208
-    # 24 since APRAS-61's self-scoped profile read joined the unguarded
-    # allowlist; 28 is unmoved, because that router is TENANT_SCOPED. 23/28
-    # was the state APRAS-52's operator-side subscription-history read left.
-    assert len(UNGUARDED_ROUTES) == 24
-    assert len(GLOBAL_ROUTES) == 28
+    # 28/32 since APRAS-71's four administrator-invitation routes, which are
+    # unguarded *and* global: two superuser-only and two public. 24/28 was
+    # the state APRAS-61's self-scoped profile read left, on top of the 23/28
+    # of APRAS-52's operator-side subscription-history read.
+    assert len(UNGUARDED_ROUTES) == 28
+    assert len(GLOBAL_ROUTES) == 32

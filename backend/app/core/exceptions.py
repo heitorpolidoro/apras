@@ -1179,3 +1179,86 @@ class InfractionContestationForbiddenError(DomainError):
 
     def __init__(self) -> None:
         super().__init__("Only the notified unit may contest this infraction")
+
+
+# ---------------------------------------------------------------------------
+# Administrator invitations (APRAS-71 D7)
+# ---------------------------------------------------------------------------
+#
+# Three distinguishable statuses, and none of them echoes the invited email.
+# This does not contradict the existence-leak rule that protects *enumerable*
+# identifiers (emails, slugs): a 256-bit token is not enumerable, and whoever
+# holds a real one is the invitee, who needs to know whether to ask for a new
+# link or simply sign in. All three follow the same single indexed lookup by
+# `token_hash`, so there is no timing oracle either.
+
+
+class InvitationNotFoundError(DomainError):
+    """Raised when no invitation matches the presented token (404)."""
+
+    def __init__(self) -> None:
+        super().__init__("Convite inválido")
+
+
+class InvitationExpiredError(DomainError):
+    """Raised when the invitation's `expires_at` has passed (410).
+
+    Also the answer for an invitation superseded by a newer one for the same
+    `(tenant, email)` pair: superseding sets `expires_at` to now (D4).
+    """
+
+    def __init__(self) -> None:
+        super().__init__("Convite expirado")
+
+
+class InvitationAlreadyUsedError(DomainError):
+    """Raised when the invitation was already consumed (409).
+
+    `accepted_at IS NOT NULL` is the single-use marker, so a replay writes
+    nothing and answers this.
+    """
+
+    def __init__(self) -> None:
+        super().__init__("Convite já utilizado")
+
+
+class InvitationCpfConflictError(DomainError):
+    """Raised when the CPF offered in the new-account branch is taken (409).
+
+    Signup refuses a duplicate CPF too; here it is a conflict rather than a
+    bad request, because the body is well-formed and it is the directory
+    that cannot accept it. The invitation is **not** consumed.
+    """
+
+    def __init__(self) -> None:
+        super().__init__("Já existe um usuário com este CPF")
+
+
+class InvitationInvalidAccountError(DomainError):
+    """Raised when the account the accept body describes is not a valid one (422).
+
+    The second gate behind `InvitationAcceptRequest`'s validators: the
+    service builds the new account through `UserCreate`, so an address, a
+    CPF or a password signup would refuse is refused here too even when the
+    values never passed through the schema -- the invited address, for one,
+    comes from the stored row rather than from the body.
+    """
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(f"Não foi possível criar a conta: {reason}")
+
+
+class InvitationIncompleteError(DomainError):
+    """Raised when the new-account branch is missing a required field (422).
+
+    `full_name`, `cpf` and `password` are optional in the schema because the
+    existing-account branch ignores them (D8); creating an account without
+    them is not possible, so the refusal lives here rather than in a
+    `field_validator` that would break that branch.
+    """
+
+    def __init__(self, fields: Iterable[str]) -> None:
+        super().__init__(
+            "Os seguintes campos são obrigatórios para criar a conta: "
+            + ", ".join(sorted(fields))
+        )

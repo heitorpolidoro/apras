@@ -76,6 +76,16 @@ GLOBAL_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("POST", "/api/v1/plans/"),
         ("GET", "/api/v1/plans/{plan_id}"),
         ("PATCH", "/api/v1/plans/{plan_id}"),
+        # APRAS-71: the four administrator-invitation routes. `POST` and
+        # `GET /invitations` are superuser-only and name their tenant in the
+        # body or the query string, so there is no acting tenant to resolve;
+        # `preview` and `accept` are unauthenticated, so there is no caller
+        # to resolve one from. `tenant_invitation` is an unscoped table for
+        # the same reason `user_tenant_link` is.
+        ("POST", "/api/v1/invitations"),
+        ("GET", "/api/v1/invitations"),
+        ("POST", "/api/v1/invitations/preview"),
+        ("POST", "/api/v1/invitations/accept"),
         # Authenticated by X-Device-Key, not a JWT: resolves its tenant from
         # the device it authenticates.
         ("POST", "/api/v1/access-control/webhook/verification"),
@@ -126,7 +136,7 @@ def test_allowlist_has_no_stale_entries():
     assert existing >= GLOBAL_ROUTES, sorted(GLOBAL_ROUTES - existing)
 
 
-def test_allowlist_is_twenty_eight_routes():
+def test_allowlist_is_thirty_two_routes():
     """The global surface is small and reviewed; growing it is a decision.
 
     18 at the APRAS-49 merge base; APRAS-39 added the two module-switch
@@ -137,9 +147,11 @@ def test_allowlist_is_twenty_eight_routes():
     change-history read on that same mount. The three *tenant-side*
     `/api/v1/subscription` routes are deliberately **not** here: they are
     `TENANT_SCOPED`, because a permission-guarded route must resolve an
-    acting tenant.
+    acting tenant. APRAS-71 adds the last four, the administrator-invitation
+    surface: two superuser-only routes that name their tenant in the body or
+    the query string, and two unauthenticated ones with no caller at all.
     """
-    assert len(GLOBAL_ROUTES) == 28
+    assert len(GLOBAL_ROUTES) == 32
 
 
 def test_route_count_is_fully_accounted_for():

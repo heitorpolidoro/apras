@@ -34,7 +34,17 @@ MODULE_CLASSNAME = "tests.test_migrations_postgres"
 #: index on `tenant.slug`, and the pre-upgrade row whose two-character name
 #: must come back inside the 3-64 rule. The two rewritten history cases
 #: replaced their predecessors one for one, so they add nothing here.
-MIN_CASES = 26
+#:
+#: Raised from 26 to 29 by APRAS-71, which added the third revision
+#: (`0003_tenant_invitation`) and with it three cases: the live table with
+#: its unique `token_hash` index, the absence of any raw-credential column,
+#: and the real `downgrade` back to `0002_tenant_slug`. Widening the "no
+#: `app` import" guard from the head revision to every revision replaced one
+#: case with one case, so it adds nothing here. Measured with
+#: `uv run pytest tests/test_migrations_postgres.py --collect-only -q`,
+#: never typed from memory -- `test_the_floor_is_the_modules_real_case_count`
+#: compares this number to the real collection by **equality**.
+MIN_CASES = 29
 
 
 def _verdict(collected: int, skipped: list[str]) -> list[str]:

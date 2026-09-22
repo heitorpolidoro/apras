@@ -757,6 +757,21 @@ UNGUARDED_ROUTES: frozenset[tuple[str, str]] = frozenset(
         # parity cell and no baseline file.
         # superuser-only, guarded by deps.get_current_superuser (APRAS-52)
         ("GET", "/api/v1/tenants/{tenant_id}/subscription/history"),
+        # APRAS-71 D6: the four administrator-invitation routes. The first
+        # two follow the same convention as every line above -- superuser
+        # only, guarded by deps.get_current_superuser, mapping to no
+        # catalogue permission because `is_superuser` is a column and not a
+        # bundle. The last two are unauthenticated, like
+        # `/auth/forgot-password`: their only credential is the 256-bit
+        # single-use token in the request body.
+        # superuser-only, guarded by deps.get_current_superuser (APRAS-71)
+        ("POST", "/api/v1/invitations"),
+        # superuser-only, guarded by deps.get_current_superuser (APRAS-71)
+        ("GET", "/api/v1/invitations"),
+        # unauthenticated, rate-limited, token-in-body (APRAS-71)
+        ("POST", "/api/v1/invitations/preview"),
+        # unauthenticated, rate-limited, token-in-body (APRAS-71)
+        ("POST", "/api/v1/invitations/accept"),
     }
 )
 

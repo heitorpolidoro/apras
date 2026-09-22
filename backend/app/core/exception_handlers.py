@@ -48,6 +48,12 @@ from app.core.exceptions import (
     InvalidInvoiceFormatError,
     InvalidPhotoFormatError,
     InvalidSlugError,
+    InvitationAlreadyUsedError,
+    InvitationCpfConflictError,
+    InvitationExpiredError,
+    InvitationIncompleteError,
+    InvitationInvalidAccountError,
+    InvitationNotFoundError,
     InvoiceFileTooLargeError,
     LotAlreadyVotedError,
     LotNotFoundError,
@@ -158,6 +164,9 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             # APRAS-44 §7.4, §7.5
             InfractionRuleNotFoundError,
             InfractionNotFoundError,
+            # APRAS-71 D7: an unknown or malformed invitation token. Generic
+            # on purpose -- the body never names the invited address.
+            InvitationNotFoundError,
         ),
     ):
         status_code = status.HTTP_404_NOT_FOUND
@@ -209,9 +218,17 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             # which a shape-valid request has no answer (§6.3, §6.5, §7.5).
             InfractionRuleConflictError,
             InfractionStateError,
+            # APRAS-71 D7/D9: a consumed invitation, and the duplicate CPF
+            # of the new-account branch. Neither consumes anything.
+            InvitationAlreadyUsedError,
+            InvitationCpfConflictError,
         ),
     ):
         status_code = status.HTTP_409_CONFLICT
+    elif isinstance(exc, InvitationExpiredError):
+        # APRAS-71 D7: distinguishable from both 404 and 409, so the invitee
+        # learns whether to ask for a new link or simply sign in.
+        status_code = status.HTTP_410_GONE
     elif isinstance(exc, InvalidDeviceKeyError):
         status_code = status.HTTP_401_UNAUTHORIZED
     elif isinstance(exc, InvoiceFileTooLargeError):
@@ -237,6 +254,11 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             # APRAS-66 D-C.4: a typed slug outside `^[a-z0-9]+(-[a-z0-9]+)*$`
             # or the 3-64 bound. Refused, never folded into a valid one.
             InvalidSlugError,
+            # APRAS-71 D9: the new-account branch with a field missing, or
+            # with an email, CPF or password `UserCreate` refuses. The body
+            # names something wrong, so 422 and never 400.
+            InvitationIncompleteError,
+            InvitationInvalidAccountError,
         ),
     ):
         status_code = status.HTTP_422_UNPROCESSABLE_ENTITY

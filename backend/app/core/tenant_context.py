@@ -42,6 +42,7 @@ from sqlmodel import Session, SQLModel
 import app.models  # noqa: F401  # every model must be imported before the registry is walked
 from app.core.exceptions import CrossTenantWriteError, TenantScopeNotResolvedError
 from app.models.tenant import UserTenantLink
+from app.models.tenant_invitation import TenantInvitation
 
 #: ``session.info`` key holding the acting tenant id (``UUID``).
 ACTING_TENANT_KEY = "acting_tenant_id"
@@ -52,18 +53,31 @@ REQUEST_SCOPED_KEY = "request_scoped"
 SCOPE_RESOLVED_KEY = "tenant_scope_resolved"
 
 
+#: The two mapped classes that carry a ``tenant_id`` and are nonetheless not
+#: tenant-scoped entities. See :func:`_discover_scoped_models`.
+_UNSCOPED_TENANT_REFERENCES: tuple[type[SQLModel], ...] = (
+    UserTenantLink,
+    TenantInvitation,
+)
+
+
 def _discover_scoped_models() -> tuple[type[SQLModel], ...]:
     """Return every mapped class carrying its own ``tenant_id`` column.
 
     Derived rather than hand-written so a table added by a future task is
     filtered the day it gets a ``tenant_id``, with nobody having to remember
-    a list. ``UserTenantLink`` is excluded: it is the membership table, not
-    a tenant-scoped entity.
+    a list. Two tables are excluded, and for one reason: their ``tenant_id``
+    names a tenant from **outside** the row rather than scoping the row to a
+    request. ``UserTenantLink`` is the membership table, and
+    ``TenantInvitation`` (APRAS-71) is issued by a superuser on a route with
+    no acting tenant and consumed by an anonymous caller -- filtering either
+    would make it unreadable exactly where it is used.
     """
     return tuple(
         mapper.class_
         for mapper in SQLModel._sa_registry.mappers  # noqa: SLF001  # SQLModel exposes its mapper registry no other way
-        if "tenant_id" in mapper.local_table.c and mapper.class_ is not UserTenantLink
+        if "tenant_id" in mapper.local_table.c
+        and mapper.class_ not in _UNSCOPED_TENANT_REFERENCES
     )
 
 

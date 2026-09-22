@@ -741,6 +741,17 @@ ADMIN_ONLY_ROUTES: frozenset[tuple[str, str]] = frozenset(
         # is refused here too -- the router is global, so the capability is
         # not even readable.
         ("GET", "/api/v1/tenants/{tenant_id}/subscription/history"),
+        # APRAS-71 D6: the two superuser-only administrator-invitation
+        # routes. Issuing and listing an invitation is an operator act over
+        # a condominium named in the body or the query string, so there is
+        # no acting tenant and the guard is the flag itself. Declared as a
+        # real `Depends(api_deps.get_current_superuser)`, like every line
+        # above: this assertion is an exact set over the dependency tree,
+        # and an inlined `if not user.is_superuser` would be invisible to
+        # it. The two *public* invitation routes carry no guard at all and
+        # are therefore deliberately absent from this set.
+        ("POST", "/api/v1/invitations"),
+        ("GET", "/api/v1/invitations"),
         ("GET", "/api/v1/plans/"),
         ("POST", "/api/v1/plans/"),
         ("GET", "/api/v1/plans/{plan_id}"),
@@ -790,14 +801,17 @@ def test_only_the_superuser_grant_is_both_scoped_and_superuser_guarded():
     assert set(offenders) == SUPERUSER_GUARDED_SCOPED_ROUTES, sorted(offenders)
 
 
-def test_get_current_superuser_is_exactly_the_sixteen_operator_routes():
+def test_get_current_superuser_is_exactly_the_eighteen_operator_routes():
     """The name states the count, so the count is asserted beside it.
 
     8 at the APRAS-39 merge base; APRAS-40 adds **7** (four `/api/v1/plans`
     and three `/api/v1/tenants/{tenant_id}/subscription*`), all seven
     declaring a real `Depends(api_deps.get_current_superuser)`; APRAS-52 adds
     the **sixteenth**, the per-tenant change-history read, declared the same
-    way. The `len` assertion is what keeps this module's whole premise true
+    way; APRAS-71 adds the **seventeenth and eighteenth**, the two
+    superuser-only administrator-invitation routes on the new global
+    `invitations` router, declared the same way again. Its two *public*
+    routes carry no guard, so they are not here. The `len` assertion is what keeps this module's whole premise true
     -- that its case names state its counts -- after round 1 shipped a name
     saying fourteen over a set of fifteen.
     """
@@ -808,4 +822,4 @@ def test_get_current_superuser_is_exactly_the_sixteen_operator_routes():
         for key in _route_keys(route)
     }
     assert found == ADMIN_ONLY_ROUTES
-    assert len(ADMIN_ONLY_ROUTES) == 16
+    assert len(ADMIN_ONLY_ROUTES) == 18

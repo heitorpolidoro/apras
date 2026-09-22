@@ -54,6 +54,11 @@ class Settings(BaseSettings):
     SECRET_KEYS: list[str] = []
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    # How long an administrator invitation stays usable (APRAS-71 D2).
+    # Seven days, env-overridable: deliberately not the 15 minutes of
+    # `security.create_password_reset_token`, because the invitee has to
+    # receive mail and pick a moment to sit down with it.
+    INVITATION_EXPIRE_HOURS: int = 168
 
     # CORS
     BACKEND_CORS_ORIGINS: list[str] = [

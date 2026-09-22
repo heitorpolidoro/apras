@@ -89,7 +89,18 @@ INHERITED_TABLES = {
 # tenancy tables themselves; `plan` is the install-wide commercial catalogue
 # (APRAS-40 §3.1) -- global on purpose, so that "which plan is this
 # condominium on" is a comparable answer across the install.
-UNSCOPED_TABLES = {"user", "tenant", "user_tenant_link", "plan"}
+# `tenant_invitation` (APRAS-71) joins the unscoped group for the reason
+# `user_tenant_link` is in it: its `tenant_id` names a tenant from
+# *outside* the row -- written by a superuser on a route with no acting
+# tenant, read by an anonymous caller -- so it is a reference and not a
+# request-scoping key.
+UNSCOPED_TABLES = {
+    "user",
+    "tenant",
+    "user_tenant_link",
+    "plan",
+    "tenant_invitation",
+}
 
 
 def _migration_constant(name: str) -> tuple[str, ...]:
@@ -236,7 +247,7 @@ def test_inherited_tables_have_no_tenant_id_but_a_not_null_parent_fk():
 
 
 def test_partition_of_metadata_is_exhaustive(scoped_tables):
-    """direct + inherited + unscoped == every table: 32 + 24 + 4 == 60."""
+    """direct + inherited + unscoped == every table: 32 + 24 + 5 == 61."""
     direct = set(scoped_tables)
     partition = direct | set(INHERITED_TABLES) | UNSCOPED_TABLES
     assert partition == set(SQLModel.metadata.tables)
@@ -244,8 +255,8 @@ def test_partition_of_metadata_is_exhaustive(scoped_tables):
     assert not direct & UNSCOPED_TABLES
     assert len(direct) == 32
     assert len(INHERITED_TABLES) == 24
-    assert len(UNSCOPED_TABLES) == 4
-    assert len(direct) + len(INHERITED_TABLES) + len(UNSCOPED_TABLES) == 60
+    assert len(UNSCOPED_TABLES) == 5
+    assert len(direct) + len(INHERITED_TABLES) + len(UNSCOPED_TABLES) == 61
 
 
 def test_user_stays_global():

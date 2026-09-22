@@ -16,6 +16,7 @@ from app.api.v1.endpoints import (
     finance,
     infractions,
     inventory_movements,
+    invitations,
     lots,
     occurrences,
     packages,
@@ -211,6 +212,16 @@ api_router.include_router(
 # `tenants` in the global set. `plan` carries no `tenant_id`.
 api_router.include_router(
     plans.router, prefix="/plans", tags=["plans"], dependencies=GLOBAL_SCOPED
+)
+# APRAS-71 D6: the administrator invitation. Global, like `plans`:
+# `tenant_invitation` is an unscoped table, the two superuser routes name
+# their tenant in the body or the query string, and the two public ones have
+# no caller at all to resolve a tenant from.
+api_router.include_router(
+    invitations.router,
+    prefix="/invitations",
+    tags=["invitations"],
+    dependencies=GLOBAL_SCOPED,
 )
 # APRAS-44 §4.1: three mounts, one file. Every table of the module is
 # tenant-scoped or inherits a tenant-scoped parent, so nothing here is
