@@ -9,9 +9,11 @@ from PIL import Image
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
+from app.core import branding as branding_module
 from app.core import clock
 from app.core.exceptions import (
     CoreModuleCannotBeDisabledError,
+    InsufficientContrastError,
     InvalidSlugError,
     SlugAlreadyTakenError,
     TenantAlreadyExistsError,
@@ -581,17 +583,74 @@ class TenantService:
         moves **only** when the field is present in the payload: a name-only
         rename leaves it exactly as it was, whether it was generated or
         typed by hand (D-C.2).
+
+        ``brand_theme`` (APRAS-68) rides the same rules: validated and
+        measured **before** the write, present-or-absent decides whether it
+        moves at all, and an explicit ``null`` clears it.
         """
         payload = profile_in.model_dump(exclude_unset=True)
         new_slug = payload.pop("slug", None)
         if new_slug is not None:
             new_slug = cls.validated_slug(session, tenant, new_slug)
 
+        rebrands = "brand_theme" in payload
+        branding = cls.validated_brand_theme(payload.pop("brand_theme", None))
+
         updated = cls.update_tenant(session, tenant.id, TenantUpdate(**payload))
 
+        if rebrands:
+            updated = cls._write_brand_theme(session, updated, branding)
         if new_slug is None or new_slug == updated.slug:
             return updated
         return cls._write_slug(session, updated, new_slug)
+
+    @staticmethod
+    def validated_brand_theme(value: dict | None) -> dict | None:
+        """Normalise a submitted branding object, or refuse it (APRAS-68).
+
+        Two refusals, both 422 and both **before** anything is written:
+
+        * an unusable shape -- a malformed hex, a missing or unknown key, an
+          unknown mode -- is ``InvalidBrandThemeError``, from the single judge
+          in ``app.core.branding``;
+        * an **advanced** palette carrying a text/surface pair under 4.5:1 is
+          ``InsufficientContrastError``, listing every failing pair with its
+          measured ratio. Simple mode is never measured here because the
+          derivation owns both sides of every pair, so it cannot fail (D-A);
+          the guarantee is asserted in ``tests/test_branding.py``, not
+          re-checked per request.
+
+        The measurement runs on the **emitted** ``oklch(...)`` strings, so
+        what is refused is what a browser would have painted.
+        """
+        if value is None:
+            return None
+
+        branding = branding_module.normalize_brand_theme(value)
+        if branding["mode"] != branding_module.ADVANCED_MODE:
+            return branding
+
+        theme = branding_module.build_theme(branding)
+        failures = [
+            {**failure._asdict(), "scheme": name}
+            for name, scheme in theme.items()
+            for failure in branding_module.audit_contrast(scheme)
+        ]
+        if failures:
+            raise InsufficientContrastError(failures)
+        return branding
+
+    @staticmethod
+    def _write_brand_theme(
+        session: Session, tenant: Tenant, branding: dict | None
+    ) -> Tenant:
+        """Store an already-validated branding object, or clear it."""
+        tenant.brand_theme = branding
+        tenant.updated_at = clock.db_now()
+        session.add(tenant)
+        session.commit()
+        session.refresh(tenant)
+        return tenant
 
     @staticmethod
     def _write_slug(session: Session, tenant: Tenant, slug: str) -> Tenant:

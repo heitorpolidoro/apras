@@ -80,14 +80,36 @@ def test_the_two_serializers_are_distinct_objects():
     assert MONEY_SER is not MONEY_IN_SER
 
 
+#: The modules allowed to call the builtin ``round``, each for a stated
+#: reason that is **not** money. The scan below is a blanket ban because a
+#: blanket ban needs no judgement at the call site; this set is where the
+#: judgement is written down instead, and
+#: :func:`test_the_round_exemption_names_no_module_that_handles_money` keeps
+#: it honest by refusing any entry whose module mentions ``Decimal``.
+#:
+#: * ``core/branding.py`` (APRAS-68) rounds an **OKLCH component** -- a
+#:   lightness, a chroma, a hue in degrees -- onto the two-decimal grid
+#:   ``frontend/src/index.css`` is authored at, so the emitted
+#:   ``oklch(L C H)`` string is the precise thing the browser parses and the
+#:   contrast measurement runs on exactly the colour that gets painted.
+#:   A colour carries no cent and has no commercial rounding convention;
+#:   quantizing it as a ``Decimal`` would be the wrong instrument, not a
+#:   safer one.
+_ROUND_EXEMPT = frozenset({"core/branding.py"})
+
+
 def test_no_module_under_app_rounds_money_with_the_builtin():
     """``round()`` over a float rounds the *binary* representation.
 
     Parsed, not grepped, so the word in this module's own prose and in
-    ``app/core/money.py``'s docstring is not a finding.
+    ``app/core/money.py``'s docstring is not a finding. The handful of
+    modules in :data:`_ROUND_EXEMPT` round something that is not money, and
+    say which.
     """
     offenders = []
     for path in sorted(_APP_DIR.rglob("*.py")):
+        if str(path.relative_to(_APP_DIR)) in _ROUND_EXEMPT:
+            continue
         tree = ast.parse(path.read_text(encoding="utf-8"))
         offenders.extend(
             f"{path.relative_to(_APP_DIR)}:{node.lineno}"
@@ -97,6 +119,30 @@ def test_no_module_under_app_rounds_money_with_the_builtin():
             and node.func.id == "round"
         )
     assert offenders == [], f"money must be quantized, not round()ed: {offenders}"
+
+
+def test_the_round_exemption_names_no_module_that_handles_money():
+    """An exemption may not become a hole money can fall through.
+
+    Each exempt module must exist, must actually call ``round`` (a stale
+    entry is a silently widened ban), and must contain no ``Decimal`` at
+    all -- the moment one does, the exemption has to be re-argued rather
+    than inherited.
+    """
+    for relative in sorted(_ROUND_EXEMPT):
+        path = _APP_DIR / relative
+        assert path.is_file(), relative
+
+        source = path.read_text(encoding="utf-8")
+        assert "Decimal" not in source, relative
+
+        tree = ast.parse(source)
+        assert any(
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "round"
+            for node in ast.walk(tree)
+        ), f"{relative} no longer needs its exemption"
 
 
 # --------------------------------------------------------------------------

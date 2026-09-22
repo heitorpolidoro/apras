@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>APRAS-68 — Cores da marca do condomínio</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-50 text-slate-900">
+<div class="mx-auto max-w-6xl space-y-6 p-6">
+
+  <header class="space-y-1">
+    <h1 class="text-2xl font-bold">APRAS-68 — Cores da marca do condomínio</h1>
+    <p class="text-sm text-slate-600">
+      Nova seção em <strong>Sistema → Perfil do condomínio</strong> (<code>/admin/tenant-profile</code>),
+      sob a permissão existente <code>tenants:profile_update</code>. Escreve <code>tenant.brand_theme</code>
+      (coluna JSON) via <code>PATCH /api/v1/tenant-profile</code>; a resposta traz o <code>theme</code> derivado.
+    </p>
+    <p class="text-sm text-slate-600">
+      <strong>Dois modos.</strong> No <em>Simples</em> o condomínio escolhe duas cores e o resto — inclusive o modo escuro —
+      é derivado, com contraste garantido por construção. No <em>Avançado</em> o condomínio escreve a paleta inteira,
+      e aí qualquer par de texto/fundo abaixo de <strong>4,5:1</strong> é <strong>recusado</strong> (não apenas avisado).
+      A recusa vale na API, não só na tela.
+    </p>
+    <p class="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
+      <strong>Onde cada cor aparece.</strong> A <strong>primária</strong> vai para <code>--primary</code> e
+      <code>--ring</code> (botões principais, links, foco). A <strong>cor de destaque</strong> vai para
+      <code>--secondary</code> <strong>em croma cheio</strong> — os botões secundários (“Depois”, “Cancelar”) —
+      e <em>não</em> para <code>--accent</code>, que continua sendo só um tom pálido de fundo de <em>hover</em>
+      (<code>hover:bg-accent</code>). Sem isso a segunda cor viraria um quase-branco imperceptível.
+    </p>
+  </header>
+
+  <nav class="flex flex-wrap gap-2 border-b border-slate-200">
+    <button data-tab="editor" class="tab border-b-2 border-slate-900 px-4 py-2 text-sm font-medium">Editor (os dois modos)</button>
+    <button data-tab="none" class="tab border-b-2 border-transparent px-4 py-2 text-sm font-medium text-slate-500">Sem cor (padrão de hoje)</button>
+    <button data-tab="app" class="tab border-b-2 border-transparent px-4 py-2 text-sm font-medium text-slate-500">Efeito no app</button>
+    <button data-tab="contract" class="tab border-b-2 border-transparent px-4 py-2 text-sm font-medium text-slate-500">Contrato da API</button>
+  </nav>
+
+  <!-- ========================= EDITOR ========================= -->
+  <section data-panel="editor" class="panel space-y-4">
+
+    <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-6 py-4">
+        <div class="flex items-center gap-3">
+          <i data-lucide="palette" class="h-5 w-5 text-slate-500"></i>
+          <div>
+            <h2 class="text-lg font-semibold">Cores da marca</h2>
+            <p class="text-xs text-slate-500">O servidor é o juiz: a derivação e a medição de contraste vivem em <code>app/core/branding.py</code>.</p>
+          </div>
+        </div>
+        <div class="inline-flex rounded-lg border border-slate-300 bg-slate-100 p-1 text-sm">
+          <button id="modeSimple" class="rounded-md bg-white px-4 py-1.5 font-medium shadow-sm">Simples</button>
+          <button id="modeAdvanced" class="rounded-md px-4 py-1.5 font-medium text-slate-500">Avançado</button>
+        </div>
+      </div>
+
+      <div class="grid gap-8 px-6 py-6 lg:grid-cols-[minmax(0,380px)_1fr]">
+
+        <!-- ---- coluna esquerda: entradas ---- -->
+        <div class="space-y-5">
+
+          <!-- SIMPLES -->
+          <div id="simpleInputs" class="space-y-4">
+            <p class="rounded-md bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+              <i data-lucide="shield-check" class="mb-0.5 inline h-3.5 w-3.5"></i>
+              Duas cores. Fundos, textos, bordas e o bloco <code>.dark</code> inteiro são derivados em OKLCH —
+              o contraste não pode falhar porque o sistema escolhe os dois lados de cada par.
+            </p>
+            <div class="space-y-2">
+              <label class="block text-sm font-medium text-slate-700">Cor primária</label>
+              <div class="flex items-center gap-3">
+                <input data-simple="primary" type="color" value="#7c3aed" class="h-11 w-14 cursor-pointer rounded-md border border-slate-300 bg-white p-1" />
+                <input data-simple-hex="primary" value="#7C3AED" class="w-36 rounded-md border border-slate-300 px-3 py-2 font-mono text-sm uppercase focus:border-slate-900 focus:outline-none" />
+              </div>
+            </div>
+            <div class="space-y-2">
+              <label class="block text-sm font-medium text-slate-700">Cor de destaque <span class="font-normal text-slate-500">— vira <code>--secondary</code></span></label>
+              <div class="flex items-center gap-3">
+                <input data-simple="accent" type="color" value="#0ea5e9" class="h-11 w-14 cursor-pointer rounded-md border border-slate-300 bg-white p-1" />
+                <input data-simple-hex="accent" value="#0EA5E9" class="w-36 rounded-md border border-slate-300 px-3 py-2 font-mono text-sm uppercase focus:border-slate-900 focus:outline-none" />
+              </div>
+            </div>
+            <p class="text-xs text-slate-500">
+              Formato <code>#rrggbb</code>, maiúsculas ou minúsculas — o servidor normaliza para minúsculas.
+            </p>
+            <p class="rounded-md bg-slate-100 px-3 py-2 text-[11px] leading-relaxed text-slate-600">
+              <strong>Divulgação honesta:</strong> <code>--accent</code> é derivado só do <em>matiz</em> do destaque,
+              com croma de ~1% — toda a faixa emitida vai de <code>#e3f6f5</code> a <code>#ffeee8</code>, ou seja,
+              quase-brancos. É de propósito (é superfície de <em>hover</em>). A cor que a pessoa realmente vê é
+              <code>--secondary</code>: <code>#0ea5e9</code> emite <code>oklch(0.68 0.14 237.32)</code> ≈
+              <code>#23a3e3</code>, com texto a 6,96:1.
+            </p>
+          </div>
+
+          <!-- AVANÇADO -->
+          <div id="advancedInputs" class="hidden space-y-4">
+            <p class="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              <i data-lucide="triangle-alert" class="mb-0.5 inline h-3.5 w-3.5"></i>
+              Você escolhe os dois lados de cada par, então a garantia automática deixa de existir.
+              Combinações abaixo de 4,5:1 são <strong>recusadas</strong> — o salvamento fica bloqueado e a API devolve 422.
+            </p>
+            <div class="flex flex-wrap gap-2 text-xs">
+              <button id="presetGood" class="rounded-md border border-slate-300 px-2 py-1 hover:bg-slate-50">Carregar paleta legível</button>
+              <button id="presetBad" class="rounded-md border border-red-300 px-2 py-1 text-red-700 hover:bg-red-50">Carregar paleta ilegível</button>
+            </div>
+            <div id="advGrid" class="grid grid-cols-1 gap-2 sm:grid-cols-2"></div>
+            <label class="flex items-start gap-2 rounded-md border border-slate-200 px-3 py-2 text-xs text-slate-600">
+              <input id="deriveDark" type="checkbox" checked class="mt-0.5" />
+              <span>
+                <strong class="text-slate-800">Derivar o modo escuro</strong> a partir da primária e do destaque
+                (<code>"dark": null</code>). Desmarcado, uma segunda paleta completa é pedida e passa pela mesma recusa.
+              </span>
+            </label>
+          </div>
+
+          <div class="space-y-2 border-t border-slate-100 pt-4">
+            <button id="saveBtn" class="inline-flex w-full items-center justify-center gap-2 rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300">
+              <i data-lucide="save" class="h-4 w-4"></i> Salvar cores
+            </button>
+            <p id="saveHint" class="text-center text-xs text-slate-500">PATCH <code>/api/v1/tenant-profile</code></p>
+            <button onclick="switchTab('none')" class="inline-flex w-full items-center justify-center gap-2 rounded-md border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50">
+              <i data-lucide="rotate-ccw" class="h-4 w-4"></i> Voltar ao padrão
+            </button>
+          </div>
+        </div>
+
+        <!-- ---- coluna direita: contraste + prévia ---- -->
+        <div class="space-y-4">
+
+          <!-- estado de recusa -->
+          <div id="refusal" class="hidden rounded-lg border-2 border-red-300 bg-red-50 p-4">
+            <div class="flex items-start gap-3">
+              <i data-lucide="octagon-x" class="mt-0.5 h-5 w-5 shrink-0 text-red-600"></i>
+              <div class="space-y-1">
+                <p class="text-sm font-semibold text-red-800">Estas cores não podem ser salvas</p>
+                <p class="text-xs text-red-700">
+                  <span id="refusalCount">2</span> combinação(ões) abaixo do mínimo legível de 4,5:1 (WCAG 2.1 AA, texto normal).
+                  Ajuste as cores destacadas abaixo. Se a requisição for enviada por fora da tela, a API responde
+                  <code>422</code> com a mesma lista.
+                </p>
+                <pre class="mt-2 overflow-x-auto rounded bg-red-100 p-2 text-[11px] leading-relaxed text-red-900">{
+  "detail": "insufficient_contrast",
+  "failures": [
+    {"pair": "foreground/background",      "ratio": 1.60, "minimum": 4.5},
+    {"pair": "card-foreground/card",       "ratio": 1.10, "minimum": 4.5},
+    {"pair": "primary-foreground/primary", "ratio": 1.26, "minimum": 4.5}
+  ]
+}</pre>
+              </div>
+            </div>
+          </div>
+
+          <div id="okBanner" class="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800">
+            <i data-lucide="check-check" class="mb-0.5 inline h-4 w-4"></i>
+            Todos os pares medidos passam de 4,5:1. Medição feita sobre o valor <strong>já arredondado</strong>
+            a 2 casas <strong>e já encaixado no gamut sRGB</strong> (croma reduzido na grade de 0,01 até caber) —
+            isto é, exatamente a cor que o navegador <em>pinta</em>, não só a string que ele recebe.
+          </div>
+          <div class="rounded-lg border border-slate-200 bg-slate-50 p-3 text-[11px] leading-relaxed text-slate-600">
+            <strong class="text-slate-800">Qual lado o reparo move, por par.</strong>
+            <code>--primary</code>, <code>--secondary</code> e <code>--accent</code> (lado não-texto) se afastam do
+            seu primeiro plano; <code>--muted-foreground</code> (lado <em>texto</em>) desce no claro e sobe no escuro
+            até passar nas três superfícies contra as quais é medido (<code>--muted</code>, <code>--background</code>,
+            <code>--card</code>), porque essas três não podem se mexer.
+            <code>foreground/background</code> e <code>card-foreground/card</code> nunca precisam de reparo.
+          </div>
+
+          <div>
+            <h3 class="mb-2 text-sm font-semibold text-slate-700">Pares medidos (claro)</h3>
+            <div id="pairsLight" class="grid gap-1.5"></div>
+          </div>
+          <div>
+            <h3 class="mb-2 text-sm font-semibold text-slate-700">Pares medidos (escuro)</h3>
+            <div id="pairsDark" class="grid gap-1.5"></div>
+          </div>
+
+          <div>
+            <h3 class="mb-2 text-sm font-semibold text-slate-700">Prévia</h3>
+            <div class="grid gap-3 md:grid-cols-2">
+              <div id="previewLight" class="rounded-lg border border-slate-200 p-4"></div>
+              <div id="previewDark" class="rounded-lg border border-slate-700 p-4"></div>
+            </div>
+          </div>
+
+          <details class="rounded-lg border border-slate-200 bg-white p-3 text-xs">
+            <summary class="cursor-pointer font-medium text-slate-700">Variáveis CSS emitidas (17 por esquema — 13 autoradas no avançado + 4 derivadas)</summary>
+            <pre id="emitted" class="mt-2 overflow-x-auto text-[11px] leading-relaxed text-slate-600"></pre>
+          </details>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= SEM COR ========================= -->
+  <section data-panel="none" class="panel hidden space-y-4">
+    <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <h2 class="text-lg font-semibold">Sem cores configuradas</h2>
+      <p class="mt-2 text-sm text-slate-600">
+        <code>GET /api/v1/tenant-profile</code> devolve <code>brand_theme: null</code> e <code>theme: null</code>.
+        O cliente <strong>não injeta elemento nenhum</strong> — nem um <code>&lt;style&gt;</code> vazio.
+        O app renderiza exatamente o <code>index.css</code> de hoje, sem uma linha de diferença.
+      </p>
+      <pre class="mt-4 overflow-x-auto rounded-md bg-slate-900 p-3 text-xs text-slate-100">GET /api/v1/tenant-profile
+{
+  "name": "Condomínio Padrão",
+  "slug": "condominio-padrao",
+  "brand_theme": null,
+  "theme": null
+}
+
+document.getElementById("tenant-brand-theme")  // => null</pre>
+      <div class="mt-4 rounded-lg border border-slate-200 p-4">
+        <div class="mb-3 flex items-center gap-2">
+          <span class="inline-block h-6 w-6 rounded" style="background:oklch(0.62 0.15 160)"></span>
+          <span class="text-sm text-slate-700">Emerald Green — o padrão de hoje, intocado.</span>
+        </div>
+        <button class="rounded-md px-3 py-2 text-sm font-medium text-white" style="background:oklch(0.62 0.15 160)">Botão primário</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= EFEITO NO APP ========================= -->
+  <section data-panel="app" class="panel hidden space-y-4">
+    <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <h2 class="text-lg font-semibold">Efeito no app</h2>
+      <p class="mt-2 text-sm text-slate-600">
+        Um único <code>&lt;style id="tenant-brand-theme"&gt;</code> em <code>document.head</code> com
+        <code>:root:root{…}</code> e <code>.dark{…}</code>. Nenhuma tela é revisada uma a uma.
+        Trocar de condomínio invalida <code>["tenantProfile"]</code> e a marca troca junto.
+      </p>
+      <div class="mt-4 rounded-lg border-2 border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+        <p class="font-semibold"><i data-lucide="triangle-alert" class="mb-0.5 inline h-4 w-4"></i> Até onde a marca chega hoje</p>
+        <p class="mt-1 text-xs leading-relaxed">
+          O mecanismo só alcança componentes que usam os <em>tokens semânticos</em>. Medido em
+          <code>frontend/src</code>: <strong>56 dos 266 arquivos <code>.tsx</code></strong> usam classes semânticas
+          (<code>text-muted-foreground</code> ×190, <code>text-foreground</code> ×85, <code>text-primary</code> ×38,
+          <code>bg-card</code> ×32, <code>bg-primary</code> ×28, <code>bg-secondary</code> ×7) e
+          <strong>108 arquivos</strong> escrevem classes de paleta fixas que nenhuma variável CSS alcança
+          (<code>text-slate-400</code> ×147, <code>text-gray-500</code> ×122, <code>border-slate-800</code> ×114,
+          <code>text-indigo-600</code> ×67…).
+          <strong>Boa parte do app continuará cinza-e-índigo</strong> depois de o síndico escolher as cores.
+          Migrar esses 108 arquivos é uma <strong>tarefa de acompanhamento nomeada</strong>, fora deste PR.
+        </p>
+      </div>
+      <div id="appPreview" class="mt-4 rounded-lg border border-slate-200 p-4"></div>
+    </div>
+  </section>
+
+  <!-- ========================= CONTRATO ========================= -->
+  <section data-panel="contract" class="panel hidden space-y-4">
+    <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-3 text-sm text-slate-700">
+      <h2 class="text-lg font-semibold text-slate-900">Contrato</h2>
+      <p><strong>Coluna:</strong> <code>tenant.brand_theme</code>, JSON anulável — mesmo precedente de <code>disabled_modules</code>.
+        Revisão nova <code>0004_tenant_brand_theme</code> sobre <code>0003_tenant_invitation</code> (APRAS-71, já em
+        implementação — esta tarefa cede para não abrir duas cabeças do Alembic); se a APRAS-71 não tiver entrado,
+        vira <code>0003_tenant_brand_theme</code> sobre <code>0002_tenant_slug</code>. <code>0001</code> não é editada.</p>
+      <pre class="overflow-x-auto rounded-md bg-slate-900 p-3 text-xs text-slate-100">{"mode": "simple",   "primary": "#7c3aed", "accent": "#0ea5e9"}
+{"mode": "advanced", "light": { /* 13 chaves */ }, "dark": null }</pre>
+      <p><strong>Medição:</strong> arredonda a 2 casas → reduz o croma até caber no gamut sRGB → só então mede.
+        A CSS Color 4 §13 manda o navegador mapear o croma de uma <code>oklch()</code> fora do gamut; medir o
+        recorte ingênuo certificaria pares que o navegador pinta abaixo de 4,5:1 (pior caso medido:
+        <code>oklch(0.52 0.22 210)</code> sobre <code>oklch(0.15 0.02 210)</code>, medido 4,52 e pintado 3,74).</p>
+      <p><strong>Derivação:</strong> uma só, em <code>app/core/branding.build_theme(tenant.brand_theme)</code>.
+        A APRAS-74 (endpoint público <code>/c/&lt;slug&gt;</code>) chama a mesma função; não existe porte em TypeScript.
+        O front leva apenas a função de razão de contraste, pinada contra
+        <code>backend/tests/data/contrast_fixtures.json</code> pelos dois lados.</p>
+      <p><strong>Nunca sobrescritas:</strong> <code>--destructive*</code>, os 10 tokens de status,
+        os 8 de prioridade e <code>--radius*</code> — são semânticos e iguais em todo condomínio.</p>
+    </div>
+  </section>
+
+  <p class="pb-8 text-center text-xs text-slate-400">Mockup estático — APRAS-68</p>
+</div>
+
+<script>
+/* ---------- OKLCH -> sRGB linear -> luminância -> razão WCAG ----------
+   IMPORTANTE (BF-4): o navegador NÃO recorta canal a canal uma cor oklch()
+   fora do gamut — a CSS Color 4 §13 manda reduzir o croma a L e H constantes.
+   Medir o recorte ingênuo é medir uma cor que ninguém pinta. Aqui a medição
+   roda sobre a MESMA cor mapeada, e a derivação encaixa o croma no gamut
+   antes de medir, de modo que recorte, mapeamento e pintura coincidem.       */
+function oklchToLinearRaw(L, C, H) {
+  const h = H * Math.PI / 180, a = C * Math.cos(h), b = C * Math.sin(h);
+  const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
+  const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
+  const s_ = L - 0.0894841775 * a - 1.2914855480 * b;
+  const l = l_ ** 3, m = m_ ** 3, s = s_ ** 3;
+  return [
+     4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+    -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s,
+  ];
+}
+const EPS = 1e-4;
+function inGamut(L, C, H) { return oklchToLinearRaw(L, C, H).every(v => v >= -EPS && v <= 1 + EPS); }
+function clipLinear(L, C, H) { return oklchToLinearRaw(L, C, H).map(v => Math.min(1, Math.max(0, v))); }
+/* mapeamento de gamut da CSS Color 4 §13: busca binária no croma + recorte com JND */
+function gamutMap(L, C, H) {
+  if (L >= 1) return [1, 1, 1];
+  if (L <= 0) return [0, 0, 0];
+  if (inGamut(L, C, H)) return clipLinear(L, C, H);
+  let lo = 0, hi = C;
+  while (hi - lo > 1e-5) {
+    const mid = (lo + hi) / 2;
+    if (inGamut(L, mid, H)) { lo = mid; continue; }
+    const cur = clipLinear(L, mid, H);
+    const h = H * Math.PI / 180;
+    const [L2, a2, b2] = linearToOklab(cur);
+    const d = Math.hypot(L - L2, mid * Math.cos(h) - a2, mid * Math.sin(h) - b2);
+    if (d < 0.02) return cur;
+    hi = mid;
+  }
+  return clipLinear(L, lo, H);
+}
+function linearToHexChannels(rgb) {
+  return rgb.map(v => v <= 0.0031308 ? 12.92 * v : 1.055 * Math.pow(v, 1 / 2.4) - 0.055);
+}
+function luminance([r, g, b]) { return 0.2126 * r + 0.7152 * g + 0.0722 * b; }
+function ratio(c1, c2) {
+  const l1 = luminance(gamutMap(...c1)), l2 = luminance(gamutMap(...c2));
+  const hi = Math.max(l1, l2), lo = Math.min(l1, l2);
+  return (hi + 0.05) / (lo + 0.05);
+}
+function linearToOklab([r, g, b]) {
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  return [0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+          1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+          0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s];
+}
+function hexToOklch(hex) {
+  const n = hex.replace('#', '');
+  const srgb = [0, 2, 4].map(i => parseInt(n.slice(i, i + 2), 16) / 255);
+  const lin = srgb.map(v => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+  const [L, A, B] = linearToOklab(lin);
+  let H = Math.atan2(B, A) * 180 / Math.PI; if (H < 0) H += 360;
+  return [L, Math.hypot(A, B), H];
+}
+const r2 = v => Math.round(v * 100) / 100;
+function clampLC(L, C) { return [Math.min(0.92, Math.max(0.20, L)), Math.min(0.22, C)]; }
+/* arredonda a 2 casas e DEPOIS reduz o croma na mesma grade de 0,01 até caber no sRGB */
+function snap(L, C, H) {
+  L = r2(L); C = r2(C); H = r2(H);
+  let guard = 0;
+  while (C > 0 && !inGamut(L, C, H) && guard++ < 100) C = r2(C - 0.01);
+  return [L, C, H];
+}
+const css = c => `oklch(${c[0].toFixed(2)} ${c[1].toFixed(2)} ${c[2].toFixed(2)})`;
+function toCssHex(c) {
+  const ch = linearToHexChannels(gamutMap(...c));
+  return '#' + ch.map(v => Math.round(Math.min(1, Math.max(0, v)) * 255).toString(16).padStart(2, '0')).join('');
+}
+
+/* ---------- pares medidos (8 por esquema) ---------- */
+const PAIRS = [
+  ['foreground', 'background'], ['card-foreground', 'card'],
+  ['primary-foreground', 'primary'], ['secondary-foreground', 'secondary'],
+  ['accent-foreground', 'accent'], ['muted-foreground', 'muted'],
+  ['muted-foreground', 'background'], ['muted-foreground', 'card'],
+];
+/* 13 chaves autoradas no modo avançado; 4 derivadas dentro do esquema */
+const AUTHORED = ['background','foreground','card','card-foreground','primary','primary-foreground',
+  'secondary','secondary-foreground','accent','accent-foreground','muted','muted-foreground','border'];
+
+/* ---------- derivação modo simples (resumo fiel do spec) ----------
+   BF-2: a regra "melhor entre branco e quase-preto" vale SÓ para as duas
+         superfícies de marca (--primary e --secondary). Os demais primeiros
+         planos são constantes, listadas na tabela do spec.
+   BF-3: a cor de destaque vai para --secondary EM CROMA CHEIO (é ali que a
+         pessoa vê); --accent continua sendo o tom pálido de hover.
+   BF-1: qual lado o reparo move é fixo POR PAR — não-texto para
+         primary/secondary/accent, texto para muted-foreground.               */
+function pickForeground(c, hue) {
+  const white = [0.98, 0, 0], black = snap(0.15, 0.02, hue);
+  return ratio(c, white) >= ratio(c, black) ? white : black;
+}
+/* move o lado NÃO-TEXTO, afastando-o do texto, reencaixando no gamut a cada passo */
+function repairSurface(surface, fg) {
+  let cur = surface;
+  const away = fg[0] > cur[0] ? -0.01 : 0.01;
+  for (let i = 0; i < 100 && ratio(cur, fg) < 4.5; i++) cur = snap(cur[0] + away, cur[1], cur[2]);
+  return cur;
+}
+/* move o lado TEXTO até passar em TODAS as superfícies contra as quais é medido */
+function repairText(fg, surfaces, down) {
+  let cur = fg;
+  for (let i = 0; i < 100 && surfaces.some(s => ratio(cur, s) < 4.5); i++)
+    cur = snap(cur[0] + (down ? -0.01 : 0.01), cur[1], cur[2]);
+  return cur;
+}
+function deriveSimple(primaryHex, accentHex, dark) {
+  const [pl, pc, ph] = hexToOklch(primaryHex); const [pL, pC] = clampLC(pl, pc);
+  const [al, ac, ah] = hexToOklch(accentHex);  const [aL, aC] = clampLC(al, ac);
+  const H = r2(ph), AH = r2(ah);
+  const D = dark
+    ? { bg: snap(0.14,0.01,H), card: snap(0.16,0.01,H), fg: snap(0.98,0.01,H),
+        muted: snap(0.22,0.02,H), mutedFg0: snap(0.65,0.02,H),
+        acc: snap(0.22, Math.max(0.02, r2(aC * 0.2)), AH), accFg: snap(0.98,0.01,AH),
+        border: snap(0.25,0.02,H), pStart: Math.max(pL, 0.62), sStart: Math.max(aL, 0.62), down: false }
+    : { bg: [0.99,0,0], card: [1,0,0], fg: snap(0.14,0.01,H),
+        muted: snap(0.96,0.01,H), mutedFg0: snap(0.55,0.02,H),
+        acc: snap(0.96, Math.max(0.01, r2(aC * 0.1)), AH), accFg: snap(0.20,0.02,AH),
+        border: snap(0.92,0.01,H), pStart: pL, sStart: aL, down: true };
+
+  let primary = snap(D.pStart, pC, H);
+  const pFg = pickForeground(primary, H); primary = repairSurface(primary, pFg);
+  let secondary = snap(D.sStart, aC, AH);
+  const sFg = pickForeground(secondary, AH); secondary = repairSurface(secondary, sFg);
+  const accent = repairSurface(D.acc, D.accFg);
+  const mutedFg = repairText(D.mutedFg0, [D.muted, D.bg, D.card], D.down);
+
+  const s = {
+    background: D.bg, foreground: D.fg, card: D.card, 'card-foreground': D.fg,
+    primary, 'primary-foreground': pFg, secondary, 'secondary-foreground': sFg,
+    accent, 'accent-foreground': D.accFg, muted: D.muted, 'muted-foreground': mutedFg, border: D.border,
+  };
+  s.popover = s.card; s['popover-foreground'] = s['card-foreground']; s.input = s.border; s.ring = s.primary;
+  return s;
+}
+
+/* ---------- estado ---------- */
+let mode = 'simple';
+const simple = { primary: '#7c3aed', accent: '#0ea5e9' };
+const GOOD = { background:'#fffdf7', foreground:'#1d1b16', card:'#ffffff', 'card-foreground':'#1d1b16',
+  primary:'#8a2b2b', 'primary-foreground':'#fff7f5', secondary:'#1f6f8b', 'secondary-foreground':'#ffffff',
+  accent:'#e8ddc9', 'accent-foreground':'#3a3128', muted:'#f1ece4', 'muted-foreground':'#5c5344', border:'#e2d9c8' };
+const BAD = { background:'#2b2b2b', foreground:'#4a4a4a', card:'#ffe680', 'card-foreground':'#fff1a8',
+  primary:'#ffe680', 'primary-foreground':'#ffffff', secondary:'#1f6f8b', 'secondary-foreground':'#3a7fa0',
+  accent:'#e8ddc9', 'accent-foreground':'#3a3128', muted:'#f1ece4', 'muted-foreground':'#8a8a8a', border:'#e2d9c8' };
+const advanced = { ...GOOD };
+
+function advancedScheme() {
+  const s = {};
+  /* no avançado a cor é literal: só arredonda e encaixa no gamut. O clamp de L em
+     [0,20 ; 0,92] e o de C em 0,22 existem para extrair um matiz utilizável de uma
+     ENTRADA no modo simples — aplicá-los aqui transformaria um branco autorado em
+     0,92 e dessaturaria um roxo autorado. */
+  for (const k of AUTHORED) { const [l, c, h] = hexToOklch(advanced[k]); s[k] = snap(l, c, h); }
+  s.popover = s.card; s['popover-foreground'] = s['card-foreground'];
+  s.input = s.border; s.ring = s.primary;
+  return s;
+}
+
+function schemes() {
+  if (mode === 'simple') return { light: deriveSimple(simple.primary, simple.accent, false),
+                                  dark: deriveSimple(simple.primary, simple.accent, true) };
+  return { light: advancedScheme(),
+           dark: document.getElementById('deriveDark').checked
+             ? deriveSimple(advanced.primary, advanced.accent, true)
+             : advancedScheme() };
+}
+
+function audit(scheme) {
+  return PAIRS.map(([f, b]) => ({ fg: f, bg: b, ratio: ratio(scheme[f], scheme[b]) }));
+}
+
+/* ---------- render ---------- */
+function buildAdvancedGrid() {
+  const grid = document.getElementById('advGrid');
+  grid.innerHTML = AUTHORED.map(k => `
+    <label class="flex items-center gap-2 rounded-md border border-slate-200 px-2 py-1.5">
+      <input type="color" data-adv="${k}" value="${advanced[k]}" class="h-7 w-9 cursor-pointer rounded border border-slate-300 p-0.5" />
+      <span class="truncate font-mono text-[11px] text-slate-600">--${k}</span>
+    </label>`).join('');
+  grid.querySelectorAll('[data-adv]').forEach(i =>
+    i.addEventListener('input', e => { advanced[e.target.dataset.adv] = e.target.value; render(); }));
+}
+
+function pairRow(p) {
+  const ok = p.ratio >= 4.5;
+  return `<div class="flex items-center justify-between rounded-md border px-3 py-1.5 text-xs ${ok ? 'border-slate-200 bg-white' : 'border-red-300 bg-red-50'}">
+    <span class="font-mono ${ok ? 'text-slate-600' : 'font-semibold text-red-700'}">--${p.fg} / --${p.bg}</span>
+    <span class="flex items-center gap-1.5 ${ok ? 'text-emerald-700' : 'text-red-700'}">
+      ${p.ratio.toFixed(2)}:1 ${ok ? '<i data-lucide="check" class="h-3.5 w-3.5"></i>' : '<i data-lucide="x" class="h-3.5 w-3.5"></i>'}
+    </span></div>`;
+}
+
+function previewHtml(s, label) {
+  const v = k => toCssHex(s[k]);
+  return `<div style="background:${v('background')};color:${v('foreground')}" class="rounded-md p-3">
+    <p class="mb-2 text-[11px] uppercase tracking-wide opacity-60">${label}</p>
+    <div style="background:${v('card')};color:${v('card-foreground')};border:1px solid ${v('border')}" class="rounded-md p-3">
+      <p class="text-sm font-semibold">Assembleia de 12/10</p>
+      <p style="color:${v('muted-foreground')}" class="text-xs">Convocação enviada a 84 unidades</p>
+      <div class="mt-3 flex gap-2">
+        <button style="background:${v('primary')};color:${v('primary-foreground')}" class="rounded px-3 py-1.5 text-xs font-medium">Confirmar</button>
+        <button style="background:${v('secondary')};color:${v('secondary-foreground')}" class="rounded px-3 py-1.5 text-xs font-medium">Depois</button>
+        <span style="background:${v('accent')};color:${v('accent-foreground')}" class="rounded px-2 py-1 text-xs">destaque</span>
+      </div>
+    </div></div>`;
+}
+
+function render() {
+  const { light, dark } = schemes();
+  const al = audit(light), ad = audit(dark);
+  document.getElementById('pairsLight').innerHTML = al.map(pairRow).join('');
+  document.getElementById('pairsDark').innerHTML = ad.map(pairRow).join('');
+  document.getElementById('previewLight').innerHTML = previewHtml(light, 'Claro');
+  document.getElementById('previewDark').innerHTML = previewHtml(dark, 'Escuro');
+  document.getElementById('appPreview').innerHTML = previewHtml(light, 'Painel do condomínio');
+  document.getElementById('emitted').textContent =
+    ':root {\n' + Object.keys(light).sort().map(k => `  --${k}: ${css(light[k])};`).join('\n') +
+    '\n}\n.dark {\n' + Object.keys(dark).sort().map(k => `  --${k}: ${css(dark[k])};`).join('\n') + '\n}';
+
+  const failures = [...al, ...ad].filter(p => p.ratio < 4.5);
+  const refusing = mode === 'advanced' && failures.length > 0;
+  document.getElementById('refusal').classList.toggle('hidden', !refusing);
+  document.getElementById('okBanner').classList.toggle('hidden', refusing);
+  document.getElementById('refusalCount').textContent = failures.length;
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = refusing;
+  document.getElementById('saveHint').innerHTML = refusing
+    ? '<span class="text-red-600">Bloqueado na tela; a API devolveria <code>422 insufficient_contrast</code>.</span>'
+    : 'PATCH <code>/api/v1/tenant-profile</code>';
+  lucide.createIcons();
+}
+
+/* ---------- eventos ---------- */
+function setMode(m) {
+  mode = m;
+  document.getElementById('simpleInputs').classList.toggle('hidden', m !== 'simple');
+  document.getElementById('advancedInputs').classList.toggle('hidden', m !== 'advanced');
+  document.getElementById('modeSimple').className = m === 'simple'
+    ? 'rounded-md bg-white px-4 py-1.5 font-medium shadow-sm' : 'rounded-md px-4 py-1.5 font-medium text-slate-500';
+  document.getElementById('modeAdvanced').className = m === 'advanced'
+    ? 'rounded-md bg-white px-4 py-1.5 font-medium shadow-sm' : 'rounded-md px-4 py-1.5 font-medium text-slate-500';
+  render();
+}
+document.getElementById('modeSimple').addEventListener('click', () => setMode('simple'));
+document.getElementById('modeAdvanced').addEventListener('click', () => setMode('advanced'));
+document.getElementById('deriveDark').addEventListener('change', render);
+document.getElementById('presetGood').addEventListener('click', () => { Object.assign(advanced, GOOD); buildAdvancedGrid(); render(); });
+document.getElementById('presetBad').addEventListener('click', () => { Object.assign(advanced, BAD); buildAdvancedGrid(); render(); });
+document.querySelectorAll('[data-simple]').forEach(i => i.addEventListener('input', e => {
+  simple[e.target.dataset.simple] = e.target.value;
+  document.querySelector(`[data-simple-hex="${e.target.dataset.simple}"]`).value = e.target.value.toUpperCase();
+  render();
+}));
+document.querySelectorAll('[data-simple-hex]').forEach(i => i.addEventListener('input', e => {
+  const v = e.target.value.trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(v)) {
+    simple[e.target.dataset.simpleHex] = v.toLowerCase();
+    document.querySelector(`[data-simple="${e.target.dataset.simpleHex}"]`).value = v.toLowerCase();
+    render();
+  }
+}));
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => {
+    const on = t.dataset.tab === name;
+    t.className = 'tab border-b-2 px-4 py-2 text-sm font-medium ' + (on ? 'border-slate-900' : 'border-transparent text-slate-500');
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('hidden', p.dataset.panel !== name));
+}
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
+
+buildAdvancedGrid();
+render();
+lucide.createIcons();
+</script>
+</body>
+</html>

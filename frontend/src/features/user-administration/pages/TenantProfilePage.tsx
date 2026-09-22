@@ -24,6 +24,7 @@ import {
   useUpdateTenantProfile,
 } from "../../../hooks/useTenantProfile";
 import { Spinner } from "../../../components/ui/spinner";
+import TenantBrandColors from "../components/TenantBrandColors";
 
 /**
  * "Perfil do condomínio" — the screen behind `/admin/tenant-profile`
@@ -400,6 +401,13 @@ const TenantProfilePage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* The condominium's brand colours (APRAS-68). Under the same
+          `tenants:profile_update` the route already gates on — there is no
+          second permission — and reading the same profile payload, so a save
+          here re-themes the running app through `TenantBrandTheme` with no
+          extra wiring. */}
+      <TenantBrandColors profile={data} />
 
       {confirming && (
         <div

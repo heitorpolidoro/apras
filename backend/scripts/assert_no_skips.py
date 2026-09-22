@@ -54,10 +54,19 @@ MODULE_CLASSNAME = "tests.test_migrations_postgres"
 #: docstring are both pinned. Appending the revision to `EXPECTED_HISTORY`
 #: added no case -- the history cases loop over the tuple.
 #:
+#: Raised from 33 to 36 by APRAS-68, which added the fifth revision
+#: (`0006_tenant_brand_theme`, on `0005_purchase_line_items`) and with it
+#: three cases: the nullable JSON column with no server default, the
+#: pre-upgrade row that comes back `NULL` because there is no backfill, and
+#: the real `downgrade` back one revision. The spec wrote this revision as
+#: `0004` on `0003_tenant_invitation`; APRAS-73 landed first, so the incoming
+#: revision renumbered itself rather than leave two Alembic heads, and the
+#: digits skip `0004`.
+#:
 #: Measured after the change, against the index this commit carries and not
 #: against a worktree that also holds another task's in-flight revision:
 #: `uv run pytest tests/test_migrations_postgres.py --collect-only -q`.
-MIN_CASES = 33
+MIN_CASES = 36
 
 
 def _verdict(collected: int, skipped: list[str]) -> list[str]:

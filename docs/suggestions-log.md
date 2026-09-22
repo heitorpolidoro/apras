@@ -1407,3 +1407,120 @@ after the run is byte-identical to the one at the start.
   number } })`. `parseApiError` already normalises axios errors elsewhere in the
   codebase; exposing a small `httpStatus(error)` helper next to it would keep that cast
   in one place rather than growing a copy per screen.
+
+## [APRAS-76] Fix the default theme's muted text contrast, which is below WCAG AA — 2026-09-21
+- *Test criteria* claims "all 19 dark pairs (worst `--muted-foreground` on
+  `--muted`, 5.3726)". The dark worst is actually
+  `--destructive-foreground` on `--destructive` at **5.1359**; the muted pair
+  is 5.3726 as stated, just not the minimum. Everything still passes, and the
+  test derives its own pairs so nothing downstream depends on the sentence, but
+  the number is wrong in a spec whose credibility rests on its arithmetic.
+- Expected result 6 says "`git diff --name-only` lists exactly ...". The
+  working tree currently carries ~30 unrelated modified/untracked files
+  (APRAS-71 invitations, other spec/mock files), and QA receives only the
+  `expected_results`, never this context — run literally, that command will
+  list everything and fail a correct implementation. Consider phrasing it as
+  "the commit for this task touches exactly these two files" (verifiable with
+  `git show --name-only`), which is just as mechanical and not hostage to a
+  dirty tree.
+- The 0.01-grid chroma walk is an approximation of CSS Color 4 §13, which
+  specifies a binary search on chroma with a deltaE-OK ≤ 0.02 clip. The spec's
+  algorithm is fully specified and unambiguous, and the difference does not
+  move any pair across 4.5, but expected result 1's wording ("after CSS Color 4
+  §13 chroma-reduction gamut mapping") overstates the fidelity. Calling it
+  "§13-style chroma reduction on the authored 0.01 grid" would describe what
+  the test actually does.
+- The ~40-line oracle deliberately duplicates what APRAS-68's
+  `frontend/src/lib/contrast.ts` will contain. The independence argument is
+  good, but the two can drift silently. Worth a one-line note in the test file
+  pointing at the other module so whoever lands second sees the choice.
+- Consider having the test assert the two repaired values themselves
+  (`--muted-foreground: oklch(0.53 0.02 160)`, `--primary-foreground:
+  oklch(0.15 0.02 160)`), not just the ratios. The ratio assertion already
+  catches a regression, but naming the value makes the failure message point at
+  the fix rather than at the arithmetic.
+
+## [APRAS-76] Fix the default theme's muted text contrast, which is below WCAG AA — 2026-09-21
+- *Test criteria* says `git diff --stat` while expected result 6 says
+  `git diff --name-only`. They agree in substance; using one command in both
+  places would remove a needless diff between the two documents.
+- Step 3's phrase "within `[0, 1]` (tolerance 1e-4)" is two-sided in my reading
+  and the 0.15 → 0.14 pin confirms it, but writing `[-1e-4, 1 + 1e-4]` would
+  make it unmistakable without relying on the pin.
+
+## [APRAS-68] Whitelabel: cores da marca do condominio no perfil e no app — 2026-09-22
+- `backend/app/services/tenant_service.py:593-602` — `update_profile` commits in
+  three steps (`update_tenant`, then `_write_brand_theme`, then `_write_slug`).
+  A `SlugAlreadyTakenError` raised by the last step leaves an already-committed
+  brand theme behind while the request fails. This mirrors the pre-existing
+  name-then-slug behaviour rather than introducing it, so it is not a new defect,
+  but one transaction for the whole profile PATCH would close the whole class.
+- `frontend/src/lib/contrast.ts:307-317` — `auditHexPalette` rounds to 2dp via
+  `formatOklch` but does not replicate the backend's 0.01-grid chroma snap
+  (`branding.snap_to_gamut`) before measuring, so a borderline out-of-gamut
+  authored palette can pass the client check and still be refused by the server.
+  The design already handles that (the 422 body is rendered verbatim, and a test
+  covers it), but one sentence in the module docstring naming this specific
+  divergence would stop a future reader treating a mismatch as a port bug.
+- `frontend/src/features/user-administration/components/TenantBrandColors.tsx:598-603`
+  — the green "all pairs pass" banner renders in simple mode, where by design
+  nothing was measured client-side. Consider a mode-specific string so the
+  reassurance states the actual reason ("simple mode cannot fail by
+  construction") instead of implying a measurement that did not run.
+- `backend/app/core/branding.py:93` — `EMITTED_KEYS = (*AUTHORED_KEYS,
+  *DERIVED_FROM)` relies on unpacking a dict to its keys. `*DERIVED_FROM` is
+  correct but reads as an oversight; `*tuple(DERIVED_FROM)` or
+  `*DERIVED_FROM.keys()` says it outright.
+- `backend/tests/test_branding.py` — the `_brand_surface` helper imports
+  `derive_brand_surface` inside the function body while every other symbol is
+  imported at module level. Moving it up would remove the "why is this one
+  different?" question.
+- Process note, not a code change: `tests/test_migrations_postgres.py` skipped
+  all 36 cases here for want of Postgres on 55432, and diff-scoped `eslint`
+  could not be invoked in this session. Both need to be green in QA/CI before
+  this merges; `MIN_CASES = 36` is exact, so any change to that module's case
+  count will trip `assert_no_skips`.
+
+## [APRAS-68] Whitelabel: cores da marca do condominio no perfil e no app — 2026-09-22 (QA)
+- **The injected dark selector is `:root:root.dark`, while `index.css` declares
+  a bare `.dark`.** Today nothing applies the class — there is no `classList`
+  call anywhere in `frontend/src` — so the two cannot disagree. But the day a
+  dark-mode toggle ships, if it puts `.dark` on `<body>` or on a wrapper `<div>`
+  (a common shadcn pattern) rather than on `<html>`, `index.css`'s rule will
+  apply and the tenant's will silently not. Worth a one-line comment in the
+  toggle task, or emitting `:root:root.dark, :root:root .dark` when it lands.
+- **`oklch(0.98 0 0)` in the spec prose is emitted as `oklch(0.98 0.00 0.00)`.**
+  `format_oklch` always writes 2 decimals, which is what the expected results
+  require and is valid CSS, but the spec's literal pins (`over oklch(0.98 0 0)`)
+  do not match the bytes. Aligning the prose with the emitter would save the
+  next reader the double-take I had.
+- **`frontend/src/lib/contrast.ts` exports rather more than "the ratio function
+  and the gamut predicate".** It also carries `gamutMap`, `hexToOklch`,
+  `oklchToHex`, `formatOklch`, `auditScheme` and `auditHexPalette`. None of them
+  is a *derivation* — the module cannot build a theme, and `contrast.test.ts`
+  explicitly asserts that no export is named `buildTheme` / `deriveScheme` /
+  `repairSurface` / `repairText` — so the "one derivation in the repository"
+  contract APRAS-74 depends on is intact. But the spec sentence that says
+  "contains the contrast ratio function and gamut predicate only" is now
+  narrower than the file, and APRAS-74's reviewer will read that sentence.
+- **Advanced mode's `"dark": null` fallback is fed the authored `accent`, not
+  the authored `secondary`.** The code says so, at length, and the choice is
+  defensible (it is what makes the scheme byte-identical to the simple
+  derivation, which is the stated contract). It is still surprising: in advanced
+  mode `accent` is the pale hover tint, so a derived dark `--secondary` comes
+  out near the tint's lightness rather than at the brand's chroma. Nothing
+  renders it today. When the dark-mode toggle ships, this is the first thing to
+  re-decide.
+- **A throwaway container `apras-qa68-pg` (port 55433) is still running.** I
+  could not stop it — the sandbox refused `docker stop`/`docker kill`. It holds
+  nothing but the migration test's own schema and can be removed with
+  `docker kill apras-qa68-pg` (it was started with `--rm`). The pre-existing
+  `apras-pgtest73` on 55432 was deliberately left alone.
+- **`eslint` could not be executed from this review sandbox** (the shell wrapper
+  refused every invocation form: `npm run lint`, `npx eslint`,
+  `./node_modules/.bin/eslint`, `node node_modules/eslint/bin/eslint.js`). I
+  therefore have no first-hand reading of the "375 errors + 2 warnings"
+  baseline. This is not treated as a finding: `.github/workflows/ci.yml` has no
+  eslint job — the frontend gates are `npm run build` and `npm run test:coverage`,
+  both of which I ran and both of which pass — so nothing that CI enforces is
+  unverified. Flagging it only so the gap in *this* report is explicit.

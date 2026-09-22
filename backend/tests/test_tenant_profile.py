@@ -24,6 +24,7 @@ from fastapi.testclient import TestClient
 from PIL import Image
 from sqlmodel import Session
 
+from app.core.branding import EMITTED_KEYS, build_theme
 from app.core.permissions import ROUTE_PERMISSIONS, UNGUARDED_ROUTES
 from app.core.security import create_access_token, get_password_hash
 from app.core.slug import SLUG_MAX_LENGTH, SLUG_MIN_LENGTH, SLUG_PATTERN
@@ -465,6 +466,352 @@ def test_is_active_is_not_writable_here(tenant_client: TestClient, session: Sess
     assert response.status_code == 200
     session.expire_all()
     assert session.get(Tenant, DEFAULT_TENANT_ID).is_active is True
+
+
+# ---------------------------------------------------------------------------
+# The brand colours (APRAS-68): stored whole, derived on read, refused in the
+# API rather than only on the screen.
+# ---------------------------------------------------------------------------
+
+
+def _branding_of(session: Session, tenant_id: uuid.UUID = DEFAULT_TENANT_ID):
+    session.expire_all()
+    return session.get(Tenant, tenant_id).brand_theme
+
+
+def _advanced_body(**overrides: str) -> dict:
+    return {
+        "mode": "advanced",
+        "light": {**_READABLE_PALETTE, **overrides},
+        "dark": None,
+    }
+
+
+#: The mock's "carregar paleta legível" preset: every measured pair clears AA.
+_READABLE_PALETTE = {
+    "background": "#fffdf7",
+    "foreground": "#1d1b16",
+    "card": "#ffffff",
+    "card-foreground": "#1d1b16",
+    "primary": "#8a2b2b",
+    "primary-foreground": "#fff7f5",
+    "secondary": "#1f6f8b",
+    "secondary-foreground": "#ffffff",
+    "accent": "#e8ddc9",
+    "accent-foreground": "#3a3128",
+    "muted": "#f1ece4",
+    "muted-foreground": "#5c5344",
+    "border": "#e2d9c8",
+}
+
+
+def test_a_tenant_with_no_colours_reads_a_null_brand_theme_and_a_null_theme(
+    tenant_client: TestClient, session: Session
+):
+    """(e): the app then renders today's `index.css` byte for byte, and the
+    client injects **no element at all** -- not an empty `<style>`."""
+    caller = _member(session, permissions=[])
+
+    body = tenant_client.get(
+        PROFILE_URL, headers=_auth(caller, DEFAULT_TENANT_ID)
+    ).json()
+
+    assert body["brand_theme"] is None
+    assert body["theme"] is None
+
+
+def test_patch_accepts_uppercase_hex_and_stores_lowercase(
+    tenant_client: TestClient, session: Session
+):
+    """ER-1: brand guides write hex uppercase; the server is the single
+    normalisation point, and every later read is lowercase."""
+    caller = _member(session, permissions=[PERMISSION])
+    headers = _auth(caller, DEFAULT_TENANT_ID)
+
+    response = tenant_client.patch(
+        PROFILE_URL,
+        json={
+            "brand_theme": {
+                "mode": "simple",
+                "primary": "#FFE680",
+                "accent": "#0EA5E9",
+            }
+        },
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["brand_theme"] == {
+        "mode": "simple",
+        "primary": "#ffe680",
+        "accent": "#0ea5e9",
+    }
+    later = tenant_client.get(PROFILE_URL, headers=headers).json()
+    assert later["brand_theme"]["primary"] == "#ffe680"
+    assert later["theme"]["light"]["primary"].startswith("oklch(")
+    assert _branding_of(session)["accent"] == "#0ea5e9"
+
+
+def test_the_derived_theme_carries_seventeen_variables_per_scheme(
+    tenant_client: TestClient, session: Session
+):
+    caller = _member(session, permissions=[PERMISSION])
+
+    theme = tenant_client.patch(
+        PROFILE_URL,
+        json={
+            "brand_theme": {
+                "mode": "simple",
+                "primary": "#7c3aed",
+                "accent": "#0ea5e9",
+            }
+        },
+        headers=_auth(caller, DEFAULT_TENANT_ID),
+    ).json()["theme"]
+
+    assert set(theme) == {"light", "dark"}
+    for scheme in theme.values():
+        assert set(scheme) == set(EMITTED_KEYS)
+    assert theme["light"]["secondary"] == "oklch(0.68 0.14 237.32)"
+
+
+def test_advanced_palette_below_aa_is_refused_by_the_api(
+    tenant_client: TestClient, session: Session
+):
+    """D-B, proven with no UI involved: the screen's check is a convenience,
+    the API's is the rule."""
+    caller = _member(session, permissions=[PERMISSION])
+    headers = _auth(caller, DEFAULT_TENANT_ID)
+    tenant_client.patch(
+        PROFILE_URL,
+        json={
+            "brand_theme": {
+                "mode": "simple",
+                "primary": "#7c3aed",
+                "accent": "#0ea5e9",
+            }
+        },
+        headers=headers,
+    )
+
+    response = tenant_client.patch(
+        PROFILE_URL,
+        json={
+            "brand_theme": _advanced_body(background="#2b2b2b", foreground="#4a4a4a")
+        },
+        headers=headers,
+    )
+
+    assert response.status_code == 422
+    body = response.json()
+    failing = {failure["pair"] for failure in body["failures"]}
+    assert "foreground/background" in failing
+    for failure in body["failures"]:
+        assert failure["minimum"] == 4.5
+        assert failure["ratio"] < 4.5
+        assert failure["scheme"] in {"light", "dark"}
+    # Nothing was persisted: the tenant keeps the branding it had.
+    assert _branding_of(session)["mode"] == "simple"
+    assert (
+        tenant_client.get(PROFILE_URL, headers=headers).json()["brand_theme"]["primary"]
+        == "#7c3aed"
+    )
+
+
+def test_an_advanced_palette_with_a_null_dark_derives_the_simple_dark_scheme(
+    tenant_client: TestClient, session: Session
+):
+    caller = _member(session, permissions=[PERMISSION])
+    headers = _auth(caller, DEFAULT_TENANT_ID)
+
+    authored = tenant_client.patch(
+        PROFILE_URL, json={"brand_theme": _advanced_body()}, headers=headers
+    )
+
+    assert authored.status_code == 200
+    expected = build_theme(
+        {
+            "mode": "simple",
+            "primary": _READABLE_PALETTE["primary"],
+            "accent": _READABLE_PALETTE["accent"],
+        }
+    )["dark"]
+    assert authored.json()["theme"]["dark"] == expected
+
+
+def test_clearing_the_brand_theme_returns_the_tenant_to_no_colours(
+    tenant_client: TestClient, session: Session
+):
+    caller = _member(session, permissions=[PERMISSION])
+    headers = _auth(caller, DEFAULT_TENANT_ID)
+    tenant_client.patch(
+        PROFILE_URL,
+        json={
+            "brand_theme": {
+                "mode": "simple",
+                "primary": "#7c3aed",
+                "accent": "#0ea5e9",
+            }
+        },
+        headers=headers,
+    )
+
+    cleared = tenant_client.patch(
+        PROFILE_URL, json={"brand_theme": None}, headers=headers
+    )
+
+    assert cleared.status_code == 200
+    assert cleared.json()["brand_theme"] is None
+    assert cleared.json()["theme"] is None
+    assert _branding_of(session) is None
+    later = tenant_client.get(PROFILE_URL, headers=headers).json()
+    assert (later["brand_theme"], later["theme"]) == (None, None)
+
+
+@pytest.mark.parametrize(
+    "brand_theme",
+    [
+        {"mode": "simple", "primary": "#GGG", "accent": "#0ea5e9"},
+        {"mode": "simple", "primary": "red", "accent": "#0ea5e9"},
+        {"mode": "simple", "primary": "#abc", "accent": "#0ea5e9"},
+        {"mode": "simple", "primary": "#7c3aed"},
+        {"mode": "sparkle", "primary": "#7c3aed", "accent": "#0ea5e9"},
+        {"mode": "advanced"},
+        {"mode": "advanced", "light": {"background": "#ffffff"}},
+    ],
+)
+def test_a_malformed_brand_theme_is_422_and_stores_nothing(
+    tenant_client: TestClient, session: Session, brand_theme: dict
+):
+    caller = _member(session, permissions=[PERMISSION])
+
+    response = tenant_client.patch(
+        PROFILE_URL,
+        json={"brand_theme": brand_theme},
+        headers=_auth(caller, DEFAULT_TENANT_ID),
+    )
+
+    assert response.status_code == 422
+    assert _branding_of(session) is None
+
+
+def test_a_twelve_key_palette_and_an_unknown_key_are_both_422(
+    tenant_client: TestClient, session: Session
+):
+    """Advanced mode accepts exactly the 13 documented keys per scheme."""
+    caller = _member(session, permissions=[PERMISSION])
+    headers = _auth(caller, DEFAULT_TENANT_ID)
+    twelve = dict(_READABLE_PALETTE)
+    del twelve["border"]
+
+    assert (
+        tenant_client.patch(
+            PROFILE_URL,
+            json={"brand_theme": {"mode": "advanced", "light": twelve}},
+            headers=headers,
+        ).status_code
+        == 422
+    )
+    assert (
+        tenant_client.patch(
+            PROFILE_URL,
+            json={
+                "brand_theme": {
+                    "mode": "advanced",
+                    "light": {**_READABLE_PALETTE, "radius": "#123456"},
+                }
+            },
+            headers=headers,
+        ).status_code
+        == 422
+    )
+    assert _branding_of(session) is None
+
+
+def test_a_caller_without_the_permission_cannot_set_the_colours(
+    tenant_client: TestClient, session: Session
+):
+    caller = _member(session, permissions=["tenants:read"])
+
+    response = tenant_client.patch(
+        PROFILE_URL,
+        json={
+            "brand_theme": {
+                "mode": "simple",
+                "primary": "#7c3aed",
+                "accent": "#0ea5e9",
+            }
+        },
+        headers=_auth(caller, DEFAULT_TENANT_ID),
+    )
+
+    assert response.status_code == 403
+    assert _branding_of(session) is None
+
+
+def test_a_rename_alone_leaves_the_branding_untouched(
+    tenant_client: TestClient, session: Session
+):
+    """The `exclude_unset` shape: an absent field is a field left alone."""
+    caller = _member(session, permissions=[PERMISSION])
+    headers = _auth(caller, DEFAULT_TENANT_ID)
+    tenant_client.patch(
+        PROFILE_URL,
+        json={
+            "brand_theme": {
+                "mode": "simple",
+                "primary": "#7c3aed",
+                "accent": "#0ea5e9",
+            }
+        },
+        headers=headers,
+    )
+
+    renamed = tenant_client.patch(
+        PROFILE_URL, json={"name": "Outro Nome"}, headers=headers
+    )
+
+    assert renamed.status_code == 200
+    assert renamed.json()["brand_theme"]["primary"] == "#7c3aed"
+    assert renamed.json()["theme"] is not None
+    assert _branding_of(session)["primary"] == "#7c3aed"
+
+
+def test_the_logo_routes_answer_the_same_body_including_the_theme(
+    tenant_client: TestClient, session: Session, storage: LocalStorageProvider
+):
+    """All four routes return `TenantProfileRead`, so the injector re-themes
+    from any of them without a second request."""
+    caller = _member(session, permissions=[PERMISSION])
+    headers = _auth(caller, DEFAULT_TENANT_ID)
+    tenant_client.patch(
+        PROFILE_URL,
+        json={
+            "brand_theme": {
+                "mode": "simple",
+                "primary": "#7c3aed",
+                "accent": "#0ea5e9",
+            }
+        },
+        headers=headers,
+    )
+
+    uploaded = _upload(tenant_client, caller, content=_png())
+    removed = tenant_client.delete(LOGO_URL, headers=headers)
+
+    for response in (uploaded, removed):
+        assert response.status_code == 200
+        assert response.json()["theme"]["light"]["primary"].startswith("oklch(")
+
+
+def test_the_brand_colours_add_no_route_and_no_permission_string():
+    """D-E: the existing `GET`/`PATCH` carries it, so no `ROUTE_PERMISSIONS`
+    entry moves and no parity-matrix baseline changes."""
+    from app.core.permissions import PERMISSIONS
+
+    assert ROUTE_PERMISSIONS[("PATCH", PROFILE_URL)] == PERMISSION
+    assert not [p for p in PERMISSIONS if "brand" in p or "theme" in p]
+    assert not [key for key in ROUTE_PERMISSIONS if "brand" in key[1]]
 
 
 # ---------------------------------------------------------------------------

@@ -24,6 +24,7 @@ from fastapi import APIRouter, Depends, File, UploadFile
 from sqlmodel import Session
 
 from app.api import deps as api_deps
+from app.core.branding import build_theme
 from app.db import get_session
 from app.models.tenant import Tenant
 from app.models.user import User
@@ -31,6 +32,20 @@ from app.schemas.tenant import TenantProfileRead, TenantProfileUpdate
 from app.services.tenant_service import TenantService
 
 router = APIRouter()
+
+
+def _profile_of(tenant: Tenant) -> TenantProfileRead:
+    """The one body all four routes answer, brand colours included.
+
+    ``theme`` is **derived on read** and never stored (APRAS-68): a change to
+    ``app.core.branding`` reaches every condominium with no data migration,
+    and a tenant with no colours gets ``null`` rather than an empty object, so
+    the client injects no element at all.
+    """
+    return TenantProfileRead.model_validate(tenant).model_copy(
+        update={"theme": build_theme(tenant.brand_theme)}
+    )
+
 
 #: Bound once at import, like `endpoints/uploads.py`'s three guards: the
 #: multipart route needs a parameter default-free signature, and one object
@@ -51,7 +66,7 @@ def get_tenant_profile(
     ``UNGUARDED_ROUTES`` under the ``/permissions/me`` precedent. The page's
     own gate is the permission, so a caller without it never loads the screen.
     """
-    return TenantProfileRead.model_validate(tenant)
+    return _profile_of(tenant)
 
 
 @router.patch("")
@@ -78,7 +93,7 @@ def update_tenant_profile(
     rename this permission already authorises.
     """
     updated = TenantService.update_profile(session, tenant, profile_in)
-    return TenantProfileRead.model_validate(updated)
+    return _profile_of(updated)
 
 
 @router.put("/logo")
@@ -101,7 +116,7 @@ async def set_tenant_logo(
         filename=file.filename or "logo.png",
         content_type=file.content_type or "application/octet-stream",
     )
-    return TenantProfileRead.model_validate(updated)
+    return _profile_of(updated)
 
 
 @router.delete("/logo")
@@ -112,4 +127,4 @@ def clear_tenant_logo(
 ) -> TenantProfileRead:
     """Remove the logo. Idempotent: an already-empty profile is still a 200."""
     updated = TenantService.clear_logo(session, tenant)
-    return TenantProfileRead.model_validate(updated)
+    return _profile_of(updated)

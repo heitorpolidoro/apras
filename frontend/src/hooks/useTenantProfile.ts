@@ -21,8 +21,17 @@ import {
  */
 export const TENANT_PROFILE_KEY = ["tenantProfile"] as const;
 
-export const useTenantProfile = () =>
-  useQuery({ queryKey: TENANT_PROFILE_KEY, queryFn: getTenantProfile });
+/**
+ * `enabled` exists for one caller: `TenantBrandTheme` (APRAS-68).
+ *
+ * The injector is mounted for the whole app, including the login screen,
+ * where there is no token and this `GET` could only 401. Passing
+ * `{ enabled: isAuthenticated }` keeps it from firing there. Every other
+ * caller omits it and gets today's behaviour, because `enabled` defaults to
+ * `true`.
+ */
+export const useTenantProfile = ({ enabled = true }: { enabled?: boolean } = {}) =>
+  useQuery({ queryKey: TENANT_PROFILE_KEY, queryFn: getTenantProfile, enabled });
 
 /** The response body *is* the new state, so it is written straight in. */
 const useProfileMutation = <TVariables>(

@@ -17,6 +17,75 @@ import apiClient from "./client";
  * file's name in the message.
  */
 
+/**
+ * The 13 colours advanced mode asks for, per scheme (APRAS-68 (b)).
+ *
+ * Mirrored from `backend/app/core/branding.AUTHORED_KEYS`, in the same order,
+ * so the form lists them in the order the server validates them. The other
+ * four of the 17 emitted properties — `popover`, `popover-foreground`,
+ * `input`, `ring` — are derived *inside* a scheme and never asked for.
+ * `--destructive*`, the 10 status tokens, the 8 priority tokens and
+ * `--radius` are semantic and are never overridden at all.
+ */
+export const BRAND_AUTHORED_KEYS = [
+  "background",
+  "foreground",
+  "card",
+  "card-foreground",
+  "primary",
+  "primary-foreground",
+  "secondary",
+  "secondary-foreground",
+  "accent",
+  "accent-foreground",
+  "muted",
+  "muted-foreground",
+  "border",
+] as const;
+
+export type BrandPaletteKey = (typeof BRAND_AUTHORED_KEYS)[number];
+
+/** Exactly the 13 keys above, each an sRGB `#rrggbb`. */
+export type BrandPalette = Record<BrandPaletteKey, string>;
+
+/** Two colours in; the whole palette and the whole `.dark` counterpart are
+ *  derived in OKLCH by `app/core/branding.py` and by nothing else. */
+export interface SimpleBrandTheme {
+  mode: "simple";
+  primary: string;
+  accent: string;
+}
+
+/** The palette authored by hand. `dark: null` — the default the screen
+ *  offers — means the dark scheme is the simple-mode derivation of the
+ *  authored `primary` and `accent`, because no per-variable inversion of a
+ *  hand-authored light palette preserves either intent or contrast. */
+export interface AdvancedBrandTheme {
+  mode: "advanced";
+  light: BrandPalette;
+  dark: BrandPalette | null;
+}
+
+export type BrandTheme = SimpleBrandTheme | AdvancedBrandTheme;
+
+/** One emitted scheme: CSS custom-property names without the leading `--`,
+ *  mapped to `oklch(L C H)` strings at 2dp. */
+export type ThemeScheme = Record<string, string>;
+
+/** What `build_theme` returns — derived on read, never stored. */
+export interface DerivedTheme {
+  light: ThemeScheme;
+  dark: ThemeScheme;
+}
+
+/** One pair the API refused, as `InsufficientContrastError` reports it. */
+export interface BrandContrastFailure {
+  pair: string;
+  ratio: number;
+  minimum: number;
+  scheme: string;
+}
+
 export interface TenantProfile {
   id: string;
   name: string;
@@ -24,14 +93,38 @@ export interface TenantProfile {
   slug: string;
   is_active: boolean;
   logo_url: string | null;
+  /** What the condominium chose, normalised to lowercase by the server;
+   *  `null` means no branding, and then the app renders today's `index.css`
+   *  byte for byte (APRAS-68 (e)). */
+  brand_theme: BrandTheme | null;
+  /** What `app/core/branding.build_theme` derived from it. `null` whenever
+   *  `brand_theme` is, and then `TenantBrandTheme` injects no element at all. */
+  theme: DerivedTheme | null;
 }
 
 /** The writable half of the profile. A field left out is a field left alone —
- *  which is what keeps a rename from ever touching the slug (D-C.2). */
+ *  which is what keeps a rename from ever touching the slug (D-C.2), and what
+ *  keeps a rename from touching the colours. An explicit `null` on
+ *  `brand_theme` is the "voltar ao padrão" action. */
 export interface TenantProfileUpdate {
   name?: string;
   slug?: string;
+  brand_theme?: BrandTheme | null;
 }
+
+/**
+ * The hex rule, mirrored from `backend/app/core/branding.HEX_COLOR_PATTERN`.
+ *
+ * **Case-insensitive and it never lowercases.** Brand guides conventionally
+ * write hex uppercase, so `#FFE680` is accepted; the server is the single
+ * normalisation point and is what stores `#ffe680`. This pre-validates only,
+ * so a field can say why it is refusing before a round trip.
+ */
+export const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
+
+/** Whether the server would accept this value as a colour. */
+export const isValidHexColor = (value: string): boolean =>
+  HEX_COLOR_PATTERN.test(value);
 
 /**
  * The slug rule, mirrored from `backend/app/core/slug.py` (APRAS-66 D-C.4).

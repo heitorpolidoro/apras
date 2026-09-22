@@ -41,8 +41,10 @@ from app.core.exceptions import (
     InfractionRuleNotFoundError,
     InfractionStateError,
     InfractionValidationError,
+    InsufficientContrastError,
     InsufficientStockError,
     InvalidAnnouncementMediaFormatError,
+    InvalidBrandThemeError,
     InvalidDeviceKeyError,
     InvalidFolderHierarchyError,
     InvalidInvoiceFormatError,
@@ -259,6 +261,12 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             # names something wrong, so 422 and never 400.
             InvitationIncompleteError,
             InvitationInvalidAccountError,
+            # APRAS-68 D-B: an unusable brand-colour object, and an advanced
+            # palette carrying an illegible pair. The refusal lives in the
+            # API, not only on the screen, so a request that bypasses the UI
+            # is refused all the same.
+            InvalidBrandThemeError,
+            InsufficientContrastError,
         ),
     ):
         status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
@@ -284,7 +292,12 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
     ):
         status_code = status.HTTP_400_BAD_REQUEST
 
-    return JSONResponse(
-        status_code=status_code,
-        content={"detail": exc.message},
-    )
+    content: dict[str, object] = {"detail": exc.message}
+    if isinstance(exc, InsufficientContrastError):
+        # The only error that carries structured data beside its message
+        # (APRAS-68 D-B): every failing pair, its measured ratio and the 4.5
+        # minimum, so a caller outside the screen learns exactly what a
+        # person editing the palette would have seen.
+        content["failures"] = exc.failures
+
+    return JSONResponse(status_code=status_code, content=content)

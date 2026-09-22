@@ -66,6 +66,11 @@ const PROFILE = {
   slug: "residencial-altos-da-serra-vi",
   is_active: true,
   logo_url: null as string | null,
+  // APRAS-68: a condominium with no colours. The brand section is part of
+  // this screen now, and every case here renders it — at its no-branding
+  // state, which is the one that must leave the app rendering as today.
+  brand_theme: null,
+  theme: null,
 };
 
 const serve = (logoUrl: string | null) => {

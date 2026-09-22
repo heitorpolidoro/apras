@@ -1,6 +1,7 @@
 """Tenant schemas for Pydantic validation (APRAS-41)."""
 
 from datetime import datetime
+from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -48,12 +49,63 @@ class TenantRead(TenantBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class SimpleBrandTheme(BaseModel):
+    """Two colours; everything else, including ``.dark``, is derived (D-A).
+
+    The hex values carry **no** ``pattern`` here, for the reason
+    :class:`TenantProfileUpdate`'s ``slug`` carries none: the rule is expressed
+    once, in ``app.core.branding``, which also binds the values read back out
+    of the column, so the two cannot disagree. A malformed value therefore
+    reaches ``TenantService`` and comes back as ``InvalidBrandThemeError`` --
+    still a 422, but from the single judge, and case-insensitively (``#FFE680``
+    is accepted and stored lowercase).
+    """
+
+    mode: Literal["simple"]
+    primary: str
+    accent: str
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class AdvancedBrandTheme(BaseModel):
+    """The whole palette, authored (D-A).
+
+    ``dark`` is optional: ``null`` -- the default the UI offers -- means the
+    dark scheme is produced by the simple-mode derivation of the authored
+    ``primary`` and ``accent``, because no per-variable inversion of a
+    hand-authored light palette can preserve either the tenant's intent or its
+    contrast. The **13-key** rule lives in ``app.core.branding`` with the hex
+    rule, so ``dict[str, str]`` here is shape and not vocabulary.
+    """
+
+    mode: Literal["advanced"]
+    light: dict[str, str]
+    dark: dict[str, str] | None = None
+
+    model_config = ConfigDict(extra="forbid")
+
+
+#: Discriminated on ``mode``: an unknown mode is refused before the union is
+#: even tried, and the two shapes can never be confused for one another.
+BrandTheme = Annotated[
+    SimpleBrandTheme | AdvancedBrandTheme, Field(discriminator="mode")
+]
+
+
 class TenantProfileRead(BaseModel):
     """The acting condominium's own profile (APRAS-61).
 
     Deliberately **not** ``TenantRead``: the profile screen shows what an
     administrator of one condominium may see and change about it, and the
     timestamps are operator data. ``logo_url`` is what the surface exists for.
+
+    ``brand_theme`` is what the tenant chose, normalised; ``theme`` is what
+    ``app.core.branding.build_theme`` derives from it (APRAS-68) -- 17 CSS
+    custom properties per scheme, **derived on read and never stored**, so a
+    change to the derivation reaches every tenant without a data migration.
+    Both are ``null`` for a condominium with no colours, and the client then
+    injects no element at all.
     """
 
     id: UUID
@@ -62,6 +114,8 @@ class TenantProfileRead(BaseModel):
     slug: str
     is_active: bool
     logo_url: str | None = None
+    brand_theme: BrandTheme | None = None
+    theme: dict[str, dict[str, str]] | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -80,10 +134,15 @@ class TenantProfileUpdate(BaseModel):
     ``TenantService`` and comes back as ``InvalidSlugError`` -- still a 422,
     but from the single judge. The field being **absent** is what leaves the
     slug untouched: a rename alone never regenerates it (D-C.2).
+
+    ``brand_theme`` (APRAS-68) follows the same shape in the other direction:
+    **absent** leaves the colours alone, and an explicit ``null`` clears them,
+    which is what the screen's "voltar ao padrão" sends.
     """
 
     name: str | None = Field(None, min_length=1, max_length=120)
     slug: str | None = None
+    brand_theme: BrandTheme | None = None
 
 
 class ModuleStateRead(BaseModel):

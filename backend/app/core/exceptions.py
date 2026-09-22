@@ -956,6 +956,39 @@ class InvalidSlugError(DomainError):
         )
 
 
+class InvalidBrandThemeError(DomainError):
+    """Raised when a submitted brand-colour object is not usable (APRAS-68).
+
+    A **422**, from the single judge in ``app.core.branding``: a value that is
+    not ``#`` plus exactly six hex digits, a missing or unknown key, or an
+    unknown ``mode``. Case is **not** a reason to refuse -- ``#FFE680`` is
+    accepted and stored as ``#ffe680``, because brand guides conventionally
+    write hex uppercase and rejecting case would be an error the síndico
+    cannot act on.
+    """
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+
+
+class InsufficientContrastError(DomainError):
+    """Raised when an advanced palette carries an illegible pair (APRAS-68).
+
+    A **422** whose body also lists ``failures`` -- every failing pair, its
+    measured ratio and the 4.5 minimum -- so a client that bypasses the screen
+    is refused with the same information the screen would have shown. Simple
+    mode never raises it: there the derivation owns both sides of every
+    measured pair, so the guarantee is by construction.
+    """
+
+    def __init__(self, failures: list[dict[str, object]]) -> None:
+        self.failures = failures
+        super().__init__(
+            "Estas cores não podem ser salvas: "
+            f"{len(failures)} combinação(ões) abaixo de 4.5:1."
+        )
+
+
 class TenantMembershipAlreadyExistsError(DomainError):
     """Raised when a user is already linked to the given tenant.
 

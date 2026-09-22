@@ -52,6 +52,7 @@ import MyInfractionsPage from "./features/infraction-management/pages/MyInfracti
 import { ROUTE_ACCESS } from "./features/user-administration/access/routeAccess";
 import { usePermissionSet } from "./features/user-administration/access/useCanAccess";
 import { Spinner } from "./components/ui/spinner";
+import TenantBrandTheme from "./components/TenantBrandTheme";
 import "./App.css";
 
 /**
@@ -99,6 +100,11 @@ function App() {
           or simulation concern). It uses useQueryClient, which is satisfied
           because App is always rendered inside a QueryClientProvider. */}
       <TenantProvider>
+        {/* Renders nothing; injects the acting condominium's colours into
+            `document.head` (APRAS-68). Inside TenantProvider so a tenant
+            switch re-themes, and outside BrowserRouter because a theme is
+            not a routing concern — it applies to every screen at once. */}
+        <TenantBrandTheme />
         <SimulationProvider>
           <SidebarProvider>
             <BrowserRouter>

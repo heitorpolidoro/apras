@@ -145,6 +145,26 @@ class Tenant(SQLModel, table=True):
     # ``<img>`` rather than with a broken one. Written by SQL/seed for now --
     # this task deliberately ships no upload UI and no API for it.
     logo_url: str | None = Field(default=None, nullable=True)
+    # The condominium's brand colours (APRAS-68), stored whole as one
+    # nullable JSON object -- ``{"mode": "simple", "primary": …, "accent": …}``
+    # or ``{"mode": "advanced", "light": {…13…}, "dark": null | {…13…}}``.
+    # Portable ``JSON`` and not Postgres ``JSONB``, exactly as
+    # ``disabled_modules`` above, so the SQLite schema the test harness builds
+    # with ``create_all()`` matches the one Alembic builds.
+    #
+    # One column rather than 27 discrete ones: advanced mode carries 13
+    # colours per scheme plus a mode discriminator, every one of them
+    # meaningless in the other mode, and the object is read and written whole,
+    # never queried by component and never indexed. The cost -- no
+    # database-level validation -- is paid by ``app.core.branding``, which is
+    # the only writer and the single judge.
+    #
+    # Nullable with **no** server default and no backfill: ``NULL`` is "this
+    # condominium has no colours", and a tenant in that state renders today's
+    # ``index.css`` byte for byte.
+    brand_theme: dict[str, Any] | None = Field(
+        default=None, sa_column=Column(JSON, nullable=True)
+    )
     created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
     updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
 

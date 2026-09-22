@@ -1,0 +1,63 @@
+{
+  "_comment": "APRAS-68. The contrast ratio, pinned from BOTH sides: tests/test_branding.py::test_the_shared_fixture_matches_the_python_helper asserts these numbers against app/core/branding.py, and frontend/src/lib/__tests__/contrast.test.ts asserts the same file against frontend/src/lib/contrast.ts. Neither language may import the other, so the file is the contract. The out-of-gamut cases are load-bearing: a port that clips per channel where the browser reduces chroma (CSS Color 4 section 13) gets 4.52 where this file says 3.74 and fails.",
+  "minimum": 4.5,
+  "tolerance": 0.01,
+  "cases": [
+    {
+      "name": "the shipped index.css muted pair, which reads 10.96 under a double sRGB transfer",
+      "a": { "oklch": [0.55, 0.02, 160.0] },
+      "b": { "oklch": [0.96, 0.01, 160.0] },
+      "ratio": 4.2913,
+      "in_gamut": [true, true]
+    },
+    {
+      "name": "the WCAG canonical #767676 on #ffffff",
+      "a": { "hex": "#767676" },
+      "b": { "hex": "#ffffff" },
+      "ratio": 4.5422,
+      "in_gamut": [true, true]
+    },
+    {
+      "name": "black on white is the maximum",
+      "a": { "hex": "#000000" },
+      "b": { "hex": "#ffffff" },
+      "ratio": 21.0,
+      "in_gamut": [true, true]
+    },
+    {
+      "name": "out of gamut: measured 4.52 by a naive clip, painted 3.74 by the browser",
+      "a": { "oklch": [0.52, 0.22, 210.0] },
+      "b": { "oklch": [0.15, 0.02, 210.0] },
+      "ratio": 3.7413,
+      "in_gamut": [false, true]
+    },
+    {
+      "name": "out of gamut red on the light background",
+      "a": { "oklch": [0.45, 0.3, 25.0] },
+      "b": { "oklch": [0.99, 0.0, 0.0] },
+      "ratio": 7.8547,
+      "in_gamut": [false, true]
+    },
+    {
+      "name": "the accent at full chroma on --secondary, with its derived foreground",
+      "a": { "oklch": [0.68, 0.14, 237.32] },
+      "b": { "oklch": [0.15, 0.02, 237.32] },
+      "ratio": 6.9614,
+      "in_gamut": [true, true]
+    },
+    {
+      "name": "#857046 as the emitted primary, one step below its rounded lightness",
+      "a": { "oklch": [0.55, 0.06, 83.88] },
+      "b": { "oklch": [0.98, 0.0, 0.0] },
+      "ratio": 4.5959,
+      "in_gamut": [true, true]
+    },
+    {
+      "name": "a hostile input against black",
+      "a": { "hex": "#ffe680" },
+      "b": { "hex": "#000000" },
+      "ratio": 16.8824,
+      "in_gamut": [true, true]
+    }
+  ]
+}
