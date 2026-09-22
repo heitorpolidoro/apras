@@ -16,6 +16,7 @@ const request = {
   status: PurchaseRequestStatus.OPEN,
   requested_by_id: "user-1",
   requested_by_name: "Admin",
+  items: [],
   quote_count: 0,
   lowest_quote_total: null,
   selected_quote_id: null,
@@ -31,8 +32,20 @@ const quote = {
   purchase_request_id: "req-1",
   supplier_name: "Fornecedor",
   supplier_contact: null,
-  unit_price: 10,
-  quantity: 2,
+  items: [
+    {
+      id: "qi-1",
+      request_item_id: null,
+      model: null,
+      unit_price: 10,
+      description: "Bomba",
+      quantity: 2,
+      position: 0,
+      line_total: 20,
+    },
+  ],
+  quoted_item_count: 0,
+  is_complete: true,
   notes: null,
   extra_fields: [],
   attachment_url: null,
@@ -139,8 +152,7 @@ describe("usePurchaseRequests hooks", () => {
       requestId: "req-1",
       data: {
         supplier_name: "Fornecedor",
-        unit_price: 10,
-        quantity: 2,
+        items: [{ description: "Bomba", quantity: 2, unit_price: 10 }],
         extra_fields: [],
       },
     });
@@ -150,10 +162,10 @@ describe("usePurchaseRequests hooks", () => {
     await editQuote.result.current.mutateAsync({
       requestId: "req-1",
       quoteId: "quote-1",
-      data: { quantity: 5 },
+      data: { items: [{ description: "Bomba", quantity: 5, unit_price: 10 }] },
     });
     expect(purchasesApi.updateQuote).toHaveBeenCalledWith("req-1", "quote-1", {
-      quantity: 5,
+      items: [{ description: "Bomba", quantity: 5, unit_price: 10 }],
     });
 
     const removeQuote = renderHook(() => useDeleteQuote(), { wrapper });

@@ -7,6 +7,8 @@ import { Input } from "../../../components/ui/input";
 import { Textarea } from "../../../components/ui/textarea";
 import type {
   PurchaseQuote,
+  PurchaseQuoteItemInput,
+  PurchaseRequestItem,
   QuoteExtraField,
   QuoteFormData,
 } from "../../../types/purchase";
@@ -14,6 +16,42 @@ import { formatCurrency } from "../utils/formatters";
 
 /** Maximum number of extra fields the backend accepts on a quote (APRAS-37). */
 export const MAX_EXTRA_FIELDS = 20;
+
+/** Maximum number of priced lines the backend accepts (APRAS-73 D6). */
+export const MAX_QUOTE_ITEMS = 50;
+
+/**
+ * What the supplier filled in for one request line. Both halves are
+ * skippable: a row the supplier left blank sends **no item at all** (D5), so
+ * "did not quote" and "quoted zero" stay different facts all the way down.
+ */
+interface PricedRow {
+  model: string;
+  unitPrice: string;
+}
+
+/** A line the supplier added that the request never asked for (D3). */
+interface ExtraRow {
+  description: string;
+  quantity: string;
+  model: string;
+  unitPrice: string;
+}
+
+const EMPTY_ROW: PricedRow = { model: "", unitPrice: "" };
+
+/** A row counts as priced once it carries a usable, non-negative number. */
+const isPriced = (row: PricedRow): boolean => {
+  const trimmed = row.unitPrice.trim();
+  if (trimmed === "") return false;
+  const value = Number(trimmed);
+  return Number.isFinite(value) && value >= 0;
+};
+
+const toNumber = (value: string): number => {
+  const parsed = Number(value.trim());
+  return Number.isFinite(parsed) ? parsed : 0;
+};
 
 /**
  * The parent remounts this modal with a `key` derived from the quote being
@@ -24,6 +62,8 @@ interface QuoteFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   quote: PurchaseQuote | null;
+  /** The lines the request enumerates: one fixed row each, in order. */
+  requestItems: PurchaseRequestItem[];
   onSubmit: (data: QuoteFormData) => Promise<void>;
   isLoading?: boolean;
 }
@@ -32,6 +72,7 @@ export const QuoteFormModal: React.FC<QuoteFormModalProps> = ({
   isOpen,
   onClose,
   quote,
+  requestItems,
   onSubmit,
   isLoading,
 }) => {
@@ -43,10 +84,31 @@ export const QuoteFormModal: React.FC<QuoteFormModalProps> = ({
   const [supplierContact, setSupplierContact] = useState<string>(
     quote?.supplier_contact ?? "",
   );
-  const [unitPrice, setUnitPrice] = useState<string>(
-    String(quote?.unit_price ?? 0),
+  const [priced, setPriced] = useState<Record<string, PricedRow>>(() =>
+    Object.fromEntries(
+      requestItems.map((item) => {
+        const line = quote?.items.find(
+          (candidate) => candidate.request_item_id === item.id,
+        );
+        return [
+          item.id,
+          line
+            ? { model: line.model ?? "", unitPrice: String(line.unit_price) }
+            : { ...EMPTY_ROW },
+        ];
+      }),
+    ),
   );
-  const [quantity, setQuantity] = useState<string>(String(quote?.quantity ?? 1));
+  const [extras, setExtras] = useState<ExtraRow[]>(() =>
+    (quote?.items ?? [])
+      .filter((line) => line.request_item_id === null)
+      .map((line) => ({
+        description: line.description,
+        quantity: String(line.quantity),
+        model: line.model ?? "",
+        unitPrice: String(line.unit_price),
+      })),
+  );
   const [notes, setNotes] = useState<string>(quote?.notes ?? "");
   const [extraFields, setExtraFields] = useState<QuoteExtraField[]>(() =>
     quote?.extra_fields ? [...quote.extra_fields] : [],
@@ -55,13 +117,35 @@ export const QuoteFormModal: React.FC<QuoteFormModalProps> = ({
 
   if (!isOpen) return null;
 
-  const parsedUnitPrice = Number(unitPrice);
-  const parsedQuantity = Number(quantity);
-  const total =
-    Number.isFinite(parsedUnitPrice) && Number.isFinite(parsedQuantity)
-      ? parsedUnitPrice * parsedQuantity
-      : 0;
   const isAtMaxExtraFields = extraFields.length >= MAX_EXTRA_FIELDS;
+  const lineCount =
+    requestItems.filter((item) => isPriced(priced[item.id] ?? EMPTY_ROW)).length +
+    extras.length;
+  const isAtMaxItems = lineCount >= MAX_QUOTE_ITEMS;
+
+  const requestLineTotal = (item: PurchaseRequestItem): number => {
+    const row = priced[item.id] ?? EMPTY_ROW;
+    return isPriced(row) ? toNumber(row.unitPrice) * item.quantity : 0;
+  };
+  const extraLineTotal = (row: ExtraRow): number =>
+    toNumber(row.unitPrice) * toNumber(row.quantity);
+
+  const total =
+    requestItems.reduce((sum, item) => sum + requestLineTotal(item), 0) +
+    extras.reduce((sum, row) => sum + extraLineTotal(row), 0);
+
+  const updatePriced = (id: string, key: keyof PricedRow, value: string) => {
+    setPriced((current) => ({
+      ...current,
+      [id]: { ...(current[id] ?? EMPTY_ROW), [key]: value },
+    }));
+  };
+
+  const updateExtra = (index: number, key: keyof ExtraRow, value: string) => {
+    setExtras((current) =>
+      current.map((row, i) => (i === index ? { ...row, [key]: value } : row)),
+    );
+  };
 
   const updateExtraField = (
     index: number,
@@ -73,6 +157,54 @@ export const QuoteFormModal: React.FC<QuoteFormModalProps> = ({
     );
   };
 
+  const collectItems = (): PurchaseQuoteItemInput[] | string => {
+    const items: PurchaseQuoteItemInput[] = [];
+    for (const item of requestItems) {
+      const row = priced[item.id] ?? EMPTY_ROW;
+      if (!isPriced(row)) continue;
+      items.push({
+        request_item_id: item.id,
+        model: row.model.trim() || null,
+        unit_price: toNumber(row.unitPrice),
+      });
+    }
+    for (const row of extras) {
+      const description = row.description.trim();
+      const quantity = toNumber(row.quantity);
+      if (!description) {
+        return t(
+          "purchases.items.descriptionRequired",
+          "Todo item avulso precisa de uma descrição.",
+        );
+      }
+      if (!Number.isInteger(quantity) || quantity <= 0) {
+        return t(
+          "purchases.quote.quantityInvalid",
+          "A quantidade deve ser maior que zero.",
+        );
+      }
+      if (!isPriced(row)) {
+        return t(
+          "purchases.quote.unitPriceInvalid",
+          "O preço unitário não pode ser negativo.",
+        );
+      }
+      items.push({
+        description,
+        quantity,
+        model: row.model.trim() || null,
+        unit_price: toNumber(row.unitPrice),
+      });
+    }
+    if (items.length === 0) {
+      return t(
+        "purchases.items.atLeastOne",
+        "Informe o preço de ao menos um item para salvar o orçamento.",
+      );
+    }
+    return items;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -82,16 +214,10 @@ export const QuoteFormModal: React.FC<QuoteFormModalProps> = ({
       );
       return;
     }
-    if (!Number.isFinite(parsedUnitPrice) || parsedUnitPrice < 0) {
-      setError(
-        t("purchases.quote.unitPriceInvalid", "O preço unitário não pode ser negativo."),
-      );
-      return;
-    }
-    if (!Number.isFinite(parsedQuantity) || parsedQuantity <= 0) {
-      setError(
-        t("purchases.quote.quantityInvalid", "A quantidade deve ser maior que zero."),
-      );
+
+    const items = collectItems();
+    if (typeof items === "string") {
+      setError(items);
       return;
     }
 
@@ -121,8 +247,7 @@ export const QuoteFormModal: React.FC<QuoteFormModalProps> = ({
       await onSubmit({
         supplier_name: supplierName.trim(),
         supplier_contact: supplierContact.trim() || null,
-        unit_price: parsedUnitPrice,
-        quantity: parsedQuantity,
+        items,
         notes: notes.trim() || null,
         extra_fields: normalized,
       });
@@ -193,41 +318,179 @@ export const QuoteFormModal: React.FC<QuoteFormModalProps> = ({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label
-                htmlFor="quote-unit-price"
-                className="block text-xs font-semibold text-gray-700 uppercase mb-1"
-              >
-                {t("purchases.quote.unitPrice", "Preço unitário (R$) *")}
-              </label>
-              <Input
-                id="quote-unit-price"
-                type="number"
-                min={0}
-                step="0.01"
-                inputMode="decimal"
-                value={unitPrice}
-                onChange={(e) =>
-                  setUnitPrice(limitDecimals(e.target.value, MONEY_DECIMALS))
-                }
-              />
+          <div className="border-t border-gray-200 pt-4">
+            <h3 className="text-sm font-bold text-gray-900">
+              {t("purchases.items.quoteTitle", "Itens do pedido")}
+            </h3>
+            <p className="text-xs text-gray-500 mb-3">
+              {t(
+                "purchases.items.quoteHint",
+                "Preencha o preço dos itens que este fornecedor cota. Deixe em branco o que ele não atende — não será somado.",
+              )}
+            </p>
+
+            {requestItems.length === 0 && (
+              <p className="text-xs text-gray-500 mb-3" data-testid="no-request-items">
+                {t(
+                  "purchases.items.requestHasNone",
+                  "Este pedido não enumerou itens. Adicione abaixo o que o fornecedor está cotando.",
+                )}
+              </p>
+            )}
+
+            <div className="space-y-2">
+              {requestItems.map((item) => {
+                const row = priced[item.id] ?? EMPTY_ROW;
+                return (
+                  <div
+                    key={item.id}
+                    data-testid={`quote-line-${item.id}`}
+                    className="rounded-lg border border-gray-200 p-3"
+                  >
+                    <div className="text-xs font-semibold text-gray-700 mb-2">
+                      {item.quantity} × {item.description}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input
+                        data-testid={`quote-line-model-${item.id}`}
+                        aria-label={`${t("purchases.items.model", "Modelo ofertado")} ${item.description}`}
+                        value={row.model}
+                        onChange={(e) => updatePriced(item.id, "model", e.target.value)}
+                        placeholder={t(
+                          "purchases.items.modelPlaceholder",
+                          "Modelo ofertado (opcional)",
+                        )}
+                      />
+                      <Input
+                        data-testid={`quote-line-price-${item.id}`}
+                        aria-label={`${t("purchases.items.unitPrice", "Preço unitário")} ${item.description}`}
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        inputMode="decimal"
+                        value={row.unitPrice}
+                        onChange={(e) =>
+                          updatePriced(
+                            item.id,
+                            "unitPrice",
+                            limitDecimals(e.target.value, MONEY_DECIMALS),
+                          )
+                        }
+                        placeholder={t("purchases.items.unitPrice", "Preço unitário")}
+                      />
+                    </div>
+                    <div
+                      className="mt-2 text-right text-xs text-gray-600"
+                      data-testid={`quote-line-total-${item.id}`}
+                    >
+                      {isPriced(row)
+                        ? formatCurrency(requestLineTotal(item))
+                        : t("purchases.items.notQuoted", "Não cotado")}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <div>
-              <label
-                htmlFor="quote-quantity"
-                className="block text-xs font-semibold text-gray-700 uppercase mb-1"
+
+            <div className="flex items-center justify-between mt-4 mb-1">
+              <h4 className="text-xs font-semibold text-gray-700 uppercase">
+                {t("purchases.items.extraTitle", "Itens avulsos do fornecedor")}
+              </h4>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isAtMaxItems}
+                onClick={() =>
+                  setExtras((current) => [
+                    ...current,
+                    { description: "", quantity: "1", model: "", unitPrice: "" },
+                  ])
+                }
               >
-                {t("purchases.quote.quantity", "Quantidade *")}
-              </label>
-              <Input
-                id="quote-quantity"
-                type="number"
-                min={1}
-                step="1"
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-              />
+                <Plus className="w-4 h-4 mr-1" />
+                {t("purchases.items.addExtra", "Adicionar item")}
+              </Button>
+            </div>
+
+            <div className="space-y-2">
+              {extras.map((row, index) => (
+                <div
+                  key={index}
+                  data-testid={`quote-extra-${index}`}
+                  className="rounded-lg border border-dashed border-gray-300 p-3"
+                >
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input
+                      data-testid={`quote-extra-description-${index}`}
+                      aria-label={`${t("purchases.items.description", "Descrição")} ${index + 1}`}
+                      value={row.description}
+                      onChange={(e) =>
+                        updateExtra(index, "description", e.target.value)
+                      }
+                      placeholder={t(
+                        "purchases.items.descriptionPlaceholder",
+                        "Ex: Nobreak 1,2 kVA",
+                      )}
+                    />
+                    <Input
+                      data-testid={`quote-extra-quantity-${index}`}
+                      aria-label={`${t("purchases.items.quantity", "Quantidade")} ${index + 1}`}
+                      type="number"
+                      min={1}
+                      step="1"
+                      value={row.quantity}
+                      onChange={(e) => updateExtra(index, "quantity", e.target.value)}
+                    />
+                    <Input
+                      data-testid={`quote-extra-model-${index}`}
+                      aria-label={`${t("purchases.items.model", "Modelo ofertado")} ${index + 1}`}
+                      value={row.model}
+                      onChange={(e) => updateExtra(index, "model", e.target.value)}
+                      placeholder={t(
+                        "purchases.items.modelPlaceholder",
+                        "Modelo ofertado (opcional)",
+                      )}
+                    />
+                    <Input
+                      data-testid={`quote-extra-price-${index}`}
+                      aria-label={`${t("purchases.items.unitPrice", "Preço unitário")} ${index + 1}`}
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      inputMode="decimal"
+                      value={row.unitPrice}
+                      onChange={(e) =>
+                        updateExtra(
+                          index,
+                          "unitPrice",
+                          limitDecimals(e.target.value, MONEY_DECIMALS),
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="mt-2 flex items-center justify-between">
+                    <span
+                      className="text-xs text-gray-600"
+                      data-testid={`quote-extra-total-${index}`}
+                    >
+                      {formatCurrency(extraLineTotal(row))}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      aria-label={t("purchases.items.removeExtra", "Remover item")}
+                      title={t("purchases.items.removeExtra", "Remover item")}
+                      onClick={() =>
+                        setExtras((current) => current.filter((_, i) => i !== index))
+                      }
+                    >
+                      <Trash2 className="w-4 h-4 text-red-500" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 

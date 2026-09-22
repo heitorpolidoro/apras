@@ -141,7 +141,20 @@ def _create_request(client: TestClient, user: User, title: str = "Pedido") -> di
 
 
 def _add_quote(client: TestClient, user: User, request_id: str, **overrides) -> dict:
-    payload = {"supplier_name": "Fornecedor A", "unit_price": 10.0, "quantity": 1}
+    # Since APRAS-73 the price lives on the quote's lines; `unit_price`
+    # and `quantity` here shape the single default line this module needs.
+    unit_price = overrides.pop("unit_price", 10.0)
+    quantity = overrides.pop("quantity", 1)
+    payload = {
+        "supplier_name": "Fornecedor A",
+        "items": [
+            {
+                "description": "Item do orçamento",
+                "quantity": quantity,
+                "unit_price": unit_price,
+            }
+        ],
+    }
     payload.update(overrides)
     res = client.post(
         f"/api/v1/purchase-requests/{request_id}/quotes",

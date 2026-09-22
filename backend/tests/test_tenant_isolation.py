@@ -19,6 +19,7 @@ import os
 import pkgutil
 import uuid
 from datetime import timedelta
+from decimal import Decimal
 
 import pytest
 from fastapi.testclient import TestClient
@@ -59,7 +60,12 @@ from app.models.media_asset import MediaAsset
 from app.models.occurrence import Occurrence
 from app.models.package import Package
 from app.models.project import ConstructionProject, ProjectMilestone, ProjectUpdate
-from app.models.purchase import PurchaseQuote, PurchaseQuoteDecision, PurchaseRequest
+from app.models.purchase import (
+    PurchaseQuote,
+    PurchaseQuoteDecision,
+    PurchaseQuoteItem,
+    PurchaseRequest,
+)
 from app.models.reservation import ReservableSpace, SpaceReservation
 from app.models.resident import Resident
 from app.models.role import Role
@@ -293,10 +299,17 @@ def _seed_tenant(raw: Session, tenant_id, actor: User, tag: str) -> dict:  # noq
     quote = PurchaseQuote(
         purchase_request_id=rows["purchase_request"].id,
         supplier_name=f"Supplier {tag}",
-        unit_price=10.0,
-        quantity=2,
         created_by_id=actor.id,
     )
+    # APRAS-73: the price moved onto the quote's own lines.
+    quote.items = [
+        PurchaseQuoteItem(
+            description=f"Item {tag}",
+            quantity=2,
+            unit_price=Decimal("10.00"),
+            position=0,
+        )
+    ]
     eligibility = LotVoterEligibility(lot_id=lot.id, user_id=actor.id)
     raw.add_all([comment, media, milestone, project_update, quote, eligibility])
     raw.commit()
@@ -1109,6 +1122,13 @@ REVIEWED_CHILD_QUERIES: dict[str, str] = {
     "app/services/project_service.py:delete_milestone": "parent ConstructionProject loaded and 404'd first (APRAS-42 §6.1)",
     "app/services/project_service.py:delete_project_update": "parent ConstructionProject loaded and 404'd first (APRAS-42 §6.1)",
     "app/services/purchase_service.py:_get_quote_or_404": "parent PurchaseRequest loaded and 404'd first",
+    "app/services/purchase_service.py:_replace_request_items": (
+        "keyed on the ids of the already-filtered PurchaseRequest's own "
+        "lines, which the caller loaded and 404'd first; the query exists "
+        "only to delete the cells whose parent line is going away, because "
+        "`purchase_quote_item.request_item_id` is nullable and the ORM "
+        "would otherwise null it out (APRAS-73 D7)"
+    ),
     "app/services/purchase_service.py:list_requests": "keyed on ids of already-filtered PurchaseRequest rows",
     "app/services/purchase_service.py:get_summary": "keyed on ids of already-filtered PurchaseRequest rows (APRAS-42 §6.2)",
     "app/services/access_control_service.py:sync_facial_template": "parent Resident loaded and 404'd first",
@@ -1205,10 +1225,13 @@ def test_inherited_models_cover_apras41_partition():
     ``infraction_rule``), ``infraction_stage`` and ``infraction_contestation``
     (→ ``infraction``). All three are reached only through their parent's id,
     so a ``tenant_id`` of their own would be a second, forgeable source of
-    truth.
+    truth. **26** since APRAS-73 added ``purchase_request_item`` (→
+    ``purchase_request``) and ``purchase_quote_item`` (→
+    ``purchase_quote``): both sides of the comparison grid are rewritten
+    wholesale with the row that owns them and are reached only through it.
     """
     by_table = _model_name_by_table()
-    assert len(INHERITED_TABLES) == 24
+    assert len(INHERITED_TABLES) == 26
     assert {by_table[table] for table in INHERITED_TABLES} == set(INHERITED_MODELS)
 
 

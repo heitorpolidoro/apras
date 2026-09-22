@@ -47,7 +47,11 @@ from app.models.enums import AssetCategory, TransactionType
 from app.models.finance import FinanceCategory, FinancialTransaction
 from app.models.infraction import InfractionSettings
 from app.models.project import ConstructionProject
-from app.models.purchase import PurchaseQuote, PurchaseRequest
+from app.models.purchase import (
+    PurchaseQuote,
+    PurchaseQuoteItem,
+    PurchaseRequest,
+)
 from app.models.user import User
 
 _APP_DIR = pathlib.Path(__file__).resolve().parent.parent / "app"
@@ -219,8 +223,13 @@ def test_no_decimal_field_anywhere_is_bare():
 
 #: The naming convention for a request body in this repository. `*Write` and
 #: `ProjectUpdateSchema` are request bodies too -- `*Create`/`*Update` is the
-#: rule, these are the two spellings the tree actually uses.
-_REQUEST_SUFFIXES = ("Create", "Update", "UpdateSchema", "Write")
+#: rule, these are the other spellings the tree actually uses. `*In` joined
+#: the list with APRAS-73: a payload nested inside both a `*Create` and an
+#: `*Update` (`PurchaseQuoteItemIn`, `PurchaseRequestItemIn`) is named for
+#: its direction rather than for one of the two verbs, and it is a request
+#: body in every sense that matters here -- `AccessLogCheckIn` and
+#: `FacialVerificationWebhookIn` were already spelled that way.
+_REQUEST_SUFFIXES = ("Create", "Update", "UpdateSchema", "Write", "In")
 
 
 def _request_side_schemas() -> set[type[BaseModel]]:
@@ -274,6 +283,7 @@ def test_the_request_side_set_is_what_it_claims_to_be():
     assert {
         "PurchaseQuoteCreate",
         "PurchaseQuoteUpdate",
+        "PurchaseQuoteItemIn",
         "ProjectBase",
         "ProjectCreate",
         "ProjectUpdateSchema",
@@ -301,7 +311,8 @@ TWELVE_FIELDS = [
     ("app.models.project", "ConstructionProject", "total_budget"),
     ("app.models.project", "ConstructionProject", "executed_budget"),
     ("app.models.project", "ProjectUpdate", "cost_impact"),
-    ("app.models.purchase", "PurchaseQuote", "unit_price"),
+    # APRAS-73 D13: the price left `purchase_quote` for its lines.
+    ("app.models.purchase", "PurchaseQuoteItem", "unit_price"),
     ("app.models.plan", "Plan", "base_price"),
     ("app.models.asset", "Asset", "acquisition_value"),
 ]
@@ -389,15 +400,24 @@ def test_money_is_a_json_number_on_every_affected_domain(
     session.add(request)
     session.commit()
     session.refresh(request)
-    session.add(
-        PurchaseQuote(
-            purchase_request_id=request.id,
-            supplier_name="Fornecedor A",
-            unit_price=Decimal("2.68"),
-            quantity=1,
-            created_by_id=admin_user.id,
-        )
+    # APRAS-73 D13: the quote itself carries no price any more, so the
+    # money-reaches-JSON-as-a-number claim keeps its live subject by moving
+    # onto one `PurchaseQuoteItem` at exactly the same value.
+    quote = PurchaseQuote(
+        purchase_request_id=request.id,
+        supplier_name="Fornecedor A",
+        created_by_id=admin_user.id,
     )
+    quote.items = [
+        PurchaseQuoteItem(
+            request_item_id=None,
+            description="Bomba submersa",
+            quantity=1,
+            unit_price=Decimal("2.68"),
+            position=0,
+        )
+    ]
+    session.add(quote)
     session.commit()
 
     endpoints = [

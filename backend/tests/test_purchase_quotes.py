@@ -52,8 +52,36 @@ def purchase_request(client: TestClient, admin: User) -> dict:
     return res.json()
 
 
+def _extra_line(
+    unit_price: float = 100.0,
+    quantity: int = 2,
+    description: str = "Item do orçamento",
+    model: str | None = None,
+) -> dict:
+    """One supplier-owned line: `request_item_id` absent, its own text (D3)."""
+    line: dict = {
+        "description": description,
+        "quantity": quantity,
+        "unit_price": unit_price,
+    }
+    if model is not None:
+        line["model"] = model
+    return line
+
+
 def _add_quote(client: TestClient, user: User, request_id: str, **overrides):
-    payload = {"supplier_name": "Fornecedor A", "unit_price": 100.0, "quantity": 2}
+    """Post a quote. `unit_price`/`quantity` shape the single default line.
+
+    Since APRAS-73 a quote has no price of its own: the two keyword names
+    survive here only because every legacy case in this module reads as "one
+    line at this price", which is exactly what the migration produces.
+    """
+    unit_price = overrides.pop("unit_price", 100.0)
+    quantity = overrides.pop("quantity", 2)
+    payload: dict = {
+        "supplier_name": "Fornecedor A",
+        "items": [_extra_line(unit_price=unit_price, quantity=quantity)],
+    }
     payload.update(overrides)
     return client.post(
         f"/api/v1/purchase-requests/{request_id}/quotes",
@@ -78,8 +106,10 @@ def test_add_quote_returns_201_with_computed_total(
     assert res.status_code == 201, res.text
     body = res.json()
     assert body["supplier_name"] == "Playground Kids"
-    assert body["unit_price"] == 1250.5
-    assert body["quantity"] == 4
+    assert len(body["items"]) == 1
+    assert body["items"][0]["unit_price"] == 1250.5
+    assert body["items"][0]["quantity"] == 4
+    assert body["items"][0]["line_total"] == 5002.0
     assert body["total_price"] == 5002.0
     assert body["created_by_name"] == "User admin_q@test.com"
 
@@ -276,13 +306,13 @@ def test_update_quote_replaces_extra_fields_wholesale(
     res = client.put(
         f"/api/v1/purchase-requests/{purchase_request['id']}/quotes/{quote['id']}",
         json={
-            "unit_price": 200.0,
+            "items": [_extra_line(unit_price=200.0)],
             "extra_fields": [{"label": "Garantia", "value": "2 anos"}],
         },
         headers=_headers(admin),
     )
     assert res.status_code == 200
-    assert res.json()["unit_price"] == 200.0
+    assert res.json()["items"][0]["unit_price"] == 200.0
     assert res.json()["total_price"] == 400.0
     assert res.json()["extra_fields"] == [{"label": "Garantia", "value": "2 anos"}]
 
@@ -345,7 +375,7 @@ def test_quote_from_another_request_returns_404(
 
     res = client.put(
         f"/api/v1/purchase-requests/{purchase_request['id']}/quotes/{quote['id']}",
-        json={"unit_price": 1.0},
+        json={"items": [_extra_line(unit_price=1.0)]},
         headers=_headers(admin),
     )
     assert res.status_code == 404
@@ -365,7 +395,7 @@ def test_quote_endpoints_on_unknown_request_return_404(
     assert (
         client.put(
             f"/api/v1/purchase-requests/{unknown}/quotes/{uuid.uuid4()}",
-            json={"unit_price": 1.0},
+            json={"items": [_extra_line(unit_price=1.0)]},
             headers=_headers(admin),
         ).status_code
         == 404
@@ -394,7 +424,7 @@ def test_quotes_are_frozen_after_a_decision(
     assert (
         client.put(
             f"/api/v1/purchase-requests/{request_id}/quotes/{quote['id']}",
-            json={"unit_price": 1.0},
+            json={"items": [_extra_line(unit_price=1.0)]},
             headers=_headers(admin),
         ).status_code
         == 409
@@ -438,5 +468,6 @@ def test_a_third_decimal_is_accepted_and_rounded_half_up(
 
     assert res.status_code == 201, res.text
     body = res.json()
-    assert body["unit_price"] == 2.68
+    assert body["items"][0]["unit_price"] == 2.68
+    assert body["items"][0]["line_total"] == 2.68
     assert body["total_price"] == 2.68

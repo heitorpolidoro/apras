@@ -13,9 +13,14 @@ import {
 import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
 import { QUOTE_ATTACHMENT_ACCEPT } from "../../../api/purchases";
-import type { PurchaseQuote } from "../../../types/purchase";
+import type {
+  PurchaseQuote,
+  PurchaseQuoteItem,
+  PurchaseRequestItem,
+} from "../../../types/purchase";
 import {
   attachmentRejectionKey,
+  buildComparisonGrid,
   unionExtraFieldLabels,
 } from "../utils/comparison";
 import { formatCurrency } from "../utils/formatters";
@@ -74,6 +79,8 @@ const SORT_LABEL_KEY: Record<SortMode, string> = {
 
 interface QuoteComparisonTableProps {
   quotes: PurchaseQuote[];
+  /** The request's enumeration: one grid row each, in `position` order. */
+  requestItems: PurchaseRequestItem[];
   /** `purchases:decide`, and the request is not cancelled. */
   canChoose: boolean;
   /** The request is OPEN — i.e. its quotes are not frozen. */
@@ -89,6 +96,7 @@ interface QuoteComparisonTableProps {
 
 export const QuoteComparisonTable: React.FC<QuoteComparisonTableProps> = ({
   quotes,
+  requestItems,
   canChoose,
   quotesEditable,
   canEditQuotes,
@@ -105,6 +113,10 @@ export const QuoteComparisonTable: React.FC<QuoteComparisonTableProps> = ({
   const pickers = useRef<Record<string, HTMLInputElement | null>>({});
 
   const labels = useMemo(() => unionExtraFieldLabels(quotes), [quotes]);
+  const gridRows = useMemo(
+    () => buildComparisonGrid(requestItems, quotes),
+    [requestItems, quotes],
+  );
 
   const ordered = useMemo(() => {
     if (sortMode === "original") return quotes;
@@ -148,6 +160,49 @@ export const QuoteComparisonTable: React.FC<QuoteComparisonTableProps> = ({
         title={t("purchases.comparison.notProvided", "Não informado")}
       >
         —
+      </span>
+    );
+
+  /**
+   * One cell of the items grid (D9).
+   *
+   * `undefined` on a **request-line** row is the supplier skipping it: the
+   * literal `Não cotado`, muted, with `data-quoted="false"`. On an **extra**
+   * row it is a plain empty cell with no text at all — those suppliers were
+   * never asked for that line, and `Não cotado` would read as a refusal.
+   * An absent `model` renders **nothing**: no dash and no placeholder,
+   * because most lines have none and a gap glyph reads as missing data.
+   */
+  const gridCell = (line: PurchaseQuoteItem | undefined, isExtra: boolean) => {
+    if (!line) {
+      return isExtra ? null : (
+        <span className="text-gray-400">
+          {t("purchases.items.notQuoted", "Não cotado")}
+        </span>
+      );
+    }
+    return (
+      <div className="space-y-0.5">
+        {line.model && <div className="text-xs text-gray-600">{line.model}</div>}
+        <div>{formatCurrency(line.unit_price)}</div>
+        <div className="text-xs font-semibold text-gray-900">
+          {formatCurrency(line.line_total)}
+        </div>
+      </div>
+    );
+  };
+
+  const coverage = (quote: PurchaseQuote) =>
+    quote.is_complete ? null : (
+      <span
+        className="text-[11px] font-normal text-amber-700"
+        data-testid={`quote-coverage-${quote.id}`}
+      >
+        {t("purchases.items.coverage", {
+          quoted: quote.quoted_item_count,
+          total: requestItems.length,
+          defaultValue: "Cobertura: {{quoted}} de {{total}} itens",
+        })}
       </span>
     );
 
@@ -286,15 +341,8 @@ export const QuoteComparisonTable: React.FC<QuoteComparisonTableProps> = ({
         </span>
       ),
     },
-    {
-      key: "unit",
-      label: t("purchases.comparison.unitTimesQuantity", "Unitário × qtd."),
-      render: (quote) => (
-        <span>
-          {formatCurrency(quote.unit_price)} × {quote.quantity}
-        </span>
-      ),
-    },
+    // APRAS-73 D9 deleted the `Unitário × qtd.` row: a quote no longer has
+    // one price, and the items grid above carries every line's pair.
     {
       key: "contact",
       label: t("purchases.comparison.contact", "Contato"),
@@ -362,11 +410,50 @@ export const QuoteComparisonTable: React.FC<QuoteComparisonTableProps> = ({
                     {quote.supplier_name}
                     {badges(quote)}
                   </div>
+                  {coverage(quote)}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
+            {gridRows.length > 0 && (
+              <tr>
+                <td
+                  colSpan={ordered.length + 1}
+                  className="pt-2 pb-1 text-[11px] font-semibold uppercase text-gray-400"
+                >
+                  {t("purchases.items.gridTitle", "Itens")}
+                </td>
+              </tr>
+            )}
+            {gridRows.map((row) => (
+              <tr key={row.key} className="border-b border-gray-100">
+                <td className="p-2 text-xs font-semibold text-gray-600">
+                  {row.quantity} × {row.description}
+                  {row.isExtra && (
+                    <Badge variant="secondary" className="ml-1">
+                      {t("purchases.items.extraBadge", "Extra")}
+                    </Badge>
+                  )}
+                </td>
+                {ordered.map((quote) => {
+                  const line = row.cells[quote.id];
+                  return (
+                    <td
+                      key={quote.id}
+                      data-testid={`grid-cell-${row.key}-${quote.id}`}
+                      data-quoted={line ? "true" : "false"}
+                      className={`p-2 text-sm ${
+                        quote.is_lowest_price ? "bg-emerald-50/40" : ""
+                      }`}
+                    >
+                      {gridCell(line, row.isExtra)}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+
             {fixedRows.map((row) => (
               <tr key={row.key} className="border-b border-gray-100">
                 <td className="p-2 text-xs font-semibold text-gray-600">
@@ -445,6 +532,42 @@ export const QuoteComparisonTable: React.FC<QuoteComparisonTableProps> = ({
               {quote.supplier_name}
               {badges(quote)}
             </div>
+            {coverage(quote)}
+            {gridRows.length > 0 && (
+              <>
+                <h4 className="mt-2 text-[11px] font-semibold uppercase text-gray-400">
+                  {t("purchases.items.gridTitleNarrow", {
+                    count: gridRows.length,
+                    defaultValue: "Itens ({{count}})",
+                  })}
+                </h4>
+                <dl className="mt-1 space-y-1">
+                  {gridRows.map((row) => {
+                    const line = row.cells[quote.id];
+                    return (
+                      <div
+                        key={row.key}
+                        data-testid={`grid-cell-${row.key}-${quote.id}`}
+                        data-quoted={line ? "true" : "false"}
+                        className="flex justify-between gap-3 text-xs"
+                      >
+                        <dt className="text-gray-500">
+                          {row.quantity} × {row.description}
+                          {row.isExtra && (
+                            <Badge variant="secondary" className="ml-1">
+                              {t("purchases.items.extraBadge", "Extra")}
+                            </Badge>
+                          )}
+                        </dt>
+                        <dd className="text-right text-gray-800">
+                          {gridCell(line, row.isExtra)}
+                        </dd>
+                      </div>
+                    );
+                  })}
+                </dl>
+              </>
+            )}
             <dl className="mt-2 space-y-1">
               {fixedRows.map((row) => (
                 <div

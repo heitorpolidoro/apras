@@ -18,6 +18,7 @@ from app.core import clock
 from app.core.exceptions import (
     PurchaseAccessForbiddenError,
     PurchaseQuoteFrozenError,
+    PurchaseQuoteItemUnknownLineError,
     PurchaseQuoteNotFoundError,
     PurchaseRequestNotFoundError,
     PurchaseRequestNotOpenError,
@@ -27,17 +28,27 @@ from app.core.exceptions import (
 from app.core.money import ZERO, quantize_money
 from app.core.uploads import sanitise_upload_filename
 from app.models.enums import PurchaseRequestStatus
-from app.models.purchase import PurchaseQuote, PurchaseQuoteDecision, PurchaseRequest
+from app.models.purchase import (
+    PurchaseQuote,
+    PurchaseQuoteDecision,
+    PurchaseQuoteItem,
+    PurchaseRequest,
+    PurchaseRequestItem,
+)
 from app.models.user import User
 from app.schemas.purchase import (
     PaginatedPurchaseRequestRead,
     PurchaseDecisionCreate,
     PurchaseDecisionRead,
     PurchaseQuoteCreate,
+    PurchaseQuoteItemIn,
+    PurchaseQuoteItemRead,
     PurchaseQuoteRead,
     PurchaseQuoteUpdate,
     PurchaseRequestCreate,
     PurchaseRequestDetailRead,
+    PurchaseRequestItemIn,
+    PurchaseRequestItemRead,
     PurchaseRequestRead,
     PurchaseRequestUpdate,
     PurchaseSummaryRead,
@@ -60,9 +71,58 @@ _PDF_MAGIC = b"%PDF-"
 _storage_provider: BaseStorageProvider = LocalStorageProvider()
 
 
+def _effective_quantity(item: PurchaseQuoteItem) -> int:
+    """How many the line prices (APRAS-73 D8).
+
+    Its own ``quantity`` for a supplier's extra line; the request line's for
+    a linked one, which is the single source of truth for *how many*.
+    """
+    if item.quantity is not None:
+        return item.quantity
+    return item.request_item.quantity
+
+
+def _effective_description(item: PurchaseQuoteItem) -> str:
+    """What the line prices: its own text, or the request line's."""
+    if item.request_item is not None:
+        return item.request_item.description
+    return item.description or ""
+
+
+def _line_total(item: PurchaseQuoteItem) -> Decimal:
+    """``quantize_money(unit_price * quantity)`` over the effective quantity."""
+    return quantize_money(item.unit_price * _effective_quantity(item))
+
+
 def _quote_total(quote: PurchaseQuote) -> Decimal:
-    """Total price of a quote (unit price times quantity, quantized to cents)."""
-    return quantize_money(quote.unit_price * quote.quantity)
+    """Total price of a quote: the sum of its line totals (APRAS-73 D8).
+
+    Seeded with :data:`~app.core.money.ZERO` so a quote with no line yields
+    ``Decimal("0.00")`` and never ``int`` 0, and quantized once more on the
+    way out. That last call is deliberately redundant over exact cents and is
+    kept as a defence, mirroring ``PurchaseQuoteRead._compute_total``; it
+    rounds nothing and is not dead code.
+    """
+    return quantize_money(sum((_line_total(item) for item in quote.items), ZERO))
+
+
+def _quoted_item_count(quote: PurchaseQuote) -> int:
+    """Request lines this quote priced -- **linked** items only (D5).
+
+    A supplier's own extra line counts toward the total and never toward
+    coverage, which is what makes ``2 of 3 plus one extra`` read as 2 and not
+    as 3.
+    """
+    return sum(1 for item in quote.items if item.request_item_id is not None)
+
+
+def _is_quote_complete(quote: PurchaseQuote, request_item_count: int) -> bool:
+    """Does the quote price every line the request enumerates? (D5)
+
+    Trivially ``True`` when the request enumerates nothing, which is what
+    keeps ranking on pre-APRAS-73 data bit-for-bit what APRAS-63 produced.
+    """
+    return _quoted_item_count(quote) == request_item_count
 
 
 class PurchaseService:
@@ -189,13 +249,31 @@ class PurchaseService:
         return max(decisions, key=lambda d: d.decided_at)
 
     @staticmethod
+    def _lowest_complete_total(
+        quotes: list[PurchaseQuote], request_item_count: int
+    ) -> Decimal | None:
+        """The baseline of the ranking, over **complete** quotes only (D10).
+
+        A deliberate, operator-ruled change to the APRAS-63 contract, where
+        this was a pure minimum over every total: an incomplete quote is
+        cheaper *because it delivers less*, so calling it the lowest price
+        compares two different things on the very screen built for choosing.
+        ``None`` when no quote covers the whole enumeration -- then no quote
+        is badged at all.
+        """
+        totals = [
+            _quote_total(q) for q in quotes if _is_quote_complete(q, request_item_count)
+        ]
+        return min(totals) if totals else None
+
+    @staticmethod
     def _build_request_read(
         purchase_request: PurchaseRequest,
         quotes: list[PurchaseQuote],
         current: PurchaseQuoteDecision | None,
         user_names: dict[UUID, str],
     ) -> PurchaseRequestRead:
-        totals = [_quote_total(q) for q in quotes]
+        items = list(purchase_request.items)
         selected_quote = None
         if current is not None:
             selected_quote = next((q for q in quotes if q.id == current.quote_id), None)
@@ -207,8 +285,11 @@ class PurchaseService:
             status=purchase_request.status,
             requested_by_id=purchase_request.requested_by_id,
             requested_by_name=user_names.get(purchase_request.requested_by_id),
+            items=[PurchaseRequestItemRead.model_validate(i) for i in items],
             quote_count=len(quotes),
-            lowest_quote_total=min(totals) if totals else None,
+            lowest_quote_total=PurchaseService._lowest_complete_total(
+                quotes, len(items)
+            ),
             selected_quote_id=current.quote_id if current else None,
             selected_quote_total=(
                 _quote_total(selected_quote) if selected_quote else None
@@ -220,20 +301,42 @@ class PurchaseService:
         )
 
     @staticmethod
+    def _build_quote_item_reads(quote: PurchaseQuote) -> list[PurchaseQuoteItemRead]:
+        """The quote's lines, each echoing its effective text and quantity.
+
+        Storage stays normalised -- a linked line stores neither -- and the
+        payload still renders the grid on its own (D3).
+        """
+        return [
+            PurchaseQuoteItemRead(
+                id=item.id,
+                request_item_id=item.request_item_id,
+                model=item.model,
+                unit_price=item.unit_price,
+                description=_effective_description(item),
+                quantity=_effective_quantity(item),
+                position=item.position,
+            )
+            for item in quote.items
+        ]
+
+    @staticmethod
     def _build_quote_read(
         quote: PurchaseQuote,
         user_names: dict[UUID, str],
         lowest_total: Decimal | None = None,
         selected_quote_id: UUID | None = None,
+        request_item_count: int = 0,
     ) -> PurchaseQuoteRead:
         total = _quote_total(quote)
+        is_complete = _is_quote_complete(quote, request_item_count)
         return PurchaseQuoteRead(
             id=quote.id,
             purchase_request_id=quote.purchase_request_id,
             supplier_name=quote.supplier_name,
             supplier_contact=quote.supplier_contact,
-            unit_price=quote.unit_price,
-            quantity=quote.quantity,
+            items=PurchaseService._build_quote_item_reads(quote),
+            is_complete=is_complete,
             notes=quote.notes,
             extra_fields=quote.extra_fields or [],
             attachment_url=quote.attachment_url,
@@ -241,10 +344,129 @@ class PurchaseService:
             created_by_id=quote.created_by_id,
             created_by_name=user_names.get(quote.created_by_id),
             is_selected=selected_quote_id is not None and selected_quote_id == quote.id,
-            is_lowest_price=lowest_total is not None and total == lowest_total,
+            # D10: `lowest_total` is already a complete quote's total, and the
+            # `is_complete` conjunct is what stops an incomplete quote that
+            # happens to *tie* with it from wearing the badge anyway.
+            is_lowest_price=(
+                lowest_total is not None and is_complete and total == lowest_total
+            ),
             created_at=quote.created_at,
             updated_at=quote.updated_at,
         )
+
+    # ------------------------------------------------------------------ #
+    # The lines, on both sides of the grid (APRAS-73 D7)
+    # ------------------------------------------------------------------ #
+
+    @staticmethod
+    def _replace_request_items(
+        session: Session,
+        purchase_request: PurchaseRequest,
+        items_in: list[PurchaseRequestItemIn],
+    ) -> None:
+        """Rewrite the enumeration wholesale, by ``id`` (D7).
+
+        A submitted line carrying an existing ``id`` keeps it -- and keeps
+        every quote cell attached to it; a line without one is created; a
+        line the payload omits is **deleted**, taking the cells that priced
+        it with it. An ``id`` this request does not own is treated as a new
+        line: it names no row that could be kept, and honouring it would let
+        one request address another's.
+        """
+        existing = {item.id: item for item in purchase_request.items}
+        result: list[PurchaseRequestItem] = []
+        survivors: set[UUID] = set()
+
+        for position, item_in in enumerate(items_in):
+            row = existing.get(item_in.id) if item_in.id is not None else None
+            if row is None:
+                row = PurchaseRequestItem(
+                    description=item_in.description,
+                    quantity=item_in.quantity,
+                    position=position,
+                )
+            else:
+                row.description = item_in.description
+                row.quantity = item_in.quantity
+                row.position = position
+                survivors.add(row.id)
+            result.append(row)
+
+        removed_ids = [row_id for row_id in existing if row_id not in survivors]
+        if removed_ids:
+            # The cells first, and flushed before the parents go:
+            # `purchase_quote_item.request_item_id` is nullable, so deleting
+            # the request line alone would have the ORM null the column out
+            # and silently turn a linked cell into a malformed extra line.
+            for cell in session.exec(
+                select(PurchaseQuoteItem).where(
+                    PurchaseQuoteItem.request_item_id.in_(removed_ids)
+                )
+            ).all():
+                session.delete(cell)
+            session.flush()
+
+        # `cascade="all, delete-orphan"` turns the assignment into the delete
+        # of every line the payload omitted.
+        purchase_request.items = result
+        session.flush()
+
+    @staticmethod
+    def _replace_quote_items(
+        session: Session,
+        purchase_request: PurchaseRequest,
+        quote: PurchaseQuote,
+        items_in: list[PurchaseQuoteItemIn],
+    ) -> None:
+        """Rewrite a quote's priced lines wholesale, keyed by the request line.
+
+        A linked line the payload still carries keeps its row, so its id is
+        stable; a supplier's own extra line is re-created every time, which
+        means an extra line's ``id`` churns on every quote edit even when
+        nothing about it changed. Known and accepted (D7): nothing in this
+        task addresses an extra line by id.
+        """
+        request_items = {item.id: item for item in purchase_request.items}
+        for item_in in items_in:
+            if (
+                item_in.request_item_id is not None
+                and item_in.request_item_id not in request_items
+            ):
+                raise PurchaseQuoteItemUnknownLineError
+
+        by_link = {
+            item.request_item_id: item
+            for item in quote.items
+            if item.request_item_id is not None
+        }
+        result: list[PurchaseQuoteItem] = []
+
+        for position, item_in in enumerate(items_in):
+            row = (
+                by_link.get(item_in.request_item_id)
+                if item_in.request_item_id is not None
+                else None
+            )
+            if row is None:
+                row = PurchaseQuoteItem(
+                    request_item_id=item_in.request_item_id,
+                    request_item=request_items.get(item_in.request_item_id),
+                    model=item_in.model,
+                    unit_price=quantize_money(item_in.unit_price),
+                    description=item_in.description,
+                    quantity=item_in.quantity,
+                    position=position,
+                )
+            else:
+                row.model = item_in.model
+                row.unit_price = quantize_money(item_in.unit_price)
+                row.position = position
+            result.append(row)
+
+        # `cascade="all, delete-orphan"`: what the payload dropped is deleted,
+        # which is what makes an extra line's id churn on every edit (D7).
+        quote.items = result
+        session.flush()
 
     # ------------------------------------------------------------------ #
     # Requests
@@ -261,14 +483,22 @@ class PurchaseService:
             )
 
         now = clock.db_now()
+        data = request_in.model_dump()
+        # The lines are rows of their own, never columns of the request.
+        data.pop("items", None)
         purchase_request = PurchaseRequest(
-            **request_in.model_dump(),
+            **data,
             status=PurchaseRequestStatus.OPEN,
             requested_by_id=current_user.id,
             created_at=now,
             updated_at=now,
         )
         session.add(purchase_request)
+        session.flush()
+        if request_in.items:
+            PurchaseService._replace_request_items(
+                session, purchase_request, request_in.items
+            )
         session.commit()
         session.refresh(purchase_request)
 
@@ -427,8 +657,12 @@ class PurchaseService:
         user_ids.update(d.decided_by_id for d in decisions)
         user_names = PurchaseService._resolve_user_names(session, user_ids)
 
-        totals = [_quote_total(q) for q in quotes]
-        lowest_total = min(totals) if totals else None
+        # Computed once per request and handed to both the ranking and the
+        # schema's `is_complete`, so the two cannot disagree (D10).
+        request_item_count = len(purchase_request.items)
+        lowest_total = PurchaseService._lowest_complete_total(
+            quotes, request_item_count
+        )
         quotes_sorted = sorted(quotes, key=lambda q: (_quote_total(q), q.created_at))
         quote_reads = [
             PurchaseService._build_quote_read(
@@ -436,6 +670,7 @@ class PurchaseService:
                 user_names,
                 lowest_total=lowest_total,
                 selected_quote_id=current.quote_id if current else None,
+                request_item_count=request_item_count,
             )
             for q in quotes_sorted
         ]
@@ -481,15 +716,26 @@ class PurchaseService:
         request_id: UUID,
         request_in: PurchaseRequestUpdate,
     ) -> PurchaseRequestRead:
-        """Update the free-text fields of a purchase request."""
+        """Update the free-text fields, and optionally the lines, of a request."""
         PurchaseService._assert_can_view(current_user, session, "purchases:update")
         purchase_request = PurchaseService._get_request_or_404(session, request_id)
         PurchaseService._assert_can_write_request(
             current_user, purchase_request, session
         )
+        # D7: a decided request's grid is immutable, because rewriting it
+        # would rewrite the quotes that were compared to reach the decision.
+        # A free-text-only update keeps its current behaviour.
+        if request_in.items is not None:
+            PurchaseService._assert_quotes_unfrozen(purchase_request)
 
-        for key, value in request_in.model_dump(exclude_unset=True).items():
+        update_data = request_in.model_dump(exclude_unset=True)
+        update_data.pop("items", None)
+        for key, value in update_data.items():
             setattr(purchase_request, key, value)
+        if request_in.items is not None:
+            PurchaseService._replace_request_items(
+                session, purchase_request, request_in.items
+            )
         purchase_request.updated_at = clock.db_now()
         session.add(purchase_request)
         session.commit()
@@ -565,8 +811,10 @@ class PurchaseService:
 
         now = clock.db_now()
         data = quote_in.model_dump()
-        data["unit_price"] = quantize_money(data["unit_price"])
         extra_fields = data.pop("extra_fields", [])
+        # The priced lines are rows of their own (D2), so they never reach
+        # the quote's constructor.
+        data.pop("items", None)
         quote = PurchaseQuote(
             **data,
             purchase_request_id=purchase_request.id,
@@ -576,11 +824,17 @@ class PurchaseService:
             updated_at=now,
         )
         session.add(quote)
+        session.flush()
+        PurchaseService._replace_quote_items(
+            session, purchase_request, quote, quote_in.items
+        )
         session.commit()
         session.refresh(quote)
 
         return PurchaseService._build_quote_read(
-            quote, {current_user.id: current_user.full_name or current_user.email}
+            quote,
+            {current_user.id: current_user.full_name or current_user.email},
+            request_item_count=len(purchase_request.items),
         )
 
     @staticmethod
@@ -601,19 +855,24 @@ class PurchaseService:
         PurchaseService._assert_quotes_unfrozen(purchase_request)
 
         update_data = quote_in.model_dump(exclude_unset=True)
-        if update_data.get("unit_price") is not None:
-            update_data["unit_price"] = quantize_money(update_data["unit_price"])
         if "extra_fields" in update_data and update_data["extra_fields"] is None:
             update_data.pop("extra_fields")
+        update_data.pop("items", None)
         for key, value in update_data.items():
             setattr(quote, key, value)
+        if quote_in.items is not None:
+            PurchaseService._replace_quote_items(
+                session, purchase_request, quote, quote_in.items
+            )
         quote.updated_at = clock.db_now()
         session.add(quote)
         session.commit()
         session.refresh(quote)
 
         user_names = PurchaseService._resolve_user_names(session, {quote.created_by_id})
-        return PurchaseService._build_quote_read(quote, user_names)
+        return PurchaseService._build_quote_read(
+            quote, user_names, request_item_count=len(purchase_request.items)
+        )
 
     @staticmethod
     def delete_quote(
@@ -725,7 +984,9 @@ class PurchaseService:
 
         cls._delete_stored_attachment(previous)
         user_names = cls._resolve_user_names(session, {quote.created_by_id})
-        return cls._build_quote_read(quote, user_names)
+        return cls._build_quote_read(
+            quote, user_names, request_item_count=len(purchase_request.items)
+        )
 
     @classmethod
     def clear_quote_attachment(
@@ -743,9 +1004,12 @@ class PurchaseService:
         cls._assert_quotes_unfrozen(purchase_request)
 
         user_names = cls._resolve_user_names(session, {quote.created_by_id})
+        request_item_count = len(purchase_request.items)
         previous = quote.attachment_url
         if previous is None and quote.attachment_filename is None:
-            return cls._build_quote_read(quote, user_names)
+            return cls._build_quote_read(
+                quote, user_names, request_item_count=request_item_count
+            )
 
         quote.attachment_url = None
         quote.attachment_filename = None
@@ -755,7 +1019,9 @@ class PurchaseService:
         session.refresh(quote)
 
         cls._delete_stored_attachment(previous)
-        return cls._build_quote_read(quote, user_names)
+        return cls._build_quote_read(
+            quote, user_names, request_item_count=request_item_count
+        )
 
     # ------------------------------------------------------------------ #
     # Decision

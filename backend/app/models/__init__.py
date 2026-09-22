@@ -71,7 +71,13 @@ from .occurrence import Occurrence, OccurrenceTimeline
 from .package import Package
 from .plan import Plan
 from .project import ConstructionProject, ProjectMilestone, ProjectUpdate
-from .purchase import PurchaseQuote, PurchaseQuoteDecision, PurchaseRequest
+from .purchase import (
+    PurchaseQuote,
+    PurchaseQuoteDecision,
+    PurchaseQuoteItem,
+    PurchaseRequest,
+    PurchaseRequestItem,
+)
 from .reservation import ReservableSpace, SpaceReservation
 from .resident import Resident
 from .role import Role
@@ -168,7 +174,9 @@ __all__ = [
     "ProjectUpdate",
     "PurchaseQuote",
     "PurchaseQuoteDecision",
+    "PurchaseQuoteItem",
     "PurchaseRequest",
+    "PurchaseRequestItem",
     "PurchaseRequestStatus",
     "ReservableSpace",
     "ReservationStatus",

@@ -70,10 +70,18 @@ def _create_request(client: TestClient, user: User, title: str = "Pedido") -> di
     return res.json()
 
 
+def _price_update(unit_price: float) -> dict:
+    """The smallest APRAS-73 quote update: one line at this price."""
+    return {"items": [{"description": "Item", "quantity": 1, "unit_price": unit_price}]}
+
+
 def _add_quote(client: TestClient, user: User, request_id: str) -> dict:
     res = client.post(
         f"/api/v1/purchase-requests/{request_id}/quotes",
-        json={"supplier_name": "Fornecedor", "unit_price": 10.0, "quantity": 1},
+        json={
+            "supplier_name": "Fornecedor",
+            "items": [{"description": "Item", "quantity": 1, "unit_price": 10.0}],
+        },
         headers=_headers(user),
     )
     assert res.status_code == 201, res.text
@@ -120,7 +128,16 @@ def test_blocked_roles_get_403_on_every_read_and_write(
         assert (
             client.post(
                 f"/api/v1/purchase-requests/{rid}/quotes",
-                json={"supplier_name": "F", "unit_price": 1.0, "quantity": 1},
+                json={
+                    "supplier_name": "F",
+                    "items": [
+                        {
+                            "description": "Item",
+                            "quantity": 1,
+                            "unit_price": 1.0,
+                        }
+                    ],
+                },
                 headers=h,
             ).status_code
             == 403
@@ -128,7 +145,7 @@ def test_blocked_roles_get_403_on_every_read_and_write(
         assert (
             client.put(
                 f"/api/v1/purchase-requests/{rid}/quotes/{quote['id']}",
-                json={"unit_price": 1.0},
+                json=_price_update(1.0),
                 headers=h,
             ).status_code
             == 403
@@ -180,7 +197,7 @@ def test_manager_may_read_create_and_quote(client: TestClient, manager: User) ->
     assert (
         client.put(
             f"/api/v1/purchase-requests/{rid}/quotes/{quote['id']}",
-            json={"unit_price": 99.0},
+            json=_price_update(99.0),
             headers=_headers(manager),
         ).status_code
         == 200
@@ -256,7 +273,7 @@ def test_manager_cannot_touch_another_managers_request_or_quote(
     assert (
         client.put(
             f"/api/v1/purchase-requests/{rid}/quotes/{quote['id']}",
-            json={"unit_price": 1.0},
+            json=_price_update(1.0),
             headers=_headers(manager),
         ).status_code
         == 403
@@ -308,7 +325,7 @@ def test_manager_cannot_edit_own_request_after_decision(
     assert (
         client.put(
             f"/api/v1/purchase-requests/{rid}/quotes/{quote['id']}",
-            json={"unit_price": 1.0},
+            json=_price_update(1.0),
             headers=_headers(manager),
         ).status_code
         == 409
@@ -333,7 +350,7 @@ def test_admin_and_director_may_edit_a_managers_request(
     assert (
         client.put(
             f"/api/v1/purchase-requests/{rid}/quotes/{quote['id']}",
-            json={"unit_price": 5.0},
+            json=_price_update(5.0),
             headers=_headers(admin),
         ).status_code
         == 200

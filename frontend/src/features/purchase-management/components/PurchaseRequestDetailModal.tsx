@@ -143,6 +143,21 @@ export const PurchaseRequestDetailModal: React.FC<
               </section>
             )}
 
+            {detail.items.length > 0 && (
+              <section data-testid="request-items">
+                <h3 className="text-xs font-semibold text-gray-700 uppercase mb-1">
+                  {t("purchases.items.requestTitle", "Itens do pedido")}
+                </h3>
+                <ul className="text-sm text-gray-800 space-y-0.5">
+                  {detail.items.map((item) => (
+                    <li key={item.id} data-testid={`request-item-row-${item.id}`}>
+                      {item.quantity} × {item.description}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
             <section>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-bold text-gray-900">
@@ -178,6 +193,7 @@ export const PurchaseRequestDetailModal: React.FC<
               ) : (
                 <QuoteComparisonTable
                   quotes={detail.quotes}
+                  requestItems={detail.items}
                   canChoose={
                     canDecide && detail.status !== PurchaseRequestStatus.CANCELLED
                   }
@@ -295,6 +311,7 @@ export const PurchaseRequestDetailModal: React.FC<
           setEditingQuote(null);
         }}
         quote={editingQuote}
+        requestItems={detail?.items ?? []}
         onSubmit={handleQuoteSubmit}
         isLoading={addQuoteMutation.isPending || updateQuoteMutation.isPending}
       />
@@ -305,6 +322,7 @@ export const PurchaseRequestDetailModal: React.FC<
         onClose={() => setDecidingQuote(null)}
         quote={decidingQuote}
         lowestQuote={lowestQuote}
+        requestItemCount={detail?.items.length ?? 0}
         onSubmit={handleDecisionSubmit}
         isLoading={selectQuoteMutation.isPending}
       />

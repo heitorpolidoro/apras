@@ -117,7 +117,14 @@ HARNESS_PATH = BACKEND_ROOT / "tests" / "matrix_world.py"
 #: fifth module-level provider. Every other route's payload is unchanged, and
 #: that is proven rather than asserted -- all seven `tests/data/*.json`
 #: baselines stay byte-identical.
-HARNESS_SHA256 = "a3190dafd910300e575cd1aa699e0519b5e09c6af964aff39c52b6ff80746f34"
+#:
+#: APRAS-73 moves it again, and for the same reason the pin exists: the
+#: price left `purchase_quote` for `purchase_quote_item`, so the harness's
+#: seeded quote gains one line and the `POST .../quotes` body carries
+#: `items` instead of `unit_price`/`quantity`. Nothing else about the world
+#: changed, and that is proven rather than asserted -- all seven
+#: `tests/data/*.json` baselines stay byte-identical.
+HARNESS_SHA256 = "83b6b84d3823fad79d70b496f3a820c0e4b6be22cab915f374298f910089ca5d"
 
 
 # ---------------------------------------------------------------------------

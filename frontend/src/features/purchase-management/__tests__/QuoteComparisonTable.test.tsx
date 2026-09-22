@@ -3,18 +3,43 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { QuoteComparisonTable } from "../components/QuoteComparisonTable";
 import {
   attachmentRejectionKey,
+  buildComparisonGrid,
   unionExtraFieldLabels,
 } from "../utils/comparison";
 import { QUOTE_ATTACHMENT_MAX_FILE_SIZE_BYTES } from "../../../api/purchases";
-import type { PurchaseQuote } from "../../../types/purchase";
+import type {
+  PurchaseQuote,
+  PurchaseQuoteItem,
+  PurchaseRequestItem,
+} from "../../../types/purchase";
+
+/** The request's enumeration: the grid's rows, in `position` order. */
+const requestItems: PurchaseRequestItem[] = [
+  { id: "ri-lamp", description: "Luminárias LED", quantity: 12, position: 0 },
+  { id: "ri-work", description: "Mão de obra", quantity: 1, position: 1 },
+];
+
+const lineOf = (
+  overrides: Partial<PurchaseQuoteItem> & { id: string },
+): PurchaseQuoteItem => ({
+  request_item_id: null,
+  model: null,
+  unit_price: 100,
+  description: "Item",
+  quantity: 1,
+  position: 0,
+  line_total: 100,
+  ...overrides,
+});
 
 const quoteOf = (overrides: Partial<PurchaseQuote>): PurchaseQuote => ({
   id: "q",
   purchase_request_id: "req-1",
   supplier_name: "Fornecedor",
   supplier_contact: null,
-  unit_price: 100,
-  quantity: 1,
+  items: [],
+  quoted_item_count: 0,
+  is_complete: true,
   notes: null,
   extra_fields: [],
   attachment_url: null,
@@ -40,8 +65,20 @@ const quotes: PurchaseQuote[] = [
     id: "luz",
     supplier_name: "Luz & Cia",
     supplier_contact: "(11) 3333-0000",
-    unit_price: 289.9,
-    quantity: 12,
+    items: [
+      lineOf({
+        id: "luz-lamp",
+        request_item_id: "ri-lamp",
+        model: "Philips BY698P",
+        unit_price: 289.9,
+        description: "Luminárias LED",
+        quantity: 12,
+        position: 0,
+        line_total: 3478.8,
+      }),
+    ],
+    quoted_item_count: 1,
+    is_complete: false,
     total_price: 3478.8,
     notes: "Instalação inclusa",
     extra_fields: [
@@ -52,8 +89,37 @@ const quotes: PurchaseQuote[] = [
   quoteOf({
     id: "eletro",
     supplier_name: "Eletro Norte",
-    unit_price: 245,
-    quantity: 12,
+    items: [
+      lineOf({
+        id: "eletro-lamp",
+        request_item_id: "ri-lamp",
+        unit_price: 245,
+        description: "Luminárias LED",
+        quantity: 12,
+        position: 0,
+        line_total: 2940,
+      }),
+      lineOf({
+        id: "eletro-work",
+        request_item_id: "ri-work",
+        unit_price: 0.01,
+        description: "Mão de obra",
+        quantity: 1,
+        position: 1,
+        line_total: 0.01,
+      }),
+      lineOf({
+        id: "eletro-extra",
+        request_item_id: null,
+        description: "Descarte das antigas",
+        quantity: 1,
+        unit_price: 150,
+        position: 2,
+        line_total: 150,
+      }),
+    ],
+    quoted_item_count: 2,
+    is_complete: true,
     total_price: 2940,
     is_lowest_price: true,
     extra_fields: [{ label: "Prazo de entrega", value: "10 dias" }],
@@ -61,8 +127,19 @@ const quotes: PurchaseQuote[] = [
   quoteOf({
     id: "sul",
     supplier_name: "Sul Elétrica",
-    unit_price: 300,
-    quantity: 12,
+    items: [
+      lineOf({
+        id: "sul-lamp",
+        request_item_id: "ri-lamp",
+        unit_price: 300,
+        description: "Luminárias LED",
+        quantity: 12,
+        position: 0,
+        line_total: 3600,
+      }),
+    ],
+    quoted_item_count: 1,
+    is_complete: false,
     total_price: 3600,
     is_selected: true,
     extra_fields: [{ label: "Frete", value: "Grátis" }],
@@ -84,6 +161,7 @@ const renderTable = (
   render(
     <QuoteComparisonTable
       quotes={quotes}
+      requestItems={requestItems}
       canChoose
       quotesEditable
       canEditQuotes
@@ -103,6 +181,9 @@ const supplierOrder = () =>
       (element.textContent ?? "")
         .replace("Menor preço", "")
         .replace("Escolhido", "")
+        // APRAS-73: the header also carries the coverage of an
+        // incomplete quote, which this assertion is not about.
+        .replace(/Cobertura: \d+ de \d+ itens/, "")
         .trim(),
     );
 
@@ -121,6 +202,47 @@ describe("unionExtraFieldLabels", () => {
 
   it("is empty when no quote carries an extra field", () => {
     expect(unionExtraFieldLabels([quoteOf({})])).toEqual([]);
+  });
+});
+
+describe("buildComparisonGrid", () => {
+  it("puts the request lines first in position order, then the extras", () => {
+    const rows = buildComparisonGrid(requestItems, quotes);
+
+    expect(rows.map((row) => row.key)).toEqual([
+      "ri-lamp",
+      "ri-work",
+      "eletro-extra",
+    ]);
+    expect(rows.map((row) => row.isExtra)).toEqual([false, false, true]);
+    expect(rows[0].description).toBe("Luminárias LED");
+    expect(rows[0].quantity).toBe(12);
+  });
+
+  it("leaves the cell undefined where a supplier priced nothing", () => {
+    const rows = buildComparisonGrid(requestItems, quotes);
+
+    // Every supplier priced the lamps; only Eletro Norte priced the labour.
+    expect(Object.keys(rows[0].cells).sort()).toEqual(["eletro", "luz", "sul"]);
+    expect(rows[1].cells.eletro?.id).toBe("eletro-work");
+    expect(rows[1].cells.luz).toBeUndefined();
+    expect(rows[1].cells.sul).toBeUndefined();
+    // An extra line is filled only in the column of the quote that added it.
+    expect(Object.keys(rows[2].cells)).toEqual(["eletro"]);
+  });
+
+  it("sorts the request lines by position, not by arrival", () => {
+    const rows = buildComparisonGrid([...requestItems].reverse(), quotes);
+
+    expect(rows.map((row) => row.key)).toEqual([
+      "ri-lamp",
+      "ri-work",
+      "eletro-extra",
+    ]);
+  });
+
+  it("is empty for a request with no lines and quotes with no extras", () => {
+    expect(buildComparisonGrid([], [quoteOf({})])).toEqual([]);
   });
 });
 
@@ -339,6 +461,62 @@ describe("QuoteComparisonTable", () => {
     );
   });
 
+  it("renders the items grid: one row per request line, extras beneath", () => {
+    renderTable();
+
+    expect(screen.getByText("12 × Luminárias LED")).toBeInTheDocument();
+    expect(screen.getByText("1 × Mão de obra")).toBeInTheDocument();
+    expect(screen.getByText("1 × Descarte das antigas")).toBeInTheDocument();
+    expect(screen.getByText("Extra")).toBeInTheDocument();
+    // D9 deleted the `Unitário × qtd.` row together with the single price.
+    expect(screen.queryByText("Unitário × qtd.")).toBeNull();
+  });
+
+  it("renders `Não cotado` with data-quoted=false where a supplier skipped a line", () => {
+    renderTable();
+
+    const skipped = screen.getByTestId("grid-cell-ri-work-luz");
+    expect(skipped).toHaveAttribute("data-quoted", "false");
+    expect(skipped).toHaveTextContent("Não cotado");
+
+    const priced = screen.getByTestId("grid-cell-ri-work-eletro");
+    expect(priced).toHaveAttribute("data-quoted", "true");
+    expect(priced).not.toHaveTextContent("Não cotado");
+  });
+
+  it("leaves an extra line's other columns empty rather than `Não cotado`", () => {
+    renderTable();
+
+    const foreign = screen.getByTestId("grid-cell-eletro-extra-luz");
+    expect(foreign).toHaveAttribute("data-quoted", "false");
+    expect(foreign).toHaveTextContent("");
+  });
+
+  it("renders no model element at all in a cell whose model is null", () => {
+    renderTable();
+
+    expect(
+      within(screen.getByTestId("grid-cell-ri-lamp-luz")).getByText(
+        "Philips BY698P",
+      ),
+    ).toBeInTheDocument();
+    const withoutModel = screen.getByTestId("grid-cell-ri-lamp-eletro");
+    expect(withoutModel).not.toHaveTextContent("—");
+    expect(withoutModel.querySelectorAll("div")).toHaveLength(3);
+  });
+
+  it("shows the coverage of every incomplete quote and of no complete one", () => {
+    renderTable();
+
+    expect(screen.getByTestId("quote-coverage-luz")).toHaveTextContent(
+      "Cobertura: 1 de 2 itens",
+    );
+    expect(screen.getByTestId("quote-coverage-sul")).toHaveTextContent(
+      "Cobertura: 1 de 2 itens",
+    );
+    expect(screen.queryByTestId("quote-coverage-eletro")).toBeNull();
+  });
+
   it("transposes into one block per supplier below the md breakpoint", () => {
     const listeners: Array<() => void> = [];
     vi.stubGlobal(
@@ -359,5 +537,15 @@ describe("QuoteComparisonTable", () => {
     expect(
       within(screen.getByTestId("quote-row-luz")).getByText("Garantia"),
     ).toBeInTheDocument();
+
+    // The same lines, once per card, with the per-card `Itens (N)` heading
+    // and the skipped line still spelled out.
+    const card = within(screen.getByTestId("quote-row-luz"));
+    expect(card.getByText("Itens (3)")).toBeInTheDocument();
+    expect(card.getByText("12 × Luminárias LED")).toBeInTheDocument();
+    expect(card.getByTestId("grid-cell-ri-work-luz")).toHaveTextContent(
+      "Não cotado",
+    );
+    expect(card.getByText("Cobertura: 1 de 2 itens")).toBeInTheDocument();
   });
 });

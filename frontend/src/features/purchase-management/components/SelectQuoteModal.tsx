@@ -20,8 +20,14 @@ interface SelectQuoteModalProps {
   isOpen: boolean;
   onClose: () => void;
   quote: PurchaseQuote | null;
-  /** The quote carrying the lowest total, or `null` when none is known. */
+  /**
+   * The quote carrying the lowest total, or `null` when none is known.
+   * Since APRAS-73 D10 the backend only ever marks a **complete** quote
+   * `is_lowest_price`, so this inherits the restriction with no change here.
+   */
   lowestQuote?: PurchaseQuote | null;
+  /** How many lines the request enumerates, for the coverage sentence. */
+  requestItemCount?: number;
   onSubmit: (data: DecisionFormData) => Promise<void>;
   isLoading?: boolean;
 }
@@ -31,6 +37,7 @@ export const SelectQuoteModal: React.FC<SelectQuoteModalProps> = ({
   onClose,
   quote,
   lowestQuote = null,
+  requestItemCount = 0,
   onSubmit,
   isLoading,
 }) => {
@@ -42,6 +49,10 @@ export const SelectQuoteModal: React.FC<SelectQuoteModalProps> = ({
 
   const trimmed = justification.trim();
   const isTooShort = trimmed.length < MIN_JUSTIFICATION_LENGTH;
+  // D10: the two panels are mutually exclusive. `computeGap` already returns
+  // `null` for an incomplete quote, so `isIncomplete` never has to be
+  // subtracted from `gap` a second time here.
+  const isIncomplete = quote.is_complete === false;
   const gap = computeGap(quote, lowestQuote);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -84,12 +95,44 @@ export const SelectQuoteModal: React.FC<SelectQuoteModalProps> = ({
               {quote.supplier_name}
             </p>
             <p className="text-xs text-gray-600 mt-1">
-              {quote.quantity} × {formatCurrency(quote.unit_price)} ={" "}
+              {t("purchases.items.coverage", {
+                quoted: quote.quoted_item_count,
+                total: requestItemCount,
+                defaultValue: "Cobertura: {{quoted}} de {{total}} itens",
+              })}{" "}
+              ·{" "}
               <span className="font-semibold text-gray-900">
                 {formatCurrency(quote.total_price)}
               </span>
             </p>
           </div>
+
+          {isIncomplete && (
+            <div
+              data-testid="decision-coverage-warning"
+              className="rounded-lg border border-amber-200 bg-amber-50 p-4"
+            >
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                <div className="text-xs text-amber-900">
+                  <p className="font-semibold">
+                    {t("purchases.decision.coverageTitle", {
+                      quoted: quote.quoted_item_count,
+                      total: requestItemCount,
+                      defaultValue:
+                        "Este orçamento cobre {{quoted}} de {{total}} itens.",
+                    })}
+                  </p>
+                  <p className="mt-1">
+                    {t(
+                      "purchases.decision.coverageBody",
+                      "Ele não atende o pedido inteiro, então não há comparação de preço com os orçamentos completos.",
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {gap && lowestQuote && (
             <div

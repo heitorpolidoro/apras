@@ -882,6 +882,24 @@ class PurchaseQuoteFrozenError(DomainError):
         super().__init__(message)
 
 
+class PurchaseQuoteItemUnknownLineError(DomainError):
+    """Raised when a quote line points at a request line that cannot serve it.
+
+    APRAS-73 D3: the ``request_item_id`` is unknown, or it exists but belongs
+    to a **different** purchase request. A plain :class:`DomainError`, so the
+    family's default **400** applies rather than a 422 -- the schema cannot
+    see a cross-entity fact, so the refusal is not a shape error.
+    """
+
+    def __init__(
+        self,
+        message: str = (
+            "Um item do orçamento aponta para uma linha que não pertence a este pedido."
+        ),
+    ) -> None:
+        super().__init__(message)
+
+
 class TenantNotFoundError(DomainError):
     """Raised when a tenant is not found, or is hidden from a non-member.
 

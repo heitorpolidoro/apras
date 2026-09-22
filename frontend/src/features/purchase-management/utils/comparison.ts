@@ -12,7 +12,11 @@ import {
   QUOTE_ATTACHMENT_ALLOWED_MIME_TYPES,
   QUOTE_ATTACHMENT_MAX_FILE_SIZE_BYTES,
 } from "../../../api/purchases";
-import type { PurchaseQuote } from "../../../types/purchase";
+import type {
+  PurchaseQuote,
+  PurchaseQuoteItem,
+  PurchaseRequestItem,
+} from "../../../types/purchase";
 
 /**
  * The union of every `extra_fields` label, in first-seen order across the
@@ -65,6 +69,10 @@ export const computeGap = (
   quote: PurchaseQuote,
   lowestQuote: PurchaseQuote | null,
 ): { difference: number; percent: number } | null => {
+  // APRAS-73 D10: a partial offer's distance from a full one is not a price
+  // difference. The decision modal shows `decision-coverage-warning` there
+  // instead, and the two panels are mutually exclusive.
+  if (quote.is_complete === false) return null;
   if (!lowestQuote || quote.is_lowest_price || quote.id === lowestQuote.id) {
     return null;
   }
@@ -74,4 +82,71 @@ export const computeGap = (
     difference,
     percent: (difference / lowestQuote.total_price) * 100,
   };
+};
+
+/** One row of the comparison grid, plus the cell each quote fills in it. */
+export interface ComparisonGridRow {
+  /**
+   * The `request_item_id` for a request-line row and the quote item's own
+   * `id` for a supplier extra row — the same key the cell testids carry.
+   */
+  key: string;
+  description: string;
+  quantity: number;
+  /** A line only one supplier asked to sell; every other column is empty. */
+  isExtra: boolean;
+  /** `undefined` where that supplier did not price the line (D5). */
+  cells: Record<string, PurchaseQuoteItem | undefined>;
+}
+
+/**
+ * The grid, derived and nothing else (APRAS-73 D9).
+ *
+ * One row per request line in `position` order, then the supplier extra
+ * lines beneath them, in the order the quotes arrive and in each quote's own
+ * `position` order. Alignment is by **request line identity**, never by
+ * matching free text: both suppliers point at the same
+ * `purchase_request_item` row, so the rows are exact.
+ *
+ * Pure and exported so the grid can be asserted without rendering anything.
+ */
+export const buildComparisonGrid = (
+  requestItems: PurchaseRequestItem[],
+  quotes: PurchaseQuote[],
+): ComparisonGridRow[] => {
+  const ordered = [...requestItems].sort((a, b) => a.position - b.position);
+  const rows: ComparisonGridRow[] = ordered.map((item) => ({
+    key: item.id,
+    description: item.description,
+    quantity: item.quantity,
+    isExtra: false,
+    cells: Object.fromEntries(
+      quotes
+        .map(
+          (quote) =>
+            [
+              quote.id,
+              quote.items.find((line) => line.request_item_id === item.id),
+            ] as const,
+        )
+        .filter(([, line]) => line !== undefined),
+    ),
+  }));
+
+  for (const quote of quotes) {
+    const extras = [...quote.items]
+      .filter((line) => line.request_item_id === null)
+      .sort((a, b) => a.position - b.position);
+    for (const line of extras) {
+      rows.push({
+        key: line.id,
+        description: line.description,
+        quantity: line.quantity,
+        isExtra: true,
+        cells: { [quote.id]: line },
+      });
+    }
+  }
+
+  return rows;
 };

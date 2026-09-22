@@ -239,7 +239,10 @@ def test_summary_counts_by_status(client: TestClient, admin: User) -> None:
     decided = _create_request(client, admin, title="Decidido")
     quote = client.post(
         f"/api/v1/purchase-requests/{decided['id']}/quotes",
-        json={"supplier_name": "Fornecedor A", "unit_price": 100.0, "quantity": 3},
+        json={
+            "supplier_name": "Fornecedor A",
+            "items": [{"description": "Serviço", "quantity": 3, "unit_price": 100.0}],
+        },
         headers=_headers(admin),
     ).json()
     client.post(
@@ -265,12 +268,18 @@ def test_list_row_carries_decision_projection(client: TestClient, admin: User) -
     created = _create_request(client, admin)
     cheap = client.post(
         f"/api/v1/purchase-requests/{created['id']}/quotes",
-        json={"supplier_name": "Barato", "unit_price": 10.0, "quantity": 2},
+        json={
+            "supplier_name": "Barato",
+            "items": [{"description": "Serviço", "quantity": 2, "unit_price": 10.0}],
+        },
         headers=_headers(admin),
     ).json()
     client.post(
         f"/api/v1/purchase-requests/{created['id']}/quotes",
-        json={"supplier_name": "Caro", "unit_price": 50.0, "quantity": 2},
+        json={
+            "supplier_name": "Caro",
+            "items": [{"description": "Serviço", "quantity": 2, "unit_price": 50.0}],
+        },
         headers=_headers(admin),
     )
     client.post(

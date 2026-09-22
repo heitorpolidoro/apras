@@ -73,6 +73,7 @@ from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 from fastapi.testclient import TestClient
@@ -126,7 +127,7 @@ from app.models.media_asset import MediaAsset
 from app.models.occurrence import Occurrence
 from app.models.package import Package
 from app.models.project import ConstructionProject, ProjectMilestone, ProjectUpdate
-from app.models.purchase import PurchaseQuote, PurchaseRequest
+from app.models.purchase import PurchaseQuote, PurchaseQuoteItem, PurchaseRequest
 from app.models.reservation import ReservableSpace, SpaceReservation
 from app.models.resident import Resident
 from app.models.role import Role
@@ -667,11 +668,22 @@ def build_world(session: Session) -> MatrixWorld:  # noqa: PLR0915  # linear scr
     quote = PurchaseQuote(
         purchase_request_id=purchase_request.id,
         supplier_name="Matrix Supplier",
-        unit_price=10.0,
-        quantity=1,
         created_by_id=users["ADMINISTRATOR"].id,
     )
     session.add(quote)
+    session.flush()
+    # APRAS-73: the price is a line of the quote, never a column
+    # of it. One supplier-owned line reproduces the world this
+    # fixture described before.
+    session.add(
+        PurchaseQuoteItem(
+            quote_id=quote.id,
+            description="Matrix item",
+            quantity=1,
+            unit_price=Decimal("10.00"),
+            position=0,
+        )
+    )
 
     milestone = ProjectMilestone(project_id=project.id, title="Matrix Milestone")
     session.add(milestone)
@@ -1272,7 +1284,16 @@ REQUEST_BODIES: dict[tuple[str, str], BodySpec] = {
         {"title": "Matrix renamed request"}
     ),
     ("POST", "/api/v1/purchase-requests/{request_id}/quotes"): _static(
-        {"supplier_name": "Matrix Supplier B", "unit_price": 20.0, "quantity": 2}
+        {
+            "supplier_name": "Matrix Supplier B",
+            "items": [
+                {
+                    "description": "Matrix item",
+                    "quantity": 2,
+                    "unit_price": 20.0,
+                }
+            ],
+        }
     ),
     ("PUT", "/api/v1/purchase-requests/{request_id}/quotes/{quote_id}"): _static(
         {"supplier_name": "Matrix Supplier C"}

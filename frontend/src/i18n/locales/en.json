@@ -1320,8 +1320,6 @@
       "supplierNamePlaceholder": "E.g. Central Plumbing Ltd",
       "supplierContact": "Supplier contact",
       "supplierContactPlaceholder": "Phone, e-mail or sales rep",
-      "unitPrice": "Unit price (R$) *",
-      "quantity": "Quantity *",
       "quantityInvalid": "Quantity must be greater than zero.",
       "unitPriceInvalid": "Unit price cannot be negative.",
       "total": "Quote total",
@@ -1360,7 +1358,9 @@
       "superseded": "Superseded",
       "gapTitle": "This is not the lowest quote.",
       "gapBody": "The lowest is {{supplier}}, at {{lowest}}. This choice costs {{difference}} more ({{percent}}%).",
-      "gapHint": "Explain below what justifies the difference (warranty, lead time, installation included…)."
+      "gapHint": "Explain below what justifies the difference (warranty, lead time, installation included…).",
+      "coverageTitle": "This quote covers {{quoted}} of {{total}} items.",
+      "coverageBody": "It does not cover the whole request, so there is no price comparison against the complete quotes."
     },
     "detail": {
       "title": "Purchase Request",
@@ -1368,8 +1368,6 @@
       "description": "Description",
       "quotes": "Quotes",
       "supplier": "Supplier",
-      "unitPrice": "Unit price",
-      "quantity": "Qty.",
       "totalPrice": "Total",
       "actions": "Actions"
     },
@@ -1377,7 +1375,6 @@
       "title": "Comparison",
       "field": "Field",
       "total": "Total",
-      "unitTimesQuantity": "Unit × qty.",
       "contact": "Contact",
       "notes": "Notes",
       "attachment": "Document",
@@ -1400,6 +1397,34 @@
       "invalidType": "Unsupported format. Send a PDF, PNG or JPEG of up to 5 MB.",
       "tooLarge": "File larger than 5 MB. Send a PDF, PNG or JPEG of up to 5 MB.",
       "rejected": "{{filename}} was not uploaded."
+    },
+    "items": {
+      "addExtra": "Add item",
+      "addLine": "Add item",
+      "atLeastOne": "Enter the price of at least one item to save the quote.",
+      "coverage": "Coverage: {{quoted}} of {{total}} items",
+      "description": "Description",
+      "descriptionPlaceholder": "e.g. 1.2 kVA UPS",
+      "descriptionRequired": "Every supplier item needs a description.",
+      "extraBadge": "Extra",
+      "extraTitle": "Supplier's own items",
+      "gridTitle": "Items",
+      "gridTitleNarrow": "Items ({{count}})",
+      "lockedHint": "The items of a decided or cancelled request cannot be changed.",
+      "model": "Offered model",
+      "modelPlaceholder": "Offered model (optional)",
+      "notQuoted": "Not quoted",
+      "quantity": "Quantity",
+      "quoteHint": "Fill in the price of the items this supplier quotes. Leave blank whatever it does not supply — it will not be added up.",
+      "quoteTitle": "Request items",
+      "removalWarning": "Removing this item deletes the prices {{count}} quote(s) already entered for it.",
+      "removeExtra": "Remove item",
+      "removeLine": "Remove item",
+      "requestHasNone": "This request lists no items. Add below what the supplier is quoting.",
+      "requestHint": "List what will be bought. Each quote fills in the model and the price of every item.",
+      "requestPlaceholder": "e.g. 4MP IP cameras",
+      "requestTitle": "Request items",
+      "unitPrice": "Unit price"
     }
   },
   "tenant": {
