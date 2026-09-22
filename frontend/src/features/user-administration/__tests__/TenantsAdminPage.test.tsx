@@ -257,7 +257,13 @@ describe("TenantsAdminPage creation", () => {
       "Condomínio Padrão",
     );
     expect(invalidate).not.toHaveBeenCalled();
-    expect(mockedGet).toHaveBeenCalledTimes(1);
+    // The condominium list is not reloaded. Counted by URL rather than by
+    // total calls: APRAS-72 added one `GET /invitations` for the
+    // Administrator column, which is a different list and not this
+    // assertion's subject.
+    expect(
+      mockedGet.mock.calls.filter(([url]) => url === "/tenants"),
+    ).toHaveLength(1);
   });
 
   it("falls back to the generic message on any other failure", async () => {

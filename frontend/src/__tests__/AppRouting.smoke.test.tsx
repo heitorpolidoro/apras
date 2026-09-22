@@ -115,6 +115,25 @@ describe("App routing smoke test (real router, real pages)", () => {
     ).toBeNull();
   });
 
+  it("renders the real acceptance page on /invite?token=… and no login form", async () => {
+    // APRAS-72 D5: `/invite` is outside `ProtectedRoute`, beside the four
+    // other public routes, so an anonymous visitor following the mailed link
+    // lands on the page and not on `/login`. `api/client` rejects every verb
+    // here, so the preview fails and the page renders a terminal state —
+    // which is still the acceptance page, and still not the login form.
+    renderAppAt(`/invite?token=x`);
+
+    expect(
+      await screen.findByText("Convite para administrar um condomínio"),
+    ).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/invite");
+    // The page replaces the history entry as soon as it has read the token,
+    // so the credential does not survive in history or in a `Referer`.
+    expect(window.location.search).toBe("");
+    expect(screen.queryByRole("button", { name: "Entrar" })).toBeNull();
+    expect(screen.queryByLabelText("Senha")).toBeNull();
+  });
+
   it("redirects an unauthenticated visit to /dashboard onto the login form", async () => {
     renderAppAt("/dashboard");
 

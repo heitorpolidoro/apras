@@ -8,6 +8,7 @@ import LoginPage from "./features/user-administration/pages/LoginPage";
 import SignupPage from "./features/user-administration/pages/SignupPage";
 import ForgotPasswordPage from "./features/user-administration/pages/ForgotPasswordPage";
 import ResetPasswordPage from "./features/user-administration/pages/ResetPasswordPage";
+import AcceptInvitationPage from "./features/user-administration/pages/AcceptInvitationPage";
 import AdminUserDashboard from "./features/user-administration/pages/AdminUserDashboard";
 import ContactInfoDashboard from "./features/user-administration/pages/ContactInfoDashboard";
 import GuestWelcomePage from "./features/user-administration/pages/GuestWelcomePage";
@@ -112,6 +113,11 @@ function App() {
                   element={<ForgotPasswordPage />}
                 />
                 <Route path="/reset-password" element={<ResetPasswordPage />} />
+                {/* APRAS-72 D5: the URL APRAS-71 mails, outside
+                    ProtectedRoute like the four public routes above. It gets
+                    no ROUTE_ACCESS, NAV_ITEMS or NAV_GROUPS entry for the
+                    same reason they do not. */}
+                <Route path="/invite" element={<AcceptInvitationPage />} />
 
                 <Route
                   path="/tasks"

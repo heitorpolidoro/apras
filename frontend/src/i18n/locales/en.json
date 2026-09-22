@@ -1726,8 +1726,6 @@
     "activeBadge": "Active",
     "inactiveBadge": "Inactive",
     "administratorPlaceholder": "—",
-    "inviteSoon": "Invite (coming soon)",
-    "inviteAdministratorSoon": "Invite administrator (coming soon)",
     "loading": "Loading the condominiums...",
     "loadError": "Could not load the condominiums",
     "empty": "No condominium yet.",
@@ -1976,5 +1974,105 @@
       "slugTaken": "That address is already in use by another condominium.",
       "slugInvalid": "Invalid address: use 3 to 64 characters, lowercase letters, digits and single hyphens only."
     }
+  },
+  "invitations": {
+    "status": {
+      "pending": "Pending",
+      "accepted": "Accepted",
+      "expired": "Expired"
+    },
+    "dialog": {
+      "title": "Invite administrator",
+      "titleFromCreated": "Invite the administrator now",
+      "tenantLabel": "Condominium:",
+      "emailLabel": "Administrator e-mail",
+      "fullNameLabel": "Full name (optional)",
+      "hint": "The invited person becomes this condominium's administrator in the system. The invitation is single-use and expires after the deadline the server sets.",
+      "cancel": "Cancel",
+      "close": "Close",
+      "submit": "Send invitation",
+      "submitting": "Sending...",
+      "done": "Done",
+      "successTitle": "Invitation sent",
+      "successBody": "We sent the invitation to {{email}} to administer {{tenant}}.",
+      "invalidEmail": "Enter a valid e-mail address.",
+      "validationError": "Check the form: {{messages}}",
+      "genericError": "Could not send the invitation"
+    },
+    "panel": {
+      "title": "Invitations — {{tenant}}",
+      "open": "See the invitations of {{tenant}}",
+      "close": "Close the invitations",
+      "columns": {
+        "email": "Invited e-mail",
+        "status": "Status",
+        "sentAt": "Sent on",
+        "expiresAt": "Expires on",
+        "actions": "Actions"
+      },
+      "acceptedOn": "on {{date}}",
+      "resend": "Resend invitation",
+      "resending": "Resending...",
+      "noAction": "—",
+      "loading": "Loading the invitations...",
+      "loadError": "Could not load the invitations",
+      "empty": "No invitation sent yet."
+    },
+    "column": {
+      "loadError": "Not loaded"
+    }
+  },
+  "acceptInvitation": {
+    "title": "Invitation to administer a condominium",
+    "loading": "Loading the invitation...",
+    "tenantLabel": "Condominium:",
+    "slugLabel": "Address:",
+    "inviterLabel": "Invited by:",
+    "emailLabel": "E-mail:",
+    "expiresLabel": "Valid until:",
+    "newAccount": {
+      "intro": "Create your account to administer this condominium in the system.",
+      "fullNameLabel": "Full name",
+      "cpfLabel": "CPF",
+      "passwordLabel": "Password",
+      "confirmPasswordLabel": "Confirm password",
+      "submit": "Create account and accept invitation",
+      "submitting": "Creating the account...",
+      "passwordMismatch": "The passwords do not match.",
+      "cpfConflict": "This CPF is already registered. The values you typed were kept."
+    },
+    "existingAccount": {
+      "intro": "This e-mail already has an APRAS account. Accepting grants that account administration of {{tenant}} in the system.",
+      "notice": "Your current password does not change and this link does not sign you in.",
+      "submit": "Accept invitation",
+      "submitting": "Accepting..."
+    },
+    "linked": {
+      "title": "Invitation accepted",
+      "body": "You now administer {{tenant}} in the system. Sign in with the password you already use on this account."
+    },
+    "missingLink": {
+      "title": "Open the invitation link again",
+      "body": "This page was opened without the invitation's full address. Go back to the e-mail you received and open the link from there — it is still valid."
+    },
+    "invalid": {
+      "title": "Invalid link",
+      "body": "This invitation does not exist or the link is incomplete. Ask the superuser for a new invitation."
+    },
+    "expired": {
+      "title": "Invitation expired",
+      "body": "This invitation has expired. Ask the superuser to resend it."
+    },
+    "used": {
+      "title": "Invitation already used",
+      "body": "This invitation has already been accepted. Sign in with your account."
+    },
+    "error": {
+      "title": "Could not load the invitation",
+      "body": "The server did not answer in time or refused the attempt. Wait a few minutes and open the invitation link again."
+    },
+    "goToLogin": "Go to the login page",
+    "validationError": "Check the form: {{messages}}",
+    "genericError": "Could not accept the invitation"
   }
 }

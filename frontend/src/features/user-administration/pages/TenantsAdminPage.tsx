@@ -1,8 +1,15 @@
 import React, { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Copy, MailPlus, Plus, Search } from "lucide-react";
+import { Copy, MailPlus, Plus, Search, TriangleAlert } from "lucide-react";
 import { useCreateTenant, useTenants } from "../../../hooks/useTenants";
+import { useAllInvitations } from "../../../hooks/useInvitations";
 import { parseApiError } from "../../../api/errors";
+import { invitationStatus } from "../../../types/invitations";
+import type { Invitation } from "../../../types/invitations";
+import InviteAdministratorDialog from "../components/InviteAdministratorDialog";
+import TenantInvitationsPanel, {
+  InvitationStatusBadge,
+} from "../components/TenantInvitationsPanel";
 import type { Tenant } from "../../../types/auth";
 
 /**
@@ -26,9 +33,9 @@ import type { Tenant } from "../../../types/auth";
  * every tenant ordered by name, so a pager would be a fiction over an
  * already-complete payload. The filters below are therefore client-side.
  *
- * The **Administrator** column, the per-row **actions** cell and the success
- * panel's secondary slot are APRAS-72's attachment points (D7) and render as
- * disabled placeholders here, so the layout is not redesigned then.
+ * APRAS-72 fills the three slots APRAS-70 D7 reserved — the **Administrator**
+ * column, the per-row **actions** cell and the success panel's secondary
+ * button — and changes nothing else on the screen.
  */
 
 type StatusFilter = "all" | "active" | "inactive";
@@ -52,6 +59,70 @@ const StatusBadge: React.FC<{ isActive: boolean }> = ({ isActive }) => {
   );
 };
 
+/**
+ * The Administrator column (APRAS-72 D1a).
+ *
+ * Purely presentational: the page issues **one** unfiltered
+ * `GET /invitations` for the whole table and hands each cell its own
+ * condominium's most recent invitation. One call for the table is not one
+ * call per row, which is the only thing D2 forbids — and unlike a cache-only
+ * cell it makes the column truthful on first load.
+ *
+ * Three renderings, for three different facts, none of them interchangeable:
+ *
+ * - a **badge** when this condominium has an invitation;
+ * - the **em dash** only when the list came back and this condominium has
+ *   none — an em dash for any other reason would tell a superuser to issue an
+ *   invitation that may already exist;
+ * - a **failure chip** when the list could not be loaded, so the operator can
+ *   see the column is not answering instead of reading silence as "none". It
+ *   keeps a full-size clickable box, because the panel — which reports the
+ *   error and retries — is reached by clicking this cell.
+ *
+ * While the list is still in flight the cell renders nothing: that state is
+ * transient, and an empty cell claims nothing. The button keeps its
+ * accessible name in every one of the four, so it is never an unlabelled
+ * control.
+ */
+type AdministratorColumnState = "loading" | "loaded" | "error";
+
+const TenantAdministratorCell: React.FC<{
+  tenant: Tenant;
+  latest?: Invitation;
+  columnState: AdministratorColumnState;
+  onOpen: () => void;
+}> = ({ tenant, latest, columnState, onOpen }) => {
+  const { t } = useTranslation();
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      data-testid={`tenant-administrator-${tenant.id}`}
+      aria-label={t("invitations.panel.open", { tenant: tenant.name })}
+      className="rounded-md px-1 py-0.5 text-left"
+    >
+      {/* A stale-but-real answer beats a failure chip: a background refetch
+          that fails does not erase what the column already knows. */}
+      {latest && <InvitationStatusBadge status={invitationStatus(latest)} />}
+      {!latest && columnState === "error" && (
+        <span
+          title={t("invitations.panel.loadError")}
+          className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2.5 py-0.5 text-xs font-medium text-destructive"
+        >
+          <TriangleAlert className="size-3.5" aria-hidden="true" />
+          {t("invitations.column.loadError")}
+        </span>
+      )}
+      {!latest && columnState === "loaded" && (
+        <span className="text-xs text-muted-foreground">
+          {t("tenantsAdmin.administratorPlaceholder")}
+        </span>
+      )}
+    </button>
+  );
+};
+
 const TenantsAdminPage: React.FC = () => {
   const { t, i18n } = useTranslation();
   const { data: tenants, isPending, isError } = useTenants();
@@ -64,8 +135,36 @@ const TenantsAdminPage: React.FC = () => {
   const [formError, setFormError] = useState<string | null>(null);
   const [created, setCreated] = useState<Tenant | null>(null);
   const [copied, setCopied] = useState(false);
+  // The two APRAS-72 surfaces. Both are per-condominium and independent of
+  // each other: the dialog can be opened from another row without closing
+  // the panel.
+  const [inviteFor, setInviteFor] = useState<Tenant | null>(null);
+  const [panelFor, setPanelFor] = useState<Tenant | null>(null);
 
   const all = useMemo(() => tenants ?? [], [tenants]);
+
+  // One unfiltered list for the whole table (see `TenantAdministratorCell`).
+  // The endpoint returns newest first, so the first entry kept per
+  // condominium is that condominium's most recent invitation.
+  const {
+    data: invitations,
+    isSuccess: invitationsLoaded,
+    isError: invitationsFailed,
+  } = useAllInvitations();
+  const columnState: AdministratorColumnState = invitationsFailed
+    ? "error"
+    : invitationsLoaded
+      ? "loaded"
+      : "loading";
+  const newestByTenant = useMemo(() => {
+    const newest = new Map<string, Invitation>();
+    for (const invitation of invitations ?? []) {
+      if (!newest.has(invitation.tenant_id)) {
+        newest.set(invitation.tenant_id, invitation);
+      }
+    }
+    return newest;
+  }, [invitations]);
 
   const rows = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -192,17 +291,32 @@ const TenantsAdminPage: React.FC = () => {
             >
               {t("tenantsAdmin.backToList")}
             </button>
-            {/* APRAS-72's third attachment point (D7). */}
+            {/* APRAS-70 D7's third slot: the same dialog, with the
+                condominium just created already chosen. */}
             <button
               type="button"
-              disabled
-              className="inline-flex cursor-not-allowed items-center gap-2 rounded-md border border-dashed border-border px-3 py-2 text-xs font-medium text-muted-foreground"
+              onClick={() => setInviteFor(created)}
+              className="inline-flex items-center gap-2 rounded-md border border-emerald-300 px-3 py-2 text-xs font-medium text-emerald-800"
             >
               <MailPlus className="size-3.5" />
-              {t("tenantsAdmin.inviteAdministratorSoon")}
+              {t("invitations.dialog.titleFromCreated")}
             </button>
           </div>
         </div>
+      )}
+
+      {inviteFor && (
+        <InviteAdministratorDialog
+          tenant={inviteFor}
+          onClose={() => setInviteFor(null)}
+        />
+      )}
+
+      {panelFor && (
+        <TenantInvitationsPanel
+          tenant={panelFor}
+          onClose={() => setPanelFor(null)}
+        />
       )}
 
       {isFormOpen && (
@@ -331,19 +445,24 @@ const TenantsAdminPage: React.FC = () => {
                 >
                   {formatDate(tenant.created_at)}
                 </td>
-                {/* APRAS-72's first attachment point: the invitation state. */}
-                <td className="px-4 py-3 text-xs italic text-muted-foreground">
-                  {t("tenantsAdmin.administratorPlaceholder")}
+                {/* APRAS-70 D7's first slot: the invitation state. */}
+                <td className="px-4 py-3">
+                  <TenantAdministratorCell
+                    tenant={tenant}
+                    latest={newestByTenant.get(tenant.id)}
+                    columnState={columnState}
+                    onOpen={() => setPanelFor(tenant)}
+                  />
                 </td>
-                {/* APRAS-72's second: "Invite administrator". */}
+                {/* Its second slot: "Invite administrator". */}
                 <td className="px-4 py-3 text-right">
                   <button
                     type="button"
-                    disabled
-                    className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-md border border-dashed border-border px-2.5 py-1 text-xs text-muted-foreground"
+                    onClick={() => setInviteFor(tenant)}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-xs font-medium"
                   >
                     <MailPlus className="size-3.5" />
-                    {t("tenantsAdmin.inviteSoon")}
+                    {t("invitations.dialog.title")}
                   </button>
                 </td>
               </tr>

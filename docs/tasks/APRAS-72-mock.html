@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>APRAS-72 — Convite de administrador e página pública de aceite</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-50 text-slate-900">
+<div class="max-w-6xl mx-auto p-6 space-y-6">
+
+  <header class="space-y-1">
+    <h1 class="text-2xl font-bold">APRAS-72 — Convite de administrador</h1>
+    <p class="text-sm text-slate-600">
+      Estende a tela <code>/admin/tenants</code> (APRAS-70) com a ação de convite e a lista de convites,
+      e adiciona a página pública <code>/invite?token=…</code> (rota fora de <code>ProtectedRoute</code>,
+      igual a <code>/reset-password</code>). Consome as rotas de APRAS-71:
+      <code>POST /invitations</code>, <code>GET /invitations?tenant_id=</code>,
+      <code>POST /invitations/preview</code>, <code>POST /invitations/accept</code>.
+      <strong>Nenhum arquivo de backend, nenhuma migração, nenhuma rota nova.</strong>
+      O papel convidado é o <strong>administrador do condomínio no sistema</strong>
+      (<code>is_tenant_admin</code>) — nunca "síndico".
+    </p>
+  </header>
+
+  <nav class="flex flex-wrap gap-2 text-sm">
+    <button data-tab="admin" class="tab px-3 py-1.5 rounded-md border bg-white">1. /admin/tenants</button>
+    <button data-tab="new" class="tab px-3 py-1.5 rounded-md border bg-white">2. /invite — conta nova (201)</button>
+    <button data-tab="existing" class="tab px-3 py-1.5 rounded-md border bg-white">3. /invite — conta existente (200)</button>
+    <button data-tab="errors" class="tab px-3 py-1.5 rounded-md border bg-white">4. /invite — 404 / 410 / 409</button>
+  </nav>
+
+  <!-- ===================== 1. /admin/tenants ===================== -->
+  <section data-panel="admin" class="panel space-y-4">
+    <div class="rounded-xl border bg-white shadow-sm overflow-hidden">
+      <div class="px-4 py-3 border-b flex items-center justify-between">
+        <div>
+          <h2 class="font-semibold">Condomínios</h2>
+          <p class="text-xs text-slate-500">Somente superusuário — <code>{ superuser: true }</code>, herdado de APRAS-70.</p>
+        </div>
+        <button class="px-3 py-1.5 rounded-md bg-slate-900 text-white text-sm">Novo condomínio</button>
+      </div>
+
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-slate-600">
+          <tr class="text-left">
+            <th class="px-4 py-2 font-medium">Nome</th>
+            <th class="px-4 py-2 font-medium">Endereço (slug)</th>
+            <th class="px-4 py-2 font-medium">Situação</th>
+            <th class="px-4 py-2 font-medium">Administrador</th>
+            <th class="px-4 py-2 font-medium text-right">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tenantRows" class="divide-y"></tbody>
+      </table>
+      <p class="px-4 py-2 text-xs text-slate-500 border-t">
+        A coluna <strong>Administrador</strong> mostra o convite <em>mais recente</em> do condomínio;
+        clicar nela abre o painel lateral com todos os convites daquele condomínio
+        (<code>GET /invitations?tenant_id=…</code>, uma única chamada, só com o painel aberto).
+      </p>
+    </div>
+
+    <!-- painel lateral de convites -->
+    <div id="invPanel" class="hidden rounded-xl border bg-white shadow-sm">
+      <div class="px-4 py-3 border-b flex items-center justify-between">
+        <h3 class="font-semibold text-sm">Convites — <span id="invPanelTenant"></span></h3>
+        <button onclick="closePanel()" class="text-slate-500 text-sm">Fechar</button>
+      </div>
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-slate-600">
+          <tr class="text-left">
+            <th class="px-4 py-2 font-medium">E-mail convidado</th>
+            <th class="px-4 py-2 font-medium">Situação</th>
+            <th class="px-4 py-2 font-medium">Enviado em</th>
+            <th class="px-4 py-2 font-medium">Expira em</th>
+            <th class="px-4 py-2 font-medium text-right">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="invRows" class="divide-y"></tbody>
+      </table>
+      <p class="px-4 py-2 text-xs text-slate-500 border-t">
+        Situação <strong>derivada no cliente</strong> de <code>accepted_at</code> / <code>expires_at</code> —
+        não existe coluna <code>status</code> (APRAS-71 D1).
+        <strong>Reenviar</strong> chama de novo <code>POST /invitations</code>, o que expira a linha anterior (D4).
+        <strong>Não há revogar</strong>: exigiria rota nova, fora de escopo.
+      </p>
+    </div>
+  </section>
+
+  <!-- modal de convite -->
+  <div id="inviteModal" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-lg w-full max-w-md">
+      <div class="px-5 py-4 border-b">
+        <h3 class="font-semibold">Convidar administrador</h3>
+        <p class="text-xs text-slate-500">Condomínio: <span id="modalTenant" class="font-medium"></span></p>
+      </div>
+      <div id="modalBody" class="px-5 py-4 space-y-3 text-sm">
+        <label class="block">
+          <span class="text-slate-700">E-mail <span class="text-red-600">*</span></span>
+          <input id="inviteEmail" type="email" value="ana.souza@example.com"
+                 class="mt-1 w-full rounded-md border px-3 py-2" />
+        </label>
+        <label class="block">
+          <span class="text-slate-700">Nome completo (opcional)</span>
+          <input type="text" placeholder="Ana Souza" class="mt-1 w-full rounded-md border px-3 py-2" />
+        </label>
+        <p class="text-xs text-slate-500">
+          A pessoa convidada será o <strong>administrador deste condomínio no sistema</strong>.
+          O link do convite vale 7 dias e só pode ser usado uma vez.
+        </p>
+      </div>
+      <div class="px-5 py-3 border-t flex justify-end gap-2">
+        <button onclick="closeModal()" class="px-3 py-1.5 rounded-md border text-sm">Cancelar</button>
+        <button onclick="sendInvite()" class="px-3 py-1.5 rounded-md bg-slate-900 text-white text-sm">Enviar convite</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== 2. conta nova ===================== -->
+  <section data-panel="new" class="panel hidden">
+    <div class="max-w-md mx-auto space-y-4">
+      <div class="rounded-xl border bg-white shadow-sm p-6 space-y-4">
+        <div class="text-center">
+          <h2 class="text-xl font-bold text-slate-900">APRAS</h2>
+          <p class="text-sm text-slate-500">Convite para administrar um condomínio</p>
+        </div>
+        <div class="rounded-lg bg-slate-50 border p-3 text-sm space-y-1">
+          <p><span class="text-slate-500">Condomínio:</span> <strong>Residencial Aurora</strong> <code class="text-xs">/c/residencial-aurora</code></p>
+          <p><span class="text-slate-500">Convidado por:</span> Heitor Polidoro</p>
+          <p><span class="text-slate-500">E-mail:</span> ana.souza@example.com</p>
+          <p><span class="text-slate-500">Válido até:</span> 28/09/2026</p>
+        </div>
+        <p class="text-xs text-slate-600">
+          Tudo acima vem de <code>POST /invitations/preview</code> e aparece <strong>antes</strong> de pedir qualquer dado.
+          Como <code>account_exists = false</code>, o formulário de conta nova é exibido.
+        </p>
+        <form class="space-y-3 text-sm" onsubmit="event.preventDefault(); document.getElementById('cpfErr').classList.toggle('hidden')">
+          <label class="block"><span>Nome completo</span>
+            <input class="mt-1 w-full rounded-md border px-3 py-2" value="Ana Souza" /></label>
+          <label class="block"><span>CPF</span>
+            <input class="mt-1 w-full rounded-md border px-3 py-2" value="123.456.789-00" />
+            <span id="cpfErr" class="hidden text-xs text-red-600">Este CPF já está cadastrado (409). Os dados digitados foram mantidos.</span>
+          </label>
+          <label class="block"><span>Senha</span>
+            <input type="password" class="mt-1 w-full rounded-md border px-3 py-2" value="••••••••" /></label>
+          <label class="block"><span>Confirmar senha</span>
+            <input type="password" class="mt-1 w-full rounded-md border px-3 py-2" value="••••••••" /></label>
+          <button class="w-full px-3 py-2 rounded-md bg-slate-900 text-white">Criar conta e aceitar convite</button>
+          <p class="text-xs text-slate-500">
+            Sucesso = <code>201</code> com <code>access_token</code>: a sessão é iniciada e a pessoa cai em <code>/</code>.
+            Clique em "Criar conta" para ver o erro <code>409</code> de CPF duplicado.
+          </p>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== 3. conta existente ===================== -->
+  <section data-panel="existing" class="panel hidden">
+    <div class="max-w-md mx-auto space-y-4">
+      <div class="rounded-xl border bg-white shadow-sm p-6 space-y-4">
+        <div class="text-center">
+          <h2 class="text-xl font-bold text-slate-900">APRAS</h2>
+          <p class="text-sm text-slate-500">Convite para administrar um condomínio</p>
+        </div>
+        <div class="rounded-lg bg-slate-50 border p-3 text-sm space-y-1">
+          <p><span class="text-slate-500">Condomínio:</span> <strong>Residencial Aurora</strong></p>
+          <p><span class="text-slate-500">Convidado por:</span> Heitor Polidoro</p>
+          <p><span class="text-slate-500">E-mail:</span> ja.tenho.conta@example.com</p>
+        </div>
+        <div class="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm">
+          Este e-mail <strong>já tem conta no APRAS</strong>. Ao aceitar, sua conta passa a administrar
+          <strong>Residencial Aurora</strong>. Sua senha atual <strong>não muda</strong> e
+          <strong>este link não faz login</strong> — depois de aceitar, entre normalmente com a senha que você já usa.
+        </div>
+        <button onclick="document.getElementById('acceptedPanel').classList.remove('hidden'); this.classList.add('hidden')"
+                class="w-full px-3 py-2 rounded-md bg-slate-900 text-white text-sm">Aceitar convite</button>
+        <div id="acceptedPanel" class="hidden rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm space-y-2">
+          <p><strong>Convite aceito.</strong> Você agora administra <strong>Residencial Aurora</strong>.</p>
+          <p>Entre com a senha que você já usa nesta conta.</p>
+          <a href="#" class="inline-block px-3 py-1.5 rounded-md bg-slate-900 text-white text-xs">Ir para o login</a>
+        </div>
+        <p class="text-xs text-slate-500">
+          Resposta <code>200</code> com o formato <code>InvitationPreview</code>, <strong>sem token</strong> e
+          <strong>sem Set-Cookie</strong> (APRAS-71 D8). Nenhum campo de senha é renderizado neste ramo.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== 4. erros ===================== -->
+  <section data-panel="errors" class="panel hidden">
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="rounded-xl border bg-white shadow-sm p-5 space-y-2">
+        <h3 class="font-semibold text-sm text-red-700">404 — link inválido</h3>
+        <p class="text-sm">Este convite não existe ou o link está incompleto. Peça um novo convite ao superusuário.</p>
+        <p class="text-xs text-slate-500">Nenhum formulário é renderizado. Mesmo estado quando falta <code>?token=</code> — e aí nem há chamada de API.</p>
+      </div>
+      <div class="rounded-xl border bg-white shadow-sm p-5 space-y-2">
+        <h3 class="font-semibold text-sm text-amber-700">410 — convite expirado</h3>
+        <p class="text-sm">Este convite expirou. Peça ao superusuário que reenvie o convite.</p>
+        <p class="text-xs text-slate-500">Não há reenvio autosserviço: não existe rota de emissão sem autenticação.</p>
+      </div>
+      <div class="rounded-xl border bg-white shadow-sm p-5 space-y-2">
+        <h3 class="font-semibold text-sm text-slate-700">409 — convite já utilizado</h3>
+        <p class="text-sm">Este convite já foi aceito. Entre com sua conta.</p>
+        <a href="#" class="inline-block px-3 py-1.5 rounded-md bg-slate-900 text-white text-xs">Ir para o login</a>
+      </div>
+      <div class="rounded-xl border bg-white shadow-sm p-5 space-y-2">
+        <h3 class="font-semibold text-sm text-slate-700">409 no aceite — desambiguação</h3>
+        <p class="text-sm">
+          No ramo de conta nova, <code>409</code> pode ser CPF duplicado <em>ou</em> token consumido.
+          A página refaz o <code>preview</code>: se ele responder <code>409</code>, vira "já utilizado";
+          se ainda responder <code>200</code>, a mensagem aparece sob o campo CPF e o formulário continua preenchido.
+        </p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+const TENANTS = [
+  { id: "t1", name: "Residencial Aurora", slug: "residencial-aurora", active: true },
+  { id: "t2", name: "Edifício Bonsucesso", slug: "edificio-bonsucesso", active: true },
+  { id: "t3", name: "Condomínio Cipreste", slug: "condominio-cipreste", active: false }
+];
+
+const INVITATIONS = {
+  t1: [
+    { email: "ana.souza@example.com", created_at: "2026-09-21", expires_at: "2026-09-28", accepted_at: null },
+    { email: "ana.souza@example.com", created_at: "2026-09-10", expires_at: "2026-09-12", accepted_at: null }
+  ],
+  t2: [
+    { email: "bruno.lima@example.com", created_at: "2026-08-30", expires_at: "2026-09-06", accepted_at: "2026-09-01" }
+  ],
+  t3: []
+};
+
+function statusOf(inv) {
+  if (inv.accepted_at) return "accepted";
+  if (new Date(inv.expires_at) <= new Date("2026-09-21")) return "expired";
+  return "pending";
+}
+
+const BADGE = {
+  pending:  ["Pendente",  "bg-amber-100 text-amber-800 border-amber-300"],
+  accepted: ["Aceito",    "bg-emerald-100 text-emerald-800 border-emerald-300"],
+  expired:  ["Expirado",  "bg-slate-100 text-slate-600 border-slate-300"]
+};
+
+function badge(status) {
+  const [label, cls] = BADGE[status];
+  return `<span class="inline-block px-2 py-0.5 rounded-full border text-xs ${cls}">${label}</span>`;
+}
+
+function renderTenants() {
+  document.getElementById("tenantRows").innerHTML = TENANTS.map((t) => {
+    const list = INVITATIONS[t.id];
+    const latest = list.length ? badge(statusOf(list[0])) : '<span class="text-slate-400">—</span>';
+    return `<tr>
+      <td class="px-4 py-2">${t.name}</td>
+      <td class="px-4 py-2"><code class="text-xs">${t.slug}</code></td>
+      <td class="px-4 py-2">${t.active ? "Ativo" : "Inativo"}</td>
+      <td class="px-4 py-2"><button class="underline decoration-dotted" onclick="openPanel('${t.id}')">${latest}</button></td>
+      <td class="px-4 py-2 text-right">
+        <button class="px-2 py-1 rounded-md border text-xs" onclick="openModal('${t.id}')">Convidar administrador</button>
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+function renderInvitations(tenantId) {
+  const rows = INVITATIONS[tenantId];
+  const body = document.getElementById("invRows");
+  if (!rows.length) {
+    body.innerHTML = `<tr><td colspan="5" class="px-4 py-6 text-center text-slate-500 text-sm">Nenhum convite enviado.</td></tr>`;
+    return;
+  }
+  body.innerHTML = rows.map((inv) => {
+    const st = statusOf(inv);
+    const action = st === "accepted"
+      ? '<span class="text-xs text-slate-400">—</span>'
+      : `<button class="px-2 py-1 rounded-md border text-xs" onclick="resend('${tenantId}','${inv.email}')">Reenviar</button>`;
+    return `<tr>
+      <td class="px-4 py-2">${inv.email}</td>
+      <td class="px-4 py-2">${badge(st)}</td>
+      <td class="px-4 py-2">${inv.created_at}</td>
+      <td class="px-4 py-2">${inv.expires_at}</td>
+      <td class="px-4 py-2 text-right">${action}</td>
+    </tr>`;
+  }).join("");
+}
+
+let openTenant = null;
+
+function openPanel(id) {
+  openTenant = id;
+  document.getElementById("invPanel").classList.remove("hidden");
+  document.getElementById("invPanelTenant").textContent = TENANTS.find((t) => t.id === id).name;
+  renderInvitations(id);
+}
+
+function closePanel() {
+  document.getElementById("invPanel").classList.add("hidden");
+}
+
+let modalTenant = null;
+
+function openModal(id) {
+  modalTenant = id;
+  document.getElementById("modalTenant").textContent = TENANTS.find((t) => t.id === id).name;
+  document.getElementById("inviteModal").classList.remove("hidden");
+}
+
+function closeModal() {
+  document.getElementById("inviteModal").classList.add("hidden");
+}
+
+function sendInvite() {
+  const email = document.getElementById("inviteEmail").value;
+  INVITATIONS[modalTenant].unshift({
+    email, created_at: "2026-09-21", expires_at: "2026-09-28", accepted_at: null
+  });
+  closeModal();
+  renderTenants();
+  openPanel(modalTenant);
+}
+
+function resend(tenantId, email) {
+  // Reenviar = reemitir: a linha anterior passa a estar expirada (APRAS-71 D4).
+  INVITATIONS[tenantId] = INVITATIONS[tenantId].map((inv) =>
+    inv.email === email && !inv.accepted_at ? { ...inv, expires_at: "2026-09-20" } : inv
+  );
+  INVITATIONS[tenantId].unshift({
+    email, created_at: "2026-09-21", expires_at: "2026-09-28", accepted_at: null
+  });
+  renderTenants();
+  renderInvitations(tenantId);
+}
+
+document.querySelectorAll(".tab").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const name = btn.dataset.tab;
+    document.querySelectorAll(".panel").forEach((p) =>
+      p.classList.toggle("hidden", p.dataset.panel !== name)
+    );
+    document.querySelectorAll(".tab").forEach((b) =>
+      b.classList.toggle("bg-slate-900", b === btn)
+    );
+    document.querySelectorAll(".tab").forEach((b) =>
+      b.classList.toggle("text-white", b === btn)
+    );
+  });
+});
+
+renderTenants();
+document.querySelector('.tab[data-tab="admin"]').click();
+if (window.lucide) window.lucide.createIcons();
+</script>
+</body>
+</html>

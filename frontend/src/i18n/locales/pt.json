@@ -1726,8 +1726,6 @@
     "activeBadge": "Ativo",
     "inactiveBadge": "Inativo",
     "administratorPlaceholder": "—",
-    "inviteSoon": "Convidar (em breve)",
-    "inviteAdministratorSoon": "Convidar administrador (em breve)",
     "loading": "Carregando os condomínios...",
     "loadError": "Não foi possível carregar os condomínios",
     "empty": "Nenhum condomínio cadastrado.",
@@ -1976,5 +1974,105 @@
       "slugTaken": "Esse endereço já está em uso por outro condomínio.",
       "slugInvalid": "Endereço inválido: use de 3 a 64 caracteres, apenas letras minúsculas, números e hífens simples."
     }
+  },
+  "invitations": {
+    "status": {
+      "pending": "Pendente",
+      "accepted": "Aceito",
+      "expired": "Expirado"
+    },
+    "dialog": {
+      "title": "Convidar administrador",
+      "titleFromCreated": "Convidar o administrador agora",
+      "tenantLabel": "Condomínio:",
+      "emailLabel": "E-mail do administrador",
+      "fullNameLabel": "Nome completo (opcional)",
+      "hint": "A pessoa convidada passa a ser o administrador deste condomínio no sistema. O convite é de uso único e expira no prazo definido pelo servidor.",
+      "cancel": "Cancelar",
+      "close": "Fechar",
+      "submit": "Enviar convite",
+      "submitting": "Enviando...",
+      "done": "Concluir",
+      "successTitle": "Convite enviado",
+      "successBody": "Enviamos o convite para {{email}} administrar {{tenant}}.",
+      "invalidEmail": "Informe um e-mail válido.",
+      "validationError": "Verifique o formulário: {{messages}}",
+      "genericError": "Não foi possível enviar o convite"
+    },
+    "panel": {
+      "title": "Convites — {{tenant}}",
+      "open": "Ver os convites de {{tenant}}",
+      "close": "Fechar os convites",
+      "columns": {
+        "email": "E-mail convidado",
+        "status": "Situação",
+        "sentAt": "Enviado em",
+        "expiresAt": "Expira em",
+        "actions": "Ações"
+      },
+      "acceptedOn": "em {{date}}",
+      "resend": "Reenviar convite",
+      "resending": "Reenviando...",
+      "noAction": "—",
+      "loading": "Carregando os convites...",
+      "loadError": "Não foi possível carregar os convites",
+      "empty": "Nenhum convite enviado."
+    },
+    "column": {
+      "loadError": "Não carregou"
+    }
+  },
+  "acceptInvitation": {
+    "title": "Convite para administrar um condomínio",
+    "loading": "Carregando o convite...",
+    "tenantLabel": "Condomínio:",
+    "slugLabel": "Endereço:",
+    "inviterLabel": "Convidado por:",
+    "emailLabel": "E-mail:",
+    "expiresLabel": "Válido até:",
+    "newAccount": {
+      "intro": "Crie sua conta para administrar este condomínio no sistema.",
+      "fullNameLabel": "Nome completo",
+      "cpfLabel": "CPF",
+      "passwordLabel": "Senha",
+      "confirmPasswordLabel": "Confirmar senha",
+      "submit": "Criar conta e aceitar convite",
+      "submitting": "Criando a conta...",
+      "passwordMismatch": "As senhas não coincidem.",
+      "cpfConflict": "Este CPF já está cadastrado. Os dados digitados foram mantidos."
+    },
+    "existingAccount": {
+      "intro": "Este e-mail já tem conta no APRAS. Ao aceitar, essa conta passa a administrar {{tenant}} no sistema.",
+      "notice": "Sua senha atual não muda e este link não faz login.",
+      "submit": "Aceitar convite",
+      "submitting": "Aceitando..."
+    },
+    "linked": {
+      "title": "Convite aceito",
+      "body": "Você agora administra {{tenant}} no sistema. Entre com a senha que você já usa nesta conta."
+    },
+    "missingLink": {
+      "title": "Abra o link do convite novamente",
+      "body": "Esta página foi aberta sem o endereço completo do convite. Volte ao e-mail que você recebeu e abra o link de lá — ele continua valendo."
+    },
+    "invalid": {
+      "title": "Link inválido",
+      "body": "Este convite não existe ou o link está incompleto. Peça um novo convite ao superusuário."
+    },
+    "expired": {
+      "title": "Convite expirado",
+      "body": "Este convite expirou. Peça ao superusuário que reenvie o convite."
+    },
+    "used": {
+      "title": "Convite já utilizado",
+      "body": "Este convite já foi aceito. Entre com a sua conta."
+    },
+    "error": {
+      "title": "Não foi possível carregar o convite",
+      "body": "O servidor não respondeu a tempo ou recusou a tentativa. Aguarde alguns minutos e abra o link do convite novamente."
+    },
+    "goToLogin": "Ir para o login",
+    "validationError": "Verifique o formulário: {{messages}}",
+    "genericError": "Não foi possível aceitar o convite"
   }
 }
