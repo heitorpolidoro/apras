@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>APRAS-75 — Landing pública em / (mock de estrutura)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+      .todo {
+        background-image: repeating-linear-gradient(
+          45deg,
+          rgba(245, 158, 11, 0.16) 0 8px,
+          rgba(245, 158, 11, 0.05) 8px 16px
+        );
+        outline: 1px dashed rgba(217, 119, 6, 0.6);
+        outline-offset: 2px;
+        border-radius: 4px;
+      }
+      .todo::after {
+        content: " LANDING_COPY_TODO";
+        font-size: 0.65rem;
+        letter-spacing: 0.08em;
+        color: #b45309;
+        vertical-align: super;
+      }
+      body.hide-markers .todo::after {
+        content: "";
+      }
+      body.hide-markers .todo {
+        background-image: none;
+        outline: none;
+      }
+    </style>
+  </head>
+  <body class="bg-slate-100 text-slate-900 antialiased hide-markers">
+    <!-- ================= CONTROLES DO MOCK (não fazem parte da tela) ========= -->
+    <div class="sticky top-0 z-50 border-b border-slate-300 bg-white/95 backdrop-blur">
+      <div class="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-2 text-xs">
+        <span class="font-semibold text-slate-700">APRAS-75 · mock de estrutura</span>
+        <span class="rounded bg-amber-100 px-2 py-0.5 font-medium text-amber-800">
+          Todo o texto é placeholder — o copy é input do operador
+        </span>
+        <div class="ml-auto flex items-center gap-2">
+          <span class="text-slate-500">Estado de <code>/</code>:</span>
+          <button
+            data-state="anon"
+            class="state-btn rounded border border-slate-300 px-2 py-1 font-medium"
+          >
+            anônimo
+          </button>
+          <button
+            data-state="loading"
+            class="state-btn rounded border border-slate-300 px-2 py-1 font-medium"
+          >
+            isLoading
+          </button>
+          <button
+            data-state="auth"
+            class="state-btn rounded border border-slate-300 px-2 py-1 font-medium"
+          >
+            autenticado
+          </button>
+          <label class="ml-3 flex items-center gap-1 text-slate-600">
+            <input id="marker-toggle" type="checkbox" checked />
+            marcar slots de copy
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= ESTADO: isLoading ================================== -->
+    <section id="state-loading" class="hidden">
+      <div class="flex min-h-[70vh] items-center justify-center">
+        <div
+          class="h-10 w-10 animate-spin rounded-full border-4 border-slate-300 border-t-slate-700"
+        ></div>
+      </div>
+      <p class="pb-10 text-center text-xs text-slate-500">
+        <code>useAuth().isLoading</code> → o mesmo <code>&lt;Spinner /&gt;</code> de hoje.
+        Nenhum redirecionamento.
+      </p>
+    </section>
+
+    <!-- ================= ESTADO: autenticado =============================== -->
+    <section id="state-auth" class="hidden">
+      <div class="mx-auto max-w-5xl px-4 py-10">
+        <div class="rounded-lg border border-dashed border-slate-400 bg-white p-8 text-center">
+          <p class="text-sm font-semibold text-slate-700">
+            Comportamento de hoje, inalterado
+          </p>
+          <p class="mt-2 text-sm text-slate-500">
+            <code>usePermissionSet()</code> carregando → <code>&lt;Spinner /&gt;</code>;
+            resolvido → <code>&lt;GeneralDashboardPage /&gt;</code>.
+          </p>
+          <div class="mt-6 rounded border border-slate-200 bg-slate-50 p-6 text-left">
+            <h2 class="text-lg font-bold">Painel Geral</h2>
+            <p class="text-sm text-slate-500">
+              Bem-vindo ao painel central do seu condomínio.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= ESTADO: anônimo → LandingPage ====================== -->
+    <section id="state-anon">
+      <!-- nota: sem Navbar e sem offset de sidebar; ambos já dependem de isAuthenticated -->
+      <div class="min-h-screen bg-white">
+        <!-- topo mínimo: marca + CTA entrar -->
+        <header class="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
+          <div class="flex items-center gap-2">
+            <i data-lucide="building-2" class="h-6 w-6 text-slate-900"></i>
+            <span class="text-lg font-bold tracking-tight">APRAS</span>
+          </div>
+          <a
+            href="#"
+            class="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+          >
+            Entrar
+          </a>
+        </header>
+
+        <!-- HERO -->
+        <section class="mx-auto max-w-6xl px-6 pb-16 pt-10 text-center">
+          <h1 class="mx-auto max-w-3xl text-4xl font-extrabold leading-tight sm:text-5xl">
+            <span class="todo">[headline — texto a definir pelo operador]</span>
+          </h1>
+          <p class="mx-auto mt-5 max-w-2xl text-lg text-slate-600">
+            <span class="todo"
+              >[sub-headline — o que o APRAS faz, para quem, e o argumento de
+              venda: a definir pelo operador]</span
+            >
+          </p>
+          <div class="mt-8 flex items-center justify-center gap-3">
+            <a
+              href="#"
+              class="inline-flex items-center gap-2 rounded-md bg-slate-900 px-6 py-3 text-base font-semibold text-white hover:bg-slate-800"
+            >
+              Entrar
+              <i data-lucide="arrow-right" class="h-4 w-4"></i>
+            </a>
+          </div>
+          <p class="mt-3 text-xs text-slate-400">
+            CTA primário → <code>&lt;Link to="/login"&gt;</code>
+          </p>
+        </section>
+
+        <!-- BLOCOS DE CAPACIDADE (exatamente 4, dentro de landing-capabilities) -->
+        <section
+          data-testid="landing-capabilities"
+          class="border-y border-slate-200 bg-slate-50"
+        >
+          <div class="mx-auto grid max-w-6xl gap-8 px-6 py-16 md:grid-cols-2 lg:grid-cols-4">
+            <div class="rounded-lg border border-slate-200 bg-white p-6">
+              <i data-lucide="clipboard-list" class="h-6 w-6 text-slate-900"></i>
+              <h2 class="mt-4 text-base font-bold">
+                <span class="todo">[capacidade 1 — título]</span>
+              </h2>
+              <p class="mt-2 text-sm text-slate-600">
+                <span class="todo">[capacidade 1 — um parágrafo curto]</span>
+              </p>
+            </div>
+            <div class="rounded-lg border border-slate-200 bg-white p-6">
+              <i data-lucide="shield-check" class="h-6 w-6 text-slate-900"></i>
+              <h2 class="mt-4 text-base font-bold">
+                <span class="todo">[capacidade 2 — título]</span>
+              </h2>
+              <p class="mt-2 text-sm text-slate-600">
+                <span class="todo">[capacidade 2 — um parágrafo curto]</span>
+              </p>
+            </div>
+            <div class="rounded-lg border border-slate-200 bg-white p-6">
+              <i data-lucide="wallet" class="h-6 w-6 text-slate-900"></i>
+              <h2 class="mt-4 text-base font-bold">
+                <span class="todo">[capacidade 3 — título]</span>
+              </h2>
+              <p class="mt-2 text-sm text-slate-600">
+                <span class="todo">[capacidade 3 — um parágrafo curto]</span>
+              </p>
+            </div>
+            <div class="rounded-lg border border-slate-200 bg-white p-6">
+              <i data-lucide="users" class="h-6 w-6 text-slate-900"></i>
+              <h2 class="mt-4 text-base font-bold">
+                <span class="todo">[capacidade 4 — título]</span>
+              </h2>
+              <p class="mt-2 text-sm text-slate-600">
+                <span class="todo">[capacidade 4 — um parágrafo curto]</span>
+              </p>
+            </div>
+          </div>
+          <div class="pb-6 text-center text-xs text-slate-500">
+            exatamente 4 blocos — contados dentro de
+            <code>[data-testid="landing-capabilities"]</code>
+          </div>
+        </section>
+
+        <!-- CTA REPETIDO — o <h2> abaixo fica FORA de landing-capabilities -->
+        <section class="mx-auto max-w-3xl px-6 py-16 text-center">
+          <h2 class="text-2xl font-bold">
+            <span class="todo">[chamada final — a definir]</span>
+          </h2>
+          <a
+            href="#"
+            class="mt-6 inline-flex items-center gap-2 rounded-md border border-slate-900 px-6 py-3 text-base font-semibold text-slate-900 hover:bg-slate-900 hover:text-white"
+          >
+            Entrar
+            <i data-lucide="log-in" class="h-4 w-4"></i>
+          </a>
+        </section>
+
+        <!-- FOOTER -->
+        <footer class="border-t border-slate-200">
+          <div
+            class="mx-auto flex max-w-6xl flex-col items-center gap-2 px-6 py-8 text-sm text-slate-500 sm:flex-row sm:justify-between"
+          >
+            <span class="todo">[linha de rodapé — a definir]</span>
+            <span class="text-xs">APRAS</span>
+          </div>
+        </footer>
+      </div>
+    </section>
+
+    <script>
+      lucide.createIcons();
+
+      const sections = {
+        anon: document.getElementById("state-anon"),
+        loading: document.getElementById("state-loading"),
+        auth: document.getElementById("state-auth"),
+      };
+
+      const setState = (name) => {
+        Object.entries(sections).forEach(([key, el]) => {
+          el.classList.toggle("hidden", key !== name);
+        });
+        document.querySelectorAll(".state-btn").forEach((btn) => {
+          const active = btn.dataset.state === name;
+          btn.classList.toggle("bg-slate-900", active);
+          btn.classList.toggle("text-white", active);
+        });
+      };
+
+      document.querySelectorAll(".state-btn").forEach((btn) => {
+        btn.addEventListener("click", () => setState(btn.dataset.state));
+      });
+      setState("anon");
+
+      const markerToggle = document.getElementById("marker-toggle");
+      const applyMarkers = () => {
+        document.body.classList.toggle("hide-markers", !markerToggle.checked);
+      };
+      markerToggle.addEventListener("change", applyMarkers);
+      applyMarkers();
+    </script>
+  </body>
+</html>
