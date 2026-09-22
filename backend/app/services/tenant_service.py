@@ -177,6 +177,23 @@ class TenantService:
             raise SlugAlreadyTakenError(value)
         return value
 
+    @staticmethod
+    def get_by_slug(session: Session, slug: str) -> Tenant | None:
+        """The condominium carrying ``slug``, or ``None`` (APRAS-74).
+
+        Exact match against the stored, already-normalised value: the slug is
+        lowercased once, on write (``slugify`` / ``is_valid_slug``), so a
+        case-insensitive read here would be a second normalisation rule that
+        can disagree with the unique index.
+
+        ``None`` rather than a raise, because the one caller --
+        ``GET /api/v1/public/tenants/{slug}/branding`` -- is unauthenticated
+        and answers the *same* 404 for an unknown slug and for an inactive
+        condominium (D3). Folding both into one ``if`` at the call site is
+        what keeps the two indistinguishable.
+        """
+        return session.exec(select(Tenant).where(Tenant.slug == slug)).first()
+
     @classmethod
     def create_tenant(cls, session: Session, tenant_in: TenantCreate) -> Tenant:
         """Create a tenant, rejecting a duplicate (globally unique) name.

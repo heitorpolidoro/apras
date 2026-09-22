@@ -23,6 +23,7 @@ from app.api.v1.endpoints import (
     permissions,
     plans,
     projects,
+    public_branding,
     purchases,
     reservations,
     residents,
@@ -221,6 +222,17 @@ api_router.include_router(
     invitations.router,
     prefix="/invitations",
     tags=["invitations"],
+    dependencies=GLOBAL_SCOPED,
+)
+# APRAS-74: the unauthenticated branding read behind `/c/<slug>`. Global, and
+# it must be: the caller sends no `X-Tenant-Id` and carries no identity to
+# resolve one from, so `get_current_tenant` would refuse every request. The
+# `/public` segment is deliberate -- it puts the unauthenticated surface in
+# the route table itself, where a reviewer sees it without opening a file.
+api_router.include_router(
+    public_branding.router,
+    prefix="/public",
+    tags=["public"],
     dependencies=GLOBAL_SCOPED,
 )
 # APRAS-44 §4.1: three mounts, one file. Every table of the module is

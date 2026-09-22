@@ -13,6 +13,21 @@ import type { DerivedTheme } from "../api/tenantProfile";
  *  leave two rule sets behind. */
 export const TENANT_BRAND_STYLE_ID = "tenant-brand-theme";
 
+/**
+ * The element `/c/<slug>` owns while an **anonymous** visitor is looking at
+ * the branded login (APRAS-74).
+ *
+ * A second id rather than a second writer of the first one. The two injectors
+ * answer to different sources — this one to the public branding read, the
+ * other to the acting tenant's profile — so sharing an id would make the last
+ * effect to run win, silently and by mount order. Distinct ids also make each
+ * one assertable on its own: a test can state that exactly one of the two is
+ * present. They can never both be mounted, because the public page injects
+ * only while the visitor is signed out and `TenantBrandTheme` fetches only
+ * while signed in.
+ */
+export const PUBLIC_BRAND_STYLE_ID = "public-brand-theme";
+
 const declarations = (scheme: Readonly<Record<string, string>>): string =>
   Object.entries(scheme)
     .map(([name, value]) => `  --${name}: ${value};`)

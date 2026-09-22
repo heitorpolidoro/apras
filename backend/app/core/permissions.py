@@ -772,6 +772,14 @@ UNGUARDED_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("POST", "/api/v1/invitations/preview"),
         # unauthenticated, rate-limited, token-in-body (APRAS-71)
         ("POST", "/api/v1/invitations/accept"),
+        # APRAS-74 D3: the public condominium branding behind `/c/<slug>`.
+        # Unauthenticated and rate-limited (30/minute per IP), like
+        # `/auth/forgot-password` and the two lines above -- it authenticates
+        # nobody, so there is nobody to hold a permission and nothing a
+        # catalogue string could gate. Its four fields are public by
+        # decision: existence is not a secret, and slug enumeration is
+        # accepted with the rate limit as the single mitigation.
+        ("GET", "/api/v1/public/tenants/{slug}/branding"),
     }
 )
 

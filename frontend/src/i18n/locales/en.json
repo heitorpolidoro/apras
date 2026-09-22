@@ -180,6 +180,13 @@
     "validationError": "Error: {{messages}}",
     "genericError": "An error occurred while signing in. Please check your credentials."
   },
+  "publicEntry": {
+    "subtitle": "Sign in to access your condominium.",
+    "noAccess": "You do not have access to this condominium",
+    "noAccessMessage": "If you should have access, contact the condominium administrator.",
+    "myCondominiums": "Go to my condominiums",
+    "signOut": "Sign out"
+  },
   "guestWelcome": {
     "heading": "Welcome",
     "body": "Your account has been approved, but you haven't been assigned a role yet. Once an Administrator assigns you a role, you'll get access to the rest of the system."

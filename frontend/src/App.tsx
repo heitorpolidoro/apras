@@ -9,6 +9,7 @@ import SignupPage from "./features/user-administration/pages/SignupPage";
 import ForgotPasswordPage from "./features/user-administration/pages/ForgotPasswordPage";
 import ResetPasswordPage from "./features/user-administration/pages/ResetPasswordPage";
 import AcceptInvitationPage from "./features/user-administration/pages/AcceptInvitationPage";
+import BrandedEntryPage from "./features/user-administration/pages/BrandedEntryPage";
 import AdminUserDashboard from "./features/user-administration/pages/AdminUserDashboard";
 import ContactInfoDashboard from "./features/user-administration/pages/ContactInfoDashboard";
 import GuestWelcomePage from "./features/user-administration/pages/GuestWelcomePage";
@@ -124,6 +125,14 @@ function App() {
                     no ROUTE_ACCESS, NAV_ITEMS or NAV_GROUPS entry for the
                     same reason they do not. */}
                 <Route path="/invite" element={<AcceptInvitationPage />} />
+                {/* APRAS-74 D2: the condominium's own front door. Public, so
+                    no ProtectedRoute and no requiredAccess — an anonymous
+                    visitor is exactly who it is for. It gets no ROUTE_ACCESS,
+                    NAV_ITEMS or NAV_GROUPS entry for the same reason the five
+                    public routes above do not. The `/c/` prefix is
+                    deliberate: a bare `/<slug>` would collide with every
+                    route in this table. */}
+                <Route path="/c/:slug" element={<BrandedEntryPage />} />
 
                 <Route
                   path="/tasks"

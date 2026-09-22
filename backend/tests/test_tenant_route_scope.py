@@ -86,6 +86,13 @@ GLOBAL_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("GET", "/api/v1/invitations"),
         ("POST", "/api/v1/invitations/preview"),
         ("POST", "/api/v1/invitations/accept"),
+        # APRAS-74: the public condominium branding behind `/c/<slug>`.
+        # Global, and it has no alternative: the request carries no
+        # `Authorization` and no `X-Tenant-Id`, so there is neither a header
+        # nor a caller for `get_current_tenant` to resolve a tenant from. The
+        # condominium is named in the path and is the *subject* of the read,
+        # exactly as `{tenant_id}` is on `/tenants/{tenant_id}/modules`.
+        ("GET", "/api/v1/public/tenants/{slug}/branding"),
         # Authenticated by X-Device-Key, not a JWT: resolves its tenant from
         # the device it authenticates.
         ("POST", "/api/v1/access-control/webhook/verification"),
@@ -136,7 +143,7 @@ def test_allowlist_has_no_stale_entries():
     assert existing >= GLOBAL_ROUTES, sorted(GLOBAL_ROUTES - existing)
 
 
-def test_allowlist_is_thirty_two_routes():
+def test_allowlist_is_thirty_three_routes():
     """The global surface is small and reviewed; growing it is a decision.
 
     18 at the APRAS-49 merge base; APRAS-39 added the two module-switch
@@ -150,8 +157,11 @@ def test_allowlist_is_thirty_two_routes():
     acting tenant. APRAS-71 adds the last four, the administrator-invitation
     surface: two superuser-only routes that name their tenant in the body or
     the query string, and two unauthenticated ones with no caller at all.
+    APRAS-74 adds the thirty-third, the public condominium-branding read: an
+    unauthenticated request carries neither a header nor a caller to resolve
+    an acting tenant from, and names its subject in the path instead.
     """
-    assert len(GLOBAL_ROUTES) == 32
+    assert len(GLOBAL_ROUTES) == 33
 
 
 def test_route_count_is_fully_accounted_for():

@@ -180,6 +180,13 @@
     "validationError": "Erro: {{messages}}",
     "genericError": "Ocorreu um erro ao tentar fazer login. Verifique suas credenciais."
   },
+  "publicEntry": {
+    "subtitle": "Entre para acessar o seu condomínio.",
+    "noAccess": "Você não tem acesso a este condomínio",
+    "noAccessMessage": "Se você deveria ter acesso, fale com o administrador do condomínio.",
+    "myCondominiums": "Ir para os meus condomínios",
+    "signOut": "Sair"
+  },
   "guestWelcome": {
     "heading": "Bem-vindo(a)",
     "body": "Sua conta foi aprovada, mas ainda não recebeu um papel (role). Assim que um Administrador atribuir um papel a você, terá acesso ao restante do sistema."

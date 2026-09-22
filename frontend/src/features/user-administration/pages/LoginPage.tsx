@@ -3,19 +3,25 @@ import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import apiClient from "../../../api/client";
-import { parseApiError } from "../../../api/errors";
-import { Button } from "../../../components/ui/button";
-import { Input } from "../../../components/ui/input";
-import { Label } from "../../../components/ui/label";
 import { AlertModal } from "../../../components/ui/alert-modal";
+import LoginForm from "../components/LoginForm";
 import type { User } from "../../../types/auth";
 
+/**
+ * `/login`: the page chrome around the shared `LoginForm`.
+ *
+ * APRAS-74 moved the credential fields, the error modal and the
+ * `POST /auth/login` + `AuthContext.login` sequence into
+ * `components/LoginForm.tsx`, so `/c/<slug>` renders the same form rather
+ * than a second copy of it. What stays here is what is genuinely this page's:
+ * the app name and subtitle, the deep-link navigation off
+ * `location.state.from`, the post-signup success modal, the signup prompt and
+ * the development-only quick-login picker.
+ */
 const LoginPage: React.FC = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [devError, setDevError] = useState<string | null>(null);
+  const [isDevLoading, setIsDevLoading] = useState(false);
   const [devUsers, setDevUsers] = useState<User[]>([]);
 
   const { t } = useTranslation();
@@ -45,8 +51,8 @@ const LoginPage: React.FC = () => {
    * Handle quick login for development environment
    */
   const handleDevLogin = async (selectedEmail: string) => {
-    setError(null);
-    setIsLoading(true);
+    setDevError(null);
+    setIsDevLoading(true);
     try {
       const response = await apiClient.post("/auth/dev-login", null, {
         params: { email: selectedEmail, remember_me: rememberMe },
@@ -54,43 +60,9 @@ const LoginPage: React.FC = () => {
       await login(response.data.access_token, rememberMe);
       navigate(from, { replace: true });
     } catch {
-      setError("Dev login failed");
+      setDevError("Dev login failed");
     } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setIsLoading(true);
-
-    try {
-      const formData = new FormData();
-      formData.append("username", email);
-      formData.append("password", password);
-
-      const response = await apiClient.post(
-        `/auth/login?remember_me=${rememberMe}`,
-        formData,
-        { headers: { "Content-Type": "multipart/form-data" } },
-      );
-
-      await login(response.data.access_token, rememberMe);
-      navigate(from, { replace: true });
-    } catch (err) {
-      const apiError = err as { response?: { data?: { detail?: unknown } } };
-      const detail = apiError.response?.data?.detail;
-      if (detail === "Inactive user") {
-        setError(t("login.pendingApproval"));
-      } else {
-        setError(parseApiError(err, t, {
-          validationError: "login.validationError",
-          genericError: "login.genericError",
-        }));
-      }
-    } finally {
-      setIsLoading(false);
+      setIsDevLoading(false);
     }
   };
 
@@ -120,61 +92,18 @@ const LoginPage: React.FC = () => {
           />
 
           <AlertModal
-            open={!!error}
-            onClose={() => setError(null)}
+            open={!!devError}
+            onClose={() => setDevError(null)}
             variant="destructive"
             title="Erro"
-            message={error ?? ""}
+            message={devError ?? ""}
           />
 
-          <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="email">{t("login.email")}</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-                placeholder="your@email.com"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <div className="flex justify-between items-center">
-                <Label htmlFor="password">{t("login.password")}</Label>
-                <Link to="/forgot-password" className="text-xs text-primary hover:underline">
-                  Esqueceu a senha?
-                </Link>
-              </div>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete="current-password"
-                placeholder="••••••••"
-              />
-            </div>
-
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="rounded border-input"
-              />
-              <span className="text-sm text-muted-foreground">
-                {t("login.rememberMe")}
-              </span>
-            </label>
-
-            <Button type="submit" disabled={isLoading} className="w-full mt-1">
-              {isLoading ? t("login.submitting") : t("login.submit")}
-            </Button>
-          </form>
+          <LoginForm
+            onSuccess={() => navigate(from, { replace: true })}
+            onRememberMeChange={setRememberMe}
+            busy={isDevLoading}
+          />
 
           {devUsers.length > 0 && (
             <div className="mt-6 pt-6 border-t border-dashed">
@@ -186,7 +115,7 @@ const LoginPage: React.FC = () => {
                   <button
                     key={u.id}
                     onClick={() => handleDevLogin(u.email)}
-                    disabled={isLoading}
+                    disabled={isDevLoading}
                     className="text-xs px-2.5 py-1.5 rounded-md bg-primary/5 hover:bg-primary/10 text-primary border border-primary/20 transition-colors"
                   >
                     {u.full_name}

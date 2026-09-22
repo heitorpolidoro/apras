@@ -120,6 +120,34 @@ class TenantProfileRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class PublicTenantBrandingRead(BaseModel):
+    """A condominium's public identity, for an unauthenticated caller (APRAS-74).
+
+    Four fields and **nothing else**. This is the one body in the product
+    that leaves the server with no credential attached to the request, so the
+    field list is a security boundary rather than a convenience: no tenant
+    ``id``, no ``is_active``, no ``disabled_modules``, no plan, no counts and
+    no member or user data. Declared as its own schema -- never as a subset
+    of ``TenantProfileRead`` or of the ``Tenant`` model -- because a field
+    added to either of those must not be able to arrive here by inheritance.
+    ``test_public_branding.py`` asserts the key set as an *equality*, so a
+    fifth field fails in CI before it can ship.
+
+    ``theme`` is whatever ``app.core.branding.build_theme`` derives for this
+    condominium (APRAS-68), passed through verbatim and ``null`` for a tenant
+    with no colours; this module states no opinion about its internal shape.
+    """
+
+    #: The ``<slug>`` of ``/c/<slug>``, echoed back so a client that followed
+    #: a redirect or a normalisation knows what it actually resolved.
+    slug: str
+    name: str
+    logo_url: str | None = None
+    theme: dict[str, dict[str, str]] | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class TenantProfileUpdate(BaseModel):
     """The writable half of the profile: the name, and only the name.
 

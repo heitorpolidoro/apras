@@ -45,8 +45,11 @@ PERMISSION_RE = re.compile(r"^[a-z][a-z0-9_]*:[a-z][a-z0-9_]*$")
 #: column, not a catalogue bundle) or deliberately public. Without the entry
 #: `test_every_router_module_has_at_least_one_permission` fails on its
 #: exact-set assertion, because the tag maps to no `ROUTE_PERMISSIONS` key.
+#: `public` joins them in APRAS-74 for the plainest reason of the three: the
+#: whole tag is one unauthenticated route, so it authenticates nobody who
+#: could hold a permission.
 FULLY_UNGUARDED_TAGS = frozenset(
-    {"auth", "health", "invitations", "permissions", "plans", "<root>"}
+    {"auth", "health", "invitations", "permissions", "plans", "public", "<root>"}
 )
 
 
@@ -164,8 +167,8 @@ def test_permission_strings_follow_the_convention():
     assert not bad, f"permissions violating <module>:<action>: {bad}"
 
 
-def test_unguarded_allowlist_is_twenty_eight_routes():
-    assert len(UNGUARDED_ROUTES) == 28
+def test_unguarded_allowlist_is_twenty_nine_routes():
+    assert len(UNGUARDED_ROUTES) == 29
 
 
 def test_route_count_is_fully_accounted_for():
@@ -217,12 +220,19 @@ def test_route_count_is_fully_accounted_for():
     taking 232/208/24 to **236/208/28**. `PERMISSIONS` stays 175 and
     `len(ROUTE_PERMISSIONS)` stays 208, so no parity cell moves and no
     baseline file, additive or frozen, is written.
+
+    APRAS-74 adds **one** route and **no** mapped one -- the unauthenticated
+    condominium-branding read behind `/c/<slug>` -- taking 236/208/28 to
+    **237/208/29**, for the same reason as APRAS-71's two public routes: it
+    authenticates nobody, so there is nobody to hold a catalogue permission.
+    `PERMISSIONS` stays 175, `len(ROUTE_PERMISSIONS)` stays 208, no parity
+    cell moves and no baseline file is written.
     """
     total = len(_all_route_keys())
     assert set(ROUTE_PERMISSIONS) & UNGUARDED_ROUTES == set()
     assert len(ROUTE_PERMISSIONS) + len(UNGUARDED_ROUTES) == total
-    assert len(UNGUARDED_ROUTES) == 28
-    assert len(ROUTE_PERMISSIONS) == total - 28
+    assert len(UNGUARDED_ROUTES) == 29
+    assert len(ROUTE_PERMISSIONS) == total - 29
     assert len(ROUTE_PERMISSIONS) == 208
 
 

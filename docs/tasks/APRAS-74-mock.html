@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>APRAS-74 — /c/&lt;slug&gt; entrada com a marca do condomínio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+      :root {
+        --brand: #10b981;
+        --brand-fg: #ffffff;
+      }
+      .brand-bg { background-color: var(--brand); color: var(--brand-fg); }
+      .brand-text { color: var(--brand); }
+      .brand-ring:focus { outline: 2px solid var(--brand); outline-offset: 1px; }
+      .brand-border { border-color: var(--brand); }
+    </style>
+  </head>
+  <body class="bg-slate-100 text-slate-900">
+    <div class="mx-auto max-w-5xl px-4 py-8">
+      <header class="mb-6">
+        <h1 class="text-2xl font-semibold">APRAS-74 — entrada pública <code class="rounded bg-slate-200 px-1">/c/&lt;slug&gt;</code></h1>
+        <p class="mt-1 text-sm text-slate-600">
+          Mockup interativo da rota pública e do endpoint
+          <code>GET /api/v1/public/tenants/&lt;slug&gt;/branding</code>.
+          Troque o visitante, o slug e o estado de carregamento para ver as quatro telas.
+          Textos em pt-BR; a spec é em inglês.
+        </p>
+      </header>
+
+      <!-- Controls -->
+      <section class="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div class="flex flex-wrap items-end gap-4">
+          <div>
+            <label class="block text-xs font-medium uppercase tracking-wide text-slate-500">URL</label>
+            <div class="mt-1 flex items-center rounded-md border border-slate-300 bg-slate-50 px-2 py-1.5 font-mono text-sm">
+              <span class="text-slate-400">https://apras.app</span><span class="text-slate-700">/c/</span>
+              <select id="slug" class="bg-transparent font-mono text-sm focus:outline-none">
+                <option value="altos-da-serra">altos-da-serra</option>
+                <option value="vila-das-flores">vila-das-flores</option>
+                <option value="condominio-inexistente">condominio-inexistente</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium uppercase tracking-wide text-slate-500">Visitante</label>
+            <div id="visitorTabs" class="mt-1 inline-flex rounded-md border border-slate-300 bg-slate-50 p-0.5">
+              <button data-visitor="anon" class="tab rounded px-3 py-1.5 text-sm font-medium">Anônimo</button>
+              <button data-visitor="member" class="tab rounded px-3 py-1.5 text-sm font-medium">Logado, é membro</button>
+              <button data-visitor="stranger" class="tab rounded px-3 py-1.5 text-sm font-medium">Logado, não é membro</button>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium uppercase tracking-wide text-slate-500">Carregamento</label>
+            <label class="mt-1 flex items-center gap-2 rounded-md border border-slate-300 bg-slate-50 px-3 py-1.5 text-sm">
+              <input id="bootingChk" type="checkbox" class="rounded border-slate-300" />
+              <span>Sessão ainda carregando (<span class="font-mono">/auth/me</span> ou <span class="font-mono">/tenants</span> em voo)</span>
+            </label>
+          </div>
+
+          <button id="reloadBtn" class="ml-auto inline-flex items-center gap-1.5 rounded-md border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50">
+            <i data-lucide="rotate-cw" class="h-4 w-4"></i> Recarregar a página
+          </button>
+        </div>
+      </section>
+
+      <div class="grid gap-6 lg:grid-cols-[1fr_22rem]">
+        <!-- Screen -->
+        <section>
+          <div class="mb-2 flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
+            <i data-lucide="monitor" class="h-4 w-4"></i> Tela
+          </div>
+          <div id="screen" class="min-h-[26rem] rounded-xl border border-slate-200 bg-white p-8 shadow-sm"></div>
+        </section>
+
+        <!-- Network / notes -->
+        <aside class="space-y-4">
+          <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="mb-2 flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
+              <i data-lucide="activity" class="h-4 w-4"></i> Rede
+            </div>
+            <ul id="network" class="space-y-2 font-mono text-[11px] leading-relaxed"></ul>
+            <p class="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-500">
+              A resolução <span class="font-mono">slug → id</span> para quem está logado é uma
+              busca em memória na lista do seletor de condomínios. <strong>Nenhuma requisição</strong>
+              em nenhum dos dois ramos — é isso que impede o oráculo de temporização (D6).
+            </p>
+            <p class="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-500">
+              A lista só existe depois de <span class="font-mono">/auth/me</span> e
+              <span class="font-mono">/tenants</span>. Até lá, spinner — o mesmo para
+              todo mundo. O formulário de login é o componente
+              <span class="font-mono">LoginForm</span> compartilhado com
+              <span class="font-mono">/login</span>, não uma segunda cópia.
+            </p>
+          </div>
+
+          <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="mb-2 flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
+              <i data-lucide="braces" class="h-4 w-4"></i> Resposta do endpoint
+            </div>
+            <pre id="payload" class="overflow-x-auto rounded bg-slate-900 p-3 font-mono text-[11px] leading-relaxed text-slate-100"></pre>
+            <p class="mt-2 text-xs text-slate-500">
+              Exatamente quatro chaves. Sem UUID, sem <span class="font-mono">is_active</span>,
+              sem módulos, sem contagens, sem dados de morador.
+            </p>
+          </div>
+
+          <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900">
+            <div class="mb-1 flex items-center gap-1.5 font-semibold">
+              <i data-lucide="shield-alert" class="h-4 w-4"></i> Limite por IP
+            </div>
+            30 requisições por minuto por IP. A 31ª recebe 429.
+            <button id="floodBtn" class="mt-2 block rounded border border-amber-300 bg-white px-2 py-1 font-medium hover:bg-amber-100">
+              Simular 31 requisições
+            </button>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <script>
+      const TENANTS = {
+        "altos-da-serra": {
+          slug: "altos-da-serra",
+          name: "Condomínio Altos da Serra",
+          logo_url: "/static/uploads/altos-da-serra.png",
+          theme: { light: { primary: "oklch(0.56 0.14 262.00)" }, dark: { primary: "oklch(0.68 0.14 262.00)" } },
+          color: "#3b5bdb",
+          initials: "AS",
+        },
+        "vila-das-flores": {
+          slug: "vila-das-flores",
+          name: "Residencial Vila das Flores",
+          logo_url: null,
+          theme: null,
+          color: "#10b981",
+          initials: "VF",
+        },
+      };
+
+      // The signed-in user's memberships, as GET /tenants already returns them.
+      const MY_TENANTS = [
+        { id: "3f2a…", name: "Condomínio Altos da Serra", slug: "altos-da-serra", is_active: true },
+      ];
+
+      let visitor = "anon";
+      let slug = "altos-da-serra";
+      let flooded = false;
+      // Cold load: /auth/me and /tenants have not answered yet. The page shows
+      // the same spinner for every visitor and every slug until they do.
+      let booting = false;
+
+      const el = (id) => document.getElementById(id);
+
+      function setTheme(color) {
+        document.documentElement.style.setProperty("--brand", color || "#10b981");
+      }
+
+      function renderTabs() {
+        document.querySelectorAll(".tab").forEach((b) => {
+          const on = b.dataset.visitor === visitor;
+          b.className =
+            "tab rounded px-3 py-1.5 text-sm font-medium " +
+            (on ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-white");
+        });
+      }
+
+      function renderNetwork(lines) {
+        el("network").innerHTML = lines
+          .map(
+            (l) =>
+              `<li class="flex gap-2"><span class="${l.ok ? "text-emerald-600" : "text-rose-600"}">${l.status}</span><span class="text-slate-600">${l.text}</span></li>`,
+          )
+          .join("");
+      }
+
+      function render() {
+        renderTabs();
+        const tenant = TENANTS[slug] || null;
+        const known = !!tenant;
+        const member = known && MY_TENANTS.some((t) => t.slug === slug);
+
+        // Endpoint payload panel
+        if (flooded) {
+          el("payload").textContent = JSON.stringify({ detail: "Rate limit exceeded: 30 per 1 minute" }, null, 2);
+        } else if (known) {
+          el("payload").textContent = JSON.stringify(
+            { slug: tenant.slug, name: tenant.name, logo_url: tenant.logo_url, theme: tenant.theme },
+            null, 2,
+          );
+        } else {
+          el("payload").textContent = JSON.stringify({ detail: "Tenant not found" }, null, 2);
+        }
+
+        const net = [
+          flooded
+            ? { status: "429", ok: false, text: `GET /public/tenants/${slug}/branding` }
+            : { status: known ? "200" : "404", ok: known, text: `GET /public/tenants/${slug}/branding` },
+        ];
+        if (booting) {
+          net.push({ status: "…", ok: true, text: "GET /auth/me · GET /tenants (em voo)" });
+        } else if (visitor !== "anon") {
+          net.push({ status: "—", ok: true, text: "resolução slug → id: lookup em memória, 0 requisições" });
+        }
+        renderNetwork(net);
+
+        setTheme(known && !flooded ? tenant.color : "#10b981");
+
+        // Screen
+        if (booting) {
+          el("screen").innerHTML = loadingView();
+        } else if (visitor !== "anon") {
+          el("screen").innerHTML = member ? switchedView(tenant) : noAccessView();
+        } else {
+          el("screen").innerHTML = loginView(known && !flooded ? tenant : null);
+        }
+        lucide.createIcons();
+      }
+
+      function loadingView() {
+        return `
+          <div class="mx-auto flex max-w-md flex-col items-center gap-4 py-16 text-center">
+            <i data-lucide="loader-circle" class="h-8 w-8 animate-spin text-slate-400"></i>
+            <p class="text-sm text-slate-500">Carregando…</p>
+            <p class="max-w-sm text-xs text-slate-400">
+              Mesmo spinner para os três visitantes e para qualquer slug, até
+              <span class="font-mono">/auth/me</span> e <span class="font-mono">/tenants</span>
+              responderem. Um morador nunca vê o login anônimo nem o aviso de
+              "sem acesso" antes da lista chegar — e, por ser simétrica, a espera
+              não vira um oráculo de temporização (D6).
+            </p>
+          </div>`;
+      }
+
+      function logoBlock(tenant) {
+        if (!tenant) {
+          return `<div class="flex h-14 w-14 items-center justify-center rounded-xl bg-slate-200 text-slate-500"><i data-lucide="building-2" class="h-7 w-7"></i></div>`;
+        }
+        if (tenant.logo_url) {
+          return `<div class="flex h-14 w-14 items-center justify-center rounded-xl brand-bg text-lg font-bold">${tenant.initials}</div>`;
+        }
+        return `<div class="flex h-14 w-14 items-center justify-center rounded-xl border-2 brand-border brand-text text-lg font-bold">${tenant.initials}</div>`;
+      }
+
+      function loginView(tenant) {
+        const title = tenant ? tenant.name : "APRAS";
+        const sub = tenant
+          ? "Entre para acessar o seu condomínio."
+          : "Entre com a sua conta.";
+        return `
+          <div class="mx-auto max-w-sm">
+            <div class="mb-6 flex flex-col items-center gap-3 text-center">
+              ${logoBlock(tenant)}
+              <div>
+                <h2 class="text-xl font-semibold">${title}</h2>
+                <p class="text-sm text-slate-500">${sub}</p>
+              </div>
+            </div>
+            <form class="space-y-4" onsubmit="event.preventDefault(); onLogin();">
+              <div>
+                <label class="mb-1 block text-sm font-medium">E-mail</label>
+                <input type="email" value="morador@exemplo.com.br" class="brand-ring w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label class="mb-1 block text-sm font-medium">Senha</label>
+                <input type="password" value="••••••••" class="brand-ring w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+              </div>
+              <label class="flex items-center gap-2 text-sm text-slate-600">
+                <input type="checkbox" class="rounded border-slate-300" /> Mantenha-me conectado
+              </label>
+              <button type="submit" class="brand-bg w-full rounded-md px-3 py-2 text-sm font-semibold">Entrar</button>
+              <p class="text-center text-sm text-slate-500">
+                Esqueceu a senha? <a href="#" class="brand-text font-medium">Recuperar acesso</a>
+              </p>
+            </form>
+          </div>`;
+      }
+
+      function switchedView(tenant) {
+        return `
+          <div class="mx-auto max-w-md text-center">
+            <div class="mb-4 flex justify-center">${logoBlock(tenant)}</div>
+            <h2 class="text-xl font-semibold">Entrando em ${tenant.name}…</h2>
+            <p class="mt-2 text-sm text-slate-500">
+              O condomínio ativo foi trocado e você está sendo levado ao painel.
+            </p>
+            <div class="mx-auto mt-6 w-full max-w-sm rounded-lg border border-slate-200 bg-slate-50 p-3 text-left font-mono text-[11px] text-slate-600">
+              setActingTenant("3f2a…")<br />navigate("/", { replace: true })
+            </div>
+          </div>`;
+      }
+
+      function noAccessView() {
+        return `
+          <div class="mx-auto max-w-md text-center">
+            <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-rose-100 text-rose-600">
+              <i data-lucide="lock" class="h-7 w-7"></i>
+            </div>
+            <h2 class="text-xl font-semibold">Você não tem acesso a este condomínio</h2>
+            <p class="mt-2 text-sm text-slate-500">
+              Se você deveria ter acesso, fale com o administrador do condomínio.
+            </p>
+            <div class="mt-6 flex justify-center gap-2">
+              <a href="#" class="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50">Ir para os meus condomínios</a>
+              <a href="#" class="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white">Sair</a>
+            </div>
+            <p class="mt-4 text-xs text-slate-400">
+              Mesma tela para um slug inexistente — mesmo componente, mesmo caminho de código, sem 404.
+            </p>
+          </div>`;
+      }
+
+      function onLogin() {
+        // After login the memberships are re-fetched, so the page goes back
+        // through the same spinner before resolving slug → id.
+        const member = MY_TENANTS.some((t) => t.slug === slug);
+        visitor = member ? "member" : "stranger";
+        booting = true;
+        el("bootingChk").checked = true;
+        render();
+        setTimeout(() => {
+          booting = false;
+          el("bootingChk").checked = false;
+          render();
+        }, 900);
+      }
+
+      el("slug").addEventListener("change", (e) => {
+        slug = e.target.value;
+        flooded = false;
+        render();
+      });
+      document.querySelectorAll(".tab").forEach((b) =>
+        b.addEventListener("click", () => {
+          visitor = b.dataset.visitor;
+          render();
+        }),
+      );
+      el("bootingChk").addEventListener("change", (e) => {
+        booting = e.target.checked;
+        render();
+      });
+      el("reloadBtn").addEventListener("click", () => {
+        // A reload is a cold load: the spinner comes first, always.
+        flooded = false;
+        booting = true;
+        el("bootingChk").checked = true;
+        render();
+        setTimeout(() => {
+          booting = false;
+          el("bootingChk").checked = false;
+          render();
+        }, 900);
+      });
+      el("floodBtn").addEventListener("click", () => {
+        flooded = true;
+        render();
+      });
+
+      render();
+    </script>
+  </body>
+</html>

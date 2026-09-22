@@ -29,8 +29,16 @@ TESTS = BACKEND / "tests"
 #: It may fall freely. Raising it is a decision that belongs in a task's spec,
 #: not in a diff -- APRAS-60 §17 raised it by exactly one, for the `E711` its
 #: `parent_id == None` folder lookup needs and that `voting_service` already
-#: spells the same way.
-NOQA_CAP = 69
+#: spells the same way. APRAS-74 raises it by exactly one more, for the
+#: `ARG001` on `public_branding.get_public_tenant_branding`: `slowapi`'s
+#: `@limiter.limit` decorator looks the request up by *parameter name*, so
+#: the handler must declare a `request: Request` it never reads. The spec
+#: mandates that directive verbatim, in the shape `endpoints/invitations.py`
+#: already carries for the same decorator; the alternative -- adding
+#: `ARG001` to the `app/api/v1/endpoints/**` per-file ignores -- would
+#: silence every genuinely unused argument across 35 routers to save one
+#: line.
+NOQA_CAP = 70
 
 #: A ``noqa: CODE[, CODE...]`` directive followed by two spaces and a reason.
 NOQA_OK = re.compile(r"#\s*noqa:\s*[A-Z]+[0-9]+(\s*,\s*[A-Z]+[0-9]+)*\s+#\s+\S")

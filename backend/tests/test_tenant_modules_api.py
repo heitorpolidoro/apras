@@ -402,6 +402,8 @@ def test_the_routes_are_unguarded_and_global():
     # 28/32 since APRAS-71's four administrator-invitation routes, which are
     # unguarded *and* global: two superuser-only and two public. 24/28 was
     # the state APRAS-61's self-scoped profile read left, on top of the 23/28
-    # of APRAS-52's operator-side subscription-history read.
-    assert len(UNGUARDED_ROUTES) == 28
-    assert len(GLOBAL_ROUTES) == 32
+    # of APRAS-52's operator-side subscription-history read. 29/33 since
+    # APRAS-74's public condominium-branding read, which is unguarded *and*
+    # global for the same pair of reasons as APRAS-71's two public routes.
+    assert len(UNGUARDED_ROUTES) == 29
+    assert len(GLOBAL_ROUTES) == 33
