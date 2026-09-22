@@ -36,11 +36,18 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.14 0.01 160);
   --primary: oklch(0.62 0.15 160); /* Emerald Green */
-  --primary-foreground: oklch(0.98 0 0);
+  /* Dark, not near-white: white on the emerald measures 3.2169:1, this 5.7548:1.
+     The brand colour itself must not move, and this is the same foreground the
+     backend's branded-theme rule picks for this hue, so a branded and an
+     unbranded tenant render alike. Guarded by src/__tests__/themeContrast.test.ts. */
+  --primary-foreground: oklch(0.15 0.02 160);
   --secondary: oklch(0.96 0.01 160);
   --secondary-foreground: oklch(0.2 0.02 160);
   --muted: oklch(0.96 0.01 160);
-  --muted-foreground: oklch(0.55 0.02 160);
+  /* Lightness 0.53 is the ceiling that keeps WCAG AA on --muted (4.6684:1);
+     0.54 measures 4.4754:1 and fails. Guarded by
+     src/__tests__/themeContrast.test.ts. */
+  --muted-foreground: oklch(0.53 0.02 160);
   --accent: oklch(0.96 0.01 160);
   --accent-foreground: oklch(0.2 0.02 160);
   --destructive: oklch(0.58 0.24 27);

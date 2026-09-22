@@ -1524,3 +1524,63 @@ after the run is byte-identical to the one at the start.
   eslint job — the frontend gates are `npm run build` and `npm run test:coverage`,
   both of which I ran and both of which pass — so nothing that CI enforces is
   unverified. Flagging it only so the gap in *this* report is explicit.
+
+## [APRAS-76] Fix the default theme's muted text contrast, which is below WCAG AA — 2026-09-22
+
+- `frontend/src/__tests__/themeContrast.test.ts:104` — `gamutMap` reduces chroma
+  on a 0.01 grid, whereas the production measurement
+  (`frontend/src/lib/contrast.ts`, and `backend/app/core/branding.py`) uses the
+  JND bisection CSS Color 4 §13 actually specifies. For the shipped palette the
+  two agree on the snapped chroma (0.14) and differ by only ~0.004 in the
+  resulting ratio, so nothing is at risk today. But a future out-of-gamut
+  surface landing within ~0.01 of 4.5 could pass this guard while the product's
+  own checker rejects the same palette. Worth one sentence in the header noting
+  the grid is deliberately coarser and conservative, or — when the two files are
+  eventually unified, as the header already contemplates — adopting the
+  bisection.
+- `frontend/src/__tests__/themeContrast.test.ts:196` — `MINIMUM_PAIRS` is used
+  in `it("declares both schemes")` as a floor on the *token count*
+  (`Object.keys(light).length`) and elsewhere as a floor on the *pair count*.
+  The two happen to share the number 19 but not the meaning; a second constant
+  (`MINIMUM_TOKENS`) would keep the assertion honest if either floor moves.
+- `frontend/src/features/user-administration/components/TenantBrandColors.tsx:62-79`
+  — `DEFAULT_PALETTE`'s comment claims it is "today's `index.css` light scheme",
+  and two of its entries are now stale: `"primary-foreground": "#fafafa"` (the
+  token is now `oklch(0.15 0.02 160)` ≈ `#040e08`) and `"muted-foreground":
+  "#6b7772"` (now `oklch(0.53 0.02 160)` ≈ `#627068`). That file is explicitly
+  out of this task's scope and the mismatch is pre-existing — the advanced-mode
+  starting palette already seeded white-on-emerald, which already failed the
+  live check — so this is not a finding against APRAS-76. It is a good candidate
+  for the follow-up task the spec's *Out of Scope* section already anticipates
+  (alongside `text-primary` as body text at 3.3114 on `--background`), since the
+  drift is now larger and more visible.
+
+## [APRAS-76] Fix the default theme's muted text contrast, which is below WCAG AA — 2026-09-22
+
+- **Frontend lint is red on `master` and CI does not catch it.** ~200 eslint
+  errors across ~40 files, and `.github/workflows/ci.yml` runs only `build` and
+  `test:coverage` for the frontend. Worth its own cleanup card plus adding
+  `npm run lint` to the `frontend` CI job, otherwise the debt keeps growing
+  invisibly and every future task inherits an ambiguous "lint must be green"
+  acceptance criterion.
+- **`destructive-foreground` on `destructive` is the thinnest pair in the
+  theme** at 4.5425:1 light / 5.1359:1 dark. It passes, but a future 0.01 nudge
+  to `--destructive` would break AA. Consider a source comment there like the
+  two this task added for `--muted-foreground` and `--primary-foreground`, so
+  the next editor sees the margin before moving the value.
+- **`MINIMUM_PAIRS = 19` is exactly today's pair count**, so the
+  `toBeGreaterThanOrEqual` floor is sitting on the boundary. That is fine and
+  intentional as an anti-vacuity floor, but if a future task removes a token
+  pair the count silently drops below and the failure will read as a parser
+  bug. A short comment to that effect, or deriving the floor from the token
+  count, would age better.
+- **The suite deliberately does not import `src/lib/contrast.ts` (APRAS-68).**
+  The reasoning in the file header is sound — an independent oracle is what
+  makes the green run evidence — but it does mean two OKLCH implementations now
+  live in the repo and can drift. If they are unified later, pin both halves, as
+  the header itself already says.
+- **Pair coverage is background-surface only.** `--primary` and `--ring` used as
+  *text* or as focus indicators against `--background` are not enumerated by the
+  naming convention. Out of scope for this card and not part of the expected
+  results, but a plausible follow-up if non-text contrast (WCAG 1.4.11) is ever
+  in scope.
