@@ -91,6 +91,10 @@ describe.each([
   ["/admin/modules"],
   ["/admin/plans"],
   ["/admin/subscriptions"],
+  // APRAS-70: the condominium list and its create form. Same rule, same
+  // reason — `POST /api/v1/tenants` is `get_current_superuser`-gated and
+  // `tenants:create` is a `SUPERUSER_ONLY_PERMISSION`.
+  ["/admin/tenants"],
 ])("the %s rule resolves through the flag alone", (path) => {
   it("allows a superuser and refuses a whole-catalogue tenant_admin", async () => {
     // One case per `{ superuser: true }` route, read out of `ROUTE_ACCESS`

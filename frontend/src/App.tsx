@@ -44,6 +44,7 @@ import SubscriptionPage from "./features/user-administration/pages/SubscriptionP
 import TenantProfilePage from "./features/user-administration/pages/TenantProfilePage";
 import PlansAdminPage from "./features/user-administration/pages/PlansAdminPage";
 import TenantSubscriptionsPage from "./features/user-administration/pages/TenantSubscriptionsPage";
+import TenantsAdminPage from "./features/user-administration/pages/TenantsAdminPage";
 import InfractionsPage from "./features/infraction-management/pages/InfractionsPage";
 import InfractionRulesPage from "./features/infraction-management/pages/InfractionRulesPage";
 import MyInfractionsPage from "./features/infraction-management/pages/MyInfractionsPage";
@@ -401,6 +402,17 @@ function App() {
                       requiredAccess={ROUTE_ACCESS["/subscription"]}
                     >
                       <SubscriptionPage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/admin/tenants"
+                  element={
+                    <ProtectedRoute
+                      requiredAccess={ROUTE_ACCESS["/admin/tenants"]}
+                    >
+                      <TenantsAdminPage />
                     </ProtectedRoute>
                   }
                 />

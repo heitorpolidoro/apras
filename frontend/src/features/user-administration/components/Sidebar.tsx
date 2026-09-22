@@ -43,6 +43,7 @@ import {
   Scale,
   AlertCircle,
   Landmark,
+  Hotel,
   ChevronDown,
   ChevronRight,
   PanelLeftClose,
@@ -83,6 +84,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Scale,
   AlertCircle,
   Landmark,
+  Hotel,
 };
 
 const SidebarItemLink: React.FC<{

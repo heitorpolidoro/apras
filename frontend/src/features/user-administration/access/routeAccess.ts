@@ -78,6 +78,13 @@ export const ROUTE_ACCESS: Record<string, AccessRule> = {
   "/admin/tenant-profile": { anyOf: ["tenants:profile_update"] },
   "/admin/plans": { superuser: true },
   "/admin/subscriptions": { superuser: true },
+  // APRAS-70: the install-wide condominium list and the only screen that
+  // creates one. Same rule and same reason as `/admin/modules`:
+  // `POST /api/v1/tenants` is `get_current_superuser`-gated and
+  // `tenants:create` is in `SUPERUSER_ONLY_PERMISSIONS`, so no `{ anyOf }`
+  // rule could express it and `{ anyOf: ["tenants:create"] }` would offer the
+  // screen to an acting tenant_admin the API answers 403.
+  "/admin/tenants": { superuser: true },
   // APRAS-44 §10.2. `{ module: "infractions" }` is specifically **wrong** for
   // `/infractions`: a module rule means "holds any `infractions:*`", so a
   // resident holding only `my_lots_read` would be offered the management list
@@ -186,6 +193,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       "/admin/roles",
       "/admin/photo-approvals",
       "/admin/tenant-profile",
+      "/admin/tenants",
       "/admin/modules",
       "/admin/plans",
       "/admin/subscriptions",
@@ -223,6 +231,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { path: "/admin/access-control", labelKey: "nav.accessControl", iconName: "KeyRound" },
   { path: "/gate-monitor", labelKey: "nav.gateMonitor", iconName: "Tv" },
   { path: "/admin/tenant-profile", labelKey: "nav.tenantProfile", iconName: "Landmark" },
+  { path: "/admin/tenants", labelKey: "nav.tenants", iconName: "Hotel" },
   { path: "/admin/modules", labelKey: "nav.modules", iconName: "Sliders" },
   { path: "/subscription", labelKey: "nav.subscription", iconName: "CreditCard" },
   { path: "/admin/plans", labelKey: "nav.plans", iconName: "Sparkles" },

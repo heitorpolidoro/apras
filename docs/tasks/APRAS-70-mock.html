@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>APRAS-70 — Cadastro de condomínios (superusuário)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-50 text-slate-900">
+<div class="max-w-6xl mx-auto p-6 space-y-6">
+
+  <header class="space-y-1">
+    <h1 class="text-2xl font-bold">APRAS-70 — Condomínios</h1>
+    <p class="text-sm text-slate-600">
+      Menu <strong>Administração → Condomínios</strong> (<code>/admin/tenants</code>),
+      regra <code>{ superuser: true }</code> em <code>ROUTE_ACCESS</code> — mesmo padrão de
+      <code>/admin/modules</code>. Lê <code>GET /api/v1/tenants</code> e cria por
+      <code>POST /api/v1/tenants</code>. Nenhuma rota nova, nenhuma migração.
+    </p>
+  </header>
+
+  <nav class="flex flex-wrap gap-2 border-b border-slate-200">
+    <button data-tab="list" class="tab px-4 py-2 text-sm font-medium border-b-2 border-slate-900">Lista</button>
+    <button data-tab="create" class="tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-slate-500">Novo condomínio</button>
+    <button data-tab="created" class="tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-slate-500">Criado (201)</button>
+    <button data-tab="duplicate" class="tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-slate-500">Nome duplicado (409)</button>
+    <button data-tab="empty" class="tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-slate-500">Filtro sem resultado</button>
+    <button data-tab="denied" class="tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-slate-500">Sem acesso (não superusuário)</button>
+  </nav>
+
+  <!-- ============================ LISTA ============================ -->
+  <section data-panel="list" class="panel space-y-4">
+    <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div class="flex flex-wrap items-center gap-3 border-b border-slate-100 px-6 py-4">
+        <i data-lucide="hotel" class="h-5 w-5 text-slate-500"></i>
+        <div class="mr-auto">
+          <h2 class="text-lg font-semibold">Condomínios</h2>
+          <p class="text-xs text-slate-500">Todos os condomínios da instalação, em ordem alfabética.</p>
+        </div>
+        <button onclick="switchTab('create')"
+          class="inline-flex items-center gap-2 rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800">
+          <i data-lucide="plus" class="h-4 w-4"></i> Novo condomínio
+        </button>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-3 border-b border-slate-100 bg-slate-50/60 px-6 py-3">
+        <div class="relative">
+          <i data-lucide="search" class="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-slate-400"></i>
+          <input id="q" placeholder="Filtrar por nome ou endereço"
+            class="w-72 rounded-md border border-slate-300 py-2 pl-8 pr-3 text-sm focus:border-slate-900 focus:outline-none" />
+        </div>
+        <select id="status" class="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-900 focus:outline-none">
+          <option value="all">Todos</option>
+          <option value="active">Somente ativos</option>
+          <option value="inactive">Somente inativos</option>
+        </select>
+        <span id="count" class="ml-auto text-xs text-slate-500"></span>
+      </div>
+
+      <table class="w-full text-sm">
+        <thead class="bg-white text-left text-xs uppercase tracking-wide text-slate-500">
+          <tr class="border-b border-slate-100">
+            <th class="px-6 py-3 font-semibold">Condomínio</th>
+            <th class="px-6 py-3 font-semibold">Endereço (slug)</th>
+            <th class="px-6 py-3 font-semibold">Situação</th>
+            <th class="px-6 py-3 font-semibold">Criado em</th>
+            <th class="px-6 py-3 font-semibold">Administrador</th>
+            <th class="px-6 py-3 font-semibold text-right">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="rows" class="divide-y divide-slate-100"></tbody>
+      </table>
+
+      <div id="noresult" class="hidden px-6 py-10 text-center text-sm text-slate-500">
+        <i data-lucide="search-x" class="mx-auto mb-2 h-6 w-6 text-slate-400"></i>
+        Nenhum condomínio corresponde ao filtro.
+      </div>
+    </div>
+
+    <div class="rounded-lg border border-slate-200 bg-white p-4 text-xs leading-relaxed text-slate-600">
+      <strong>Anotações.</strong>
+      <code>GET /api/v1/tenants</code> não aceita <code>skip</code>/<code>limit</code> e devolve tudo ordenado por nome:
+      por isso <strong>não há paginação</strong>, e sim filtro de texto e de situação no cliente (D4).
+      A coluna <em>Situação</em> é somente leitura — desativar é <code>PATCH /tenants/{id}</code> e não pertence a esta tela (D5).
+      As colunas <em>Administrador</em> e <em>Ações</em> ficam reservadas para a APRAS-72 (D7) e aparecem desabilitadas aqui.
+      Trocar o slug é feito no <em>Perfil do condomínio</em> (<code>/admin/tenant-profile</code>), depois de alternar para aquele condomínio (D3).
+    </div>
+  </section>
+
+  <!-- ========================== CRIAÇÃO ============================ -->
+  <section data-panel="create" class="panel hidden space-y-4">
+    <div class="mx-auto max-w-xl rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div class="flex items-center gap-3 border-b border-slate-100 px-6 py-4">
+        <i data-lucide="plus-circle" class="h-5 w-5 text-slate-500"></i>
+        <h2 class="text-lg font-semibold">Novo condomínio</h2>
+      </div>
+      <div class="space-y-5 px-6 py-6">
+        <div>
+          <label class="block text-sm font-medium text-slate-700">Nome do condomínio</label>
+          <input id="newName" value="Residencial Altos da Serra VI"
+            class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-900 focus:outline-none" />
+          <p class="mt-1 text-xs text-slate-500">
+            Obrigatório, 1 a 120 caracteres, único em toda a instalação.
+          </p>
+        </div>
+        <div class="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-xs text-slate-600">
+          <i data-lucide="info" class="mr-1 inline h-3.5 w-3.5 align-text-bottom"></i>
+          O <strong>endereço</strong> do condomínio é derivado do nome pelo sistema e pode receber um sufixo
+          numérico se já estiver em uso. Ele é exibido depois de salvar, e pode ser alterado no
+          <em>Perfil do condomínio</em>.
+        </div>
+        <div class="flex items-center justify-end gap-3">
+          <button onclick="switchTab('list')" class="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Cancelar</button>
+          <button onclick="switchTab('created')" class="rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">Criar condomínio</button>
+        </div>
+      </div>
+    </div>
+    <div class="mx-auto max-w-xl rounded-lg border border-slate-200 bg-white p-4 text-xs text-slate-600">
+      <strong>Anotações.</strong> O formulário pede <strong>só o nome</strong> (D1): <code>TenantCreate</code> não tem campo
+      <code>slug</code>. Não há prévia do slug no cliente (D2) — <code>app/core/slug.py</code> é a única autoridade da derivação.
+      O corpo enviado é <code>{ "name": "…" }</code>; <code>is_active</code> é omitido e o backend cria ativo.
+    </div>
+  </section>
+
+  <!-- ========================== CRIADO ============================= -->
+  <section data-panel="created" class="panel hidden space-y-4">
+    <div class="mx-auto max-w-xl space-y-4">
+      <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
+        <div class="flex items-start gap-3">
+          <i data-lucide="check-circle-2" class="mt-0.5 h-5 w-5 text-emerald-700"></i>
+          <div class="space-y-3">
+            <p class="text-sm font-semibold text-emerald-900">Condomínio criado</p>
+            <p class="text-sm text-emerald-900">Residencial Altos da Serra VI</p>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-emerald-800">Endereço:</span>
+              <code class="rounded bg-white px-2 py-1 font-mono text-xs text-slate-800">residencial-altos-da-serra-vi-2</code>
+              <button class="inline-flex items-center gap-1 rounded border border-emerald-300 px-2 py-1 text-xs text-emerald-800 hover:bg-emerald-100">
+                <i data-lucide="copy" class="h-3 w-3"></i> Copiar
+              </button>
+            </div>
+            <p class="text-xs text-emerald-800">
+              O sufixo <code>-2</code> veio do servidor: o endereço base já estava em uso.
+            </p>
+            <div class="flex flex-wrap items-center gap-2 pt-1">
+              <button onclick="switchTab('list')" class="rounded-md bg-emerald-700 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-800">Voltar à lista</button>
+              <button disabled title="APRAS-72"
+                class="inline-flex cursor-not-allowed items-center gap-2 rounded-md border border-dashed border-slate-300 px-3 py-2 text-xs font-medium text-slate-400">
+                <i data-lucide="mail-plus" class="h-3.5 w-3.5"></i> Convidar administrador · APRAS-72
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="rounded-lg border border-slate-200 bg-white p-4 text-xs text-slate-600">
+        <strong>Anotações.</strong> O slug exibido é o do corpo do <code>201</code> (<code>TenantRead.slug</code>), nunca um palpite do cliente.
+        Ao concluir, a chave TanStack <code>["tenants"]</code> é invalidada — a mesma que o <code>TenantContext</code> usa,
+        então o seletor de condomínio passa a mostrar o novo sem recarregar. O botão de convite é o ponto de encaixe da APRAS-72 (D7).
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= DUPLICADO =========================== -->
+  <section data-panel="duplicate" class="panel hidden space-y-4">
+    <div class="mx-auto max-w-xl rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div class="flex items-center gap-3 border-b border-slate-100 px-6 py-4">
+        <i data-lucide="plus-circle" class="h-5 w-5 text-slate-500"></i>
+        <h2 class="text-lg font-semibold">Novo condomínio</h2>
+      </div>
+      <div class="space-y-5 px-6 py-6">
+        <div>
+          <label class="block text-sm font-medium text-slate-700">Nome do condomínio</label>
+          <input value="Condomínio Padrão"
+            class="mt-1 w-full rounded-md border border-red-400 px-3 py-2 text-sm focus:border-red-500 focus:outline-none" />
+          <p class="mt-1 flex items-center gap-1.5 text-xs font-medium text-red-600">
+            <i data-lucide="alert-circle" class="h-3.5 w-3.5"></i>
+            Já existe um condomínio com esse nome.
+          </p>
+        </div>
+        <div class="flex items-center justify-end gap-3">
+          <button onclick="switchTab('list')" class="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Cancelar</button>
+          <button class="rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">Criar condomínio</button>
+        </div>
+      </div>
+    </div>
+    <div class="mx-auto max-w-xl rounded-lg border border-slate-200 bg-white p-4 text-xs text-slate-600">
+      <strong>Anotações.</strong> <code>tenant.name</code> é único globalmente: <code>TenantAlreadyExistsError</code> → <strong>409</strong> (D6).
+      A mensagem é traduzida no cliente, e não o <code>detail</code> em inglês do backend. O formulário continua aberto,
+      o texto digitado é preservado e a lista <strong>não</strong> é recarregada. Um 422 ou qualquer outra falha cai em
+      <code>parseApiError</code> com a chave genérica da página.
+    </div>
+  </section>
+
+  <!-- ========================= SEM RESULTADO ======================= -->
+  <section data-panel="empty" class="panel hidden space-y-4">
+    <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div class="flex flex-wrap items-center gap-3 border-b border-slate-100 bg-slate-50/60 px-6 py-3">
+        <div class="relative">
+          <i data-lucide="search" class="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-slate-400"></i>
+          <input value="parque das" readonly
+            class="w-72 rounded-md border border-slate-300 py-2 pl-8 pr-3 text-sm" />
+        </div>
+        <select class="rounded-md border border-slate-300 px-3 py-2 text-sm"><option>Somente inativos</option></select>
+        <span class="ml-auto text-xs text-slate-500">0 de 5 condomínios</span>
+      </div>
+      <div class="px-6 py-12 text-center text-sm text-slate-500">
+        <i data-lucide="search-x" class="mx-auto mb-2 h-6 w-6 text-slate-400"></i>
+        Nenhum condomínio corresponde ao filtro.
+      </div>
+    </div>
+    <div class="rounded-lg border border-slate-200 bg-white p-4 text-xs text-slate-600">
+      <strong>Anotações.</strong> Estado vazio <em>do filtro</em>. O estado vazio <em>da instalação</em> é impossível na prática —
+      a migração semeia <code>Condomínio Padrão</code> — mas a tela mostra a mesma linha com o texto de lista vazia.
+    </div>
+  </section>
+
+  <!-- ============================ NEGADO =========================== -->
+  <section data-panel="denied" class="panel hidden space-y-4">
+    <div class="rounded-xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+      <i data-lucide="lock" class="mx-auto mb-3 h-8 w-8 text-slate-400"></i>
+      <h2 class="text-lg font-semibold">Acesso restrito</h2>
+      <p class="mx-auto mt-1 max-w-md text-sm text-slate-600">
+        Você não tem permissão para acessar esta área.
+      </p>
+    </div>
+    <div class="rounded-lg border border-slate-200 bg-white p-4 text-xs text-slate-600">
+      <strong>Anotações.</strong> <code>RestrictedAccessMessage</code> renderizado <strong>no lugar</strong>, sem redirecionamento,
+      exatamente como em <code>/admin/modules</code>. A regra <code>{ superuser: true }</code> lê o usuário
+      <strong>real</strong>, então "ver como" nunca abre a tela. O item do menu usa o mesmo objeto de regra.
+      Um <code>tenant_admin</code> cai aqui: <code>POST /tenants</code> é superusuário e responde 403 para ele.
+    </div>
+  </section>
+
+</div>
+
+<script>
+  const TENANTS = [
+    { name: "Condomínio Padrão", slug: "condominio-padrao", is_active: true, created_at: "19/09/2026" },
+    { name: "Edifício Aurora", slug: "edificio-aurora", is_active: true, created_at: "20/09/2026" },
+    { name: "Parque das Águas", slug: "parque-das-aguas", is_active: false, created_at: "12/08/2026" },
+    { name: "Residencial Altos da Serra", slug: "residencial-altos-da-serra", is_active: true, created_at: "02/07/2026" },
+    { name: "Residencial Altos da Serra VI", slug: "residencial-altos-da-serra-vi-2", is_active: true, created_at: "21/09/2026" },
+  ];
+
+  function badge(active) {
+    return active
+      ? '<span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700"><i data-lucide="check" class="h-3 w-3"></i>Ativo</span>'
+      : '<span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600"><i data-lucide="pause" class="h-3 w-3"></i>Inativo</span>';
+  }
+
+  function render() {
+    const q = (document.getElementById("q").value || "").toLowerCase();
+    const status = document.getElementById("status").value;
+    const rows = TENANTS.filter((tenant) => {
+      const matches = tenant.name.toLowerCase().includes(q) || tenant.slug.includes(q);
+      const statusOk =
+        status === "all" || (status === "active" ? tenant.is_active : !tenant.is_active);
+      return matches && statusOk;
+    });
+    document.getElementById("rows").innerHTML = rows
+      .map(
+        (tenant) => `
+        <tr class="hover:bg-slate-50">
+          <td class="px-6 py-3 font-medium">${tenant.name}</td>
+          <td class="px-6 py-3"><code class="rounded bg-slate-100 px-2 py-0.5 font-mono text-xs">${tenant.slug}</code></td>
+          <td class="px-6 py-3">${badge(tenant.is_active)}</td>
+          <td class="px-6 py-3 text-slate-600">${tenant.created_at}</td>
+          <td class="px-6 py-3 text-xs italic text-slate-400">—</td>
+          <td class="px-6 py-3 text-right">
+            <button disabled title="APRAS-72"
+              class="inline-flex cursor-not-allowed items-center gap-1.5 rounded-md border border-dashed border-slate-300 px-2.5 py-1 text-xs text-slate-400">
+              <i data-lucide="mail-plus" class="h-3.5 w-3.5"></i> Convidar
+            </button>
+          </td>
+        </tr>`,
+      )
+      .join("");
+    document.getElementById("noresult").classList.toggle("hidden", rows.length > 0);
+    document.getElementById("count").textContent =
+      `${rows.length} de ${TENANTS.length} condomínios`;
+    lucide.createIcons();
+  }
+
+  function switchTab(name) {
+    document.querySelectorAll(".panel").forEach((p) => {
+      p.classList.toggle("hidden", p.dataset.panel !== name);
+    });
+    document.querySelectorAll(".tab").forEach((t) => {
+      const on = t.dataset.tab === name;
+      t.classList.toggle("border-slate-900", on);
+      t.classList.toggle("border-transparent", !on);
+      t.classList.toggle("text-slate-500", !on);
+    });
+  }
+
+  document.querySelectorAll(".tab").forEach((t) => {
+    t.addEventListener("click", () => switchTab(t.dataset.tab));
+  });
+  document.getElementById("q").addEventListener("input", render);
+  document.getElementById("status").addEventListener("change", render);
+  render();
+  lucide.createIcons();
+</script>
+</body>
+</html>

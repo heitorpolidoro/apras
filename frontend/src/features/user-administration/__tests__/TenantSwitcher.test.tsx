@@ -43,12 +43,16 @@ vi.mock("../../../hooks/useRoles", () => ({
 const TENANT_A: Tenant = {
   id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
   name: "Condomínio A",
+  slug: "condominio-a",
   is_active: true,
+  created_at: "2026-01-01T00:00:00",
 };
 const TENANT_B: Tenant = {
   id: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
   name: "Condomínio B",
+  slug: "condominio-b",
   is_active: true,
+  created_at: "2026-01-02T00:00:00",
 };
 
 const USER: Partial<User> = {

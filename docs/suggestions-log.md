@@ -1137,3 +1137,273 @@ after the run is byte-identical to the one at the start.
   which the handler maps to 409 — a reasonable status, but the message names a slug the caller
   never typed. A distinct exception (or a message about retrying) would read better in that very
   rare path. Non-blocking.
+
+## [APRAS-68] Whitelabel — 2026-09-21 (spec_review round 1)
+
+- The 0.01 step loop is dead code for the vast majority of inputs (needed at
+  only 3,445 of 120,888 domain points) because the `L ∈ [0.20, 0.92]` clamp
+  already guarantees the bar almost everywhere. Worth a sentence in
+  `branding.py` noting this so a future reader does not mistake it for the
+  primary mechanism, and worth ensuring the hostile-input test includes at least
+  one colour that actually *exercises* the loop — every colour in the current
+  set clears 4.5:1 at zero steps, so the loop is untested by the stated set.
+  A mid-lightness low-chroma colour near `oklch(0.56 0.04 165)` does exercise it.
+- Step 4 gives `--ring` the *effective* (contrast-adjusted) primary. For a very
+  pale brand the adjusted primary moves dark, which is fine on `--background`,
+  but for a very dark brand in light mode it moves lighter and the focus ring
+  can lose contrast against `--background`. Focus indicators have their own
+  WCAG requirement (1.4.11, 3:1 against adjacent colours). Not blocking for this
+  task's stated ERs, but worth a follow-up.
+- On the dark derivation: it is cheap and ER-4 asks for it, so keep it. But
+  since nothing can apply `.dark` today, the emitted dark block is unverifiable
+  in the running app and its contrast guarantee rests entirely on
+  `test_branding.py`. Whoever eventually turns dark mode on should re-check it
+  against real rendering rather than trusting it has been exercised.
+- `docs/tasks/APRAS-68-mock.html` is in Portuguese. That is correct for a UI
+  mock (it shows operator-facing copy) and the spec itself is correctly in
+  English, so this is not a language-policy finding — noting it only so the
+  point is not re-raised later.
+
+## [APRAS-68] Whitelabel — 2026-09-21 (spec_review round 2)
+- Step 4 does not say whether the foreground candidate is re-evaluated on each
+  loop iteration. Verified inert (0 divergences over 604,440 lattice points),
+  but one clause saying "the foreground chosen at the first pick is kept for
+  the rest of the loop" would remove the reader's doubt.
+- Worst emitted ratio across the whole emittable lattice is 4.500004 — the
+  algorithm is correct but has no headroom by construction. If any future
+  change to rounding, gamut clamping or the foreground candidates is
+  anticipated, raising the loop's exit threshold to e.g. 4.55 would buy margin
+  at no visible cost. Alternatively, state explicitly that the contrast test
+  uses `app.core.branding`'s own contrast helper, so an implementation that
+  lands exactly on the bar can never fail its own assertion.
+- Test criteria say `#857046` light is pinned "at ... 4.59"; the measured value
+  is 4.5959. Either write 4.596 (as step 4 already does) or drop the figure and
+  keep only the emitted-pair pin.
+- Because rounding now precedes the loop, the emittable primary set is a finite
+  lattice of 73 × 23 lightness/chroma points per hue. A test that sweeps that
+  lattice (or a coarse slice of it) would prove ER-4 for all inputs rather than
+  for a hostile set of eight; it runs in seconds in pure Python.
+
+## [APRAS-70] Tela de criação de condomínio — 2026-09-21 (spec_review round 1)
+
+- D5 is right that `is_active` is read-only here, but no frontend surface calls
+  `PATCH /api/v1/tenants/{id}` at all today (only `/modules` and the
+  `/subscription` family exist in `frontend/src/api/`). Worth one sentence in
+  D5 saying the badge and the status filter are, for now, reflecting a flag
+  only the API can set — otherwise the first reader of the shipped screen will
+  file "the filter never does anything" as a bug.
+- D6 says a 409 "does **not** invalidate the list", and test criterion 4 phrases
+  the same thing as "does not call the list query again". The second wording is
+  weaker (a refetch can happen for unrelated reasons); consider asserting on
+  `queryClient.invalidateQueries` not being called with `["tenants"]`, matching
+  the positive assertion in criterion 3.
+- The spec pins `iconName: "Hotel"` in "Files touched" but expected result 1
+  only requires that the name exist in `ICON_MAP`. Fine as is; just note that
+  `Landmark` is already taken by `/admin/tenant-profile`, so reusing it would
+  make the two administration entries visually identical.
+- The mock depends on `cdn.tailwindcss.com` and `unpkg.com`; if "opens
+  standalone" is ever meant to include offline, that convention needs changing
+  repo-wide, not here.
+
+## [APRAS-70] Tela de criação de condomínio — 2026-09-21 (spec_review round 2)
+
+- `expect(navItemPaths).toHaveLength(NAV_ITEMS.length)` is a tautology once
+  `navItemPaths` is `NAV_ITEMS.map(…)` — it can never fail. Keeping it is
+  harmless and arguably documents the shape, but the assertion doing the work
+  is the one on `allGroupPaths`; consider dropping the first and keeping
+  `allGroupPaths`, `uniqueGroupPaths.size` and the sorted `toEqual`.
+- The `toBeGreaterThanOrEqual(31)` floor decays: at 40 nav items it tolerates
+  nine deletions. If the project wants a guard that keeps its strength, the
+  durable form is asserting against a snapshot of the path set rather than a
+  count — but that is a repo-wide test-convention decision, not this task's.
+- `GeneralDashboardPage.test.tsx:38-45`'s `actingTenant` literal already has
+  `created_at` but no `slug`, and survives only because of `as never`. Not this
+  task's problem, but if the cast is ever removed that fixture is the next one
+  to break.
+
+## [APRAS-71] Backend do convite — 2026-09-21 (spec_review round 1)
+
+- Consider `hmac.new(settings.SECRET_KEY, raw_token, "sha256")` instead of a bare
+  `sha256`, for domain separation and so a read-only database dump is not by
+  itself enough to verify a guessed token offline. It keeps the indexed equality
+  lookup, so it costs nothing D1 relies on. Bare SHA-256 is defensible at 256 bits
+  and I am not blocking on it — but the spec's D1 could say it considered and
+  declined the pepper rather than leaving the reader to wonder.
+- Note in D10/D11 that the `RESEND_API_KEY`-absent fallback prints a **7-day
+  credential conferring `is_tenant_admin`** to stdout, where `forgot_password`
+  printed a 15-minute JWT. Same mechanism, materially different blast radius on a
+  misconfigured production deploy.
+- `tests/test_password_recovery.py` contains no stdout assertion at all (verified:
+  no `capsys`, no `[AUTH]`, no `RESEND`), so "passes unedited" does not actually
+  protect D10's byte-for-byte print claim. Pin the two `[AUTH]` lines in
+  `tests/test_mail.py` if the claim is meant to be enforced.
+- `test_migrations_postgres.py` derives `EXPECTED_HISTORY` from `HEAD_REVISION`
+  (`:58`, `:63`), so the edit is "move `HEAD_REVISION` and extend the tuple", not
+  "`EXPECTED_HISTORY` gains the new revision". Restate it that way.
+- Two test function names encode the old numbers and will read as lies after the
+  change: `test_unguarded_allowlist_is_twenty_four_routes`
+  (`test_permission_registry.py:160`) and `test_allowlist_is_twenty_eight_routes`
+  (`test_tenant_route_scope.py:129`). Renaming them does not move any count.
+- `NOQA_CAP` headroom is exactly **2** (measured: 67 effective `# noqa` under
+  `app/` + `tests/`, cap 69, self-excluded). The two rate-limited public handlers
+  each need slowapi's unused `request: Request` with a `# noqa: ARG001`, which
+  consumes the entire headroom. Worth naming in the spec so the implementer does
+  not spend a round discovering it.
+
+## [APRAS-71] Backend do convite — 2026-09-21 (spec_review round 2)
+- The "Files touched" bullet for `test_migrations_postgres.py` says
+  `EXPECTED_HISTORY` gains the new revision but does not mention
+  `HEAD_REVISION` (:58), which :318 and :331 also use. The file's own comment at
+  :55-56 says a new revision moves both, so it is mechanical, but naming it would
+  remove a step the implementer has to infer.
+- D8 enumerates the `InvitationPreview` fields as email, tenant name, slug,
+  `expires_at`, `account_exists`, while the Approach section's preview bullet also
+  lists the inviter's full name. Same schema, so one enumeration is just shorter;
+  making the two lists identical would avoid a reviewer asking about it later.
+
+## [APRAS-72] UI do convite — 2026-09-21 (spec_review round 1)
+
+- D7 should say in one clause that the **re**-preview reuses the same D7 mapping in full, so a
+  `410` or `404` answer to it lands on the expired / invalid terminal state rather than leaving
+  the form open.
+- ER9's "no copy claims the person is signed in" is the one clause a machine cannot check.
+  Pair it with two mechanical assertions that mean the same thing: the `AuthContext.login` spy
+  is never called, and `navigate` is never called with `/`.
+- APRAS-71 never enumerates `InvitationRead`'s fields (only the table columns) nor the field
+  names inside `InvitationPreview`. This spec commits to `created_at` on `InvitationRead` (the
+  panel's "sent date") and to `inviter_name` / `tenant_name` / `tenant_slug` on the preview.
+  Worth one sentence saying these names are the contract, so APRAS-71's implementation is held
+  to them rather than APRAS-72 discovering a mismatch.
+- D4 notes resend is out-of-the-box supersession; consider saying whether the resend action is
+  disabled while its mutation is pending, to avoid two superseding issues from a double click.
+
+## [APRAS-72] UI do convite — 2026-09-21 (spec_review round 2)
+
+- Expected result 7 ends "and chooses its branch from `account_exists`". In
+  context ("before any input is requested") this plainly means the form choice,
+  and result 9 removes any doubt, but "chooses which form to render from
+  `account_exists`" would make the two results impossible to read against each
+  other.
+- In the `200`-in-`false`-branch crossing the visitor has just typed a password
+  that was never used, and the terminal panel says "sign in with your current
+  password". Consider a sentence of copy guidance acknowledging the discarded
+  input, so the implementer does not invent reassurance text of their own.
+- The mock shows both branches and the error states; it does not depict the
+  crossing outcome. Not required by result 14, but a fourth acceptance-page
+  state in the mock would let a reviewer see the panel the crossing produces.
+
+## [APRAS-73] Orçamento com vários itens — 2026-09-21 (spec_review round 1)
+
+- Generalise `test_the_slug_revision_imports_nothing_from_app`
+  (`backend/tests/test_migrations_postgres.py:322`) to loop over every entry
+  in `EXPECTED_HISTORY` and rename it accordingly. As written it parses only
+  `HEAD_REVISION`, so this task's revision inherits the assertion and `0002`
+  quietly loses it. APRAS-71 D12 already proposes the same generalisation —
+  whichever lands first should do it.
+- `EXPECTED_HISTORY = (ROOT_REVISION, HEAD_REVISION)` (line 63) currently
+  derives the whole history from two constants; with a third revision it has
+  to become an explicit three-tuple. Worth one line in Files Touched so the
+  developer does not mistake it for a pure `HEAD_REVISION` edit.
+- D3 quantizes the sum of already-quantized line totals ("quantized once
+  more on the way out"). That second quantization is a no-op over exact
+  cents; keeping it is harmless and defensive, but a sentence saying it is
+  deliberately redundant would stop a later reader from removing it as dead
+  code — or from assuming it rounds something.
+- Consider stating in D10 that the backfilled description is expected to
+  read redundantly against its request's title, and that the operator's
+  first edit of the quote replaces it. It is the right choice, but the
+  reasoning deserves to survive the first "why does this say the same thing
+  twice?" from a user.
+
+## [APRAS-73] Orçamento com vários itens — 2026-09-21 (spec_review rounds 2-3)
+
+- Pin the docstring assertion to a substring (e.g. that `downgrade.__doc__`
+  contains "perda"/"lossy" and "backup"), so the test cannot pass on a
+  docstring that merely exists.
+- D2's frontend clause "and their tests" is correct but implicit; naming
+  QuoteFormModal.test.tsx, QuoteComparisonTable.test.tsx and
+  SelectQuoteModal.test.tsx would make the 26 fully explicit.
+- The mock's annotation callouts are in Portuguese while the spec is English.
+  This matches the mock convention used across APRAS-68/70/72 and the language
+  policy targets specs and technical docs, so it is not a finding — but if the
+  mock annotations are ever treated as spec text (as B3 effectively did, since
+  a wrong callout would have misled the implementer), keeping them in English
+  would remove one class of spec/mock drift.
+- ER 7 says "each cell carrying that supplier's item count and lines" without
+  naming the `N itens` / `1 item` singular-plural form that the Test Criteria
+  and the mock both use. A QA agent holding only `expected_results` would pass
+  a cell reading `3` instead of `3 itens`. Non-blocking (the result is still
+  mechanically verifiable), but tightening the wording at the next touch would
+  close the gap.
+
+## [APRAS-70] Add superuser-only condominium creation screen — 2026-09-21
+
+1. **`useTenants` duplicates an existing hook.**
+   `frontend/src/hooks/useTenants.ts:13-14` is
+   `useQuery({ queryKey: ["tenants"], queryFn: listTenants })`, which is
+   character-for-character what `useAllTenants` already is at
+   `frontend/src/hooks/useTenantModules.ts:19-20`. There is no behavioural
+   risk — both resolve to the same cache entry, so they cannot disagree — but
+   the project now has two names for one query, and a future reader changing
+   one will not find the other. The spec's "Files touched" did prescribe the
+   new file (and `useCreateTenant` needs a home), so this is not a deviation;
+   the tidy follow-up is to delete `useAllTenants`, move its one consumer to
+   `useTenants`, and leave `useTenants.ts` as the single owner of the
+   `["tenants"]` list query. Non-blocking.
+
+2. **D3's hint is a page footer, not "next to the slug".** D3 says the list
+   states *next to the slug* where the address is edited;
+   `TenantsAdminPage.tsx:361-363` renders `tenantsAdmin.slugEditHint` as a
+   paragraph below the whole table. The information is on the screen and the
+   substantive half of D3 (no slug edit, no auto tenant switch) is fully
+   honoured, so this is placement, not behaviour. If the mock shows it under
+   the slug column header, moving it there — or into the column header's title
+   attribute — would match D3's wording more literally.
+
+3. **`expect(navItemPaths).toHaveLength(NAV_ITEMS.length)` is a tautology.**
+   `navItemPaths` is `NAV_ITEMS.map(...)`, so that assertion
+   (`routeAccess.test.ts:103`) can never fail. It is harmless and it is what D8
+   literally prescribed, but the *load-bearing* version of the same idea is the
+   one on the next lines — `allGroupPaths` and `uniqueGroupPaths` compared
+   against `NAV_ITEMS.length` — which do catch omissions and duplicates.
+   Dropping the tautological line would lose nothing. Explicitly a
+   disagreement with D8's letter, hence a suggestion rather than a finding.
+
+4. **The loading state is text, not a spinner.** The Approach section says "a
+   spinner while the query is pending"; `TenantsAdminPage.tsx:293` renders
+   `<p>{t("tenantsAdmin.loading")}</p>`. Functionally equivalent and arguably
+   better for screen readers; flagging only so nobody reads it later as an
+   oversight.
+
+5. **`copied` is set optimistically.** `copySlug` (`:127-131`) calls
+   `setCopied(true)` without awaiting `writeText`, so a rejected clipboard
+   write (permission denied, insecure context) still shows "Copied". A
+   `.then(() => setCopied(true))` with a `catch` would be truthful. Very minor,
+   and the current form is what keeps the code synchronous and easy to test.
+
+6. **The table header renders with an empty body when filters match nothing.**
+   `all.length > 0` gates the table and `rows.length === 0` gates the
+   `noResults` message (`:298`, `:355`), so a non-matching filter shows column
+   headers above nothing, then the message. Rendering the message *inside* a
+   full-width `<td>` row would read slightly better, and matches what the spec
+   calls "an empty-state row". Cosmetic.
+
+## [APRAS-70] Add superuser-only condominium creation screen — 2026-09-21
+
+- `expect(navItemPaths).toHaveLength(NAV_ITEMS.length)` (routeAccess.test.ts:102) is now
+  a tautology — `navItemPaths` is `NAV_ITEMS.map(...)`, so it can never fail. The
+  expected result asks for exactly this shape, so it is correct as delivered; if the file
+  is touched again, that one line could be dropped without losing any invariant, since
+  the real coverage check is `allGroupPaths.length === NAV_ITEMS.length` plus the sorted
+  set equality.
+- The file still carries `expect(paths.length).toBeGreaterThan(20)` at line 38 from an
+  earlier task — the same kind of hard-coded board size the APRAS-70 D8 comment argues
+  against. Out of scope here; worth folding into the next edit of that test.
+- `frontend/src/api/tenants.ts` `createTenant` takes an inline `{ name: string }` literal
+  while the page and hook pass the same shape around. A named `TenantCreatePayload` type
+  would give the three call sites one declaration to change when APRAS-72 extends the
+  create body.
+- The 409 detection in `isDuplicateName` reaches into `(error as { response?: { status?:
+  number } })`. `parseApiError` already normalises axios errors elsewhere in the
+  codebase; exposing a small `httpStatus(error)` helper next to it would keep that cast
+  in one place rather than growing a copy per screen.

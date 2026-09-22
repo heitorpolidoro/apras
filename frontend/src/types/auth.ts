@@ -19,7 +19,15 @@ export interface TenantMembership {
 export interface Tenant {
   id: string;
   name: string;
+  /** The condominium's address, derived from the name by the backend
+   *  (APRAS-66). Non-optional: every `TenantRead` body carries it. */
+  slug: string;
   is_active: boolean;
+  /** ISO-8601, as `TenantRead` serialises it (APRAS-41). Non-optional for the
+   *  same reason as `slug`. `updated_at` is deliberately **not** declared —
+   *  nothing renders it, and a field no screen reads is a field no fixture
+   *  should have to invent. */
+  created_at: string;
 }
 
 export interface User {

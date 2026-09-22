@@ -87,19 +87,30 @@ describe("ROUTE_ACCESS / NAV_ITEMS", () => {
     expect(paths).toContain("/admin/subscriptions");
   });
 
-  // 30 before APRAS-61, which adds "/admin/tenant-profile" to the
-  // `administration` group.
-  it("NAV_GROUPS covers all 31 NAV_ITEMS with zero omissions and zero duplicates", () => {
+  // The board's size is not restated here (APRAS-70 D8). The invariant this
+  // test is named after — zero omissions, zero duplicates — is carried by the
+  // final set comparison together with the two lengths being equal *to each
+  // other*; a hard-coded total only encoded "the board has exactly this many
+  // screens today", which every new screen then had to remember to bump. It
+  // was bumped at APRAS-61 and would have had to be bumped again here, so it
+  // is expressed as `NAV_ITEMS.length` instead. `toHaveLength(7)` stays a
+  // literal on purpose: the group set is a design decision, not a running
+  // total.
+  it("NAV_GROUPS covers every NAV_ITEMS path with zero omissions and zero duplicates", () => {
     expect(NAV_GROUPS).toHaveLength(7);
     const navItemPaths = NAV_ITEMS.map((item) => item.path);
-    expect(navItemPaths).toHaveLength(31);
+    expect(navItemPaths).toHaveLength(NAV_ITEMS.length);
+    // The accidental-deletion guard the old literal did provide, kept
+    // explicitly and monotonically: it passes as the board grows and still
+    // fails if nav items are removed.
+    expect(navItemPaths.length).toBeGreaterThanOrEqual(31);
 
     const allGroupPaths = NAV_GROUPS.flatMap((group) => group.itemPaths);
-    expect(allGroupPaths).toHaveLength(31);
+    expect(allGroupPaths).toHaveLength(NAV_ITEMS.length);
 
     // No duplicates within all groups combined
     const uniqueGroupPaths = new Set(allGroupPaths);
-    expect(uniqueGroupPaths.size).toBe(31);
+    expect(uniqueGroupPaths.size).toBe(NAV_ITEMS.length);
 
     // Exact match of paths between NAV_GROUPS and NAV_ITEMS
     expect([...allGroupPaths].sort()).toEqual([...navItemPaths].sort());

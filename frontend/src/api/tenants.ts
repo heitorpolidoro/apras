@@ -17,6 +17,22 @@ export const listTenants = async (): Promise<Tenant[]> => {
   return response.data;
 };
 
+/**
+ * Create one condominium. Superuser only (APRAS-70).
+ *
+ * The body is `{ name }` and nothing else: `TenantCreate` has no `slug`
+ * field — `app/core/slug.py` plus `TenantService.generated_slug` are the
+ * single derivation authority, including the `-2` collision suffix — and
+ * `is_active` is omitted so the backend's `true` default applies. The
+ * authoritative slug is read from the `201` body.
+ */
+export const createTenant = async (payload: {
+  name: string;
+}): Promise<Tenant> => {
+  const response = await apiClient.post<Tenant>("/tenants", payload);
+  return response.data;
+};
+
 /** Every module and its state in one tenant. Superuser only. */
 export const getTenantModules = async (
   tenantId: string,
