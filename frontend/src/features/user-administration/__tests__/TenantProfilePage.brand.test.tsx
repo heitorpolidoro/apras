@@ -148,7 +148,7 @@ const brandSection = async () =>
   })) as HTMLElement;
 
 const switchTo = async (mode: "modeSimple" | "modeAdvanced") => {
-  const user = userEvent.setup();
+  const user = userEvent.setup({ delay: null });
   await user.click(
     within(await brandSection()).getByRole("button", {
       name: t(`tenantProfile.brand.${mode}`),
@@ -157,14 +157,50 @@ const switchTo = async (mode: "modeSimple" | "modeAdvanced") => {
   return user;
 };
 
+/**
+ * Enters a hex value into one brand field, in a single change event.
+ *
+ * The heaviest test in this file clears and retypes 14 fields of 7 characters
+ * — about 98 keystrokes — with the derive-dark checkbox cleared, which mounts
+ * 26 hex inputs instead of 13. `TenantBrandColors` memoises nothing, so every
+ * keystroke re-rendered roughly twice the tree and recomputed `contrastRatio`
+ * across the palette. Both the field count and the cost per field had doubled
+ * against vitest's fixed five-second per-test deadline, and under the load
+ * harness the test crossed it.
+ *
+ * Two changes were tried, in the order the spec prescribes. Passing
+ * `delay: null` to `userEvent.setup` (a v14 *setup* option, kept below because
+ * it is free and helps the remaining per-character path) removes the
+ * inter-keystroke hop but not the ~98 re-renders, and was **not** enough: the
+ * named test stayed red 3/3 at level A. Entering the value in one shot is what
+ * fixed it — the work itself is gone, not merely deferred. No deadline was
+ * raised anywhere.
+ */
+const hexField = (key: string) =>
+  document.querySelector<HTMLInputElement>(
+    `input[data-brand-hex="${key}"]`,
+  ) as HTMLInputElement;
+
 const typeHex = async (
   user: ReturnType<typeof userEvent.setup>,
   key: string,
   value: string,
 ) => {
-  const field = document.querySelector<HTMLInputElement>(
-    `input[data-brand-hex="${key}"]`,
-  ) as HTMLInputElement;
+  const field = hexField(key);
+  await user.clear(field);
+  fireEvent.change(field, { target: { value } });
+};
+
+/**
+ * The per-character path, kept for the one case that asserts on how the field
+ * behaves while a malformed value is being entered.
+ */
+const typeHexPerCharacter = async (
+  user: ReturnType<typeof userEvent.setup>,
+  key: string,
+  value: string,
+) => {
+  const field = hexField(key);
   await user.clear(field);
   await user.type(field, value);
 };
@@ -298,7 +334,7 @@ describe("the writes", () => {
     } as never);
     renderPage();
     const section = await brandSection();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     await typeHex(user, "primary", "#FFE680");
     await typeHex(user, "accent", "#0EA5E9");
@@ -321,7 +357,7 @@ describe("the writes", () => {
     mockedPatch.mockResolvedValue({ data: { ...PROFILE } } as never);
     renderPage();
     const section = await brandSection();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     await user.click(
       within(section).getByRole("button", { name: t("tenantProfile.brand.reset") }),
@@ -354,7 +390,7 @@ describe("the writes", () => {
     });
     renderPage();
     const section = await brandSection();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     await typeHex(user, "primary", "#7c3aed");
     await user.click(
@@ -373,9 +409,9 @@ describe("the writes", () => {
     serve();
     renderPage();
     const section = await brandSection();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
-    await typeHex(user, "primary", "#GGG");
+    await typeHexPerCharacter(user, "primary", "#GGG");
 
     expect(
       within(section).getByRole("button", { name: t("tenantProfile.brand.save") }),
@@ -429,7 +465,7 @@ describe("a condominium that already authored a palette", () => {
     } as never);
     renderPage();
     const section = await brandSection();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     await user.click(screen.getByLabelText(t("tenantProfile.brand.deriveDark")));
     for (const key of BRAND_AUTHORED_KEYS) {
@@ -453,7 +489,7 @@ describe("a condominium that already authored a palette", () => {
     mockedPatch.mockResolvedValue({ data: { ...PROFILE } } as never);
     renderPage();
     const section = await brandSection();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     const picker = section.querySelector<HTMLInputElement>(
       'input[type="color"]',
@@ -476,7 +512,7 @@ describe("a condominium that already authored a palette", () => {
     mockedPatch.mockRejectedValue({ response: { status: 500 } });
     renderPage();
     const section = await brandSection();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     await user.click(
       within(section).getByRole("button", { name: t("tenantProfile.brand.reset") }),
@@ -495,7 +531,7 @@ describe("a condominium that already authored a palette", () => {
     } as never);
     renderPage();
     const section = await brandSection();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     await user.click(
       within(section).getByRole("button", { name: t("tenantProfile.brand.save") }),
@@ -594,7 +630,7 @@ describe("a theme the server sent that this client cannot read whole", () => {
     mockedPatch.mockRejectedValue({ response: { status: 500 } });
     renderPage();
     const section = await brandSection();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     await user.click(
       within(section).getByRole("button", { name: t("tenantProfile.brand.save") }),
@@ -619,7 +655,7 @@ describe("a theme the server sent that this client cannot read whole", () => {
     });
     renderPage();
     const section = await brandSection();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     await user.click(
       within(section).getByRole("button", { name: t("tenantProfile.brand.save") }),

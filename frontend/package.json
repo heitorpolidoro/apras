@@ -7,6 +7,8 @@
     "dev": "vite",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "test:load": "bash scripts/load-test.sh a",
+    "test:load:max": "bash scripts/load-test.sh b",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"

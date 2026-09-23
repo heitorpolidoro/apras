@@ -1584,3 +1584,65 @@ after the run is byte-identical to the one at the start.
   naming convention. Out of scope for this card and not part of the expected
   results, but a plausible follow-up if non-text contrast (WCAG 1.4.11) is ever
   in scope.
+
+## [APRAS-86] Build the load-reproduction harness and fix the failures it reproduces — 2026-09-23
+
+- `frontend/src/features/user-administration/__tests__/TenantProfilePage.brand.test.tsx:160-178`: the
+  long docblock explaining the ~98-keystroke problem, the two options tried and which one sufficed is
+  attached to `hexField` (:179), but it describes `typeHex` (:184). As written, the file's most
+  important explanatory comment documents the wrong symbol — a reader jumping to `typeHex` sees no
+  rationale, and a reader of `hexField` sees a rationale for something else. Move it onto `typeHex` and
+  leave `hexField` with a one-line comment.
+- `frontend/scripts/load-test.sh:58`: `trap cleanup EXIT INT TERM` runs cleanup but never exits, so a
+  SIGINT directed at the script's own pid (as opposed to a terminal Ctrl-C, which signals the whole
+  process group) does not abort the run and the script still exits 0. Measured: hogs were still up five
+  seconds after `kill -INT`, the suite ran to completion, exit status 0. Consider
+  `trap 'cleanup; exit 130' INT` and `trap 'cleanup; exit 143' TERM`, keeping the bare `trap cleanup EXIT`.
+- `frontend/scripts/load-test.sh:80-84`: `SUITE_PIDS` collects the *subshell* pid, not the `npx`/`vitest`
+  pid, so `kill "$pid"` in cleanup relies on the signal reaching the grandchildren. It did in my SIGTERM
+  test (0 surviving vitest processes), but that is npx's propagation doing the work, not the script's.
+  Killing the process group, or `pkill -P "$pid"` before killing the subshell, would make the guarantee
+  the script's own.
+- `frontend/src/features/user-administration/__tests__/TenantProfilePage.brand.test.tsx:190-191`: add a
+  one-line comment that `await user.clear(field)` is retained deliberately — it is the remaining
+  userEvent call that enforces the disabled/readonly/interactability checks that a bare
+  `fireEvent.change` bypasses. Without the note, a future reader may reasonably read the `clear` as
+  redundant with the one-shot change and delete it, silently removing that guard from nine call sites.
+- `frontend/src/features/user-administration/__tests__/TenantProfilePage.brand.test.tsx:179-182`:
+  `hexField` casts a possibly-null `querySelector` result with `as HTMLInputElement`. A mistyped key
+  surfaces as an opaque null-deref inside userEvent rather than as "no brand hex field named X".
+  Throwing a named error on null would make the eventual failure legible. Pre-existing behaviour, merely
+  now centralised in one place where it is cheap to fix.
+- `frontend/scripts/load-test.sh:37-38`: `.load-test-logs/` accumulates one file per suite instance per
+  run forever, with no pruning and no documented retention. Twenty invocations during this task's
+  development already left a sizeable set. Consider pruning logs older than a day, or noting in the
+  header comment that the directory is the operator's to clean.
+
+## [APRAS-86] Build the load-reproduction harness and fix the failures it reproduces (QA) — 2026-09-23
+
+- The level-A gate is not host-independent. On 30 independent `npm run test:load`
+  runs of the fixed tree I got 18 green; the 12 reds were entirely category-B
+  tests (`Navbar.permissions > shows a morador exactly the links their permissions allow`
+  in 11 of 12, `RoleMembersPanel > lists the role's members` in 5) and they track
+  the host load average almost perfectly: 9/9 and 8/8 green while `load1` was
+  below ~10, 1/10 green while a concurrent process held it above 100, and one
+  run degenerated to 32 failures with `LoginPage > renders login form` among
+  them. `TenantProfilePage.brand.test.tsx` — the file this task repairs —
+  survived 29 of those 30 runs, so the diff is not what makes the gate flaky. If
+  `test:load` is ever cited as a pass/fail gate by a later task, it is worth
+  either pinning the hog count to `hw.physicalcpu` rather than the literal 12, or
+  having the script refuse to run when `sysctl -n vm.loadavg` already exceeds a
+  threshold, so a green or red bar means something about the diff rather than
+  about who else is on the machine.
+- The 64-file eslint baseline carried in the spec's result #12 is wrong: a clean
+  `8a915d4` tree measures 77 files carrying the same 375 errors + 2 warnings. The
+  developer flagged the discrepancy and could not explain it; the explanation is
+  that the baseline figure was mis-derived. Worth correcting at source so the
+  next task does not re-litigate it.
+- The report's §7d argues that D2's contention relief "had its chance in the
+  (1)→(2) column and produced a delta of zero" for the invitation test. In my own
+  sample that column moves 6/6 → 4/6, i.e. D2 *does* reduce this test's rate. The
+  (2)→(3) inference is unaffected — D2 is held fixed across it, and my (2)→(3) is
+  a larger 4/6 → 0/6 — but the "confound measured away" phrasing is stronger than
+  a single n=6 sample supports and would read better as "in this sample the
+  confound did not fire".

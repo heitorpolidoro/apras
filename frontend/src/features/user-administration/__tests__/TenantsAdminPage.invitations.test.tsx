@@ -154,6 +154,25 @@ const renderPage = (client = newClient()) => {
   return { client, ...render(<TenantsAdminPage />, { wrapper: Wrapper }) };
 };
 
+/**
+ * The "invite administrator" button of one condominium's row.
+ *
+ * Scoped by the row's own test id rather than taken as `findAllByRole(...)[0]`.
+ * The `[0]` picked its subject by **render order**, while the assertion twelve
+ * lines later names a condominium (`toHaveBeenCalledWith({ tenant_id:
+ * AURORA.id })`); the day the page sorts differently, that test goes green
+ * while asserting about the wrong tenant. That render-order correctness is the
+ * whole justification for this change, and it holds whatever the load harness
+ * reports. The row test id already exists in production
+ * (`TenantsAdminPage.tsx`, `data-testid={`tenant-row-${tenant.id}`}`), so no
+ * component change is needed.
+ */
+const inviteButtonFor = async (tenantId: string) =>
+  within(await screen.findByTestId(`tenant-row-${tenantId}`)).getByRole(
+    "button",
+    { name: t("invitations.dialog.title") },
+  );
+
 const openPanel = async (
   user: ReturnType<typeof userEvent.setup>,
   tenantId: string,
@@ -193,13 +212,7 @@ describe("TenantsAdminPage — inviting an administrator", () => {
     const user = userEvent.setup();
     renderPage();
 
-    await user.click(
-      (
-        await screen.findAllByRole("button", {
-          name: t("invitations.dialog.title"),
-        })
-      )[0],
-    );
+    await user.click(await inviteButtonFor(AURORA.id));
     await user.type(
       screen.getByLabelText(t("invitations.dialog.emailLabel")),
       "ana.souza@example.com",
@@ -228,13 +241,7 @@ describe("TenantsAdminPage — inviting an administrator", () => {
     const user = userEvent.setup();
     renderPage();
 
-    await user.click(
-      (
-        await screen.findAllByRole("button", {
-          name: t("invitations.dialog.title"),
-        })
-      )[0],
-    );
+    await user.click(await inviteButtonFor(AURORA.id));
     const submit = screen.getByRole("button", {
       name: t("invitations.dialog.submit"),
     });
@@ -270,13 +277,7 @@ describe("TenantsAdminPage — inviting an administrator", () => {
     const user = userEvent.setup();
     renderPage();
 
-    await user.click(
-      (
-        await screen.findAllByRole("button", {
-          name: t("invitations.dialog.title"),
-        })
-      )[0],
-    );
+    await user.click(await inviteButtonFor(AURORA.id));
     // Well-formed for the browser's own `type="email"` check and refused by
     // `EmailStr` all the same — the 422 this arm is about is the server's.
     await user.type(
@@ -304,13 +305,7 @@ describe("TenantsAdminPage — inviting an administrator", () => {
     const user = userEvent.setup();
     renderPage();
 
-    await user.click(
-      (
-        await screen.findAllByRole("button", {
-          name: t("invitations.dialog.title"),
-        })
-      )[0],
-    );
+    await user.click(await inviteButtonFor(AURORA.id));
     await user.click(
       screen.getByRole("button", { name: t("invitations.dialog.cancel") }),
     );
