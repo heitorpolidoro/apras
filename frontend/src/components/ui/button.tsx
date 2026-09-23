@@ -17,7 +17,13 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
-        success: "bg-emerald-600 text-white hover:bg-emerald-700",
+        // APRAS-78: retargeted to the primary token triple. `--primary`
+        // *is* emerald, so the two already differed by 2.40 L points;
+        // leaving it literal would make `success` the one button in the
+        // app a tenant's brand can never reach. Byte-identical to
+        // `default` by design — removing the now-duplicate variant is an
+        // API change and is out of scope.
+        success: "bg-primary text-primary-foreground hover:bg-primary/90",
       },
       size: {
         default: "h-9 px-4 py-2",

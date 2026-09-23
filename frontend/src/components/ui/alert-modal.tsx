@@ -115,9 +115,9 @@ const AlertModal: React.FC<AlertModalProps> = ({
             className={cn(
               "px-4 py-1.5 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               variant === "destructive"
-                ? "bg-destructive text-white hover:bg-destructive/90"
+                ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 : variant === "success"
-                  ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
                   : variant === "warning"
                     ? "bg-amber-500 text-white hover:bg-amber-600"
                     : "bg-primary text-primary-foreground hover:bg-primary/90",
