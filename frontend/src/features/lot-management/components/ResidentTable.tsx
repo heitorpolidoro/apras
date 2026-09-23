@@ -70,9 +70,9 @@ export const ResidentTable: React.FC<ResidentTableProps> = ({
   };
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-      <table className="w-full text-left text-sm text-slate-600 dark:text-slate-300">
-        <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400">
+    <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
+      <table className="w-full text-left text-sm text-muted-foreground">
+        <thead className="border-b border-border bg-muted text-xs uppercase font-semibold text-muted-foreground">
           <tr>
             <th scope="col" className="px-4 py-3">
               {t("residents.name")}
@@ -99,10 +99,10 @@ export const ResidentTable: React.FC<ResidentTableProps> = ({
             )}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+        <tbody className="divide-y divide-border">
           {residents.map((resident) => (
-            <tr key={resident.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-              <td className="px-4 py-3 font-semibold text-slate-900 dark:text-white">
+            <tr key={resident.id} className="hover:bg-accent">
+              <td className="px-4 py-3 font-semibold text-foreground">
                 <div className="flex items-center space-x-2">
                   <div className="flex size-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 font-bold text-xs">
                     {resident.full_name.charAt(0).toUpperCase()}
@@ -110,12 +110,12 @@ export const ResidentTable: React.FC<ResidentTableProps> = ({
                   <div>
                     <span>{resident.full_name}</span>
                     {resident.notes && (
-                      <p className="text-xs text-slate-400 font-normal">{resident.notes}</p>
+                      <p className="text-xs text-muted-foreground font-normal">{resident.notes}</p>
                     )}
                   </div>
                 </div>
               </td>
-              <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">
+              <td className="px-4 py-3 text-xs text-muted-foreground">
                 <div>{formatCpf(resident.cpf)}</div>
                 {resident.rg && <div className="text-[11px]">RG: {resident.rg}</div>}
               </td>
@@ -127,21 +127,21 @@ export const ResidentTable: React.FC<ResidentTableProps> = ({
                     <span className="font-medium">{resident.user.full_name}</span>
                   </div>
                 ) : (
-                  <span className="inline-flex items-center text-xs text-slate-400 italic">
+                  <span className="inline-flex items-center text-xs text-muted-foreground italic">
                     {t("residents.unlinked")}
                   </span>
                 )}
               </td>
-              <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400 space-y-0.5">
+              <td className="px-4 py-3 text-xs text-muted-foreground space-y-0.5">
                 {resident.phone && (
                   <div className="flex items-center space-x-1">
-                    <Phone className="size-3 text-slate-400" />
+                    <Phone className="size-3 text-muted-foreground" />
                     <span>{resident.phone}</span>
                   </div>
                 )}
                 {resident.email && (
                   <div className="flex items-center space-x-1">
-                    <Mail className="size-3 text-slate-400" />
+                    <Mail className="size-3 text-muted-foreground" />
                     <span>{resident.email}</span>
                   </div>
                 )}
@@ -168,7 +168,7 @@ export const ResidentTable: React.FC<ResidentTableProps> = ({
                       title={t("residents.edit")}
                       aria-label={t("residents.edit")}
                     >
-                      <Edit2 className="size-4 text-slate-600 dark:text-slate-300" />
+                      <Edit2 className="size-4 text-muted-foreground" />
                     </Button>
                     {resident.user ? (
                       <Button
@@ -188,7 +188,7 @@ export const ResidentTable: React.FC<ResidentTableProps> = ({
                         title={t("residents.linkUser")}
                         aria-label={t("residents.linkUser")}
                       >
-                        <LinkIcon className="size-4 text-emerald-600 dark:text-emerald-400" />
+                        <LinkIcon className="size-4 text-primary" />
                       </Button>
                     )}
                     <Button
@@ -198,7 +198,7 @@ export const ResidentTable: React.FC<ResidentTableProps> = ({
                       title={t("residents.deactivate")}
                       aria-label={t("residents.deactivate")}
                     >
-                      <Trash2 className="size-4 text-red-600 dark:text-red-400" />
+                      <Trash2 className="size-4 text-destructive" />
                     </Button>
                   </div>
                 </td>

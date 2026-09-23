@@ -29,7 +29,10 @@ import { describe, expect, it } from "vitest";
  * nothing else here (§3d), which is why nothing below assumes an allow-list
  * shape.
  */
-export const MIGRATED_DIRECTORIES: readonly string[] = ["src/components/ui"];
+export const MIGRATED_DIRECTORIES: readonly string[] = [
+  "src/components/ui",
+  "src/features/lot-management/components",
+];
 
 /** The eight gap codes of §1h, in precedence order. Closed set: an entry
  *  carrying anything else fails, so hiding a migratable class requires
@@ -311,6 +314,27 @@ export const violations = (
   ledger: readonly LedgerRow[],
 ): string[] => {
   const problems: string[] = [];
+  // One scan per file, not one per exception. `matchesIn` is linear in the
+  // file and `lineOf` is linear in the match offset, so re-scanning inside
+  // the exception loop is cubic once a second directory is pinned: with the
+  // pilot alone it took milliseconds, with 170 exceptions over 18 files it
+  // exceeded the 5s test timeout. Memoising changes no result — the argument
+  // is still the only input, so the mutated-argument tests below still bite.
+  // Keyed on the file *and* the source it was scanned from. `pinnedFiles()`
+  // de-duplicates through a Set, so two entries naming one file cannot occur
+  // today — but `violations` is exported and takes an arbitrary array, and a
+  // key that is right only by a caller's precondition rots silently. Holding
+  // the source makes the cache correct for any argument.
+  const scans = new Map<string, { source: string; matches: Match[] }>();
+  const scan = (file: string, source: string): Match[] => {
+    const cached = scans.get(file);
+    if (cached !== undefined && cached.source === source) {
+      return cached.matches;
+    }
+    const matches = matchesIn(file, source);
+    scans.set(file, { source, matches });
+    return matches;
+  };
   const excused = new Set(
     exceptions.map((entry) => key(entry.file, entry.class)),
   );
@@ -344,7 +368,7 @@ export const violations = (
       continue;
     }
     if (
-      !matchesIn(entry.file, source.source).some(
+      !scan(entry.file, source.source).some(
         (match) => match.text === entry.class,
       )
     ) {
@@ -375,7 +399,7 @@ export const violations = (
 
   // The guard proper.
   for (const { file, source } of files) {
-    for (const match of matchesIn(file, source)) {
+    for (const match of scan(file, source)) {
       if (excused.has(key(file, match.text))) {
         continue;
       }
@@ -446,18 +470,53 @@ describe("the §3b grammar", () => {
 });
 
 describe("MIGRATED_DIRECTORIES", () => {
-  it("is seeded with exactly src/components/ui", () => {
-    expect(MIGRATED_DIRECTORIES).toEqual(["src/components/ui"]);
+  // Written as containment plus uniqueness rather than `toEqual`, so that
+  // every child after APRAS-79 appends exactly one `toContain` and edits
+  // nothing else. A `toEqual` here would have to be rewritten seven times.
+  it("holds every directory a child has pinned, each exactly once", () => {
+    expect(MIGRATED_DIRECTORIES).toContain("src/components/ui");
+    expect(MIGRATED_DIRECTORIES).toContain(
+      "src/features/lot-management/components",
+    );
+    expect(new Set(MIGRATED_DIRECTORIES).size).toBe(
+      MIGRATED_DIRECTORIES.length,
+    );
   });
 
-  it("pins every non-test source file in that directory", () => {
+  it("pins every non-test source file in those directories", () => {
+    const roots = MIGRATED_DIRECTORIES.map((entry) =>
+      entry.endsWith(RECURSION_MARKER)
+        ? entry.slice(0, -RECURSION_MARKER.length)
+        : entry,
+    );
+
     expect(PINNED.map((file) => file.file)).toContain(
       "src/components/ui/button.tsx",
     );
+    expect(PINNED.map((file) => file.file)).toContain(
+      "src/features/lot-management/components/LotTable.tsx",
+    );
     expect(
-      PINNED.every((file) => file.file.startsWith("src/components/ui/")),
+      PINNED.every((file) =>
+        roots.some((root) => file.file.startsWith(`${root}/`)),
+      ),
     ).toBe(true);
     expect(PINNED.some((file) => /\.test\.tsx?$/.test(file.file))).toBe(false);
+  });
+
+  it("pins the files of every entry and nothing else", () => {
+    // Derived, never a literal: a hard total would have to be edited by each
+    // of the six children still to come, which is the edit items 1 and 2 of
+    // this rewrite exist to remove. Each child asserts its own directory's
+    // count in its own scoped block instead.
+    const perDirectory = MIGRATED_DIRECTORIES.map(
+      (entry) => pinnedFiles([entry]).length,
+    );
+
+    expect(perDirectory.every((count) => count > 0)).toBe(true);
+    expect(PINNED).toHaveLength(
+      perDirectory.reduce((total, count) => total + count, 0),
+    );
   });
 });
 
@@ -599,15 +658,110 @@ describe("the pilot's own ledger arithmetic", () => {
   });
 
   it("leaves 24 of the pilot's 31 palette occurrences in place", () => {
-    const remaining = PINNED.flatMap((file) =>
-      matchesIn(file.file, file.source),
-    );
+    // Scoped to the pilot's own directory exactly as `pilot` above is: over
+    // all of PINNED this figure grows with every child and would never be 24
+    // again, which would make APRAS-78's arithmetic a later child's to edit.
+    const remaining = PINNED.filter((file) =>
+      file.file.startsWith("src/components/ui/"),
+    ).flatMap((file) => matchesIn(file.file, file.source));
 
     expect(remaining).toHaveLength(24);
   });
 
   it("keeps every `why` under 120 characters and off the code", () => {
     for (const row of pilot) {
+      expect(row.why.length).toBeLessThanOrEqual(120);
+      expect(row.why).not.toContain("GAP-");
+    }
+  });
+});
+
+describe("APRAS-79's ledger arithmetic", () => {
+  // One scoped `describe` per child, appended. A child never edits another
+  // child's block, which is what keeps seven migrations from colliding in
+  // one file.
+  const DIRECTORY = "src/features/lot-management/components/";
+  const rows = LEDGER.filter((row) =>
+    toSrcRelative(row.file).startsWith(DIRECTORY),
+  );
+  const count = (code: string) => rows.filter((row) => row.code === code).length;
+
+  it("logs 211 occurrences under six codes", () => {
+    expect(rows).toHaveLength(211);
+    expect(count("GAP-SWATCH")).toBe(58);
+    expect(count("GAP-OUT-OF-BUDGET")).toBe(49);
+    expect(count("GAP-TINT")).toBe(46);
+    expect(count("GAP-NO-TOKEN")).toBe(38);
+    expect(count("GAP-BORDER-100")).toBe(12);
+    expect(count("GAP-OVERLAY")).toBe(8);
+  });
+
+  it("uses no code it does not account for", () => {
+    expect(count("GAP-NO-SURFACE")).toBe(0);
+    expect(count("GAP-UNLISTED")).toBe(0);
+  });
+
+  it("leaves 211 of the directory's 520 palette occurrences in place", () => {
+    // 520 = 166 migrated + 143 deleted `dark:` siblings + 211 left and logged.
+    const remaining = PINNED.filter((file) =>
+      file.file.startsWith(DIRECTORY),
+    ).flatMap((file) => matchesIn(file.file, file.source));
+
+    expect(remaining).toHaveLength(211);
+  });
+
+  it("excepts the 148 distinct (file, class) pairs those 211 occupy", () => {
+    const entries = EXCEPTIONS.filter((entry) =>
+      entry.file.startsWith(DIRECTORY),
+    );
+    const pairs = new Set(rows.map((row) => `${toSrcRelative(row.file)} :: ${row.class}`));
+
+    expect(entries).toHaveLength(148);
+    expect(pairs.size).toBe(148);
+    expect(entries.every((entry) => entry.task === "APRAS-79")).toBe(true);
+  });
+
+  it("keeps the four red tint triples whole, each on one line", () => {
+    const triples = [
+      ["LinkUserAccountModal.tsx", 67, "text-red-600"],
+      ["ResidentFormModal.tsx", 99, "text-red-600"],
+      ["LotFormModal.tsx", 112, "text-red-700"],
+      ["UserLotAssignmentModal.tsx", 91, "text-red-700"],
+    ] as const;
+
+    for (const [name, line, foreground] of triples) {
+      const file = `${DIRECTORY}${name}`;
+      const source = PINNED.find((pinned) => pinned.file === file);
+      const onThatLine = matchesIn(file, source?.source ?? "")
+        .filter((match) => match.line === line)
+        .map((match) => match.text);
+
+      // Same line, not merely somewhere in the file: a future edit that split
+      // a triple across two elements would pass the weaker assertion.
+      expect(onThatLine).toContain("bg-red-50");
+      expect(onThatLine).toContain(foreground);
+    }
+
+    // And no fifth triple was created: `bg-red-50` occurs exactly four times.
+    const surfaces = PINNED.filter((file) =>
+      file.file.startsWith(DIRECTORY),
+    ).flatMap((file) =>
+      matchesIn(file.file, file.source).filter(
+        (match) => match.text === "bg-red-50",
+      ),
+    );
+
+    expect(surfaces).toHaveLength(4);
+  });
+
+  it("pins the directory's nine source files", () => {
+    expect(PINNED.filter((file) => file.file.startsWith(DIRECTORY))).toHaveLength(
+      9,
+    );
+  });
+
+  it("keeps every `why` under 120 characters and off the code", () => {
+    for (const row of rows) {
       expect(row.why.length).toBeLessThanOrEqual(120);
       expect(row.why).not.toContain("GAP-");
     }

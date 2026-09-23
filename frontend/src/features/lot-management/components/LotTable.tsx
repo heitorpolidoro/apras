@@ -53,16 +53,16 @@ export const LotTable: React.FC<LotTableProps> = ({
 
   if (lots.length === 0) {
     return (
-      <div className="rounded-lg border border-slate-200 bg-white p-8 text-center text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+      <div className="rounded-lg border border-border bg-card p-8 text-center text-muted-foreground">
         {t("lots.empty")}
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-      <table className="w-full text-left text-sm text-slate-600 dark:text-slate-300">
-        <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400">
+    <div className="overflow-x-auto rounded-lg border border-border bg-card shadow-sm">
+      <table className="w-full text-left text-sm text-muted-foreground">
+        <thead className="border-b border-border bg-muted text-xs uppercase font-semibold text-muted-foreground">
           <tr>
             <th scope="col" className="px-4 py-3">
               {t("lots.block")}
@@ -90,30 +90,30 @@ export const LotTable: React.FC<LotTableProps> = ({
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+        <tbody className="divide-y divide-border">
           {lots.map((lot) => (
             <tr
               key={lot.id}
-              className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+              className="hover:bg-accent transition-colors"
             >
-              <td className="px-4 py-3 font-semibold text-slate-900 dark:text-white">
+              <td className="px-4 py-3 font-semibold text-foreground">
                 {lot.block}
               </td>
-              <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
+              <td className="px-4 py-3 font-medium text-foreground">
                 {lot.lot_number}
               </td>
-              <td className="px-4 py-3 text-slate-600 dark:text-slate-300 max-w-xs truncate">
+              <td className="px-4 py-3 text-muted-foreground max-w-xs truncate">
                 {lot.address || "-"}
               </td>
-              <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
+              <td className="px-4 py-3 text-muted-foreground">
                 {lot.postal_code || "-"}
               </td>
-              <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
+              <td className="px-4 py-3 text-muted-foreground">
                 {lot.area_sqm !== null && lot.area_sqm !== undefined
                   ? `${lot.area_sqm} m²`
                   : "-"}
               </td>
-              <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
+              <td className="px-4 py-3 text-muted-foreground">
                 {lot.fraction_ideal !== null && lot.fraction_ideal !== undefined
                   ? lot.fraction_ideal
                   : "-"}
@@ -128,7 +128,7 @@ export const LotTable: React.FC<LotTableProps> = ({
                     title={t("lots.lotDetails")}
                     aria-label={t("lots.lotDetails")}
                   >
-                    <Eye className="size-4 text-slate-600 dark:text-slate-400" />
+                    <Eye className="size-4 text-muted-foreground" />
                   </Button>
 
                   {canManage && (
@@ -162,7 +162,7 @@ export const LotTable: React.FC<LotTableProps> = ({
                       title={t("lots.delete")}
                       aria-label={t("lots.delete")}
                     >
-                      <Trash2 className="size-4 text-red-600 dark:text-red-400" />
+                      <Trash2 className="size-4 text-destructive" />
                     </Button>
                   )}
                 </div>

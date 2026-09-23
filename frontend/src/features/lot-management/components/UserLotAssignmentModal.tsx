@@ -71,9 +71,9 @@ export const UserLotAssignmentModal: React.FC<UserLotAssignmentModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-900">
+      <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-xl">
         <div className="flex items-center justify-between border-b border-slate-100 pb-4 dark:border-slate-800">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+          <h2 className="text-lg font-semibold text-foreground">
             {t("lots.linkUser")} (Q: {lotBlock}, L: {lotNumber})
           </h2>
           <Button
@@ -98,13 +98,13 @@ export const UserLotAssignmentModal: React.FC<UserLotAssignmentModalProps> = ({
               {t("lots.selectUser")} *
             </label>
             {isLoadingUsers ? (
-              <div className="text-sm text-slate-500">Carregando usuários...</div>
+              <div className="text-sm text-muted-foreground">Carregando usuários...</div>
             ) : (
               <select
                 value={selectedUserId}
                 onChange={(e) => setSelectedUserId(e.target.value)}
                 required
-                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground focus:border-blue-500 focus:outline-none"
               >
                 <option value="">{t("lots.selectUser")}...</option>
                 {users?.map((u) => (
@@ -123,7 +123,7 @@ export const UserLotAssignmentModal: React.FC<UserLotAssignmentModalProps> = ({
             <select
               value={associationType}
               onChange={(e) => setAssociationType(e.target.value as LotAssociationType)}
-              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+              className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground focus:border-blue-500 focus:outline-none"
             >
               <option value={LotAssociationType.PROPRIETARIO}>
                 {t("lots.assocProprietario")}
@@ -146,7 +146,7 @@ export const UserLotAssignmentModal: React.FC<UserLotAssignmentModalProps> = ({
               id="is_primary"
               checked={isPrimary}
               onChange={(e) => setIsPrimary(e.target.checked)}
-              className="size-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800"
+              className="size-4 rounded border-input text-blue-600 focus:ring-blue-500 dark:bg-slate-800"
             />
             <label
               htmlFor="is_primary"

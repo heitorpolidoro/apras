@@ -1,24 +1,1022 @@
 [
-  { "file": "src/components/ui/alert-modal.tsx", "class": "text-emerald-500", "code": "GAP-TINT", "task": "APRAS-78" },
-  { "file": "src/components/ui/alert-modal.tsx", "class": "text-emerald-700", "code": "GAP-TINT", "task": "APRAS-78" },
-  { "file": "src/components/ui/alert-modal.tsx", "class": "border-emerald-200", "code": "GAP-TINT", "task": "APRAS-78" },
-  { "file": "src/components/ui/alert-modal.tsx", "class": "text-amber-500", "code": "GAP-NO-TOKEN", "task": "APRAS-78" },
-  { "file": "src/components/ui/alert-modal.tsx", "class": "text-amber-700", "code": "GAP-NO-TOKEN", "task": "APRAS-78" },
-  { "file": "src/components/ui/alert-modal.tsx", "class": "border-amber-200", "code": "GAP-NO-TOKEN", "task": "APRAS-78" },
-  { "file": "src/components/ui/alert-modal.tsx", "class": "bg-black/40", "code": "GAP-OVERLAY", "task": "APRAS-78" },
-  { "file": "src/components/ui/alert-modal.tsx", "class": "bg-amber-500", "code": "GAP-NO-TOKEN", "task": "APRAS-78" },
-  { "file": "src/components/ui/alert-modal.tsx", "class": "text-white", "code": "GAP-NO-SURFACE", "task": "APRAS-78" },
-  { "file": "src/components/ui/alert-modal.tsx", "class": "hover:bg-amber-600", "code": "GAP-NO-TOKEN", "task": "APRAS-78" },
-  { "file": "src/components/ui/alert.tsx", "class": "border-emerald-500/50", "code": "GAP-TINT", "task": "APRAS-78" },
-  { "file": "src/components/ui/alert.tsx", "class": "text-emerald-700", "code": "GAP-TINT", "task": "APRAS-78" },
-  { "file": "src/components/ui/alert.tsx", "class": "bg-emerald-50", "code": "GAP-TINT", "task": "APRAS-78" },
-  { "file": "src/components/ui/alert.tsx", "class": "border-amber-500/50", "code": "GAP-NO-TOKEN", "task": "APRAS-78" },
-  { "file": "src/components/ui/alert.tsx", "class": "text-amber-700", "code": "GAP-NO-TOKEN", "task": "APRAS-78" },
-  { "file": "src/components/ui/alert.tsx", "class": "bg-amber-50", "code": "GAP-NO-TOKEN", "task": "APRAS-78" },
-  { "file": "src/components/ui/badge.tsx", "class": "bg-emerald-100", "code": "GAP-TINT", "task": "APRAS-78" },
-  { "file": "src/components/ui/badge.tsx", "class": "text-emerald-800", "code": "GAP-TINT", "task": "APRAS-78" },
-  { "file": "src/components/ui/badge.tsx", "class": "bg-red-100", "code": "GAP-TINT", "task": "APRAS-78" },
-  { "file": "src/components/ui/badge.tsx", "class": "text-red-800", "code": "GAP-TINT", "task": "APRAS-78" },
-  { "file": "src/components/ui/badge.tsx", "class": "bg-amber-100", "code": "GAP-NO-TOKEN", "task": "APRAS-78" },
-  { "file": "src/components/ui/badge.tsx", "class": "text-amber-800", "code": "GAP-NO-TOKEN", "task": "APRAS-78" }
+  {
+    "file": "src/components/ui/alert-modal.tsx",
+    "class": "text-emerald-500",
+    "code": "GAP-TINT",
+    "task": "APRAS-78"
+  },
+  {
+    "file": "src/components/ui/alert-modal.tsx",
+    "class": "text-emerald-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-78"
+  },
+  {
+    "file": "src/components/ui/alert-modal.tsx",
+    "class": "border-emerald-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-78"
+  },
+  {
+    "file": "src/components/ui/alert-modal.tsx",
+    "class": "text-amber-500",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-78"
+  },
+  {
+    "file": "src/components/ui/alert-modal.tsx",
+    "class": "text-amber-700",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-78"
+  },
+  {
+    "file": "src/components/ui/alert-modal.tsx",
+    "class": "border-amber-200",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-78"
+  },
+  {
+    "file": "src/components/ui/alert-modal.tsx",
+    "class": "bg-black/40",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-78"
+  },
+  {
+    "file": "src/components/ui/alert-modal.tsx",
+    "class": "bg-amber-500",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-78"
+  },
+  {
+    "file": "src/components/ui/alert-modal.tsx",
+    "class": "text-white",
+    "code": "GAP-NO-SURFACE",
+    "task": "APRAS-78"
+  },
+  {
+    "file": "src/components/ui/alert-modal.tsx",
+    "class": "hover:bg-amber-600",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-78"
+  },
+  {
+    "file": "src/components/ui/alert.tsx",
+    "class": "border-emerald-500/50",
+    "code": "GAP-TINT",
+    "task": "APRAS-78"
+  },
+  {
+    "file": "src/components/ui/alert.tsx",
+    "class": "text-emerald-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-78"
+  },
+  {
+    "file": "src/components/ui/alert.tsx",
+    "class": "bg-emerald-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-78"
+  },
+  {
+    "file": "src/components/ui/alert.tsx",
+    "class": "border-amber-500/50",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-78"
+  },
+  {
+    "file": "src/components/ui/alert.tsx",
+    "class": "text-amber-700",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-78"
+  },
+  {
+    "file": "src/components/ui/alert.tsx",
+    "class": "bg-amber-50",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-78"
+  },
+  {
+    "file": "src/components/ui/badge.tsx",
+    "class": "bg-emerald-100",
+    "code": "GAP-TINT",
+    "task": "APRAS-78"
+  },
+  {
+    "file": "src/components/ui/badge.tsx",
+    "class": "text-emerald-800",
+    "code": "GAP-TINT",
+    "task": "APRAS-78"
+  },
+  {
+    "file": "src/components/ui/badge.tsx",
+    "class": "bg-red-100",
+    "code": "GAP-TINT",
+    "task": "APRAS-78"
+  },
+  {
+    "file": "src/components/ui/badge.tsx",
+    "class": "text-red-800",
+    "code": "GAP-TINT",
+    "task": "APRAS-78"
+  },
+  {
+    "file": "src/components/ui/badge.tsx",
+    "class": "bg-amber-100",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-78"
+  },
+  {
+    "file": "src/components/ui/badge.tsx",
+    "class": "text-amber-800",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-78"
+  },
+  {
+    "file": "src/features/lot-management/components/LinkUserAccountModal.tsx",
+    "class": "bg-black/40",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LinkUserAccountModal.tsx",
+    "class": "bg-emerald-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LinkUserAccountModal.tsx",
+    "class": "bg-red-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LinkUserAccountModal.tsx",
+    "class": "dark:bg-emerald-950/40",
+    "code": "GAP-TINT",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LinkUserAccountModal.tsx",
+    "class": "dark:bg-red-950/50",
+    "code": "GAP-TINT",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LinkUserAccountModal.tsx",
+    "class": "dark:divide-slate-800",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LinkUserAccountModal.tsx",
+    "class": "dark:text-red-400",
+    "code": "GAP-TINT",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LinkUserAccountModal.tsx",
+    "class": "dark:text-slate-300",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LinkUserAccountModal.tsx",
+    "class": "divide-slate-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LinkUserAccountModal.tsx",
+    "class": "text-red-600",
+    "code": "GAP-TINT",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LinkUserAccountModal.tsx",
+    "class": "text-slate-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "bg-amber-100",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "bg-black/40",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "bg-blue-100",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "bg-blue-50",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "bg-emerald-100",
+    "code": "GAP-TINT",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "bg-emerald-50",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "bg-purple-50",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "bg-slate-100",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "bg-slate-50",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "border-red-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "border-slate-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "dark:bg-amber-900/40",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "dark:bg-amber-900/50",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "dark:bg-blue-900/30",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "dark:bg-blue-900/40",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "dark:bg-emerald-900/30",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "dark:bg-emerald-900/40",
+    "code": "GAP-TINT",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "dark:bg-purple-900/30",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "dark:bg-slate-800",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "dark:border-red-900/50",
+    "code": "GAP-TINT",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "dark:border-slate-800",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "dark:hover:text-slate-300",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "dark:text-amber-300",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "dark:text-blue-300",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "dark:text-emerald-300",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "dark:text-purple-300",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "dark:text-slate-300",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "dark:text-slate-400",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "hover:text-slate-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "ring-blue-700/10",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "ring-emerald-600/20",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "ring-purple-600/20",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "ring-slate-500/10",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "text-amber-800",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "text-blue-700",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "text-blue-800",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "text-emerald-700",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "text-emerald-800",
+    "code": "GAP-TINT",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "text-purple-700",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotDetailsView.tsx",
+    "class": "text-slate-600",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotFormModal.tsx",
+    "class": "bg-black/50",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotFormModal.tsx",
+    "class": "bg-red-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotFormModal.tsx",
+    "class": "border-slate-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotFormModal.tsx",
+    "class": "dark:bg-red-900/30",
+    "code": "GAP-TINT",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotFormModal.tsx",
+    "class": "dark:border-slate-800",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotFormModal.tsx",
+    "class": "dark:text-red-400",
+    "code": "GAP-TINT",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotFormModal.tsx",
+    "class": "dark:text-slate-300",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotFormModal.tsx",
+    "class": "focus:border-blue-500",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotFormModal.tsx",
+    "class": "text-red-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotFormModal.tsx",
+    "class": "text-slate-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotTable.tsx",
+    "class": "bg-amber-100",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotTable.tsx",
+    "class": "bg-blue-100",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotTable.tsx",
+    "class": "bg-emerald-100",
+    "code": "GAP-TINT",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotTable.tsx",
+    "class": "dark:bg-amber-900/40",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotTable.tsx",
+    "class": "dark:bg-blue-900/40",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotTable.tsx",
+    "class": "dark:bg-emerald-900/40",
+    "code": "GAP-TINT",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotTable.tsx",
+    "class": "dark:text-amber-300",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotTable.tsx",
+    "class": "dark:text-amber-400",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotTable.tsx",
+    "class": "dark:text-blue-300",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotTable.tsx",
+    "class": "dark:text-blue-400",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotTable.tsx",
+    "class": "dark:text-emerald-300",
+    "code": "GAP-TINT",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotTable.tsx",
+    "class": "text-amber-600",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotTable.tsx",
+    "class": "text-amber-800",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotTable.tsx",
+    "class": "text-blue-600",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotTable.tsx",
+    "class": "text-blue-800",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotTable.tsx",
+    "class": "text-emerald-800",
+    "code": "GAP-TINT",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotsPage.tsx",
+    "class": "bg-black/40",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotsPage.tsx",
+    "class": "border-red-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotsPage.tsx",
+    "class": "dark:border-red-900/50",
+    "code": "GAP-TINT",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/LotsPage.tsx",
+    "class": "focus:border-blue-500",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentFormModal.tsx",
+    "class": "bg-black/40",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentFormModal.tsx",
+    "class": "bg-red-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentFormModal.tsx",
+    "class": "dark:bg-red-950/50",
+    "code": "GAP-TINT",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentFormModal.tsx",
+    "class": "dark:text-red-400",
+    "code": "GAP-TINT",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentFormModal.tsx",
+    "class": "dark:text-slate-300",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentFormModal.tsx",
+    "class": "text-red-600",
+    "code": "GAP-TINT",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentFormModal.tsx",
+    "class": "text-slate-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "bg-amber-50",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "bg-blue-50",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "bg-emerald-100",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "bg-emerald-50",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "bg-pink-50",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "bg-purple-50",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "bg-slate-100",
+    "code": "GAP-TINT",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "bg-slate-50",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "border-emerald-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "dark:bg-amber-900/30",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "dark:bg-blue-900/30",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "dark:bg-emerald-900/30",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "dark:bg-emerald-900/40",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "dark:bg-emerald-950/40",
+    "code": "GAP-TINT",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "dark:bg-pink-900/30",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "dark:bg-purple-900/30",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "dark:bg-slate-800",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "dark:border-emerald-800/50",
+    "code": "GAP-TINT",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "dark:text-amber-300",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "dark:text-amber-400",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "dark:text-blue-300",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "dark:text-emerald-300",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "dark:text-emerald-400",
+    "code": "GAP-TINT",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "dark:text-pink-300",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "dark:text-purple-300",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "dark:text-slate-400",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "ring-amber-600/20",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "ring-blue-700/10",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "ring-emerald-600/20",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "ring-pink-700/10",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "ring-purple-700/10",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "ring-slate-500/10",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "text-amber-600",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "text-amber-700",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "text-blue-700",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "text-emerald-700",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "text-emerald-800",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "text-pink-700",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "text-purple-700",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentTable.tsx",
+    "class": "text-slate-600",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentsTab.tsx",
+    "class": "bg-black/40",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentsTab.tsx",
+    "class": "border-amber-200",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentsTab.tsx",
+    "class": "border-red-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentsTab.tsx",
+    "class": "dark:border-amber-900/50",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentsTab.tsx",
+    "class": "dark:border-red-900/50",
+    "code": "GAP-TINT",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentsTab.tsx",
+    "class": "dark:text-amber-400",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/ResidentsTab.tsx",
+    "class": "text-amber-600",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/UserLotAssignmentModal.tsx",
+    "class": "bg-black/50",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/UserLotAssignmentModal.tsx",
+    "class": "bg-red-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/UserLotAssignmentModal.tsx",
+    "class": "border-slate-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/UserLotAssignmentModal.tsx",
+    "class": "dark:bg-red-900/30",
+    "code": "GAP-TINT",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/UserLotAssignmentModal.tsx",
+    "class": "dark:bg-slate-800",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/UserLotAssignmentModal.tsx",
+    "class": "dark:border-slate-800",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/UserLotAssignmentModal.tsx",
+    "class": "dark:text-red-400",
+    "code": "GAP-TINT",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/UserLotAssignmentModal.tsx",
+    "class": "dark:text-slate-300",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/UserLotAssignmentModal.tsx",
+    "class": "focus:border-blue-500",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/UserLotAssignmentModal.tsx",
+    "class": "focus:ring-blue-500",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/UserLotAssignmentModal.tsx",
+    "class": "text-blue-600",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/UserLotAssignmentModal.tsx",
+    "class": "text-red-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/lot-management/components/UserLotAssignmentModal.tsx",
+    "class": "text-slate-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-79"
+  }
 ]

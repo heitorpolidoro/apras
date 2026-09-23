@@ -29,7 +29,7 @@ export const LotDetailsView: React.FC<LotDetailsViewProps> = ({
 
   if (isLoading) {
     return (
-      <div className="p-8 text-center text-slate-500">
+      <div className="p-8 text-center text-muted-foreground">
         {t("lots.loading")}
       </div>
     );
@@ -37,7 +37,7 @@ export const LotDetailsView: React.FC<LotDetailsViewProps> = ({
 
   if (isError || !lot) {
     return (
-      <div className="p-8 text-center text-red-500">
+      <div className="p-8 text-center text-destructive">
         Erro ao carregar detalhes do lote.
       </div>
     );
@@ -95,14 +95,14 @@ export const LotDetailsView: React.FC<LotDetailsViewProps> = ({
       </div>
 
       {/* Lot Info Card */}
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
         <div className="flex items-center justify-between border-b border-slate-100 pb-4 dark:border-slate-800">
           <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+            <h2 className="text-xl font-bold text-foreground">
               {t("lots.block")} {lot.block} — {t("lots.lotNumber")} {lot.lot_number}
             </h2>
             {lot.address && (
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              <p className="mt-1 text-sm text-muted-foreground">
                 {lot.address} {lot.postal_code ? `(${lot.postal_code})` : ""}
               </p>
             )}
@@ -128,26 +128,26 @@ export const LotDetailsView: React.FC<LotDetailsViewProps> = ({
 
         <div className="mt-4 grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
           <div>
-            <span className="block text-xs font-medium text-slate-500 dark:text-slate-400">
+            <span className="block text-xs font-medium text-muted-foreground">
               {t("lots.areaSqm")}
             </span>
-            <span className="font-medium text-slate-900 dark:text-white">
+            <span className="font-medium text-foreground">
               {lot.area_sqm ? `${lot.area_sqm} m²` : "-"}
             </span>
           </div>
           <div>
-            <span className="block text-xs font-medium text-slate-500 dark:text-slate-400">
+            <span className="block text-xs font-medium text-muted-foreground">
               {t("lots.fractionIdeal")}
             </span>
-            <span className="font-medium text-slate-900 dark:text-white">
+            <span className="font-medium text-foreground">
               {lot.fraction_ideal ?? "-"}
             </span>
           </div>
           <div className="col-span-2">
-            <span className="block text-xs font-medium text-slate-500 dark:text-slate-400">
+            <span className="block text-xs font-medium text-muted-foreground">
               {t("lots.notes")}
             </span>
-            <span className="font-medium text-slate-900 dark:text-white">
+            <span className="font-medium text-foreground">
               {lot.notes || "-"}
             </span>
           </div>
@@ -155,15 +155,15 @@ export const LotDetailsView: React.FC<LotDetailsViewProps> = ({
       </div>
 
       {/* Tabs Navigation */}
-      <div className="border-b border-slate-200 dark:border-slate-800">
+      <div className="border-b border-border">
         <nav className="-mb-px flex space-x-6" aria-label="Tabs">
           <button
             type="button"
             onClick={() => setActiveTab("users")}
             className={`whitespace-nowrap pb-4 text-sm font-semibold border-b-2 transition-colors ${
               activeTab === "users"
-                ? "border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400"
-                : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:border-input hover:text-slate-700 dark:hover:text-slate-300"
             }`}
           >
             {t("lots.linkedUsersTab")} ({lot.users.length})
@@ -173,8 +173,8 @@ export const LotDetailsView: React.FC<LotDetailsViewProps> = ({
             onClick={() => setActiveTab("residents")}
             className={`whitespace-nowrap pb-4 text-sm font-semibold border-b-2 transition-colors ${
               activeTab === "residents"
-                ? "border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400"
-                : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:border-input hover:text-slate-700 dark:hover:text-slate-300"
             }`}
           >
             {t("residents.residentsTab")}
@@ -186,20 +186,20 @@ export const LotDetailsView: React.FC<LotDetailsViewProps> = ({
         <ResidentsTab lotId={lotId} canManage={canManage} />
       ) : (
         /* Linked Users Table */
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
+        <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+          <h3 className="text-lg font-semibold text-foreground mb-4">
             {t("lots.linkedUsers")} ({lot.users.length})
           </h3>
 
           {lot.users.length === 0 ? (
-            <p className="text-sm text-slate-500 dark:text-slate-400">
+            <p className="text-sm text-muted-foreground">
               {t("lots.noLinkedUsers")}
             </p>
           ) : (
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-slate-600 dark:text-slate-300">
-              <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400">
+            <table className="w-full text-left text-sm text-muted-foreground">
+              <thead className="border-b border-border bg-muted text-xs uppercase font-semibold text-muted-foreground">
                 <tr>
                   <th scope="col" className="px-4 py-3">
                     Usuário
@@ -217,9 +217,9 @@ export const LotDetailsView: React.FC<LotDetailsViewProps> = ({
                   )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+              <tbody className="divide-y divide-border">
                 {lot.users.map((link) => (
-                  <tr key={link.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                  <tr key={link.id} className="hover:bg-accent">
                     <td className="px-4 py-3">
                       <div className="flex items-center space-x-3">
                         <div className="flex size-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 font-semibold text-xs">
@@ -227,7 +227,7 @@ export const LotDetailsView: React.FC<LotDetailsViewProps> = ({
                         </div>
                         <div>
                           <div className="flex items-center space-x-2">
-                            <span className="font-semibold text-slate-900 dark:text-white">
+                            <span className="font-semibold text-foreground">
                               {link.user.full_name}
                             </span>
                             {link.is_primary && (
@@ -236,7 +236,7 @@ export const LotDetailsView: React.FC<LotDetailsViewProps> = ({
                               </span>
                             )}
                           </div>
-                          <div className="flex items-center text-xs text-slate-500 space-x-1">
+                          <div className="flex items-center text-xs text-muted-foreground space-x-1">
                             <Mail className="size-3" />
                             <span>{link.user.email}</span>
                           </div>
@@ -244,7 +244,7 @@ export const LotDetailsView: React.FC<LotDetailsViewProps> = ({
                       </div>
                     </td>
                     <td className="px-4 py-3">{getAssocBadge(link.association_type)}</td>
-                    <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">
+                    <td className="px-4 py-3 text-xs text-muted-foreground">
                       {link.user.roles.join(", ")}
                     </td>
                     {canManage && (
@@ -258,7 +258,7 @@ export const LotDetailsView: React.FC<LotDetailsViewProps> = ({
                           title={t("lots.unlinkUser")}
                           aria-label={t("lots.unlinkUser")}
                         >
-                          <Trash2 className="size-4 text-red-600 dark:text-red-400" />
+                          <Trash2 className="size-4 text-destructive" />
                         </Button>
                       </td>
                     )}
@@ -274,11 +274,11 @@ export const LotDetailsView: React.FC<LotDetailsViewProps> = ({
       {userToUnlink && (
 
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-sm rounded-xl border border-red-200 bg-white p-6 shadow-xl dark:border-red-900/50 dark:bg-slate-900">
-            <h3 className="text-base font-semibold text-red-600 dark:text-red-400">
+          <div className="w-full max-w-sm rounded-xl border border-red-200 bg-card p-6 shadow-xl dark:border-red-900/50">
+            <h3 className="text-base font-semibold text-destructive">
               {t("lots.unlinkUser")}
             </h3>
-            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+            <p className="mt-2 text-sm text-muted-foreground">
               {t("lots.confirmUnlink", { name: userToUnlink.name })}
             </p>
             <div className="mt-5 flex justify-end space-x-3">

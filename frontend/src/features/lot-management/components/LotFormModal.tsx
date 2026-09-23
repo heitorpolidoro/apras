@@ -92,9 +92,9 @@ export const LotFormModal: React.FC<LotFormModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-lg rounded-xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-900">
+      <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-xl">
         <div className="flex items-center justify-between border-b border-slate-100 pb-4 dark:border-slate-800">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+          <h2 className="text-lg font-semibold text-foreground">
             {initialData ? t("lots.editLot") : t("lots.newLot")}
           </h2>
           <Button
@@ -194,7 +194,7 @@ export const LotFormModal: React.FC<LotFormModalProps> = ({
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as LotStatus)}
-              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+              className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground focus:border-blue-500 focus:outline-none"
             >
               <option value={LotStatus.VACANT}>{t("lots.statusVacant")}</option>
               <option value={LotStatus.OCCUPIED}>{t("lots.statusOccupied")}</option>
@@ -212,7 +212,7 @@ export const LotFormModal: React.FC<LotFormModalProps> = ({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
-              className="w-full rounded-md border border-slate-300 bg-white p-2.5 text-sm text-slate-900 focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+              className="w-full rounded-md border border-input bg-card p-2.5 text-sm text-foreground focus:border-blue-500 focus:outline-none"
               placeholder="Informações adicionais..."
             />
           </div>

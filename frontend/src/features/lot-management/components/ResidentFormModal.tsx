@@ -90,8 +90,8 @@ export const ResidentFormModal: React.FC<ResidentFormModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="w-full max-w-lg rounded-xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-900">
-        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">
+      <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-xl">
+        <h3 className="text-lg font-bold text-foreground mb-4">
           {initialData ? t("residents.editResident") : t("residents.newResident")}
         </h3>
 
@@ -111,7 +111,7 @@ export const ResidentFormModal: React.FC<ResidentFormModalProps> = ({
               required
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+              className="w-full rounded-md border border-input px-3 py-2 text-sm bg-card text-foreground"
               placeholder={t("residents.namePlaceholder")}
             />
           </div>
@@ -126,7 +126,7 @@ export const ResidentFormModal: React.FC<ResidentFormModalProps> = ({
                 required
                 value={cpf}
                 onChange={(e) => setCpf(e.target.value)}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                className="w-full rounded-md border border-input px-3 py-2 text-sm bg-card text-foreground"
                 placeholder="000.000.000-00"
               />
             </div>
@@ -138,7 +138,7 @@ export const ResidentFormModal: React.FC<ResidentFormModalProps> = ({
                 type="text"
                 value={rg}
                 onChange={(e) => setRg(e.target.value)}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                className="w-full rounded-md border border-input px-3 py-2 text-sm bg-card text-foreground"
                 placeholder="00.000.000-0"
               />
             </div>
@@ -153,7 +153,7 @@ export const ResidentFormModal: React.FC<ResidentFormModalProps> = ({
                 type="date"
                 value={birthDate}
                 onChange={(e) => setBirthDate(e.target.value)}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                className="w-full rounded-md border border-input px-3 py-2 text-sm bg-card text-foreground"
               />
             </div>
             <div>
@@ -163,7 +163,7 @@ export const ResidentFormModal: React.FC<ResidentFormModalProps> = ({
               <select
                 value={relationshipType}
                 onChange={(e) => setRelationshipType(e.target.value as ResidentRelationship)}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                className="w-full rounded-md border border-input px-3 py-2 text-sm bg-card text-foreground"
               >
                 <option value={ResidentRelationship.TITULAR}>{t("residents.relTitular")}</option>
                 <option value={ResidentRelationship.CONJUGE}>{t("residents.relConjuge")}</option>
@@ -184,7 +184,7 @@ export const ResidentFormModal: React.FC<ResidentFormModalProps> = ({
                 type="text"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                className="w-full rounded-md border border-input px-3 py-2 text-sm bg-card text-foreground"
                 placeholder="(00) 00000-0000"
               />
             </div>
@@ -196,7 +196,7 @@ export const ResidentFormModal: React.FC<ResidentFormModalProps> = ({
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                className="w-full rounded-md border border-input px-3 py-2 text-sm bg-card text-foreground"
                 placeholder="nome@email.com"
               />
             </div>
@@ -210,7 +210,7 @@ export const ResidentFormModal: React.FC<ResidentFormModalProps> = ({
               rows={2}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+              className="w-full rounded-md border border-input px-3 py-2 text-sm bg-card text-foreground"
               placeholder={t("residents.notesPlaceholder")}
             />
           </div>
