@@ -101,7 +101,7 @@ class TenantProfileRead(BaseModel):
     timestamps are operator data. ``logo_url`` is what the surface exists for.
 
     ``brand_theme`` is what the tenant chose, normalised; ``theme`` is what
-    ``app.core.branding.build_theme`` derives from it (APRAS-68) -- 17 CSS
+    ``app.core.branding.build_theme`` derives from it (APRAS-68) -- 18 CSS
     custom properties per scheme, **derived on read and never stored**, so a
     change to the derivation reaches every tenant without a data migration.
     Both are ``null`` for a condominium with no colours, and the client then

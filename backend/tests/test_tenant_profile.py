@@ -552,7 +552,7 @@ def test_patch_accepts_uppercase_hex_and_stores_lowercase(
     assert _branding_of(session)["accent"] == "#0ea5e9"
 
 
-def test_the_derived_theme_carries_seventeen_variables_per_scheme(
+def test_the_derived_theme_carries_eighteen_variables_per_scheme(
     tenant_client: TestClient, session: Session
 ):
     caller = _member(session, permissions=[PERMISSION])

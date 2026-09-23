@@ -11,6 +11,7 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-text: var(--primary-text);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -36,11 +37,19 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.14 0.01 160);
   --primary: oklch(0.62 0.15 160); /* Emerald Green */
-  /* Dark, not near-white: white on the emerald measures 3.2169:1, this 5.7548:1.
+  /* Dark, not near-white: white on the emerald measures 3.2169:1, this 5.7588:1.
      The brand colour itself must not move, and this is the same foreground the
      backend's branded-theme rule picks for this hue, so a branded and an
      unbranded tenant render alike. Guarded by src/__tests__/themeContrast.test.ts. */
   --primary-foreground: oklch(0.15 0.02 160);
+  /* The brand as *characters*: --primary is a surface colour and fails AA as
+     normal text on every light surface (3.4054:1 on --card, 3.3091:1 on
+     --background, 3.0427:1 on --muted/--accent). This is --primary walked down
+     the 0.01 lightness grid by the backend's own derive_brand_text until it
+     clears 4.5:1 on all four: 5.2096:1 on --card, 5.0622:1 on --background,
+     4.6547:1 on --muted and --accent. Guarded by
+     src/__tests__/themeContrast.test.ts. */
+  --primary-text: oklch(0.52 0.11 160);
   --secondary: oklch(0.96 0.01 160);
   --secondary-foreground: oklch(0.2 0.02 160);
   --muted: oklch(0.96 0.01 160);
@@ -87,6 +96,11 @@
   --popover-foreground: oklch(0.98 0.01 160);
   --primary: oklch(0.65 0.15 160);
   --primary-foreground: oklch(0.1 0.02 160);
+  /* Byte-identical to --primary here: at lightness 0.65 the brand already
+     clears AA on every dark surface (worst 5.7010:1 on --muted), so the
+     derivation returns its input unchanged. Guarded by
+     src/__tests__/themeContrast.test.ts. */
+  --primary-text: oklch(0.65 0.15 160);
   --secondary: oklch(0.22 0.02 160);
   --secondary-foreground: oklch(0.98 0.01 160);
   --muted: oklch(0.22 0.02 160);

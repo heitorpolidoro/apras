@@ -27,7 +27,13 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { beforeAll, describe, expect, it } from "vitest";
 import { compile } from "tailwindcss";
-import { hexToOklch, parseOklch, type Oklch } from "../lib/contrast";
+import {
+  contrastRatio,
+  hexToOklch,
+  MINIMUM_CONTRAST_RATIO,
+  parseOklch,
+  type Oklch,
+} from "../lib/contrast";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const SRC = path.resolve(HERE, "..");
@@ -55,6 +61,23 @@ interface Row {
    *  composited. The colour comparison uses the base token. */
   alpha?: number;
 }
+
+/** The nine brand **text** classes §1k routes to `*-primary-text` rather
+ *  than to `*-primary` (APRAS-88). Their rows below are retargeted **in
+ *  place**; appending new ones would leave nine stale `text-primary` rows
+ *  that still pass — `--primary` does not move — and green a suite that
+ *  contradicts the table it guards. */
+const BRAND_TEXT_CLASSES: readonly string[] = [
+  "text-indigo-300",
+  "text-indigo-500",
+  "text-indigo-600",
+  "text-indigo-700",
+  "text-indigo-800",
+  "text-indigo-900",
+  "text-emerald-500",
+  "text-emerald-600",
+  "text-emerald-700",
+];
 
 /** Every class pair in §1b–1e, published values included. */
 const ROWS: readonly Row[] = [
@@ -102,18 +125,18 @@ const ROWS: readonly Row[] = [
 
   // §1e — brand, accent and destructive.
   { source: "bg-indigo-500", target: "bg-primary", dL: 3.5, dE: 33.15 },
-  { source: "text-indigo-500", target: "text-primary", dL: 3.5, dE: 33.15 },
+  { source: "text-indigo-500", target: "text-primary-text", dL: 6.5, dE: 30.66 },
   { source: "border-indigo-500", target: "border-primary", dL: 3.5, dE: 33.15 },
   { source: "ring-indigo-500", target: "ring-ring", dL: 3.5, dE: 33.15 },
   { source: "bg-indigo-600", target: "bg-primary", dL: 10.9, dE: 37.24 },
-  { source: "text-indigo-600", target: "text-primary", dL: 10.9, dE: 37.24 },
+  { source: "text-indigo-600", target: "text-primary-text", dL: 0.9, dE: 32.71 },
   { source: "border-indigo-600", target: "border-primary", dL: 10.9, dE: 37.24 },
   { source: "accent-indigo-600", target: "accent-primary", dL: 10.9, dE: 37.24 },
   { source: "bg-indigo-700", target: "bg-primary/90", dL: 16.3, dE: 37.33, alpha: 90 },
-  { source: "text-indigo-700", target: "text-primary", dL: 16.3, dE: 37.33 },
-  { source: "text-indigo-800", target: "text-primary", dL: 22.2, dE: 36.97 },
-  { source: "text-indigo-900", target: "text-primary", dL: 26.1, dE: 36.35 },
-  { source: "text-indigo-300", target: "text-primary", dL: 16.5, dE: 27.82 },
+  { source: "text-indigo-700", target: "text-primary-text", dL: 6.3, dE: 31.25 },
+  { source: "text-indigo-800", target: "text-primary-text", dL: 12.2, dE: 29.11 },
+  { source: "text-indigo-900", target: "text-primary-text", dL: 16.1, dE: 27.2 },
+  { source: "text-indigo-300", target: "text-primary-text", dL: 26.5, dE: 32.58 },
   { source: "border-indigo-400", target: "border-primary", dL: 5.3, dE: 28.84 },
   { source: "bg-indigo-50", target: "bg-accent", dL: 0.2, dE: 2.38 },
   { source: "bg-indigo-100", target: "bg-accent", dL: 3.0, dE: 4.92 },
@@ -121,15 +144,15 @@ const ROWS: readonly Row[] = [
   { source: "border-indigo-100", target: "border-border", dL: 1.0, dE: 4.02 },
   { source: "border-indigo-200", target: "border-border", dL: 5.0, dE: 8.58 },
   { source: "bg-emerald-500", target: "bg-primary", dL: 7.6, dE: 7.89 },
-  { source: "text-emerald-500", target: "text-primary", dL: 7.6, dE: 7.89 },
+  { source: "text-emerald-500", target: "text-primary-text", dL: 17.6, dE: 18.6 },
   { source: "border-emerald-500", target: "border-primary", dL: 7.6, dE: 7.89 },
   { source: "ring-emerald-500", target: "ring-ring", dL: 7.6, dE: 7.89 },
   { source: "bg-emerald-600", target: "bg-primary", dL: 2.4, dE: 2.59 },
-  { source: "text-emerald-600", target: "text-primary", dL: 2.4, dE: 2.59 },
+  { source: "text-emerald-600", target: "text-primary-text", dL: 7.6, dE: 8.4 },
   { source: "border-emerald-600", target: "border-primary", dL: 2.4, dE: 2.59 },
   { source: "ring-emerald-600", target: "ring-ring", dL: 2.4, dE: 2.59 },
   { source: "bg-emerald-700", target: "bg-primary/90", dL: 11.2, dE: 11.72, alpha: 90 },
-  { source: "text-emerald-700", target: "text-primary", dL: 11.2, dE: 11.72 },
+  { source: "text-emerald-700", target: "text-primary-text", dL: 1.2, dE: 1.82 },
   { source: "text-red-600", target: "text-destructive", dL: 0.3, dE: 0.6 },
   { source: "bg-red-600", target: "bg-destructive", dL: 0.3, dE: 0.6 },
   { source: "text-red-500", target: "text-destructive", dL: 5.7, dE: 5.75 },
@@ -381,6 +404,11 @@ beforeAll(async () => {
   candidates.add("bg-muted");
   candidates.add("bg-accent");
   candidates.add("bg-secondary");
+  // §1k's four text surfaces, plus the token the nine rows no longer target:
+  // `text-primary` is still measured, as the *before* side of the repair.
+  candidates.add("bg-background");
+  candidates.add("bg-card");
+  candidates.add("text-primary");
   sheet = await build([...candidates]);
 });
 
@@ -467,5 +495,60 @@ describe("what the numbers cannot see (§1f case 2)", () => {
 
     expect(deltaE(muted, accent)).toBe(0);
     expect(deltaE(muted, secondary)).toBe(0);
+  });
+});
+
+describe("§1k, the brand text token (APRAS-88)", () => {
+  it("routes every one of the nine brand text classes to text-primary-text", () => {
+    for (const source of BRAND_TEXT_CLASSES) {
+      const rows = ROWS.filter((row) => row.source === source);
+
+      expect(rows.map((row) => row.target), source).toEqual([
+        "text-primary-text",
+      ]);
+    }
+  });
+
+  it("leaves every non-text brand utility on *-primary", () => {
+    // The other half of §1k: `bg-`, `border-`, `ring-` and `accent-` are
+    // graphical objects at a 3:1 floor and do not move.
+    const graphical = ROWS.filter(
+      (row) =>
+        /^(bg|border|ring|accent)-(indigo|emerald)-[567]00$/.test(row.source),
+    );
+
+    expect(graphical.length).toBe(14);
+    for (const row of graphical) {
+      expect(row.target, row.source).toMatch(/^(bg|border|ring|accent)-(primary|ring)/);
+      expect(row.target).not.toContain("primary-text");
+    }
+  });
+
+  it("measures the token AA-clean on all four text surfaces, and --primary not", () => {
+    // Measured with `src/lib/contrast.ts` — the repository's single contrast
+    // implementation, imported and never reimplemented — on the values the
+    // compiled `index.css` actually resolves to.
+    const text = sheet.colourOf("text-primary-text");
+    const primary = sheet.colourOf("text-primary");
+    const surfaces = {
+      card: 5.2096,
+      background: 5.0622,
+      muted: 4.6547,
+      accent: 4.6547,
+    } as const;
+    const before = { card: 3.4054, background: 3.3091, muted: 3.0427 } as const;
+
+    for (const [surface, ratio] of Object.entries(surfaces)) {
+      const measured = contrastRatio(text, sheet.colourOf(`bg-${surface}`));
+
+      expect(measured, `--primary-text on --${surface}`).toBeCloseTo(ratio, 3);
+      expect(measured).toBeGreaterThanOrEqual(MINIMUM_CONTRAST_RATIO);
+    }
+    for (const [surface, ratio] of Object.entries(before)) {
+      const measured = contrastRatio(primary, sheet.colourOf(`bg-${surface}`));
+
+      expect(measured, `--primary on --${surface}`).toBeCloseTo(ratio, 3);
+      expect(measured).toBeLessThan(MINIMUM_CONTRAST_RATIO);
+    }
   });
 });

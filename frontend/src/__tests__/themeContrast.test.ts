@@ -167,8 +167,9 @@ const schemes: ReadonlyArray<readonly [string, Tokens]> = [
 ];
 
 /** The lowest number of pairs a working parser can derive; a parser that
- *  silently matched nothing would otherwise pass every assertion. */
-const MINIMUM_PAIRS = 19;
+ *  silently matched nothing would otherwise pass every assertion. It went
+ *  19 → 23 with APRAS-88's four `--primary-text` pairs. */
+const MINIMUM_PAIRS = 23;
 
 const FOREGROUND_SUFFIX = "-foreground";
 const FG_SUFFIX = "-fg";
@@ -192,10 +193,23 @@ const backgroundOf = (name: string): string | null => {
   return null;
 };
 
-/** The two further surfaces muted text is actually rendered on. */
+/**
+ * The surfaces `backgroundOf` cannot name, listed by hand.
+ *
+ * Two of them are the further surfaces muted text is rendered on. The other
+ * four are APRAS-88's `--primary-text`: it is a foreground whose name ends in
+ * neither `-foreground` nor `-fg`, precisely because it is not the foreground
+ * *of* one surface — it is brand text, and §1k of the mapping table puts it on
+ * all four of the scheme's text surfaces. `--border` is not among them: it
+ * carries no text.
+ */
 const EXTRA_PAIRS: ReadonlyArray<readonly [string, string]> = [
   ["muted-foreground", "background"],
   ["muted-foreground", "card"],
+  ["primary-text", "card"],
+  ["primary-text", "background"],
+  ["primary-text", "muted"],
+  ["primary-text", "accent"],
 ];
 
 const pairsOf = (tokens: Tokens): Array<readonly [string, string]> => [
@@ -294,5 +308,29 @@ describe("the measurement", () => {
       5.7548,
       3,
     );
+  });
+
+  it("measures the pair APRAS-88 repaired at its stated ratios", () => {
+    const mutedSurface: Oklch = { l: 0.96, c: 0.01, h: 160 };
+    const primary: Oklch = { l: 0.62, c: 0.15, h: 160 };
+    const primaryText: Oklch = { l: 0.52, c: 0.11, h: 160 };
+    // Before: the brand itself as text on the pale tint, below AA.
+    expect(contrastRatio(primary, mutedSurface)).toBeLessThan(MINIMUM_RATIO);
+    // After: `--primary-text` on the same surface, and its worst of the four.
+    expect(contrastRatio(primaryText, mutedSurface)).toBeCloseTo(4.6547, 3);
+    expect(contrastRatio(primaryText, { l: 1, c: 0, h: 0 })).toBeCloseTo(
+      5.2096,
+      3,
+    );
+
+    // This oracle reduces chroma on the 0.01 grid; `src/lib/contrast.ts`
+    // bisects, so the two disagree in the third decimal on an out-of-gamut
+    // colour. `--primary` `oklch(0.62 0.15 160)` is out of gamut and reads
+    // 3.0448 here where the mapping document publishes contrast.ts's 3.0427;
+    // `--primary-text` is in gamut and both read it identically. The
+    // disagreement is recorded rather than smoothed over, because an oracle
+    // silently agreeing with the module it exists to cross-check would be
+    // worth nothing (see point 2 at the top of this file).
+    expect(contrastRatio(primary, mutedSurface)).toBeCloseTo(3.0448, 3);
   });
 });

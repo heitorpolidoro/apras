@@ -22,8 +22,9 @@ import apiClient from "./client";
  *
  * Mirrored from `backend/app/core/branding.AUTHORED_KEYS`, in the same order,
  * so the form lists them in the order the server validates them. The other
- * four of the 17 emitted properties — `popover`, `popover-foreground`,
- * `input`, `ring` — are derived *inside* a scheme and never asked for.
+ * five of the 18 emitted properties — `popover`, `popover-foreground`,
+ * `input`, `ring` and `primary-text` — are derived *inside* a scheme and never
+ * asked for.
  * `--destructive*`, the 10 status tokens, the 8 priority tokens and
  * `--radius` are semantic and are never overridden at all.
  */

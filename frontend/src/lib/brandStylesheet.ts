@@ -50,7 +50,7 @@ const declarations = (scheme: Readonly<Record<string, string>>): string =>
  *   the dark rule at (0,3,0), one step above the light one — the same
  *   relationship `index.css` has between its own `:root` and `.dark`.
  *
- * Only the 17 keys `build_theme` emitted are written, so `--destructive*`,
+ * Only the 18 keys `build_theme` emitted are written, so `--destructive*`,
  * the status and priority tokens and `--radius` are never touched.
  */
 export const themeStylesheet = (theme: DerivedTheme): string =>

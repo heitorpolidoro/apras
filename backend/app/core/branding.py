@@ -77,8 +77,9 @@ AUTHORED_KEYS = (
     "border",
 )
 
-#: ``target -> source`` for the four variables derived inside a scheme and
-#: never authored. They are what takes 13 authored colours to 17 emitted ones.
+#: ``target -> source`` for the four variables that are a **copy** of another
+#: colour in the same scheme. With :data:`BRAND_TEXT_KEY`, which is computed
+#: rather than copied, they take 13 authored colours to 18 emitted ones.
 DERIVED_FROM = {
     "popover": "card",
     "popover-foreground": "card-foreground",
@@ -86,15 +87,37 @@ DERIVED_FROM = {
     "ring": "primary",
 }
 
-#: The 17 custom properties a theme emits per scheme -- the shadcn core of
-#: ``:root``/``.dark`` and nothing else. ``--destructive*``, the 10 status
-#: tokens, the 8 priority tokens and ``--radius`` are semantic and identical
-#: in every condominium, so they are never overridden.
-EMITTED_KEYS = (*AUTHORED_KEYS, *DERIVED_FROM)
+#: The brand as **characters** (APRAS-88). ``--primary`` is a surface colour
+#: and fails AA as normal text on every light surface -- 3.0427 on
+#: ``--accent``, 3.4054 on ``--card``, 3.3091 on ``--background`` in the
+#: default theme -- so the mapping table routes brand *text* here instead.
+#: Derived, never authored: ``AUTHORED_KEYS`` stays at 13, so no stored
+#: advanced palette breaks and no API request shape changes.
+BRAND_TEXT_KEY = "primary-text"
+
+#: The four surfaces brand text is rendered on, and the ones
+#: :func:`derive_brand_text` must clear all of. ``--border`` is **not** one of
+#: them: it carries no text (``--primary-text`` measures 4.1271 on it).
+TEXT_SURFACE_KEYS = ("card", "background", "muted", "accent")
+
+#: The 18 custom properties a theme emits per scheme -- the shadcn core of
+#: ``:root``/``.dark`` plus ``--primary-text``, and nothing else.
+#: ``--destructive*``, the 10 status tokens, the 8 priority tokens and
+#: ``--radius`` are semantic and identical in every condominium, so they are
+#: never overridden.
+EMITTED_KEYS = (*AUTHORED_KEYS, *DERIVED_FROM, BRAND_TEXT_KEY)
 
 #: The eight text/surface pairs ``audit_contrast`` measures, as
 #: ``(foreground, background)``. ``--muted-foreground`` appears three times:
 #: one token carries text over three surfaces, and none of the three can move.
+#:
+#: ``--primary-text`` is deliberately **absent** (APRAS-88). This tuple is the
+#: 422 refusal contract, mirrored in ``frontend/src/lib/contrast.ts`` and
+#: pinned by ``backend/tests/data/contrast_fixtures.json``; adding its four
+#: pairs would start refusing advanced palettes that are stored and working
+#: today. Its guard is :func:`derive_brand_text`'s non-convergence rule
+#: instead, which can never emit a value that is worse than what the product
+#: renders now.
 MEASURED_PAIRS = (
     ("foreground", "background"),
     ("card-foreground", "card"),
@@ -468,6 +491,87 @@ def _repair_text(
     return current
 
 
+def _clears_every_surface(text: OklchColor, surfaces: tuple[OklchColor, ...]) -> bool:
+    return all(
+        contrast_ratio(text, surface) >= MINIMUM_CONTRAST_RATIO for surface in surfaces
+    )
+
+
+def _walk_to_legible_text(
+    text: OklchColor, surfaces: tuple[OklchColor, ...], *, step: float
+) -> OklchColor | None:
+    """One **bounded** lightness walk, or ``None`` if it never clears AA.
+
+    Every candidate is re-snapped, so the value tested is the value emitted,
+    and no step may leave ``[0.00, 1.00]``: an unbounded loop emits
+    ``oklch(-0.38 0.00 160.00)`` on the palette ``test_branding`` pins, a
+    negative lightness that ``parseOklch`` accepts downstream.
+
+    **The budget has zero slack.** Crossing the whole 0.01 grid takes exactly
+    ``_MAX_STEPS`` steps, so ``_MAX_STEPS + 1`` values have to be *tested* --
+    the value the walk lands on included. One test fewer and the claim
+    :func:`derive_brand_text` rests on, that the two walks jointly visit every
+    emittable lightness, would be false at one end.
+    """
+    current = text
+    for _ in range(_MAX_STEPS + 1):
+        if _clears_every_surface(current, surfaces):
+            return current
+        lightness = round(current.lightness + step, _DECIMALS)
+        if not 0.0 <= lightness <= 1.0:
+            return None
+        current = snap_to_gamut(OklchColor(lightness, current.chroma, current.hue))
+    # Unreachable: a walk that has not converged runs into a bound first, at
+    # the latest on the test above. Kept as the hard stop `_MAX_STEPS` is
+    # documented to be, so a future change to `_STEP` cannot turn a
+    # mis-derivation into a hang.
+    return None  # pragma: no cover
+
+
+def derive_brand_text(
+    primary: OklchColor, surfaces: tuple[OklchColor, ...]
+) -> OklchColor:
+    """``--primary-text``: the brand, moved on the grid until it reads as text.
+
+    Only lightness moves, so the tenant's hue and (gamut-snapped) chroma
+    survive; the result must clear :data:`MINIMUM_CONTRAST_RATIO` against
+    **all** of :data:`TEXT_SURFACE_KEYS`. Three rules, in order:
+
+    1. two bounded walks are attempted, one **down** and one **up**;
+    2. exactly one converging wins; both converging prefers **down**, a
+       deterministic tie-break which is also the one that leaves every
+       simple-mode value where it is;
+    3. neither converging emits ``--primary`` **unchanged**.
+
+    The direction is part of the rule and cannot be inherited: this function
+    is called once per authored scheme and takes no ``dark`` flag, and a
+    single walk "away from the surfaces" is simply wrong whenever the brand
+    starts *between* them. Because the two walks between them visit every
+    lightness on the emittable grid at this hue and chroma -- down covers
+    ``[0.00, L]``, up covers ``[L, 1.00]`` -- rule 3 fires **iff** no legible
+    value exists at all, and what it then emits is exactly what the product
+    renders today.
+
+    **There is no cushion in simple mode.** Over the emittable lattice the
+    worst case is exactly 4.500005 in light (brand ``oklch(0.92 0.04 255)``)
+    and 4.502344 in dark (brand ``oklch(0.00 0.22 300)``): that is the loop
+    stopping at the first passing step, not margin. A change to ``_STEP``, to
+    ``_LIGHT_MUTED`` or to ``_LIGHT_ACCENT_LIGHTNESS`` would land under AA
+    silently, so both are pinned to the float in ``tests/test_branding.py``.
+
+    Advanced mode carries **no** AA guarantee: a tenant authoring all 13
+    colours can ask for a white card and a near-black accent, and no single
+    colour clears both.
+    """
+    down = _walk_to_legible_text(primary, surfaces, step=-_STEP)
+    if down is not None:
+        return down
+    up = _walk_to_legible_text(primary, surfaces, step=_STEP)
+    if up is not None:
+        return up
+    return primary
+
+
 def derive_brand_surface(start: OklchColor) -> tuple[OklchColor, OklchColor]:
     """One brand surface and its foreground: snap, pick once, repair.
 
@@ -576,8 +680,17 @@ def _advanced_scheme(palette: Mapping[str, str]) -> dict[str, OklchColor]:
 
 
 def _with_derived(scheme: dict[str, OklchColor]) -> dict[str, OklchColor]:
+    """The five in-scheme derivations, for **both** modes.
+
+    ``_simple_scheme`` and ``_advanced_scheme`` end here and nowhere else, so
+    ``--primary-text`` is derived once, by the same rule, for a brand the
+    síndico typed and for a palette a tenant authored.
+    """
     for target, source in DERIVED_FROM.items():
         scheme[target] = scheme[source]
+    scheme[BRAND_TEXT_KEY] = derive_brand_text(
+        scheme["primary"], tuple(scheme[key] for key in TEXT_SURFACE_KEYS)
+    )
     return scheme
 
 

@@ -11,11 +11,13 @@ append to it and may not rewrite what is already in it.
 
 ## The rules this file exists to enforce
 
-**No task may add a property to `frontend/src/index.css`.** A one-off token
-per call site turns the token set into landfill, and `build_theme` emits
-exactly 17 keys, so a property added here would be unbranded forever. The
-answer to "there is no token for this colour" is a row in this file, never a
-new token.
+**No child of APRAS-77 may add a property to `frontend/src/index.css`.** A
+one-off token per call site turns the token set into landfill, and
+`build_theme` emits exactly 18 keys, so a property added here would be
+unbranded forever. The answer to "there is no token for this colour" is a row
+in this file, never a new token. (APRAS-88 added the eighteenth,
+`--primary-text`, as the mapping table's own amendment — to the stylesheet and
+to `build_theme` in one change, and never at a call site.)
 
 **The status-colour ruling (operator, binding and permanent).** Success,
 warning and info colours **stay hard-coded** and are **never** migrated,

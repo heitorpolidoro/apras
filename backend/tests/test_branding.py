@@ -33,10 +33,15 @@ from app.core.branding import (
     GAMUT_TOLERANCE,
     MEASURED_PAIRS,
     MINIMUM_CONTRAST_RATIO,
+    TEXT_SURFACE_KEYS,
     OklchColor,
+    _simple_scheme,
+    _walk_to_legible_text,
     audit_contrast,
     build_theme,
     contrast_ratio,
+    derive_brand_text,
+    format_oklch,
     hex_to_oklch,
     is_in_gamut,
     is_valid_hex_color,
@@ -241,13 +246,13 @@ def test_no_branding_derives_no_theme():
     assert build_theme(None) is None
 
 
-def test_a_theme_is_a_light_and_a_dark_scheme_of_the_seventeen_variables():
+def test_a_theme_is_a_light_and_a_dark_scheme_of_the_eighteen_variables():
     theme = build_theme(simple("#7c3aed", "#0ea5e9"))
 
     assert set(theme) == {"light", "dark"}
     for scheme in theme.values():
         assert set(scheme) == set(EMITTED_KEYS)
-        assert len(scheme) == 17
+        assert len(scheme) == 18
 
 
 def test_the_emitted_set_never_touches_a_semantic_token():
@@ -263,6 +268,7 @@ def test_the_emitted_set_never_touches_a_semantic_token():
         "popover-foreground",
         "input",
         "ring",
+        "primary-text",
     }
 
 
@@ -338,6 +344,288 @@ def test_dark_is_derived_from_the_same_single_stored_colour():
     assert parse_oklch(dark["primary"]).lightness >= 0.62
     assert parse_oklch(dark["background"]).lightness == 0.14
     assert dark != theme["light"]
+
+
+# ---------------------------------------------------------------------------
+# `--primary-text`: the brand as *characters*, on every text surface (APRAS-88)
+# ---------------------------------------------------------------------------
+
+#: The lattice the guarantee is claimed over: every emittable lightness decade,
+#: four chromas from grey to the input clamp, and six hues. 264 brands, both
+#: schemes, four surfaces each.
+_TEXT_LATTICE = tuple(
+    OklchColor(lightness / 10, chroma, float(hue))
+    for lightness in range(11)
+    for chroma in (0.0, 0.04, 0.11, 0.22)
+    for hue in range(0, 360, 60)
+)
+
+#: A palette `audit_contrast` accepts on which **neither** walk converges: a
+#: white card and a near-black accent cannot both be cleared by one colour.
+_DIRECTION_BLIND_PALETTE = {
+    "background": "#ffffff",
+    "foreground": "#111111",
+    "card": "#ffffff",
+    "card-foreground": "#111111",
+    "primary": "#009f68",
+    "primary-foreground": "#00261a",
+    "secondary": "#009f68",
+    "secondary-foreground": "#00261a",
+    "accent": "#1a1a1a",
+    "accent-foreground": "#ffffff",
+    "muted": "#f5f5f5",
+    "muted-foreground": "#555555",
+    "border": "#cccccc",
+}
+
+#: A palette on which the brand starts **between** its surfaces: down converges
+#: and up fails. An implementation that only ever walks up emits the
+#: `--primary` fallback at 1.3663 here.
+_DOWN_CONVERGES_PALETTE = {
+    "background": "#f97316",
+    "foreground": "#000000",
+    "card": "#eeeeee",
+    "card-foreground": "#000000",
+    "primary": "#cccccc",
+    "primary-foreground": "#000000",
+    "secondary": "#cccccc",
+    "secondary-foreground": "#000000",
+    "accent": "#eeeeee",
+    "accent-foreground": "#000000",
+    "muted": "#ff4da6",
+    "muted-foreground": "#000000",
+    "border": "#999999",
+}
+
+#: The mirror of the palette above, and the one a *down-only* implementation
+#: fails: a near-black brand on dark surfaces, where every darker value is
+#: worse and the only legible colour is lighter.
+_UP_CONVERGES_PALETTE = {
+    "background": "#1a1a1a",
+    "foreground": "#ffffff",
+    "card": "#1a1a1a",
+    "card-foreground": "#ffffff",
+    "primary": "#121212",
+    "primary-foreground": "#ffffff",
+    "secondary": "#121212",
+    "secondary-foreground": "#ffffff",
+    "accent": "#333333",
+    "accent-foreground": "#ffffff",
+    "muted": "#333333",
+    "muted-foreground": "#cccccc",
+    "border": "#4d4d4d",
+}
+
+
+def brand_text_ratios(scheme: dict[str, str]) -> dict[str, float]:
+    """`primary-text` against its four surfaces, off the emitted strings."""
+    text = parse_oklch(scheme["primary-text"])
+    return {
+        surface: contrast_ratio(text, parse_oklch(scheme[surface]))
+        for surface in TEXT_SURFACE_KEYS
+    }
+
+
+def emitted_simple(brand: OklchColor, *, dark: bool) -> dict[str, str]:
+    """One simple-mode scheme, emitted, for a brand given in OKLCH.
+
+    The lattice is stated in OKLCH rather than in hex because the two
+    zero-margin witnesses below are lattice points, not colours anyone typed.
+    """
+    return {
+        key: format_oklch(colour)
+        for key, colour in _simple_scheme(brand, brand, dark=dark).items()
+    }
+
+
+def test_the_emitted_scheme_carries_a_brand_text_colour():
+    theme = build_theme(simple("#7c3aed", "#0ea5e9"))
+
+    for scheme in theme.values():
+        assert "primary-text" in scheme
+        assert scheme["primary-text"] != ""
+
+
+@pytest.mark.parametrize("dark", [False, True])
+def test_primary_text_clears_aa_on_every_text_surface_over_the_lattice(dark: bool):
+    """The structural guarantee of simple mode, over 264 brands per scheme.
+
+    It is what alarms if `_STEP`, `_LIGHT_MUTED` or `_LIGHT_ACCENT_LIGHTNESS`
+    ever moves: the two witnesses below stop at **exactly** 4.5, so there is
+    no cushion anywhere on this lattice.
+    """
+    assert len(_TEXT_LATTICE) == 264
+
+    for brand in _TEXT_LATTICE:
+        scheme = emitted_simple(brand, dark=dark)
+        for surface, ratio in brand_text_ratios(scheme).items():
+            assert ratio >= MINIMUM_CONTRAST_RATIO, (
+                f"{format_oklch(brand)} {'dark' if dark else 'light'}: "
+                f"primary-text/{surface} is {ratio}"
+            )
+
+
+def test_the_two_zero_margin_witnesses_are_pinned_to_the_float():
+    """±0.001 around "4.5000" would admit 4.4990, a value below AA, so these
+    two are pinned to their full floats. They are the lattice minima."""
+    light = emitted_simple(OklchColor(0.92, 0.04, 255.0), dark=False)
+    dark = emitted_simple(OklchColor(0.00, 0.22, 300.0), dark=True)
+
+    assert light["primary-text"] == "oklch(0.54 0.03 255.00)"
+    assert min(brand_text_ratios(light).values()) == 4.500005203749431
+    assert dark["primary-text"] == "oklch(0.63 0.22 300.00)"
+    assert min(brand_text_ratios(dark).values()) == 4.502343552547213
+
+
+def test_the_default_brand_derives_the_stylesheets_own_primary_text():
+    """`#009f68` is what `:root --primary` paints, so simple mode must produce
+    `index.css`'s own `--primary-text`: one value, derived, not hand-picked."""
+    light = build_theme(simple("#009f68", "#009f68"))["light"]
+
+    assert light["primary"] == "oklch(0.62 0.14 160.00)"
+    assert light["primary-text"] == "oklch(0.52 0.11 160.00)"
+    assert oklch_to_hex(parse_oklch(light["primary-text"])) == "#177c52"
+    assert brand_text_ratios(light) == {
+        "card": pytest.approx(5.2096, abs=0.001),
+        "background": pytest.approx(5.0622, abs=0.001),
+        "muted": pytest.approx(4.6547, abs=0.001),
+        "accent": pytest.approx(4.6547, abs=0.001),
+    }
+
+
+def test_a_brand_that_is_already_legible_is_emitted_unchanged():
+    """Step zero counts: a navy brand on the light scheme, and every dark
+    scheme whose brand starts at `_DARK_BRAND_MIN_LIGHTNESS`, need no repair."""
+    light = build_theme(simple("#1d2c6a", "#1d2c6a"))["light"]
+
+    assert light["primary-text"] == light["primary"]
+    assert min(brand_text_ratios(light).values()) >= MINIMUM_CONTRAST_RATIO
+
+
+def test_no_legible_brand_text_exists_so_primary_is_emitted_unchanged():
+    """§1.2 rule 3. Both walks visit every lightness on the grid, so the
+    fallback fires **iff** no legible value exists at all -- and it leaves the
+    product exactly where it renders today rather than clamping to black."""
+    scheme = build_theme(advanced(_DIRECTION_BLIND_PALETTE))["light"]
+
+    assert audit_contrast(scheme) == []
+    assert scheme["primary"] == "oklch(0.62 0.14 160.00)"
+    assert scheme["primary-text"] == scheme["primary"]
+    assert min(brand_text_ratios(scheme).values()) < MINIMUM_CONTRAST_RATIO
+
+
+def test_the_downward_walk_is_taken_when_only_it_converges():
+    """The brand starts *between* its surfaces. An up-only implementation
+    emits the `--primary` fallback here, worst 1.3663 -- illegible text that
+    no assertion over simple mode would ever catch."""
+    scheme = build_theme(advanced(_DOWN_CONVERGES_PALETTE))["light"]
+
+    assert audit_contrast(scheme) == []
+    assert scheme["primary"] == "oklch(0.85 0.00 89.88)"
+    assert scheme["primary-text"] == "oklch(0.29 0.00 89.88)"
+    assert min(brand_text_ratios(scheme).values()) == pytest.approx(4.5306, abs=0.001)
+    assert min(
+        contrast_ratio(parse_oklch(scheme["primary"]), parse_oklch(scheme[surface]))
+        for surface in TEXT_SURFACE_KEYS
+    ) == pytest.approx(1.3663, abs=0.001)
+
+
+def test_the_upward_walk_is_taken_when_only_it_converges():
+    """The mirror, and the regression a *down-only* implementation fails --
+    the likelier mistake, since down is simple mode's only direction and the
+    tie-break prefers it. Down walks this brand into the floor at L 0.00."""
+    scheme = build_theme(advanced(_UP_CONVERGES_PALETTE))["light"]
+
+    assert audit_contrast(scheme) == []
+    assert scheme["primary"] == "oklch(0.18 0.00 89.88)"
+    assert scheme["primary-text"] == "oklch(0.69 0.00 89.88)"
+    assert min(brand_text_ratios(scheme).values()) >= MINIMUM_CONTRAST_RATIO
+    assert (
+        _walk_to_legible_text(
+            parse_oklch(scheme["primary"]),
+            tuple(parse_oklch(scheme[key]) for key in TEXT_SURFACE_KEYS),
+            step=-0.01,
+        )
+        is None
+    )
+
+
+def test_both_walks_converging_prefers_the_darker_value():
+    """Rule 2's tie-break, exercised on its own rather than through a palette.
+
+    `oklch(0.56 0 89.88)` is the one grey both directions escape: L 0.05 and
+    L 0.99 each clear 4.5 against it, and **down** is what is emitted.
+    """
+    brand = OklchColor(0.56, 0.0, 89.88)
+    surfaces = (brand,) * 4
+
+    assert _walk_to_legible_text(brand, surfaces, step=-0.01) == OklchColor(
+        0.05, 0.0, 89.88
+    )
+    assert _walk_to_legible_text(brand, surfaces, step=0.01) == OklchColor(
+        0.99, 0.0, 89.88
+    )
+    assert derive_brand_text(brand, surfaces) == OklchColor(0.05, 0.0, 89.88)
+
+
+def test_a_walk_tests_the_value_it_lands_on_and_not_one_step_fewer():
+    """`_MAX_STEPS` has **zero** slack: crossing the whole grid takes exactly
+    100 steps and therefore **101** tests. A loop that iterates `_MAX_STEPS`
+    times would never test the value it lands on, and the claim that the two
+    walks jointly visit every emittable lightness would be false at one end.
+
+    Unobservable on any real palette, which is exactly why it is pinned here.
+    """
+    from app.core import branding
+
+    seen: list[float] = []
+    real = branding.contrast_ratio
+
+    def spy(first: OklchColor, second: OklchColor) -> float:
+        seen.append(first.lightness)
+        return real(first, second)
+
+    # White and a mid grey together: no lightness clears 4.5 against both, so
+    # the walk is forced all the way to the bound.
+    surfaces = (OklchColor(1.0, 0.0, 0.0), OklchColor(0.30, 0.0, 0.0))
+    branding.contrast_ratio = spy
+    try:
+        walked = _walk_to_legible_text(OklchColor(1.0, 0.0, 0.0), surfaces, step=-0.01)
+    finally:
+        branding.contrast_ratio = real
+
+    assert walked is None
+    assert len(set(seen)) == 101
+    assert min(seen) == 0.0
+
+
+@pytest.mark.parametrize(
+    "palette",
+    [_GOOD_PALETTE, _DIRECTION_BLIND_PALETTE, _DOWN_CONVERGES_PALETTE],
+)
+def test_every_emitted_primary_text_is_a_valid_oklch_value(palette: dict):
+    """The unbounded repair emits `oklch(-0.38 0.00 160.00)` on the
+    direction-blind palette -- negative lightness, brand chroma stripped, and
+    `parseOklch` accepts it downstream. Nothing here may leave `[0, 1]`."""
+    theme = build_theme(advanced(palette))
+    schemes = [*theme.values()]
+    schemes += [
+        emitted_simple(brand, dark=dark)
+        for brand in (OklchColor(0.0, 0.3, 12.0), OklchColor(1.0, 0.0, 300.0))
+        for dark in (False, True)
+    ]
+
+    for scheme in schemes:
+        colour = parse_oklch(scheme["primary-text"])
+        assert _EMITTED.fullmatch(scheme["primary-text"]), scheme["primary-text"]
+        assert 0.0 <= colour.lightness <= 1.0
+        assert colour.chroma >= 0.0
+
+
+def test_the_four_text_surfaces_are_the_documented_ones():
+    """`--border` is deliberately absent: it carries no text, and
+    `--primary-text` measures 4.1271 on it."""
+    assert TEXT_SURFACE_KEYS == ("card", "background", "muted", "accent")
 
 
 # ---------------------------------------------------------------------------
@@ -645,6 +933,12 @@ def test_the_authored_key_set_is_exactly_the_thirteen_documented_names():
 
 
 def test_the_eight_measured_pairs_are_the_documented_ones():
+    # APRAS-88 adds `--primary-text` to the emitted scheme and deliberately
+    # **not** to this tuple: it is the 422 refusal contract, mirrored in
+    # `frontend/src/lib/contrast.ts` and pinned by `contrast_fixtures.json`,
+    # and four new pairs would start refusing palettes stored and working
+    # today. The non-convergence rule is that token's guard instead.
+    assert len(MEASURED_PAIRS) == 8
     assert MEASURED_PAIRS == (
         ("foreground", "background"),
         ("card-foreground", "card"),

@@ -7,9 +7,13 @@ Children APRAS-79 … APRAS-85 **consume** this document, the ledger in
 [`unmapped-colours.md`](./unmapped-colours.md) and the guard in
 `frontend/src/__tests__/themeTokenMigration.test.ts`. They may not re-derive,
 extend or amend any of the three: **a sibling may not add a row, add a gap
-code, or add a token.** A sibling that believes a row is wrong raises a
-table-amendment task against APRAS-78's artefacts and uses `GAP-UNLISTED`
-(§1h) meanwhile. One owner, seven consumers.
+code, or add a token.** A sibling that believes a row is wrong, or unusable at
+its call site, **raises a table-amendment task against APRAS-78's artefacts and
+blocks on it** — it does **not** reach for `GAP-UNLISTED`, which is defined
+(§1h code 8) for a class that has **no** row and no other code, and was never
+meant to cover a class that has one. APRAS-88 is the worked example: brand text
+had a row, the row was wrong, and the answer was an amendment — this §1k — not
+an exception. One owner, seven consumers.
 
 ## How the numbers were derived
 
@@ -108,8 +112,19 @@ extend `build_theme`, a backend change).
 
 `GAP` is a fourth value of the budget-class column, not a separate concept: it
 is what a `moves` row becomes when the operator decision does not name it. The
-three named moves are the **indigo family**, **`text-*-400` →
-`text-muted-foreground`** and **`text-white` → `text-primary-foreground`**.
+**four** named moves are:
+
+1. the **indigo family**, which since APRAS-88 names **two** targets —
+   `*-primary` for graphical objects and **`*-primary-text` for characters**
+   (§1k);
+2. **`text-*-400` → `text-muted-foreground`**;
+3. **`text-white` → `text-primary-foreground`**;
+4. **`text-emerald-500` → `text-primary-text`**, at ΔE 18.60 (APRAS-88,
+   operator-vetoable). It needs naming because emerald-as-brand is otherwise
+   `noted` and inside budget: retargeting it to the darker text token pushes
+   4 occurrences past every emerald figure this document published. The
+   alternative — a new gap code — is worse, because it reopens a set §1h
+   requires to stay closed at eight.
 
 ## 1b. Neutral surfaces
 
@@ -164,29 +179,47 @@ The four `divide-` classes present in the tree (13 occurrences) are covered:
 
 | Source class | Target | L source → target | ΔL | ΔE | Budget |
 | --- | --- | --- | --- | --- | --- |
-| `bg-indigo-500` / `text-indigo-500` / `border-indigo-500` | `*-primary` | 58.50 → 62.00 | 3.50 | 33.15 | moves (**named**) |
+| `bg-indigo-500` / `border-indigo-500` | `*-primary` | 58.50 → 62.00 | 3.50 | 33.15 | moves (**named**) |
+| `text-indigo-500` (**§1k**) | `text-primary-text` | 58.50 → 52.00 | 6.50 | 30.66 | moves (**named**) |
 | `ring-indigo-500` | `ring-ring` | 58.50 → 62.00 | 3.50 | 33.15 | moves (**named**) |
-| `bg-indigo-600` / `text-indigo-600` / `border-indigo-600` / `accent-indigo-600` | `*-primary` | 51.10 → 62.00 | 10.90 | 37.24 | moves (**named**) |
-| `bg-indigo-700` / `text-indigo-700` | `*-primary` (see §1i for `/90`) | 45.70 → 62.00 | 16.30 | 37.33 | moves (**named**) |
-| `text-indigo-800` | `text-primary` | 39.80 → 62.00 | 22.20 | 36.97 | moves (**named**) |
-| `text-indigo-900` | `text-primary` | 35.90 → 62.00 | 26.10 | 36.35 | moves (**named**) |
-| `text-indigo-300` | `text-primary` | 78.50 → 62.00 | 16.50 | 27.82 | moves (**named**) |
+| `bg-indigo-600` / `border-indigo-600` / `accent-indigo-600` | `*-primary` | 51.10 → 62.00 | 10.90 | 37.24 | moves (**named**) |
+| `text-indigo-600` (**§1k**) | `text-primary-text` | 51.10 → 52.00 | 0.90 | 32.71 | moves (**named**) |
+| `bg-indigo-700` | `bg-primary` (see §1i for `/90`) | 45.70 → 62.00 | 16.30 | 37.33 | moves (**named**) |
+| `text-indigo-700` (**§1k**) | `text-primary-text` | 45.70 → 52.00 | 6.30 | 31.25 | moves (**named**) |
+| `text-indigo-800` (**§1k**) | `text-primary-text` | 39.80 → 52.00 | 12.20 | 29.11 | moves (**named**) |
+| `text-indigo-900` (**§1k**) | `text-primary-text` | 35.90 → 52.00 | 16.10 | 27.20 | moves (**named**) |
+| `text-indigo-300` (**§1k**) | `text-primary-text` | 78.50 → 52.00 | 26.50 | 32.58 | moves (**named**) |
 | `border-indigo-400` | `border-primary` | 67.30 → 62.00 | 5.30 | 28.84 | moves (**named**) |
 | `bg-indigo-50` | `bg-accent` | 96.20 → 96.00 | 0.20 | 2.38 | invisible |
 | `bg-indigo-100` | `bg-accent` | 93.00 → 96.00 | 3.00 | 4.92 | noted |
 | `bg-indigo-200` | `bg-accent` | 87.00 → 96.00 | 9.00 | 11.38 | noted |
 | `border-indigo-100` | `border-border` | 93.00 → 92.00 | 1.00 | 4.02 | noted |
 | `border-indigo-200` | `border-border` | 87.00 → 92.00 | 5.00 | 8.58 | noted |
-| `bg-emerald-500` / `text-emerald-500` / `border-emerald-500` | `*-primary` (**§1f case 3**) | 69.60 → 62.00 | 7.60 | 7.89 | noted |
+| `bg-emerald-500` / `border-emerald-500` | `*-primary` (**§1f case 3**) | 69.60 → 62.00 | 7.60 | 7.89 | noted |
+| `text-emerald-500` (**§1k**, **§1f case 3**) | `text-primary-text` | 69.60 → 52.00 | 17.60 | 18.60 | moves (**named**) |
 | `ring-emerald-500` | `ring-ring` (**§1f case 3**) | 69.60 → 62.00 | 7.60 | 7.89 | noted |
-| `bg-emerald-600` / `text-emerald-600` / `border-emerald-600` | `*-primary` (**§1f case 3**) | 59.60 → 62.00 | 2.40 | 2.59 | invisible |
+| `bg-emerald-600` / `border-emerald-600` | `*-primary` (**§1f case 3**) | 59.60 → 62.00 | 2.40 | 2.59 | invisible |
+| `text-emerald-600` (**§1k**, **§1f case 3**) | `text-primary-text` | 59.60 → 52.00 | 7.60 | 8.40 | noted |
 | `ring-emerald-600` | `ring-ring` (**§1f case 3**) | 59.60 → 62.00 | 2.40 | 2.59 | invisible |
-| `bg-emerald-700` / `text-emerald-700` | `*-primary` (**§1f case 3**, see §1i) | 50.80 → 62.00 | 11.20 | 11.72 | noted |
+| `bg-emerald-700` | `bg-primary` (**§1f case 3**, see §1i) | 50.80 → 62.00 | 11.20 | 11.72 | noted |
+| `text-emerald-700` (**§1k**, **§1f case 3**) | `text-primary-text` | 50.80 → 52.00 | 1.20 | 1.82 | invisible |
 | `text-red-600` / `bg-red-600` | `*-destructive` | 57.70 → 58.00 | 0.30 | 0.60 | invisible |
 | `text-red-500` / `bg-red-500` | `*-destructive` | 63.70 → 58.00 | 5.70 | 5.75 | noted |
 | `text-red-700` / `bg-red-700` | `*-destructive` | 50.50 → 58.00 | 7.50 | 7.97 | noted |
 | `text-white` on `bg-destructive` | `text-destructive-foreground` | 100.00 → 98.00 | 2.00 | 2.00 | invisible |
 | `text-white` on `bg-primary` | `text-primary-foreground` | 100.00 → 15.00 | 85.00 | 85.02 | moves (**named**) |
+
+The nine `text-` rows above are **§1k rows**: they were split out of the
+combined rows in APRAS-88 and retargeted from `*-primary` to
+`*-primary-text`, and every one of their Budget classes is recomputed from the
+**new** ΔE against `oklch(0.52 0.11 160)` — which moves two of them,
+`text-emerald-700` from `noted` (11.72) to **`invisible`** (1.82) and
+`text-emerald-500` from `noted` (7.89) to **`moves`** (18.60, named in §1a).
+Every `bg-`, `border-`, `ring-` and `accent-` figure is unchanged. The
+retargeting is done **in place**, in this table and in
+`themeTokenCompile.test.ts`: an appended row would leave the old
+`text-*` → `text-primary` row passing — `--primary` does not move — and the
+suite would go green over a table contradicting itself.
 
 The indigo rows are individually enumerated rather than folded into one
 "indigo family" row, because every one of them carries different numbers and
@@ -509,14 +542,77 @@ than summarised:
 
 ---
 
+## 1k. Characters or graphical object — which brand token a class takes
+
+**Binding tree-wide, and scoped to exactly nine classes:** `text-indigo-300`,
+`-500`, `-600`, `-700`, `-800`, `-900`, `text-emerald-500`, `-600` and `-700`.
+It is deliberately *not* a `text-*` wildcard, so it cannot collide with §1a's
+`text-*-400` → `text-muted-foreground` named move.
+
+**Why the split exists.** `--primary` is a *surface* colour. Measured with
+`frontend/src/lib/contrast.ts` it fails WCAG 2.1 AA as normal text on every
+light surface: **3.4054:1** on `--card`, **3.3091:1** on `--background` and
+**3.0427:1** on `--muted` / `--accent` / `--secondary`. Routing brand text at
+`*-primary` therefore shipped a new AA failure at every migrated call site.
+APRAS-88 adds a derived token, `--primary-text` — `--primary` walked down the
+0.01 lightness grid until it clears 4.5:1 on all four text surfaces
+(**5.2096 / 5.0622 / 4.6547 / 4.6547**), re-derived per tenant from that
+tenant's own brand so hue and chroma survive.
+
+A child answers **one** question at the call site, from the JSX, with no
+measurement: **does this element paint glyphs of text?**
+
+- **Characters → `text-primary-text`, floor 4.5:1.** The element renders
+  characters if it has among its children a string literal, a text-rendering
+  expression (`{t(...)}`, `{value}`, `{count}`), or any non-icon child element.
+- **Graphical object → keeps its present `*-primary` row, floor 3:1.** That is
+  the case when the element's only children are icon components or `<svg>`,
+  **and** when the element is itself an icon component or an `<svg>` with no
+  children at all — e.g. `AuthorizationFormModal.tsx:117`,
+  `<ShieldCheck className="size-5 text-indigo-600 …" />`. That self-closing
+  shape is the commonest in the tree, **53 sites**, and is named here rather
+  than covered vacuously.
+- **Every non-`text-*` utility is graphical**, always: `bg-`, `border-`,
+  `ring-`, `divide-`, `outline-`, `fill-`, `stroke-`, `accent-`.
+- **A mixed element counts as text.** A control rendering an icon *and* a
+  label from one `currentColor` takes `text-primary-text`.
+- **No large-text carve-out.** WCAG's 3:1 allowance for ≥24px (or ≥18.66px
+  bold) text is deliberately unused: `--primary-text` clears 4.5:1 on all four
+  text surfaces, so the allowance would buy nothing and would force every child
+  to measure font sizes. Characters take `primary-text` **at any size**.
+  (`--primary-text` on `--border` is 4.1271:1; `--border` carries no text and
+  is not one of the four.)
+
+**No new gap code, no ledger row, no exceptions entry.** A brand text class
+still *migrates* — it simply migrates to a different token — so the §3b guard
+grammar, `themeTokenMigration.exceptions.json` and the ledger counts are all
+untouched. §1h stays closed at **eight** codes and code 8 is unchanged.
+
+**Two things this section records but does not repair.** In the *default*
+theme the graphical path clears 1.4.11 with thin margins (`--primary` on
+`--accent` 3.0427, on `--background` 3.3091, on `--card` 3.4054), and for a
+pale tenant brand it does not clear it at all (pale yellow on `--card`
+**1.2617**, cyan **1.7917**). That is APRAS-68 behaviour predating APRAS-77,
+introduced by no child, and it needs its own task. Second, `--primary-text`
+carries **no 422 guard**: it is not in `MEASURED_PAIRS`, because adding four
+pairs there would start refusing advanced palettes stored and working today.
+Its guard is the derivation's own non-convergence rule — when no legible value
+exists for an authored palette, `--primary-text` is emitted equal to
+`--primary`, which is exactly what the product renders now.
+
+---
+
 ## 2. The ledger
 
 Every class left untouched gets a row in
 [`unmapped-colours.md`](./unmapped-colours.md): six columns
 (`task`, `file`, `line`, `class`, `code`, `why`), append-only, sorted by file
-then line, one row per occurrence. **No task may add a property to
-`frontend/src/index.css`** — `build_theme` emits exactly 17 keys, so a new one
-would be unbranded forever.
+then line, one row per occurrence. **No child of APRAS-77 may add a property
+to — or otherwise edit — `frontend/src/index.css`** — `build_theme` emits
+exactly 18 keys, so a new one would be unbranded forever. The one exception is
+a task that amends *this table*: APRAS-88 added `--primary-text` to the
+stylesheet **and** to `build_theme` in the same change, which is what keeps the
+invariant true rather than broken.
 
 ## 3. The guard
 
