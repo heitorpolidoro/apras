@@ -3,67 +3,57 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>APRAS-75 — Landing pública em / (mock de estrutura)</title>
+    <title>APRAS-75 — Landing pública em /</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-      .todo {
-        background-image: repeating-linear-gradient(
-          45deg,
-          rgba(245, 158, 11, 0.16) 0 8px,
-          rgba(245, 158, 11, 0.05) 8px 16px
-        );
-        outline: 1px dashed rgba(217, 119, 6, 0.6);
-        outline-offset: 2px;
-        border-radius: 4px;
-      }
-      .todo::after {
-        content: " LANDING_COPY_TODO";
+      .i18n-key::after {
+        content: " [" attr(data-i18n) "]";
         font-size: 0.65rem;
-        letter-spacing: 0.08em;
-        color: #b45309;
+        letter-spacing: 0.05em;
+        color: #2563eb;
+        font-weight: 500;
         vertical-align: super;
       }
-      body.hide-markers .todo::after {
+      body.hide-keys .i18n-key::after {
         content: "";
-      }
-      body.hide-markers .todo {
-        background-image: none;
-        outline: none;
       }
     </style>
   </head>
-  <body class="bg-slate-100 text-slate-900 antialiased hide-markers">
+  <body class="bg-slate-100 text-slate-900 antialiased hide-keys">
     <!-- ================= CONTROLES DO MOCK (não fazem parte da tela) ========= -->
-    <div class="sticky top-0 z-50 border-b border-slate-300 bg-white/95 backdrop-blur">
+    <div class="sticky top-0 z-50 border-b border-slate-300 bg-white/95 backdrop-blur shadow-sm">
       <div class="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-2 text-xs">
-        <span class="font-semibold text-slate-700">APRAS-75 · mock de estrutura</span>
-        <span class="rounded bg-amber-100 px-2 py-0.5 font-medium text-amber-800">
-          Todo o texto é placeholder — o copy é input do operador
+        <span class="font-bold text-slate-800 flex items-center gap-1.5">
+          <i data-lucide="layout" class="h-4 w-4 text-indigo-600"></i>
+          APRAS-75 · Mock Interativo da Landing Page
+        </span>
+        <span class="rounded bg-emerald-100 px-2 py-0.5 font-medium text-emerald-800">
+          6 Features Centrais + Previews de Tela ("Prints")
         </span>
         <div class="ml-auto flex items-center gap-2">
-          <span class="text-slate-500">Estado de <code>/</code>:</span>
+          <span class="text-slate-500 font-medium">Estado de <code>/</code>:</span>
           <button
             data-state="anon"
-            class="state-btn rounded border border-slate-300 px-2 py-1 font-medium"
+            class="state-btn rounded border border-slate-300 px-2.5 py-1 font-medium bg-slate-900 text-white transition-colors"
           >
-            anônimo
+            anônimo (Landing)
           </button>
           <button
             data-state="loading"
-            class="state-btn rounded border border-slate-300 px-2 py-1 font-medium"
+            class="state-btn rounded border border-slate-300 px-2.5 py-1 font-medium transition-colors"
           >
             isLoading
           </button>
           <button
             data-state="auth"
-            class="state-btn rounded border border-slate-300 px-2 py-1 font-medium"
+            class="state-btn rounded border border-slate-300 px-2.5 py-1 font-medium transition-colors"
           >
-            autenticado
+            autenticado (Dashboard)
           </button>
-          <label class="ml-3 flex items-center gap-1 text-slate-600">
-            <input id="marker-toggle" type="checkbox" checked />
-            marcar slots de copy
+          <label class="ml-3 flex items-center gap-1.5 font-medium text-slate-600 cursor-pointer">
+            <input id="key-toggle" type="checkbox" class="rounded border-slate-300 text-indigo-600" />
+            exibir chaves i18n
           </label>
         </div>
       </div>
@@ -71,33 +61,54 @@
 
     <!-- ================= ESTADO: isLoading ================================== -->
     <section id="state-loading" class="hidden">
-      <div class="flex min-h-[70vh] items-center justify-center">
+      <div class="flex min-h-[70vh] flex-col items-center justify-center gap-4">
         <div
-          class="h-10 w-10 animate-spin rounded-full border-4 border-slate-300 border-t-slate-700"
+          class="h-10 w-10 animate-spin rounded-full border-4 border-slate-300 border-t-slate-800"
         ></div>
+        <p class="text-xs text-slate-500 font-mono">
+          useAuth().isLoading === true → &lt;Spinner /&gt; (sem redirecionamento)
+        </p>
       </div>
-      <p class="pb-10 text-center text-xs text-slate-500">
-        <code>useAuth().isLoading</code> → o mesmo <code>&lt;Spinner /&gt;</code> de hoje.
-        Nenhum redirecionamento.
-      </p>
     </section>
 
     <!-- ================= ESTADO: autenticado =============================== -->
     <section id="state-auth" class="hidden">
-      <div class="mx-auto max-w-5xl px-4 py-10">
-        <div class="rounded-lg border border-dashed border-slate-400 bg-white p-8 text-center">
-          <p class="text-sm font-semibold text-slate-700">
-            Comportamento de hoje, inalterado
+      <div class="mx-auto max-w-5xl px-4 py-12">
+        <div class="rounded-xl border border-dashed border-slate-400 bg-white p-8 text-center shadow-sm">
+          <div class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 mb-3">
+            <i data-lucide="check-circle-2" class="h-6 w-6"></i>
+          </div>
+          <p class="text-base font-bold text-slate-800">
+            Comportamento de hoje, inalterado para visitantes autenticados
           </p>
-          <p class="mt-2 text-sm text-slate-500">
-            <code>usePermissionSet()</code> carregando → <code>&lt;Spinner /&gt;</code>;
+          <p class="mt-1 text-sm text-slate-500">
+            <code>usePermissionSet()</code> em carregamento → <code>&lt;Spinner /&gt;</code>;
             resolvido → <code>&lt;GeneralDashboardPage /&gt;</code>.
           </p>
-          <div class="mt-6 rounded border border-slate-200 bg-slate-50 p-6 text-left">
-            <h2 class="text-lg font-bold">Painel Geral</h2>
-            <p class="text-sm text-slate-500">
-              Bem-vindo ao painel central do seu condomínio.
-            </p>
+          <div class="mt-6 rounded-lg border border-slate-200 bg-slate-50 p-6 text-left">
+            <div class="flex items-center justify-between border-b border-slate-200 pb-4">
+              <div>
+                <h2 class="text-lg font-bold text-slate-900">Painel Geral</h2>
+                <p class="text-xs text-slate-500">Condomínio Residencial Parque das Flores</p>
+              </div>
+              <span class="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700 border border-indigo-200">
+                Administrador
+              </span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+              <div class="bg-white p-4 rounded-md border border-slate-200">
+                <span class="text-xs text-slate-500">Tarefas em Aberto</span>
+                <p class="text-2xl font-bold text-slate-900 mt-1">12</p>
+              </div>
+              <div class="bg-white p-4 rounded-md border border-slate-200">
+                <span class="text-xs text-slate-500">Ocorrências Ativas</span>
+                <p class="text-2xl font-bold text-amber-600 mt-1">3</p>
+              </div>
+              <div class="bg-white p-4 rounded-md border border-slate-200">
+                <span class="text-xs text-slate-500">Visitantes Hoje</span>
+                <p class="text-2xl font-bold text-emerald-600 mt-1">27</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -105,117 +116,497 @@
 
     <!-- ================= ESTADO: anônimo → LandingPage ====================== -->
     <section id="state-anon">
-      <!-- nota: sem Navbar e sem offset de sidebar; ambos já dependem de isAuthenticated -->
       <div class="min-h-screen bg-white">
-        <!-- topo mínimo: marca + CTA entrar -->
-        <header class="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-          <div class="flex items-center gap-2">
-            <i data-lucide="building-2" class="h-6 w-6 text-slate-900"></i>
-            <span class="text-lg font-bold tracking-tight">APRAS</span>
+        <!-- HEADER MÍNIMO -->
+        <header class="border-b border-slate-100 bg-white/80 backdrop-blur sticky top-10 z-40">
+          <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+            <div class="flex items-center gap-2.5">
+              <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-900 text-white shadow-sm">
+                <i data-lucide="building-2" class="h-5 w-5"></i>
+              </div>
+              <span class="text-xl font-extrabold tracking-tight text-slate-900 i18n-key" data-i18n="landing.brand">APRAS</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <a
+                href="#previews"
+                class="hidden sm:inline-flex text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors i18n-key"
+                data-i18n="landing.hero.secondaryCta"
+              >
+                Ver demonstração
+              </a>
+              <a
+                href="/login"
+                class="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 transition-all i18n-key"
+                data-i18n="landing.loginButton"
+              >
+                <span>Entrar</span>
+                <i data-lucide="log-in" class="h-4 w-4"></i>
+              </a>
+            </div>
           </div>
-          <a
-            href="#"
-            class="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-          >
-            Entrar
-          </a>
         </header>
 
-        <!-- HERO -->
-        <section class="mx-auto max-w-6xl px-6 pb-16 pt-10 text-center">
-          <h1 class="mx-auto max-w-3xl text-4xl font-extrabold leading-tight sm:text-5xl">
-            <span class="todo">[headline — texto a definir pelo operador]</span>
-          </h1>
-          <p class="mx-auto mt-5 max-w-2xl text-lg text-slate-600">
-            <span class="todo"
-              >[sub-headline — o que o APRAS faz, para quem, e o argumento de
-              venda: a definir pelo operador]</span
-            >
-          </p>
-          <div class="mt-8 flex items-center justify-center gap-3">
-            <a
-              href="#"
-              class="inline-flex items-center gap-2 rounded-md bg-slate-900 px-6 py-3 text-base font-semibold text-white hover:bg-slate-800"
-            >
-              Entrar
-              <i data-lucide="arrow-right" class="h-4 w-4"></i>
-            </a>
+        <!-- HERO SECTION -->
+        <section class="relative overflow-hidden pt-12 pb-16 md:pt-16 md:pb-24 border-b border-slate-100 bg-gradient-to-b from-slate-50/50 to-white">
+          <div class="mx-auto max-w-6xl px-6 text-center">
+            <!-- Badge -->
+            <div class="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50/80 px-3.5 py-1 text-xs font-semibold text-indigo-800 shadow-sm mb-6">
+              <span class="flex h-2 w-2 rounded-full bg-indigo-600 animate-pulse"></span>
+              <span class="i18n-key" data-i18n="landing.hero.badge">Plataforma Integrada de Gestão Condominial</span>
+            </div>
+
+            <!-- Headline -->
+            <h1 class="mx-auto max-w-4xl text-4xl font-extrabold leading-[1.15] tracking-tight text-slate-900 sm:text-5xl md:text-6xl">
+              <span class="i18n-key" data-i18n="landing.hero.title">Gestão inteligente e transparente para condomínios e associações</span>
+            </h1>
+
+            <!-- Subtitle -->
+            <p class="mx-auto mt-6 max-w-3xl text-lg text-slate-600 leading-relaxed sm:text-xl">
+              <span class="i18n-key" data-i18n="landing.hero.subtitle">Centralize tarefas operacionais, portaria, ocorrências, obras e prestação de contas em uma plataforma moderna, segura e com auditoria completa.</span>
+            </p>
+
+            <!-- Hero CTAs -->
+            <div class="mt-8 flex flex-wrap items-center justify-center gap-4">
+              <a
+                href="/login"
+                class="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-6 py-3.5 text-base font-semibold text-white shadow-md hover:bg-slate-800 hover:shadow-lg transition-all"
+              >
+                <span class="i18n-key" data-i18n="landing.hero.cta">Acessar o sistema</span>
+                <i data-lucide="arrow-right" class="h-4 w-4"></i>
+              </a>
+              <a
+                href="#previews"
+                class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-6 py-3.5 text-base font-semibold text-slate-700 shadow-sm hover:bg-slate-50 hover:text-slate-900 transition-all"
+              >
+                <i data-lucide="play-circle" class="h-4 w-4 text-indigo-600"></i>
+                <span class="i18n-key" data-i18n="landing.hero.secondaryCta">Ver demonstração</span>
+              </a>
+            </div>
           </div>
-          <p class="mt-3 text-xs text-slate-400">
-            CTA primário → <code>&lt;Link to="/login"&gt;</code>
-          </p>
         </section>
 
-        <!-- BLOCOS DE CAPACIDADE (exatamente 4, dentro de landing-capabilities) -->
+        <!-- SEÇÃO: TELAS DO SISTEMA / PREVIEWS ("PRINTS DE TELAS") -->
         <section
-          data-testid="landing-capabilities"
-          class="border-y border-slate-200 bg-slate-50"
+          id="previews"
+          data-testid="landing-previews"
+          class="border-b border-slate-200 bg-slate-50/70 py-16 md:py-20"
         >
-          <div class="mx-auto grid max-w-6xl gap-8 px-6 py-16 md:grid-cols-2 lg:grid-cols-4">
-            <div class="rounded-lg border border-slate-200 bg-white p-6">
-              <i data-lucide="clipboard-list" class="h-6 w-6 text-slate-900"></i>
-              <h2 class="mt-4 text-base font-bold">
-                <span class="todo">[capacidade 1 — título]</span>
+          <div class="mx-auto max-w-6xl px-6">
+            <div class="text-center max-w-3xl mx-auto mb-10">
+              <span class="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-100 i18n-key" data-i18n="landing.previews.badge">
+                Telas do Sistema
+              </span>
+              <h2 class="mt-3 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+                <span class="i18n-key" data-i18n="landing.previews.title">Interface intuitiva para cada momento da gestão</span>
               </h2>
-              <p class="mt-2 text-sm text-slate-600">
-                <span class="todo">[capacidade 1 — um parágrafo curto]</span>
+              <p class="mt-2 text-base text-slate-600">
+                <span class="i18n-key" data-i18n="landing.previews.subtitle">Veja como o APRAS simplifica a rotina operacional do síndico, da equipe de portaria e dos moradores.</span>
               </p>
             </div>
-            <div class="rounded-lg border border-slate-200 bg-white p-6">
-              <i data-lucide="shield-check" class="h-6 w-6 text-slate-900"></i>
-              <h2 class="mt-4 text-base font-bold">
-                <span class="todo">[capacidade 2 — título]</span>
-              </h2>
-              <p class="mt-2 text-sm text-slate-600">
-                <span class="todo">[capacidade 2 — um parágrafo curto]</span>
-              </p>
+
+            <!-- TAB CONTROLS PARA OS PREVIEWS -->
+            <div class="flex justify-center mb-8 overflow-x-auto pb-2">
+              <div class="inline-flex rounded-xl bg-slate-200/80 p-1.5 shadow-inner">
+                <button
+                  data-preview-tab="tasks"
+                  class="preview-tab-btn active flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all bg-white text-slate-900 shadow-sm"
+                >
+                  <i data-lucide="clipboard-check" class="h-4 w-4 text-indigo-600"></i>
+                  <span class="i18n-key" data-i18n="landing.previews.tabTasks">Tarefas & Manutenção</span>
+                </button>
+                <button
+                  data-preview-tab="access"
+                  class="preview-tab-btn flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all text-slate-600 hover:text-slate-900"
+                >
+                  <i data-lucide="qr-code" class="h-4 w-4 text-emerald-600"></i>
+                  <span class="i18n-key" data-i18n="landing.previews.tabAccess">Portaria & Acesso</span>
+                </button>
+                <button
+                  data-preview-tab="infractions"
+                  class="preview-tab-btn flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all text-slate-600 hover:text-slate-900"
+                >
+                  <i data-lucide="alert-triangle" class="h-4 w-4 text-amber-600"></i>
+                  <span class="i18n-key" data-i18n="landing.previews.tabInfractions">Ocorrências & Livro</span>
+                </button>
+                <button
+                  data-preview-tab="finance"
+                  class="preview-tab-btn flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all text-slate-600 hover:text-slate-900"
+                >
+                  <i data-lucide="hard-hat" class="h-4 w-4 text-blue-600"></i>
+                  <span class="i18n-key" data-i18n="landing.previews.tabFinance">Obras & Projetos</span>
+                </button>
+              </div>
             </div>
-            <div class="rounded-lg border border-slate-200 bg-white p-6">
-              <i data-lucide="wallet" class="h-6 w-6 text-slate-900"></i>
-              <h2 class="mt-4 text-base font-bold">
-                <span class="todo">[capacidade 3 — título]</span>
-              </h2>
-              <p class="mt-2 text-sm text-slate-600">
-                <span class="todo">[capacidade 3 — um parágrafo curto]</span>
-              </p>
-            </div>
-            <div class="rounded-lg border border-slate-200 bg-white p-6">
-              <i data-lucide="users" class="h-6 w-6 text-slate-900"></i>
-              <h2 class="mt-4 text-base font-bold">
-                <span class="todo">[capacidade 4 — título]</span>
-              </h2>
-              <p class="mt-2 text-sm text-slate-600">
-                <span class="todo">[capacidade 4 — um parágrafo curto]</span>
-              </p>
+
+            <!-- CONTAINER DO PREVIEW MOCKUP (Janela estilo Software/App com controles) -->
+            <div class="mx-auto max-w-4xl rounded-2xl border border-slate-300 bg-white shadow-xl overflow-hidden ring-1 ring-slate-900/5">
+              <!-- Barra de título do mockup de tela -->
+              <div class="flex items-center justify-between border-b border-slate-200 bg-slate-100/90 px-4 py-3">
+                <div class="flex items-center gap-2">
+                  <span class="h-3 w-3 rounded-full bg-rose-400"></span>
+                  <span class="h-3 w-3 rounded-full bg-amber-400"></span>
+                  <span class="h-3 w-3 rounded-full bg-emerald-400"></span>
+                  <span class="ml-2 text-xs font-mono font-medium text-slate-500">apras.app/dashboard</span>
+                </div>
+                <div class="flex items-center gap-2 text-xs text-slate-500">
+                  <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                  <span>Ambiente Ativo</span>
+                </div>
+              </div>
+
+              <!-- PREVIEW 1: TAREFAS & MANUTENÇÃO (PRINT KANBAN / DETALHE) -->
+              <div id="preview-panel-tasks" class="preview-panel p-6 sm:p-8">
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-5">
+                  <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
+                      <i data-lucide="wrench" class="h-5 w-5"></i>
+                    </div>
+                    <div>
+                      <div class="flex items-center gap-2">
+                        <span class="rounded bg-rose-100 px-2 py-0.5 text-xs font-bold text-rose-700 i18n-key" data-i18n="landing.previews.tasks.priority">Prioridade Alta</span>
+                        <span class="rounded bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700 i18n-key" data-i18n="landing.previews.tasks.status">Em Andamento</span>
+                      </div>
+                      <h3 class="text-lg font-bold text-slate-900 mt-1 i18n-key" data-i18n="landing.previews.tasks.cardTitle">
+                        Manutenção Preventiva — Elevador Social Bloco A
+                      </h3>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 px-3 py-1.5 rounded-md border border-slate-200">
+                    <i data-lucide="clock" class="h-3.5 w-3.5 text-slate-400"></i>
+                    <span class="i18n-key" data-i18n="landing.previews.tasks.dueDate">Vencimento: Amanhã às 14:00</span>
+                  </div>
+                </div>
+
+                <div class="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div class="rounded-lg bg-slate-50 p-4 border border-slate-200">
+                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Responsável</span>
+                    <div class="flex items-center gap-2.5 mt-2">
+                      <div class="h-7 w-7 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs font-bold">EM</div>
+                      <div>
+                        <p class="text-sm font-bold text-slate-800">Elevadores Atlas</p>
+                        <p class="text-xs text-slate-500">Técnico Certificado</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="rounded-lg bg-slate-50 p-4 border border-slate-200">
+                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Checklist Técnico</span>
+                    <p class="text-sm font-bold text-slate-800 mt-2">3 de 4 itens concluídos</p>
+                    <div class="w-full bg-slate-200 h-1.5 rounded-full mt-2 overflow-hidden">
+                      <div class="bg-indigo-600 h-full rounded-full w-3/4"></div>
+                    </div>
+                  </div>
+                  <div class="rounded-lg bg-slate-50 p-4 border border-slate-200">
+                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Localização</span>
+                    <p class="text-sm font-bold text-slate-800 mt-2">Torre A — Casa de Máquinas</p>
+                    <p class="text-xs text-slate-500">Acesso via cobertura</p>
+                  </div>
+                </div>
+
+                <div class="mt-5 flex items-center gap-2 rounded-lg bg-indigo-50/60 p-3 text-xs text-indigo-900 border border-indigo-100">
+                  <i data-lucide="history" class="h-4 w-4 text-indigo-600 shrink-0"></i>
+                  <span class="font-medium i18n-key" data-i18n="landing.previews.tasks.audit">3 alterações registradas no histórico de auditoria</span>
+                </div>
+              </div>
+
+              <!-- PREVIEW 2: PORTARIA & ACESSO (PRINT CHECK-IN QR CODE) -->
+              <div id="preview-panel-access" class="preview-panel hidden p-6 sm:p-8">
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-5">
+                  <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+                      <i data-lucide="shield-check" class="h-5 w-5"></i>
+                    </div>
+                    <div>
+                      <div class="flex items-center gap-2">
+                        <span class="rounded bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-800 i18n-key" data-i18n="landing.previews.access.status">Autorizado pelo morador via app</span>
+                      </div>
+                      <h3 class="text-lg font-bold text-slate-900 mt-1 i18n-key" data-i18n="landing.previews.access.cardTitle">
+                        Liberação de Acesso por QR Code
+                      </h3>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-md border border-emerald-200">
+                    <i data-lucide="clock" class="h-3.5 w-3.5 text-emerald-600"></i>
+                    <span class="i18n-key" data-i18n="landing.previews.access.time">Entrada autorizada até 18:00</span>
+                  </div>
+                </div>
+
+                <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div class="rounded-lg bg-slate-50 p-4 border border-slate-200">
+                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Visitante / Prestador</span>
+                    <p class="text-base font-bold text-slate-900 mt-1 i18n-key" data-i18n="landing.previews.access.visitor">Carlos Eduardo (Técnico de Fibra Óptica)</p>
+                    <p class="text-xs text-slate-500 mt-0.5">Operadora Vivo Fibra · RG 38.491.200-X</p>
+                    <div class="mt-3 flex items-center gap-2 text-xs text-slate-600">
+                      <i data-lucide="car" class="h-3.5 w-3.5 text-slate-400"></i>
+                      <span>Veículo de serviço: Placa BRA-2E19</span>
+                    </div>
+                  </div>
+                  <div class="rounded-lg bg-slate-50 p-4 border border-slate-200">
+                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Destino Autorizado</span>
+                    <p class="text-base font-bold text-slate-900 mt-1 i18n-key" data-i18n="landing.previews.access.unit">Unidade: Apto 402 — Bloco B</p>
+                    <p class="text-xs text-slate-500 mt-0.5">Moradora: Dra. Renata Meirelles</p>
+                    <div class="mt-3 flex items-center gap-2 text-xs text-emerald-700">
+                      <i data-lucide="smartphone" class="h-3.5 w-3.5 text-emerald-600"></i>
+                      <span>Convite validado às 14:18 pelo leitor de QR Code</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mt-5 flex items-center justify-between rounded-lg bg-slate-900 text-white p-3 text-xs">
+                  <span class="flex items-center gap-2">
+                    <i data-lucide="check" class="h-4 w-4 text-emerald-400"></i>
+                    Acesso registrado na portaria com foto do documento arquivada
+                  </span>
+                  <span class="font-mono text-slate-400">Catraca 01 liberada</span>
+                </div>
+              </div>
+
+              <!-- PREVIEW 3: OCORRÊNCIAS & INFRAÇÕES (PRINT TIMELINE / MULTA) -->
+              <div id="preview-panel-infractions" class="preview-panel hidden p-6 sm:p-8">
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-5">
+                  <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+                      <i data-lucide="file-warning" class="h-5 w-5"></i>
+                    </div>
+                    <div>
+                      <div class="flex items-center gap-2">
+                        <span class="rounded bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800 i18n-key" data-i18n="landing.previews.infractions.status">Notificação Emitida com Fotos</span>
+                        <span class="rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">Regimento Interno Art. 44</span>
+                      </div>
+                      <h3 class="text-lg font-bold text-slate-900 mt-1 i18n-key" data-i18n="landing.previews.infractions.cardTitle">
+                        Ocorrência #1042 — Vazamento em Vaga de Garagem
+                      </h3>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2 text-xs text-amber-800 bg-amber-50 px-3 py-1.5 rounded-md border border-amber-200">
+                    <i data-lucide="calendar" class="h-3.5 w-3.5 text-amber-600"></i>
+                    <span class="i18n-key" data-i18n="landing.previews.infractions.deadline">Prazo de manifestação: 5 dias úteis</span>
+                  </div>
+                </div>
+
+                <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div class="rounded-lg bg-slate-50 p-4 border border-slate-200">
+                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Unidade Notificada</span>
+                    <p class="text-base font-bold text-slate-900 mt-1 i18n-key" data-i18n="landing.previews.infractions.unit">Local: Subsolo 1 — Vaga 45 (Unidade 301)</p>
+                    <p class="text-xs text-slate-500 mt-1">Óleo de motor com risco de escorregamento e dano ao piso epóxi.</p>
+                  </div>
+                  <div class="rounded-lg bg-slate-50 p-4 border border-slate-200">
+                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Evidências e Laudo</span>
+                    <p class="text-sm font-bold text-slate-800 mt-1 i18n-key" data-i18n="landing.previews.infractions.evidence">2 fotos e laudo da zeladoria anexados</p>
+                    <div class="flex gap-2 mt-2">
+                      <span class="inline-flex items-center gap-1 rounded bg-slate-200/80 px-2 py-1 text-xs text-slate-700">
+                        <i data-lucide="image" class="h-3 w-3"></i> foto_vaga45.jpg
+                      </span>
+                      <span class="inline-flex items-center gap-1 rounded bg-slate-200/80 px-2 py-1 text-xs text-slate-700">
+                        <i data-lucide="image" class="h-3 w-3"></i> registro_oleo.jpg
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mt-5 rounded-lg bg-slate-50 p-3.5 border border-slate-200">
+                  <div class="flex items-center justify-between text-xs text-slate-500 mb-2">
+                    <span class="font-semibold text-slate-700">Ciclo de Notificação e Conturbação</span>
+                    <span>Etapa 2 de 4</span>
+                  </div>
+                  <div class="grid grid-cols-4 gap-2 text-center text-xs font-medium">
+                    <div class="p-1.5 rounded bg-emerald-100 text-emerald-800">1. Registro</div>
+                    <div class="p-1.5 rounded bg-indigo-600 text-white shadow-sm">2. Notificação</div>
+                    <div class="p-1.5 rounded bg-slate-200 text-slate-500">3. Defesa</div>
+                    <div class="p-1.5 rounded bg-slate-200 text-slate-500">4. Resolução</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- PREVIEW 4: OBRAS & FINANÇAS (PRINT PROGRESSO / ORÇAMENTO) -->
+              <div id="preview-panel-finance" class="preview-panel hidden p-6 sm:p-8">
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-5">
+                  <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                      <i data-lucide="hammer" class="h-5 w-5"></i>
+                    </div>
+                    <div>
+                      <div class="flex items-center gap-2">
+                        <span class="rounded bg-blue-100 px-2 py-0.5 text-xs font-bold text-blue-800 i18n-key" data-i18n="landing.previews.finance.progress">68% concluído — Fase 3: Pintura e Vedação</span>
+                      </div>
+                      <h3 class="text-lg font-bold text-slate-900 mt-1 i18n-key" data-i18n="landing.previews.finance.cardTitle">
+                        Reforma da Fachada & Impermeabilização
+                      </h3>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2 text-xs text-blue-800 bg-blue-50 px-3 py-1.5 rounded-md border border-blue-200">
+                    <i data-lucide="check-square" class="h-3.5 w-3.5 text-blue-600"></i>
+                    <span class="i18n-key" data-i18n="landing.previews.finance.milestone">Próxima vistoria técnica agendada para 05/10</span>
+                  </div>
+                </div>
+
+                <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div class="rounded-lg bg-slate-50 p-4 border border-slate-200">
+                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Acompanhamento Orçamentário</span>
+                    <p class="text-sm font-bold text-slate-900 mt-1 i18n-key" data-i18n="landing.previews.finance.budget">Orçamento aprovado em assembleia: R$ 210.000</p>
+                    <div class="mt-3">
+                      <div class="flex justify-between text-xs text-slate-600 mb-1">
+                        <span>Executado: R$ 142.800</span>
+                        <span class="font-bold text-blue-700">68%</span>
+                      </div>
+                      <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                        <div class="bg-blue-600 h-full rounded-full w-[68%]"></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="rounded-lg bg-slate-50 p-4 border border-slate-200">
+                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Contrato & Garantias</span>
+                    <p class="text-base font-bold text-slate-900 mt-1">Engenharia Prisma Ltda.</p>
+                    <p class="text-xs text-slate-500 mt-0.5">ART registrada nº 2026/04819 · Seguro R.C. Ativo</p>
+                    <div class="mt-3 flex items-center gap-1.5 text-xs text-emerald-700">
+                      <i data-lucide="shield" class="h-3.5 w-3.5 text-emerald-600"></i>
+                      <span>Garantia contratual de 5 anos após entrega</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mt-5 flex items-center justify-between rounded-lg bg-slate-100 p-3 text-xs text-slate-700 border border-slate-200">
+                  <span class="flex items-center gap-2">
+                    <i data-lucide="file-check-2" class="h-4 w-4 text-blue-600"></i>
+                    Prestação de contas mensal disponível para consulta de todos os condôminos
+                  </span>
+                  <span class="font-semibold text-slate-900">Transparência 100%</span>
+                </div>
+              </div>
             </div>
           </div>
-          <div class="pb-6 text-center text-xs text-slate-500">
-            exatamente 4 blocos — contados dentro de
-            <code>[data-testid="landing-capabilities"]</code>
+        </section>
+
+        <!-- BLOCOS DE CAPACIDADE (EXATAMENTE 6 CARDS DENTRO DE landing-capabilities) -->
+        <section
+          data-testid="landing-capabilities"
+          class="border-b border-slate-200 bg-white py-16 md:py-20"
+        >
+          <div class="mx-auto max-w-6xl px-6">
+            <div class="text-center max-w-2xl mx-auto mb-12">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Módulos & Recursos</span>
+              <p class="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+                Tudo o que seu condomínio precisa em um só lugar
+              </p>
+            </div>
+
+            <div class="grid max-w-6xl gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              <!-- Bloco 1: Tarefas -->
+              <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm hover:border-slate-300 hover:shadow-md transition-all">
+                <div class="flex h-11 w-11 items-center justify-center rounded-lg bg-indigo-50 text-indigo-700">
+                  <i data-lucide="clipboard-list" class="h-5 w-5"></i>
+                </div>
+                <h2 class="mt-4 text-lg font-bold text-slate-900">
+                  <span class="i18n-key" data-i18n="landing.capabilities.tasks.title">Gestão de Tarefas e Manutenção</span>
+                </h2>
+                <p class="mt-2 text-sm text-slate-600 leading-relaxed">
+                  <span class="i18n-key" data-i18n="landing.capabilities.tasks.description">Acompanhe manutenções preventivas e rotinas operacionais com prioridades, prazos e histórico de auditoria.</span>
+                </p>
+              </div>
+
+              <!-- Bloco 2: Portaria e Acesso -->
+              <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm hover:border-slate-300 hover:shadow-md transition-all">
+                <div class="flex h-11 w-11 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+                  <i data-lucide="shield-check" class="h-5 w-5"></i>
+                </div>
+                <h2 class="mt-4 text-lg font-bold text-slate-900">
+                  <span class="i18n-key" data-i18n="landing.capabilities.access.title">Portaria e Controle de Acesso</span>
+                </h2>
+                <p class="mt-2 text-sm text-slate-600 leading-relaxed">
+                  <span class="i18n-key" data-i18n="landing.capabilities.access.description">Autorização de visitantes com QR code, controle de portaria, encomendas e permissões personalizadas.</span>
+                </p>
+              </div>
+
+              <!-- Bloco 3: Ocorrências e Notificações -->
+              <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm hover:border-slate-300 hover:shadow-md transition-all">
+                <div class="flex h-11 w-11 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
+                  <i data-lucide="alert-circle" class="h-5 w-5"></i>
+                </div>
+                <h2 class="mt-4 text-lg font-bold text-slate-900">
+                  <span class="i18n-key" data-i18n="landing.capabilities.infractions.title">Ocorrências e Notificações</span>
+                </h2>
+                <p class="mt-2 text-sm text-slate-600 leading-relaxed">
+                  <span class="i18n-key" data-i18n="landing.capabilities.infractions.description">Registre incidentes com evidências fotográficas, emita notificações automáticas e gerencie prazos e reincidências.</span>
+                </p>
+              </div>
+
+              <!-- Bloco 4: Obras e Finanças -->
+              <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm hover:border-slate-300 hover:shadow-md transition-all">
+                <div class="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
+                  <i data-lucide="hard-hat" class="h-5 w-5"></i>
+                </div>
+                <h2 class="mt-4 text-lg font-bold text-slate-900">
+                  <span class="i18n-key" data-i18n="landing.capabilities.finance.title">Obras, Projetos e Finanças</span>
+                </h2>
+                <p class="mt-2 text-sm text-slate-600 leading-relaxed">
+                  <span class="i18n-key" data-i18n="landing.capabilities.finance.description">Acompanhe cronogramas de reformas, aprove orçamentos e monitore despesas e rateios com total transparência.</span>
+                </p>
+              </div>
+
+              <!-- Bloco 5: Patrimônio e Cotações -->
+              <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm hover:border-slate-300 hover:shadow-md transition-all">
+                <div class="flex h-11 w-11 items-center justify-center rounded-lg bg-purple-50 text-purple-700">
+                  <i data-lucide="wallet" class="h-5 w-5"></i>
+                </div>
+                <h2 class="mt-4 text-lg font-bold text-slate-900">
+                  <span class="i18n-key" data-i18n="landing.capabilities.purchases.title">Patrimônio e Compras</span>
+                </h2>
+                <p class="mt-2 text-sm text-slate-600 leading-relaxed">
+                  <span class="i18n-key" data-i18n="landing.capabilities.purchases.description">Inventário digital de bens e comparativo de orçamentos item a item entre diferentes fornecedores.</span>
+                </p>
+              </div>
+
+              <!-- Bloco 6: Documentos e Governança -->
+              <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm hover:border-slate-300 hover:shadow-md transition-all">
+                <div class="flex h-11 w-11 items-center justify-center rounded-lg bg-slate-100 text-slate-800">
+                  <i data-lucide="file-text" class="h-5 w-5"></i>
+                </div>
+                <h2 class="mt-4 text-lg font-bold text-slate-900">
+                  <span class="i18n-key" data-i18n="landing.capabilities.documents.title">Documentos e Governança</span>
+                </h2>
+                <p class="mt-2 text-sm text-slate-600 leading-relaxed">
+                  <span class="i18n-key" data-i18n="landing.capabilities.documents.description">Atas de assembleia, convenções e relatórios financeiros centralizados com busca rápida para moradores e conselho.</span>
+                </p>
+              </div>
+            </div>
+
+            <div class="mt-8 text-center text-xs text-slate-400">
+              exatamente 6 blocos — contados dentro de <code>[data-testid="landing-capabilities"]</code>
+            </div>
           </div>
         </section>
 
         <!-- CTA REPETIDO — o <h2> abaixo fica FORA de landing-capabilities -->
-        <section class="mx-auto max-w-3xl px-6 py-16 text-center">
-          <h2 class="text-2xl font-bold">
-            <span class="todo">[chamada final — a definir]</span>
-          </h2>
-          <a
-            href="#"
-            class="mt-6 inline-flex items-center gap-2 rounded-md border border-slate-900 px-6 py-3 text-base font-semibold text-slate-900 hover:bg-slate-900 hover:text-white"
-          >
-            Entrar
-            <i data-lucide="log-in" class="h-4 w-4"></i>
-          </a>
+        <section class="mx-auto max-w-4xl px-6 py-16 md:py-20 text-center">
+          <div class="rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 p-8 sm:p-12 text-white shadow-xl">
+            <h2 class="text-2xl font-bold sm:text-3xl text-white">
+              <span class="i18n-key" data-i18n="landing.ctaBand.title">Pronto para simplificar a administração do seu condomínio?</span>
+            </h2>
+            <p class="mt-3 text-slate-300 text-sm sm:text-base max-w-xl mx-auto">
+              Acesse a plataforma e descubra como organizar demandas, moradores e operações com segurança e transparência.
+            </p>
+            <div class="mt-8 flex justify-center">
+              <a
+                href="/login"
+                class="inline-flex items-center gap-2 rounded-lg bg-white px-7 py-3.5 text-base font-bold text-slate-900 shadow-md hover:bg-slate-100 transition-all"
+              >
+                <span class="i18n-key" data-i18n="landing.ctaBand.cta">Entrar no APRAS</span>
+                <i data-lucide="log-in" class="h-4 w-4"></i>
+              </a>
+            </div>
+          </div>
         </section>
 
         <!-- FOOTER -->
-        <footer class="border-t border-slate-200">
+        <footer class="border-t border-slate-200 bg-slate-50">
           <div
-            class="mx-auto flex max-w-6xl flex-col items-center gap-2 px-6 py-8 text-sm text-slate-500 sm:flex-row sm:justify-between"
+            class="mx-auto flex max-w-6xl flex-col items-center gap-4 px-6 py-8 text-sm text-slate-500 sm:flex-row sm:justify-between"
           >
-            <span class="todo">[linha de rodapé — a definir]</span>
-            <span class="text-xs">APRAS</span>
+            <span class="i18n-key text-xs sm:text-sm" data-i18n="landing.footer.text">
+              APRAS — Aplicativo de Planejamento e Resoluções para Associações e Síndicos. Todos os direitos reservados.
+            </span>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-slate-400">APRAS v2.4</span>
+            </div>
           </div>
         </footer>
       </div>
@@ -224,6 +615,7 @@
     <script>
       lucide.createIcons();
 
+      // State switching (anon / loading / auth)
       const sections = {
         anon: document.getElementById("state-anon"),
         loading: document.getElementById("state-loading"),
@@ -246,12 +638,45 @@
       });
       setState("anon");
 
-      const markerToggle = document.getElementById("marker-toggle");
-      const applyMarkers = () => {
-        document.body.classList.toggle("hide-markers", !markerToggle.checked);
+      // i18n Key inspector toggle
+      const keyToggle = document.getElementById("key-toggle");
+      const applyKeyVisibility = () => {
+        document.body.classList.toggle("hide-keys", !keyToggle.checked);
       };
-      markerToggle.addEventListener("change", applyMarkers);
-      applyMarkers();
+      keyToggle.addEventListener("change", applyKeyVisibility);
+
+      // Previews tab switcher
+      const previewPanels = {
+        tasks: document.getElementById("preview-panel-tasks"),
+        access: document.getElementById("preview-panel-access"),
+        infractions: document.getElementById("preview-panel-infractions"),
+        finance: document.getElementById("preview-panel-finance"),
+      };
+
+      document.querySelectorAll(".preview-tab-btn").forEach((tabBtn) => {
+        tabBtn.addEventListener("click", () => {
+          const tabId = tabBtn.dataset.previewTab;
+          
+          // Switch tabs appearance
+          document.querySelectorAll(".preview-tab-btn").forEach((btn) => {
+            const isActive = btn.dataset.previewTab === tabId;
+            btn.classList.toggle("bg-white", isActive);
+            btn.classList.toggle("text-slate-900", isActive);
+            btn.classList.toggle("shadow-sm", isActive);
+            btn.classList.toggle("text-slate-600", !isActive);
+          });
+
+          // Switch panel visibility
+          Object.entries(previewPanels).forEach(([key, panel]) => {
+            if (panel) {
+              panel.classList.toggle("hidden", key !== tabId);
+            }
+          });
+
+          // Recreate icons in newly visible panel
+          lucide.createIcons();
+        });
+      });
     </script>
   </body>
 </html>

@@ -112,4 +112,40 @@ describe("RootRedirect", () => {
     expect(container.querySelector(".animate-spin")).not.toBeNull();
     expect(screen.queryByText("Dashboard Page")).toBeNull();
   });
+
+  // APRAS-75: anonymous visitor sees the landing page.
+  it("renders the landing page for an anonymous visitor", () => {
+    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+    } as never);
+    withPermissions([]);
+
+    renderRoot();
+
+    expect(screen.getByTestId("landing-capabilities")).toBeInTheDocument();
+    expect(screen.getByTestId("landing-previews")).toBeInTheDocument();
+    expect(screen.queryByText("Painel Geral")).toBeNull();
+  });
+
+  // APRAS-75: while useAuth() itself is loading, show the spinner and not
+  // the landing. Distinct from the usePermissionSet() loading case at line 99.
+  it("renders a spinner while useAuth is loading (not the landing page)", () => {
+    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
+      user: null,
+      isAuthenticated: false,
+      isLoading: true,
+      login: vi.fn(),
+      logout: vi.fn(),
+    } as never);
+    withPermissions([]);
+
+    const { container } = renderRoot();
+
+    expect(container.querySelector(".animate-spin")).not.toBeNull();
+    expect(screen.queryByTestId("landing-capabilities")).toBeNull();
+  });
 });

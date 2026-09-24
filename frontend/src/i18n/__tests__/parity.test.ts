@@ -74,3 +74,34 @@ describe("retired keys", () => {
     expect(PT_KEYS).not.toContain("tasks.form.assigneeHelper");
   });
 });
+
+// APRAS-75: landing page i18n gate.
+describe("landing page locale assertions", () => {
+  const LANDING_KEYS_PT = PT_KEYS.filter((k) => k.startsWith("landing."));
+  const LANDING_KEYS_EN = EN_KEYS.filter((k) => k.startsWith("landing."));
+
+  it("no locale value contains LANDING_COPY_TODO", () => {
+    const findTodo = (tree: Record<string, unknown>, prefix = ""): string[] =>
+      Object.entries(tree).flatMap(([key, value]) =>
+        value !== null && typeof value === "object" && !Array.isArray(value)
+          ? findTodo(value as Record<string, unknown>, `${prefix}${key}.`)
+          : typeof value === "string" && value.includes("LANDING_COPY_TODO")
+            ? [`${prefix}${key}`]
+            : [],
+      );
+    expect(findTodo(pt as Record<string, unknown>)).toEqual([]);
+    expect(findTodo(en as Record<string, unknown>)).toEqual([]);
+  });
+
+  it("landing.* key set has exactly 48 keys in pt", () => {
+    expect(LANDING_KEYS_PT).toHaveLength(48);
+  });
+
+  it("landing.* key set has exactly 48 keys in en", () => {
+    expect(LANDING_KEYS_EN).toHaveLength(48);
+  });
+
+  it("landing.* key sets are identical in pt and en", () => {
+    expect(LANDING_KEYS_EN.sort()).toEqual(LANDING_KEYS_PT.sort());
+  });
+});

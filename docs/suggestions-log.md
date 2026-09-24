@@ -2100,3 +2100,128 @@ after the run is byte-identical to the one at the start.
   prints `<file>:<line> <class>`, which points a future author straight at the offending
   site. No change wanted; noting it because it is the reason I could confirm the guard
   is live rather than vacuous.
+
+## [APRAS-85] Migrate the remaining feature directories and close the guard — 2026-09-24
+- **S1. Result 19's span claim reads as exclusive and is not.** It says "Of the
+  312 occurrences, the five `border-t-*` stripes fall inside **no** class-context
+  span at all, because they are values of a `headerColorClass` object property".
+  Measured with a faithful port of the guard's own `classContexts()`, **55** of
+  the 312 fall inside no span — including, in the same object literal, the ten
+  `colorClass` tints (`bg-slate-50/50`, `dark:bg-slate-900/20`, …), plus
+  `GeneralDashboardPage`'s 24 swatches, `SpaceBookingPage`'s 8,
+  `DueDateBadge`'s 4 and `TenantInvitationsPanel`'s 4. The sentence is literally
+  true of the five and the assertion it asks for (that `matchesIn` reports them
+  anyway) is right, but a QA agent holding only this text may read "of the 312 …
+  the five" as "exactly five" and fail a correct implementation, and an
+  implementer may write `expect(outsideSpans).toHaveLength(5)`. Say instead that
+  the five are among the 55 occurrences that lie outside every span, and that the
+  ten tints beside them are too — which strengthens rather than weakens the
+  no-eighteenth-set argument.
+- **S2. Name the `accent` alternative explicitly in the §3b prose item.** The
+  third load-bearing item already records that the qualifier is one letter and
+  applies to `border` and `divide` only; adding "and that no other alternative of
+  `prefix` was added or removed" makes B1 unrepeatable by a later child.
+- **S3. Result 21's counting convention is unstated.** The four known-gap figures
+  (73 / 69 / 41 / 12 = 195) are **bare** occurrences. The tree also holds one
+  `dark:text-slate-700` (`finance/CategoryTransactionDrilldown.tsx:79`) and two
+  `hover:text-slate-700` (`lot-management/LotDetailsView.tsx:166,177`); the spec
+  mentions the `dark:` one but not the two `hover:` ones, so a QA agent grepping
+  `text-slate-700` measures 72, not 69. Say "bare, excluding variant-prefixed
+  occurrences, of which there are three" and the result becomes reproducible
+  without the spec. (Pre-existing; not introduced by job (c).)
+- **S4. Say what `task` cell the eight `public-site` rows carry** when APRAS-85 is
+  the one landing second. The spec says the rows and entries are added and
+  reported rather than folded into 145/126, which is right, but it never names the
+  task id they carry — and since results 9 and 11 are both scoped by task id, the
+  implementer needs to be told (presumably `APRAS-75`, the owner) rather than left
+  to choose.
+
+---
+
+## [APRAS-85] Migrate the remaining feature directories and close the guard — 2026-09-24
+- The "979 lines" figure in §"What changes, and what is deliberately left
+  alone" is one off (`wc -l` says 978). Purely cosmetic; no expected result
+  reads it.
+- Result 3's over-reach list does not include `border-2`, which §"Over-reach"
+  prose calls out as the specific case the widening could break. It is covered
+  indirectly by APRAS-78's untouched `describe("the §3b grammar")` block (also
+  required by result 3), so this is not a gap — only a place where the result
+  could have been one case stronger.
+
+## [APRAS-75] Serve a public landing page at / to anonymous visitors — 2026-09-24
+1. `LandingPageCopy.test.tsx` — drive the three non-default preview tabs before the leak assertion so
+   all 48 keys pass through the real instance. Roughly: loop `["tabAccess","tabInfractions","tabFinance"]`,
+   `await user.click(screen.getByRole("tab", { name }))`, re-read `container.textContent`, and run the
+   same stem check. Three lines, and it retires the last untested key group.
+2. `LandingPage.tsx:86-109` — the tab widget is ARIA-incomplete: `role="tab"` buttons with
+   `aria-selected`, but no `role="tabpanel"` on the panel container (line 112), no `id`/`aria-controls`
+   pairing, and no `type="button"`. A screen reader hears "tab, 1 of 4" and has nothing to move into.
+   Adding `role="tabpanel"` + `aria-labelledby` on line 112 and `id`/`aria-controls` on the buttons is
+   a handful of attributes; arrow-key roving focus would be the full APG treatment but is optional
+   since the buttons are natively focusable and Enter/Space-operable. Given APRAS-88/APRAS-90 were
+   both AA fixes, I would fix this in the same revision round — I am leaving it non-blocking only
+   because the widget is operable by keyboard as it stands.
+3. `LandingPage.test.tsx:8-13` — the local `vi.mock("react-i18next")` is the second of the two layers
+   that hid the original defect, and it is redundant with the global mock in `setup.ts` for
+   everything except the key-passthrough behaviour. It is defensible now that the copy test exists,
+   but the comment above it should say so explicitly ("structural assertions only; copy resolution is
+   proved in `LandingPageCopy.test.tsx`") so the next reader does not re-derive the trap.
+4. `LandingPage.test.tsx:66-76` — "renders no hard-coded user-visible strings" is the weakest test in
+   the diff: under the key-passthrough mock it only asserts two specific prose phrases are absent,
+   which a newly hardcoded third string would sail past. A real version asserts every non-empty text
+   node matches `/^landing\./`. The spec's ER "no hardcoded visible string" is currently carried by
+   the copy test's stem check, not by this one.
+5. `LandingPage.tsx:20` — typed `React.FC` without importing `React` as a value works under the new
+   JSX transform, and matches nothing in particular; the file's own hooks are imported individually.
+   Minor consistency nit only.
+6. `parity.test.ts` — `LANDING_KEYS_EN.sort()` mutates the filtered arrays in place. Harmless here
+   (both are fresh arrays from `filter`), but `[...x].sort()` is the habit worth keeping.
+
+## [APRAS-75] Serve a public landing page at / to anonymous visitors — 2026-09-24
+- `LandingPage.tsx:119,123,143,159` duplicate four class strings that
+  `components/ui/badge.tsx:15-30` already owns as named variants. I accept the
+  decision not to use `<Badge>` here (its base string forces `uppercase
+  tracking-wide`, wrong for sentence-case marketing copy), but the duplication
+  is real and now exists in three places counting `TaskDetailsView.tsx`. If a
+  fourth consumer appears, the fix is to split the tint pairs out of
+  `badgeVariants` into an exported `statusTint(variant)` helper that both
+  `<Badge>` and bare spans can call, rather than to keep copying strings.
+- `LandingPageStatusTints.test.ts` asserts the class strings against the file's
+  *source text* rather than rendered output. That is what makes the whole-file
+  palette sweep possible, so it is a reasonable trade, but it means the test
+  pins a formatting detail: reformatting the badge onto two lines, or adopting
+  the `statusTint()` helper above, breaks the test without changing a pixel. A
+  rendered-DOM assertion on `getComputedStyle`-free `className` for the three
+  non-default panels would be more durable — and would also close the round-1
+  caveat that the three non-default preview panels are never mounted by the
+  i18n test.
+- `src/features/public-site` is not in `themeTokenMigration.test.ts`'s pinned
+  directory list (`:34-35`). Adding it would be a one-line change and would put
+  future files in this directory under the same guard the rest of the migrated
+  tree gets. Out of scope for APRAS-75; worth a follow-up task.
+
+## [APRAS-75] Serve a public landing page at / to anonymous visitors — 2026-09-24
+1. **The "no hardcoded copy" assertion is weaker than its name.** `LandingPage.test.tsx`
+   implements it as a two-string denylist (`"Gestão inteligente"`, `"Smart and
+   transparent"`) plus one key-presence check. MUTATION: I replaced
+   `{t("landing.footer.text")}` with the literal `Todos os direitos reservados a APRAS.`
+   and the **entire landing + i18n suite still passed** (38/38). So a future change that
+   hardcodes PT prose anywhere outside the hero/two capability titles would ship silently
+   and never translate to EN. A cheap exhaustive form: in `LandingPageCopy.test.tsx`,
+   collect the rendered text under `pt` and under `en` and assert the two differ for every
+   text node — or assert that the set of visible strings is a subset of the 48 locale
+   values. (I restored the file; diff is clean.)
+2. **`LandingPageCopy.test.tsx` only exercises `pt`.** It calls
+   `i18n.changeLanguage("pt")` in `beforeAll` and never checks `en`. The EN bundle is
+   currently guarded only by key-set parity, not by rendering. Adding one `en` render
+   with a single English assertion would close that and would also give suggestion 1
+   for free.
+3. **Pre-existing flake, not this task's:** in my first full coverage run,
+   `src/__tests__/themeTokenMigration.test.ts > "fails when any single exception is
+   removed"` timed out at the 5000 ms default (5391 ms) under parallel load. Run alone
+   it passes in 1.28 s (50/50), and the second full run passed 1933/1933. It is an
+   O(n·EXCEPTIONS) sweep with the default timeout and nothing to do with APRAS-75, but it
+   will intermittently redden CI; worth a per-test `timeout` argument in its own task.
+4. The hero's secondary CTA is an in-page `<a href="#landing-previews">`. Harmless, but
+   note that it is the one anchor on the page that is not a router `Link`, so a future
+   test that asserts "every anchor points at /login" would trip on it.

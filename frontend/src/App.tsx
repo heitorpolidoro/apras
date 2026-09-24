@@ -50,6 +50,7 @@ import TenantsAdminPage from "./features/user-administration/pages/TenantsAdminP
 import InfractionsPage from "./features/infraction-management/pages/InfractionsPage";
 import InfractionRulesPage from "./features/infraction-management/pages/InfractionRulesPage";
 import MyInfractionsPage from "./features/infraction-management/pages/MyInfractionsPage";
+import LandingPage from "./features/public-site/pages/LandingPage";
 import { ROUTE_ACCESS } from "./features/user-administration/access/routeAccess";
 import { usePermissionSet } from "./features/user-administration/access/useCanAccess";
 import { Spinner } from "./components/ui/spinner";
@@ -57,7 +58,8 @@ import TenantBrandTheme from "./components/TenantBrandTheme";
 import "./App.css";
 
 /**
- * Where "/" lands the caller: the general dashboard, for everybody.
+ * Where "/" lands the caller: a public landing page for anonymous visitors,
+ * or the general dashboard for authenticated ones.
  *
  * APRAS-57 removed the per-role landing preference — first an enum switch,
  * then a column on the role row — so this component no longer chooses a
@@ -65,10 +67,18 @@ import "./App.css";
  * while the permission set is still settling, exactly as `ProtectedRoute`
  * does: navigating away here would unmount the component before the
  * dashboard's own gating could run.
+ *
+ * APRAS-75: anonymous visitors now see LandingPage. Both hooks are called
+ * unconditionally (rules of hooks); the auth state controls which branch runs.
  */
 export const RootRedirect: React.FC = () => {
+  // useAuth() MUST be called first and unconditionally (rules of hooks).
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  // usePermissionSet() MUST also be called unconditionally, even for anonymous.
   const set = usePermissionSet();
 
+  if (authLoading) return <Spinner />;
+  if (!isAuthenticated) return <LandingPage />;
   if (set.isLoading) return <Spinner />;
 
   return <GeneralDashboardPage />;
@@ -471,14 +481,7 @@ function App() {
                   }
                 />
 
-                <Route
-                  path="/"
-                  element={
-                    <ProtectedRoute>
-                      <RootRedirect />
-                    </ProtectedRoute>
-                  }
-                />
+                <Route path="/" element={<RootRedirect />} />
               </Routes>
             </AppLayoutContent>
           </div>

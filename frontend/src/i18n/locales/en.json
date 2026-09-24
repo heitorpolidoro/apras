@@ -2161,5 +2161,85 @@
     "goToLogin": "Go to the login page",
     "validationError": "Check the form: {{messages}}",
     "genericError": "Could not accept the invitation"
+  },
+  "landing": {
+    "brand": "APRAS",
+    "loginButton": "Sign in",
+    "hero": {
+      "badge": "Integrated Condominium Management Platform",
+      "title": "Smart and transparent management for condominiums and HOAs",
+      "subtitle": "Centralize operational tasks, access control, occurrences, projects, and accountability in a modern, secure platform with complete audit trails.",
+      "cta": "Access the system",
+      "secondaryCta": "View demo"
+    },
+    "capabilities": {
+      "tasks": {
+        "title": "Task & Maintenance Management",
+        "description": "Track preventative maintenance and operational routines with priorities, deadlines, and audit trails."
+      },
+      "access": {
+        "title": "Gatekeeper & Access Control",
+        "description": "Visitor authorization with QR codes, gate control, package logging, and custom permissions."
+      },
+      "infractions": {
+        "title": "Occurrences & Infractions",
+        "description": "Log incidents with photo evidence, issue automated notices, and manage defense deadlines and recidivism."
+      },
+      "finance": {
+        "title": "Projects, Works & Finance",
+        "description": "Track renovation timelines, approve budgets, and monitor expenses and cost-sharing with total transparency."
+      },
+      "purchases": {
+        "title": "Asset Inventory & Purchases",
+        "description": "Digital asset inventory and itemized quote comparisons between multiple suppliers."
+      },
+      "documents": {
+        "title": "Documents & Governance",
+        "description": "Meeting minutes, bylaws, and financial reports centralized with quick search for residents and board."
+      }
+    },
+    "previews": {
+      "badge": "System Screens",
+      "title": "Intuitive interface for every management routine",
+      "subtitle": "See how APRAS simplifies daily operations for managers, gatekeeper staff, and residents.",
+      "tabTasks": "Tasks & Maintenance",
+      "tabAccess": "Gatekeeper & Access",
+      "tabInfractions": "Occurrences & Logbook",
+      "tabFinance": "Works & Projects",
+      "tasks": {
+        "cardTitle": "Preventative Maintenance — Passenger Elevator Tower A",
+        "status": "In Progress",
+        "priority": "High Priority",
+        "dueDate": "Due: Tomorrow at 2:00 PM",
+        "audit": "3 changes logged in the audit trail"
+      },
+      "access": {
+        "cardTitle": "QR Code Access Authorization",
+        "visitor": "Carlos Eduardo (Fiber Optic Technician)",
+        "unit": "Unit: Apt 402 — Tower B",
+        "status": "Authorized by resident via app",
+        "time": "Access authorized until 6:00 PM"
+      },
+      "infractions": {
+        "cardTitle": "Occurrence #1042 — Water Leak in Parking Space",
+        "unit": "Location: Basement 1 — Spot 45 (Unit 301)",
+        "status": "Notification Issued with Photos",
+        "deadline": "Response deadline: 5 business days",
+        "evidence": "2 photos and inspection report attached"
+      },
+      "finance": {
+        "cardTitle": "Facade Renovation & Waterproofing",
+        "progress": "68% completed — Stage 3: Painting and Sealing",
+        "budget": "Assembly-approved budget: R$ 210,000",
+        "milestone": "Next technical inspection scheduled for Oct 5"
+      }
+    },
+    "ctaBand": {
+      "title": "Ready to simplify your condominium management?",
+      "cta": "Sign in to APRAS"
+    },
+    "footer": {
+      "text": "APRAS — Planning and Resolution Application for Associations and Managers. All rights reserved."
+    }
   }
 }

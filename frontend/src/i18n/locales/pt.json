@@ -2161,5 +2161,85 @@
     "goToLogin": "Ir para o login",
     "validationError": "Verifique o formulário: {{messages}}",
     "genericError": "Não foi possível aceitar o convite"
+  },
+  "landing": {
+    "brand": "APRAS",
+    "loginButton": "Entrar",
+    "hero": {
+      "badge": "Plataforma Integrada de Gestão Condominial",
+      "title": "Gestão inteligente e transparente para condomínios e associações",
+      "subtitle": "Centralize tarefas operacionais, portaria, ocorrências, obras e prestação de contas em uma plataforma moderna, segura e com auditoria completa.",
+      "cta": "Acessar o sistema",
+      "secondaryCta": "Ver demonstração"
+    },
+    "capabilities": {
+      "tasks": {
+        "title": "Gestão de Tarefas e Manutenção",
+        "description": "Acompanhe manutenções preventivas e rotinas operacionais com prioridades, prazos e histórico de auditoria."
+      },
+      "access": {
+        "title": "Portaria e Controle de Acesso",
+        "description": "Autorização de visitantes com QR code, controle de portaria, encomendas e permissões personalizadas."
+      },
+      "infractions": {
+        "title": "Ocorrências e Notificações",
+        "description": "Registre incidentes com evidências fotográficas, emita notificações automáticas e gerencie prazos e reincidências."
+      },
+      "finance": {
+        "title": "Obras, Projetos e Finanças",
+        "description": "Acompanhe cronogramas de reformas, aprove orçamentos e monitore despesas e rateios com total transparência."
+      },
+      "purchases": {
+        "title": "Patrimônio e Compras",
+        "description": "Inventário digital de bens e comparativo de orçamentos item a item entre diferentes fornecedores."
+      },
+      "documents": {
+        "title": "Documentos e Governança",
+        "description": "Atas de assembleia, convenções e relatórios financeiros centralizados com busca rápida para moradores e conselho."
+      }
+    },
+    "previews": {
+      "badge": "Telas do Sistema",
+      "title": "Interface intuitiva para cada momento da gestão",
+      "subtitle": "Veja como o APRAS simplifica a rotina operacional do síndico, da equipe de portaria e dos moradores.",
+      "tabTasks": "Tarefas & Manutenção",
+      "tabAccess": "Portaria & Acesso",
+      "tabInfractions": "Ocorrências & Livro",
+      "tabFinance": "Obras & Projetos",
+      "tasks": {
+        "cardTitle": "Manutenção Preventiva — Elevador Social Bloco A",
+        "status": "Em Andamento",
+        "priority": "Prioridade Alta",
+        "dueDate": "Vencimento: Amanhã às 14:00",
+        "audit": "3 alterações registradas no histórico de auditoria"
+      },
+      "access": {
+        "cardTitle": "Liberação de Acesso por QR Code",
+        "visitor": "Carlos Eduardo (Técnico de Fibra Óptica)",
+        "unit": "Unidade: Apto 402 — Bloco B",
+        "status": "Autorizado pelo morador via app",
+        "time": "Entrada autorizada até 18:00"
+      },
+      "infractions": {
+        "cardTitle": "Ocorrência #1042 — Vazamento em Vaga de Garagem",
+        "unit": "Local: Subsolo 1 — Vaga 45 (Unidade 301)",
+        "status": "Notificação Emitida com Fotos",
+        "deadline": "Prazo de manifestação: 5 dias úteis",
+        "evidence": "2 fotos e laudo da zeladoria anexados"
+      },
+      "finance": {
+        "cardTitle": "Reforma da Fachada & Impermeabilização",
+        "progress": "68% concluído — Fase 3: Pintura e Vedação",
+        "budget": "Orçamento aprovado em assembleia: R$ 210.000",
+        "milestone": "Próxima vistoria técnica agendada para 05/10"
+      }
+    },
+    "ctaBand": {
+      "title": "Pronto para simplificar a administração do seu condomínio?",
+      "cta": "Entrar no APRAS"
+    },
+    "footer": {
+      "text": "APRAS — Aplicativo de Planejamento e Resoluções para Associações e Síndicos. Todos os direitos reservados."
+    }
   }
 }

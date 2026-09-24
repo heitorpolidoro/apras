@@ -152,12 +152,15 @@ describe("App routing smoke test (real router, real pages)", () => {
     expect(window.location.pathname).toBe("/login");
   });
 
-  it("redirects an unauthenticated visit to / onto the login form", async () => {
+  // APRAS-75: unauthenticated visit to "/" stays on "/" and shows the landing.
+  it("shows the landing page at / to an unauthenticated visitor", async () => {
     renderAppAt("/");
 
-    expect(await screen.findByLabelText("E-mail")).toBeInTheDocument();
-    expect(screen.getByLabelText("Senha")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Entrar" })).toBeInTheDocument();
-    expect(window.location.pathname).toBe("/login");
+    expect(
+      await screen.findByTestId("landing-capabilities"),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("landing-previews")).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/");
+    expect(screen.queryByLabelText("E-mail")).toBeNull();
   });
 });
