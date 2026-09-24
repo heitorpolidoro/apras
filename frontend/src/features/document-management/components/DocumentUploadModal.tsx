@@ -112,17 +112,17 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-xs"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/70 p-4 backdrop-blur-xs"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800"
+        className="relative w-full max-w-lg bg-card rounded-2xl shadow-2xl overflow-hidden border border-border"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div className="flex items-center space-x-2">
-            <FileUp className="h-5 w-5 text-indigo-500" />
-            <h3 className="text-base font-bold text-slate-900 dark:text-white">
+            <FileUp className="h-5 w-5 text-primary" />
+            <h3 className="text-base font-bold text-foreground">
               {isVersionMode
                 ? t("documents.uploadNewVersionTitle", "Nova Versão do Documento")
                 : t("documents.uploadDocumentTitle", "Novo Documento")}
@@ -131,7 +131,7 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-muted-foreground hover:bg-accent transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -147,7 +147,7 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
                 value={folderId}
                 onChange={(e) => setFolderId(e.target.value)}
                 required
-                className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+                className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm text-foreground focus:outline-hidden focus:ring-2 focus:ring-ring"
               >
                 <option value="" disabled>
                   {t("documents.selectFolder", "Selecione uma pasta")}
@@ -238,16 +238,16 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
               rows={2}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm text-foreground focus:outline-hidden focus:ring-2 focus:ring-ring"
               placeholder={t("documents.descriptionPlaceholder", "Resumo das informações do documento...")}
             />
           </div>
 
-          <div className="flex items-center justify-end space-x-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+          <div className="flex items-center justify-end space-x-3 pt-4 border-t border-border">
             <Button type="button" variant="outline" onClick={onClose}>
               {t("common.cancel", "Cancelar")}
             </Button>
-            <Button type="submit" disabled={isLoading} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+            <Button type="submit" disabled={isLoading} className="bg-primary hover:bg-primary/90 text-primary-foreground">
               <Upload className="h-4 w-4 mr-1.5" />
               <span>{isVersionMode ? t("documents.saveVersion", "Enviar Nova Versão") : t("documents.saveDocument", "Salvar Documento")}</span>
             </Button>

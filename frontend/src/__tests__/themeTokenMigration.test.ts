@@ -33,6 +33,10 @@ export const MIGRATED_DIRECTORIES: readonly string[] = [
   "src/components/ui",
   "src/features/lot-management/components",
   "src/features/visitor-management/components",
+  // APRAS-82's operator-given scope is two directories, not one, so this
+  // child appends two entries where its siblings appended one.
+  "src/features/document-management/components",
+  "src/features/occurrence-management/components",
 ];
 
 /** The eight gap codes of §1h, in precedence order. Closed set: an entry
@@ -302,6 +306,40 @@ const key = (file: string, className: string): string =>
   `${file}${SEPARATOR}${className}`;
 
 /**
+ * `matchesIn`, memoised at module scope on the file path *and* its source.
+ *
+ * One scan per file, not one per exception: `matchesIn` is linear in the file
+ * and `lineOf` is linear in the match offset, so re-scanning inside the
+ * exception loop is cubic once several directories are pinned. With 331
+ * exceptions over 37 pinned files the per-`violations()` cache of the first
+ * four children re-scanned every file on each of the 331 calls
+ * `it("fails when any single exception is removed")` makes, and that one test
+ * alone ran for seconds. Hoisting the memo out of `violations` makes those
+ * calls share it.
+ *
+ * Keyed on the file *and* the source it was scanned from, so the memo stays a
+ * pure function of its arguments: the mutated-argument tests below hand
+ * `violations` a file whose source carries a reintroduced class, get a key
+ * that has never been seen, and still bite.
+ */
+const SCAN_MEMO = new Map<string, Map<string, Match[]>>();
+
+const scan = (file: string, source: string): Match[] => {
+  let bySource = SCAN_MEMO.get(file);
+  if (bySource === undefined) {
+    bySource = new Map<string, Match[]>();
+    SCAN_MEMO.set(file, bySource);
+  }
+  const cached = bySource.get(source);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const matches = matchesIn(file, source);
+  bySource.set(source, matches);
+  return matches;
+};
+
+/**
  * Every reason the guard has to fail, as one list of sentences.
  *
  * A pure function of (pinned files, exceptions, ledger) so the suite can
@@ -315,27 +353,11 @@ export const violations = (
   ledger: readonly LedgerRow[],
 ): string[] => {
   const problems: string[] = [];
-  // One scan per file, not one per exception. `matchesIn` is linear in the
-  // file and `lineOf` is linear in the match offset, so re-scanning inside
-  // the exception loop is cubic once a second directory is pinned: with the
-  // pilot alone it took milliseconds, with 170 exceptions over 18 files it
-  // exceeded the 5s test timeout. Memoising changes no result — the argument
-  // is still the only input, so the mutated-argument tests below still bite.
-  // Keyed on the file *and* the source it was scanned from. `pinnedFiles()`
-  // de-duplicates through a Set, so two entries naming one file cannot occur
-  // today — but `violations` is exported and takes an arbitrary array, and a
-  // key that is right only by a caller's precondition rots silently. Holding
-  // the source makes the cache correct for any argument.
-  const scans = new Map<string, { source: string; matches: Match[] }>();
-  const scan = (file: string, source: string): Match[] => {
-    const cached = scans.get(file);
-    if (cached !== undefined && cached.source === source) {
-      return cached.matches;
-    }
-    const matches = matchesIn(file, source);
-    scans.set(file, { source, matches });
-    return matches;
-  };
+  // The scan memo is at module scope — see `scan` above. The path index is
+  // per call because `files` is an argument: a linear `find` inside the
+  // exception loop is quadratic, and this function is called once per
+  // exception by `it("fails when any single exception is removed")`.
+  const byPath = new Map(files.map((file) => [file.file, file]));
   const excused = new Set(
     exceptions.map((entry) => key(entry.file, entry.class)),
   );
@@ -361,7 +383,7 @@ export const violations = (
         `exception ${entry.file} / ${entry.class} is not an exact pair; globs and directory-wide entries are refused (§3c rule 3)`,
       );
     }
-    const source = files.find((candidate) => candidate.file === entry.file);
+    const source = byPath.get(entry.file);
     if (source === undefined) {
       problems.push(
         `exception names ${entry.file}, which is not a source file under a pinned directory (§3c rule 2)`,
@@ -482,6 +504,12 @@ describe("MIGRATED_DIRECTORIES", () => {
     expect(MIGRATED_DIRECTORIES).toContain(
       "src/features/visitor-management/components",
     );
+    expect(MIGRATED_DIRECTORIES).toContain(
+      "src/features/document-management/components",
+    );
+    expect(MIGRATED_DIRECTORIES).toContain(
+      "src/features/occurrence-management/components",
+    );
     expect(new Set(MIGRATED_DIRECTORIES).size).toBe(
       MIGRATED_DIRECTORIES.length,
     );
@@ -502,6 +530,12 @@ describe("MIGRATED_DIRECTORIES", () => {
     );
     expect(PINNED.map((file) => file.file)).toContain(
       "src/features/visitor-management/components/GatekeeperDashboard.tsx",
+    );
+    expect(PINNED.map((file) => file.file)).toContain(
+      "src/features/document-management/components/DocumentGridTable.tsx",
+    );
+    expect(PINNED.map((file) => file.file)).toContain(
+      "src/features/occurrence-management/components/OccurrenceTable.tsx",
     );
     expect(
       PINNED.every((file) =>
@@ -967,6 +1001,416 @@ describe("APRAS-80's ledger arithmetic", () => {
     expect([...new Set(mixed)]).toEqual([
       "src/features/visitor-management/components/VisitorAuthPage.tsx:144 border-red-200",
     ]);
+  });
+
+  it("keeps every `why` under 120 characters and off the code", () => {
+    for (const row of rows) {
+      expect(row.why.length).toBeLessThanOrEqual(120);
+      expect(row.why).not.toContain("GAP-");
+    }
+  });
+});
+
+describe("APRAS-82's ledger arithmetic", () => {
+  // Appended, directory-scoped, in the shape APRAS-79 and APRAS-80
+  // established. Nothing above this line is edited by this child beyond the
+  // two `MIGRATED_DIRECTORIES` entries, their four `toContain` assertions and
+  // the hoist of the scan memo to module scope.
+  //
+  // Two directories, because the operator scoped this child that way. They
+  // exercise opposite halves of §1g: `document-management` holds all 100 of
+  // the pair's `dark:` occurrences, `occurrence-management` holds none.
+  const DOCUMENTS = "src/features/document-management/components/";
+  const OCCURRENCES = "src/features/occurrence-management/components/";
+  const DIRECTORIES = [DOCUMENTS, OCCURRENCES];
+  const inDirectories = (file: string) =>
+    DIRECTORIES.some((directory) => file.startsWith(directory));
+  const rows = LEDGER.filter((row) => inDirectories(toSrcRelative(row.file)));
+  const count = (code: string) => rows.filter((row) => row.code === code).length;
+  const files = PINNED.filter((file) => inDirectories(file.file));
+  const sourceOf = (name: string) =>
+    files.find((file) => file.file.endsWith(`/${name}`))?.source ?? "";
+  const matchesOn = (name: string, line: number): string[] => {
+    const file = files.find((pinned) => pinned.file.endsWith(`/${name}`));
+
+    return matchesIn(file?.file ?? "", file?.source ?? "")
+      .filter((match) => match.line === line)
+      .map((match) => match.text);
+  };
+  /**
+   * One file's source as whole tokens, split on whitespace and on the
+   * delimiters a class string can sit inside.
+   *
+   * Whole tokens, never substrings: `text-primary` and `text-primary-text`
+   * are two tokens and neither matches the other, and `hover:bg-accent/80`
+   * survives intact rather than becoming `hover:bg-accent`. The ternary
+   * branches of a template literal are reached because `{`, `}` and the
+   * quote characters are separators, not string boundaries to be paired up.
+   */
+  const tokensOf = (name: string): string[] =>
+    sourceOf(name)
+      .split(/[\s"'`{}()<>,;]+/)
+      .filter((token) => token.length > 0);
+
+  it("pins the two directories' six and five source files", () => {
+    expect(PINNED.filter((file) => file.file.startsWith(DOCUMENTS))).toHaveLength(
+      6,
+    );
+    expect(
+      PINNED.filter((file) => file.file.startsWith(OCCURRENCES)),
+    ).toHaveLength(5);
+    expect(files).toHaveLength(11);
+  });
+
+  it("logs 129 occurrences under five codes", () => {
+    expect(rows).toHaveLength(129);
+    expect(count("GAP-OUT-OF-BUDGET")).toBe(69);
+    expect(count("GAP-TINT")).toBe(30);
+    expect(count("GAP-NO-TOKEN")).toBe(24);
+    expect(count("GAP-OVERLAY")).toBe(3);
+    expect(count("GAP-BORDER-100")).toBe(3);
+  });
+
+  it("uses no code it does not account for", () => {
+    // Neither directory colours a *category*: the occurrence category is one
+    // neutral chip for every value, so there is no swatch set. And every
+    // `text-white` sat on a background that does have a row.
+    expect(count("GAP-SWATCH")).toBe(0);
+    expect(count("GAP-NO-SURFACE")).toBe(0);
+    expect(count("GAP-UNLISTED")).toBe(0);
+  });
+
+  it("leaves 129 of the pair's 447 palette occurrences in place", () => {
+    // 447 = 240 migrated + 78 deleted `dark:` siblings + 129 left and logged,
+    // with both halves closing independently: 347 non-`dark:` = 240 + 107 and
+    // 100 `dark:` = 78 + 22.
+    const remaining = files.flatMap((file) =>
+      matchesIn(file.file, file.source),
+    );
+    const inDocuments = files
+      .filter((file) => file.file.startsWith(DOCUMENTS))
+      .flatMap((file) => matchesIn(file.file, file.source));
+
+    expect(remaining).toHaveLength(129);
+    expect(
+      remaining.filter((match) => match.text.startsWith("dark:")),
+    ).toHaveLength(22);
+    expect(inDocuments).toHaveLength(44);
+    expect(remaining).toHaveLength(inDocuments.length + 85);
+  });
+
+  it("excepts the 77 distinct (file, class) pairs those 129 occupy", () => {
+    const entries = EXCEPTIONS.filter((entry) => inDirectories(entry.file));
+    const pairs = new Set(
+      rows.map((row) => `${toSrcRelative(row.file)} :: ${row.class}`),
+    );
+
+    expect(entries).toHaveLength(77);
+    expect(pairs.size).toBe(77);
+    expect(entries.every((entry) => entry.task === "APRAS-82")).toBe(true);
+    expect(
+      entries.filter((entry) => entry.file.startsWith(DOCUMENTS)),
+    ).toHaveLength(22);
+    expect(
+      entries.filter((entry) => entry.file.startsWith(OCCURRENCES)),
+    ).toHaveLength(55);
+  });
+
+  it("carries no six-digit hex literal in any of the eleven files", () => {
+    for (const file of files) {
+      expect(file.source).not.toMatch(hexGrammar());
+    }
+  });
+
+  it("keeps all ten status sets whole, each member on its own line", () => {
+    // A ternary's or a `switch`'s branches are one set: the same property of
+    // the same element in different states. Splitting one — migrating the
+    // indigo branch of `getStatusBadgeClass` on its own, say — would break a
+    // six-colour status scale, and fails here before the guard sees it.
+    const sets: ReadonlyArray<readonly [string, number, readonly string[]]> = [
+      ["OccurrenceTable.tsx", 22, ["bg-amber-50", "text-amber-700", "border-amber-200"]],
+      ["OccurrenceTable.tsx", 24, ["bg-blue-50", "text-blue-700", "border-blue-200"]],
+      ["OccurrenceTable.tsx", 26, ["bg-indigo-50", "text-indigo-700", "border-indigo-200"]],
+      ["OccurrenceTable.tsx", 28, ["bg-emerald-50", "text-emerald-700", "border-emerald-200"]],
+      ["OccurrenceTable.tsx", 30, ["bg-rose-50", "text-rose-700", "border-rose-200"]],
+      ["OccurrenceTable.tsx", 32, ["bg-gray-50", "text-gray-700", "border-gray-200"]],
+      ["OccurrenceTable.tsx", 39, ["bg-rose-100", "text-rose-800"]],
+      ["OccurrenceTable.tsx", 41, ["bg-orange-100", "text-orange-800"]],
+      ["OccurrenceTable.tsx", 43, ["bg-sky-100", "text-sky-800"]],
+      ["OccurrenceTable.tsx", 45, ["bg-gray-100", "text-gray-700"]],
+      ["OccurrenceTable.tsx", 100, ["text-emerald-600"]],
+      ["OccurrenceTable.tsx", 102, ["text-gray-400"]],
+      ["NewOccurrenceModal.tsx", 158, ["text-emerald-600", "text-gray-500"]],
+      ["OccurrenceDetailsView.tsx", 71, ["text-emerald-700", "bg-emerald-50", "border-emerald-200"]],
+      ["OccurrenceDetailsView.tsx", 76, ["text-gray-600", "bg-gray-100", "border-gray-200"]],
+      ["OccurrenceDetailsView.tsx", 160, ["bg-emerald-50", "border-emerald-200"]],
+      ["OccurrenceDetailsView.tsx", 161, ["text-emerald-900"]],
+      ["OccurrenceDetailsView.tsx", 162, ["text-emerald-600"]],
+      ["OccurrenceDetailsView.tsx", 165, ["text-emerald-800"]],
+      ["DocumentGridTable.tsx", 143, [
+        "hover:text-emerald-600",
+        "hover:bg-emerald-50",
+        "dark:hover:bg-emerald-950/50",
+        "dark:hover:text-emerald-400",
+      ]],
+      ["OccurrenceTimelineLog.tsx", 67, ["text-amber-700", "bg-amber-50", "border-amber-200"]],
+      ["DocumentGridTable.tsx", 166, [
+        "hover:text-rose-600",
+        "hover:bg-rose-50",
+        "dark:hover:bg-rose-950/50",
+        "dark:hover:text-rose-400",
+      ]],
+      ["FolderTreeSidebar.tsx", 121, ["hover:text-rose-600", "dark:hover:text-rose-400"]],
+    ];
+    const ledgered = new Set(
+      rows.map((row) => `${row.class} in ${toSrcRelative(row.file)}`),
+    );
+
+    for (const [name, line, members] of sets) {
+      const onThatLine = matchesOn(name, line);
+      const file = files.find((pinned) => pinned.file.endsWith(`/${name}`));
+      for (const member of members) {
+        expect(onThatLine).toContain(member);
+        expect(ledgered).toContain(`${member} in ${file?.file ?? ""}`);
+      }
+    }
+
+    // The two badge maps together hold 26 classes, all still there.
+    const badgeMaps = [22, 24, 26, 28, 30, 32, 39, 41, 43, 45].flatMap((line) =>
+      matchesOn("OccurrenceTable.tsx", line),
+    );
+
+    expect(badgeMaps).toHaveLength(26);
+  });
+
+  it("splits no status set: exactly one span mixes a migrated class with a kept tint", () => {
+    // Same mechanical check APRAS-80 ran, over this child's targets. The one
+    // span it returns is `DocumentGridTable:143`, where the download button's
+    // *resting* neutral foreground takes its §1d row while the button's
+    // *hover* pair is the emerald unit. That is not a split set, and it is
+    // the shape APRAS-80 recorded at `VisitorAuthPage:144`.
+    const MIGRATED_TARGETS = [
+      "bg-card",
+      "focus:bg-card",
+      "bg-muted",
+      "bg-accent",
+      "hover:bg-accent",
+      "hover:bg-accent/80",
+      "bg-primary",
+      "hover:bg-primary/90",
+      "bg-foreground/70",
+      "border-border",
+      "border-input",
+      "border-card",
+      "focus:border-primary",
+      "divide-border",
+      "focus:ring-ring",
+      "text-foreground",
+      "text-muted-foreground",
+      "hover:text-muted-foreground",
+      "text-primary",
+      "hover:text-primary",
+      "text-primary-text",
+      "hover:text-primary-text",
+      "text-primary-foreground",
+    ];
+    const target = new RegExp(
+      String.raw`(?<![\w-])(?:${MIGRATED_TARGETS.map((name) =>
+        name.replace("/", String.raw`\/`),
+      ).join("|")})(?![\w-])`,
+      "g",
+    );
+    const tinted = new Set(
+      rows
+        .filter((row) => row.code === "GAP-TINT")
+        .map(
+          (row) => `${toSrcRelative(row.file)} :: ${row.line} :: ${row.class}`,
+        ),
+    );
+    const mixed: string[] = [];
+
+    for (const { file, source } of files) {
+      for (const [start, end] of classContexts(source)) {
+        const span = source.slice(start, end);
+        if ([...span.matchAll(target)].length === 0) {
+          continue;
+        }
+        for (const match of span.matchAll(paletteGrammar())) {
+          const line = lineOf(source, start + (match.index ?? 0));
+          if (tinted.has(`${file} :: ${line} :: ${match[0]}`)) {
+            mixed.push(`${file}:${line} ${match[0]}`);
+            break;
+          }
+        }
+      }
+    }
+
+    expect([...new Set(mixed)]).toEqual([
+      `${DOCUMENTS}DocumentGridTable.tsx:143 hover:text-emerald-600`,
+    ]);
+  });
+
+  it("routes exactly twelve brand-text occurrences to the character token", () => {
+    // §1k: the element paints glyphs of text, so the floor is 4.5:1 and the
+    // token is `*-primary-text`. Every other brand class in the pair is on an
+    // element that paints none, and keeps `*-primary` at the 3:1 floor.
+    const perFile: ReadonlyArray<readonly [string, number]> = [
+      ["FolderTreeSidebar.tsx", 4],
+      ["OccurrenceTable.tsx", 3],
+      ["OccurrenceDetailsView.tsx", 4],
+      ["OccurrenceTimelineLog.tsx", 1],
+    ];
+    const characters = (name: string) =>
+      tokensOf(name).filter(
+        (token) =>
+          token === "text-primary-text" || token === "hover:text-primary-text",
+      );
+    let total = 0;
+
+    for (const [name, expected] of perFile) {
+      expect(characters(name)).toHaveLength(expected);
+      total += expected;
+    }
+    expect(total).toBe(12);
+
+    // And at those sites only: no other file carries one.
+    for (const file of files) {
+      const name = file.file.split("/").pop() ?? "";
+      if (!perFile.some(([named]) => named === name)) {
+        expect(characters(name)).toHaveLength(0);
+      }
+      // `-primary-text` never appears on a non-`text-` utility anywhere.
+      expect(
+        [...file.source.matchAll(/[\w:-]*-primary-text\b/g)].every((match) =>
+          /(?:^|:)text-primary-text$/.test(match[0]),
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it("routes twenty-two text-prefixed brand occurrences to the graphical token", () => {
+    const perFile: ReadonlyArray<readonly [string, number]> = [
+      ["DocumentCenterPage.tsx", 2],
+      ["DocumentGridTable.tsx", 3],
+      ["DocumentUploadModal.tsx", 1],
+      ["FolderFormModal.tsx", 2],
+      ["FolderTreeSidebar.tsx", 4],
+      ["PDFViewerModal.tsx", 1],
+      ["NewOccurrenceModal.tsx", 4],
+      ["OccurrenceBookPage.tsx", 2],
+      ["OccurrenceTimelineLog.tsx", 2],
+      ["OccurrenceDetailsView.tsx", 1],
+    ];
+    let total = 0;
+
+    for (const [name, expected] of perFile) {
+      const graphical = tokensOf(name).filter(
+        (token) => token === "text-primary" || token === "hover:text-primary",
+      );
+
+      expect(graphical).toHaveLength(expected);
+      total += expected;
+    }
+    expect(total).toBe(22);
+  });
+
+  it("leaves indigo only in the status map's IN_PROGRESS branch", () => {
+    const indigo = files.flatMap((file) =>
+      matchesIn(file.file, file.source).filter((match) =>
+        match.text.includes("indigo"),
+      ),
+    );
+
+    expect(
+      indigo.map((match) => `${match.file}:${match.line} ${match.text}`).sort(),
+    ).toEqual([
+      `${OCCURRENCES}OccurrenceTable.tsx:26 bg-indigo-50`,
+      `${OCCURRENCES}OccurrenceTable.tsx:26 border-indigo-200`,
+      `${OCCURRENCES}OccurrenceTable.tsx:26 text-indigo-700`,
+    ]);
+  });
+
+  it("gives the PDF download button the brand fill and leaves the grid's emerald whole", () => {
+    // The operator's ruling, and §1f case 3's two branches in one diff: an
+    // interactive emerald *fill* migrates, an emerald *status* hover pair
+    // whose surface has no row stays. A reviewer should check this pair.
+    expect(sourceOf("PDFViewerModal.tsx")).not.toContain("emerald");
+    expect(sourceOf("PDFViewerModal.tsx")).toContain(
+      "bg-primary hover:bg-primary/90 text-primary-foreground",
+    );
+    expect(sourceOf("DocumentGridTable.tsx")).toContain(
+      "hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 dark:hover:text-emerald-400",
+    );
+
+    // No red occurs in either directory, so no destructive token appears.
+    for (const file of files) {
+      expect(file.source).not.toContain("text-destructive");
+      expect(matchesIn(file.file, file.source).map((match) => match.text)).not.
+        toContainEqual(expect.stringContaining("red-"));
+    }
+  });
+
+  it("carries every opacity modifier over verbatim and creates no brand-text alpha", () => {
+    const occurrences = (needle: string) =>
+      files.flatMap((file) =>
+        tokensOf(file.file.split("/").pop() ?? "").filter(
+          (token) => token === needle,
+        ),
+      );
+
+    expect(occurrences("bg-foreground/70")).toHaveLength(3);
+    expect(occurrences("hover:bg-accent/80")).toHaveLength(2);
+    expect(occurrences("hover:bg-primary/90")).toHaveLength(8);
+    expect(occurrences("bg-black/40")).toHaveLength(3);
+
+    for (const file of files) {
+      expect(file.source).not.toMatch(/text-primary(?:-text)?\/\d/);
+    }
+  });
+
+  it("deletes every dark: sibling of a migrated base and keeps exactly 22", () => {
+    const DELETED = [
+      "dark:bg-slate-900",
+      "dark:bg-slate-950",
+      "dark:bg-slate-800",
+      "dark:bg-slate-800/50",
+      "dark:bg-slate-800/40",
+      "dark:border-slate-800",
+      "dark:border-slate-700",
+      "dark:divide-slate-800",
+      "dark:text-white",
+      "dark:text-slate-400",
+      "dark:text-indigo-400",
+      "dark:bg-indigo-950/50",
+      "dark:bg-indigo-950/60",
+      "dark:hover:bg-slate-800",
+      "dark:hover:text-slate-200",
+      "dark:hover:bg-indigo-950/50",
+      "dark:hover:text-indigo-400",
+    ];
+    const documents = files.filter((file) => file.file.startsWith(DOCUMENTS));
+    const surviving = documents.flatMap((file) =>
+      matchesIn(file.file, file.source).filter((match) =>
+        match.text.startsWith("dark:"),
+      ),
+    );
+    const ledgered = new Set(rows.map((row) => row.class));
+
+    for (const deleted of DELETED) {
+      expect(surviving.map((match) => match.text)).not.toContain(deleted);
+      expect(ledgered).not.toContain(deleted);
+    }
+    expect(surviving).toHaveLength(22);
+    expect(
+      surviving.every((match) => ledgered.has(match.text)),
+    ).toBe(true);
+
+    // `occurrence-management` had none before and has none now.
+    expect(
+      files
+        .filter((file) => file.file.startsWith(OCCURRENCES))
+        .flatMap((file) => [...file.source.matchAll(/\bdark:/g)]),
+    ).toHaveLength(0);
   });
 
   it("keeps every `why` under 120 characters and off the code", () => {

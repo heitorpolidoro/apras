@@ -37,8 +37,8 @@ export const OccurrenceDetailsView: React.FC<OccurrenceDetailsViewProps> = ({
   if (isLoading || !occurrence) {
     return (
       <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-xl p-8 max-w-2xl w-full text-center">
-          <p className="text-gray-500">{t("common.loading", "Carregando...")}</p>
+        <div className="bg-card rounded-xl p-8 max-w-2xl w-full text-center">
+          <p className="text-muted-foreground">{t("common.loading", "Carregando...")}</p>
         </div>
       </div>
     );
@@ -59,12 +59,12 @@ export const OccurrenceDetailsView: React.FC<OccurrenceDetailsViewProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
-      <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full my-8 flex flex-col max-h-[90vh]">
+      <div className="bg-card rounded-xl shadow-xl max-w-4xl w-full my-8 flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="font-mono text-sm font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
+              <span className="font-mono text-sm font-bold text-primary-text bg-accent px-2 py-0.5 rounded border border-border">
                 {occurrence.protocol_number}
               </span>
               {occurrence.is_public ? (
@@ -79,12 +79,12 @@ export const OccurrenceDetailsView: React.FC<OccurrenceDetailsViewProps> = ({
                 </span>
               )}
             </div>
-            <h2 className="text-xl font-bold text-gray-900">{occurrence.title}</h2>
+            <h2 className="text-xl font-bold text-foreground">{occurrence.title}</h2>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+            className="p-1 text-muted-foreground hover:text-muted-foreground rounded-lg hover:bg-accent"
           >
             <X className="w-6 h-6" />
           </button>
@@ -93,11 +93,11 @@ export const OccurrenceDetailsView: React.FC<OccurrenceDetailsViewProps> = ({
         {/* Content */}
         <div className="p-6 overflow-y-auto space-y-6">
           {/* Metadata Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 rounded-lg p-4 text-sm">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-muted rounded-lg p-4 text-sm">
             <div className="flex items-center gap-2">
-              <UserIcon className="w-4 h-4 text-gray-400" />
+              <UserIcon className="w-4 h-4 text-muted-foreground" />
               <div>
-                <p className="text-xs text-gray-500">{t("occurrences.reporter", "Relator")}</p>
+                <p className="text-xs text-muted-foreground">{t("occurrences.reporter", "Relator")}</p>
                 <p className="font-medium text-gray-800">
                   {occurrence.reporter_name || t("occurrences.anonymous", "Anônimo")}
                 </p>
@@ -105,17 +105,17 @@ export const OccurrenceDetailsView: React.FC<OccurrenceDetailsViewProps> = ({
             </div>
 
             <div className="flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-gray-400" />
+              <MapPin className="w-4 h-4 text-muted-foreground" />
               <div>
-                <p className="text-xs text-gray-500">{t("occurrences.lot", "Lote Referência")}</p>
+                <p className="text-xs text-muted-foreground">{t("occurrences.lot", "Lote Referência")}</p>
                 <p className="font-medium text-gray-800">{occurrence.lot_summary || "-"}</p>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-gray-400" />
+              <Clock className="w-4 h-4 text-muted-foreground" />
               <div>
-                <p className="text-xs text-gray-500">{t("occurrences.created_at", "Data de Registro")}</p>
+                <p className="text-xs text-muted-foreground">{t("occurrences.created_at", "Data de Registro")}</p>
                 <p className="font-medium text-gray-800">
                   {new Date(occurrence.created_at).toLocaleString()}
                 </p>
@@ -128,7 +128,7 @@ export const OccurrenceDetailsView: React.FC<OccurrenceDetailsViewProps> = ({
             <h3 className="text-sm font-semibold text-gray-700 mb-1">
               {t("occurrences.description", "Descrição do ocorrido")}
             </h3>
-            <p className="text-gray-800 bg-gray-50 p-4 rounded-lg text-sm whitespace-pre-wrap">
+            <p className="text-gray-800 bg-muted p-4 rounded-lg text-sm whitespace-pre-wrap">
               {occurrence.description}
             </p>
           </div>
@@ -146,7 +146,7 @@ export const OccurrenceDetailsView: React.FC<OccurrenceDetailsViewProps> = ({
                     href={url}
                     target="_blank"
                     rel="noreferrer"
-                    className="block text-xs text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded border border-indigo-200 hover:underline"
+                    className="block text-xs text-primary-text bg-accent px-3 py-1.5 rounded border border-border hover:underline"
                   >
                     Evidência #{idx + 1}
                   </a>
@@ -168,9 +168,9 @@ export const OccurrenceDetailsView: React.FC<OccurrenceDetailsViewProps> = ({
 
           {/* Management Update Controls */}
           {isManagement && (
-            <form onSubmit={handleStatusUpdate} className="bg-slate-50 border p-4 rounded-lg space-y-3">
+            <form onSubmit={handleStatusUpdate} className="bg-muted border p-4 rounded-lg space-y-3">
               <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-indigo-600" />
+                <AlertCircle className="w-4 h-4 text-primary" />
                 {t("occurrences.manage_ticket", "Gestão do Chamado (Administração)")}
               </h3>
 
@@ -182,7 +182,7 @@ export const OccurrenceDetailsView: React.FC<OccurrenceDetailsViewProps> = ({
                   <select
                     value={editStatus || occurrence.status}
                     onChange={(e) => setEditStatus(e.target.value as OccurrenceStatus)}
-                    className="w-full text-xs border rounded p-2 text-gray-800 bg-white"
+                    className="w-full text-xs border rounded p-2 text-gray-800 bg-card"
                   >
                     <option value="OPEN">{t("occurrences.status.OPEN", "Aberto")}</option>
                     <option value="UNDER_REVIEW">{t("occurrences.status.UNDER_REVIEW", "Em Análise")}</option>
@@ -199,7 +199,7 @@ export const OccurrenceDetailsView: React.FC<OccurrenceDetailsViewProps> = ({
                   <select
                     value={editPriority || occurrence.priority}
                     onChange={(e) => setEditPriority(e.target.value as OccurrencePriority)}
-                    className="w-full text-xs border rounded p-2 text-gray-800 bg-white"
+                    className="w-full text-xs border rounded p-2 text-gray-800 bg-card"
                   >
                     <option value="LOW">{t("occurrences.priority.LOW", "Baixa")}</option>
                     <option value="MEDIUM">{t("occurrences.priority.MEDIUM", "Média")}</option>
@@ -218,14 +218,14 @@ export const OccurrenceDetailsView: React.FC<OccurrenceDetailsViewProps> = ({
                   onChange={(e) => setResolutionNotes(e.target.value)}
                   placeholder={t("occurrences.resolution_placeholder", "Descreva o parecer de conclusão...")}
                   rows={2}
-                  className="w-full text-xs border rounded p-2 text-gray-800 bg-white"
+                  className="w-full text-xs border rounded p-2 text-gray-800 bg-card"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={updateStatusMutation.isPending}
-                className="px-3 py-1.5 text-xs font-medium text-white bg-indigo-600 rounded hover:bg-indigo-700"
+                className="px-3 py-1.5 text-xs font-medium text-primary-foreground bg-primary rounded hover:bg-primary/90"
               >
                 {t("common.save", "Salvar Alterações")}
               </button>
@@ -247,7 +247,7 @@ export const OccurrenceDetailsView: React.FC<OccurrenceDetailsViewProps> = ({
             <div className="mt-4 space-y-2" data-testid="occurrence-infractions">
               {canPromote && (
                 <Link
-                  className="inline-block text-sm text-indigo-600 underline"
+                  className="inline-block text-sm text-primary-text underline"
                   data-testid="promote-to-infraction"
                   to={`/infractions?occurrence=${occurrence.id}`}
                 >
@@ -257,7 +257,7 @@ export const OccurrenceDetailsView: React.FC<OccurrenceDetailsViewProps> = ({
               {(occurrence.infraction_ids ?? []).map((infractionId) => (
                 <Link
                   key={infractionId}
-                  className="block text-sm text-indigo-600 underline"
+                  className="block text-sm text-primary-text underline"
                   data-testid={`promoted-infraction-${infractionId}`}
                   to={`/infractions?infraction=${infractionId}`}
                 >

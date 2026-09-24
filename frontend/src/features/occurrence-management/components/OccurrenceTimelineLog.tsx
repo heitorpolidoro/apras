@@ -46,18 +46,18 @@ export const OccurrenceTimelineLog: React.FC<OccurrenceTimelineLogProps> = ({
 
   return (
     <div className="space-y-6">
-      <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-        <MessageSquare className="w-5 h-5 text-indigo-600" />
+      <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+        <MessageSquare className="w-5 h-5 text-primary" />
         {t("occurrences.timeline.title", "Histórico e Trâmite")}
       </h3>
 
-      <div className="relative border-l-2 border-gray-200 pl-4 space-y-4 ml-2">
+      <div className="relative border-l-2 border-border pl-4 space-y-4 ml-2">
         {timeline.map((entry) => (
           <div key={entry.id} className="relative group">
-            <div className="absolute -left-6 top-1 w-3 h-3 bg-indigo-600 rounded-full border-2 border-white ring-2 ring-gray-100" />
-            <div className="bg-gray-50 border border-gray-100 rounded-lg p-3">
-              <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-                <span className="font-medium text-gray-900">
+            <div className="absolute -left-6 top-1 w-3 h-3 bg-primary rounded-full border-2 border-card ring-2 ring-gray-100" />
+            <div className="bg-muted border border-gray-100 rounded-lg p-3">
+              <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                <span className="font-medium text-foreground">
                   {entry.actor_name || t("occurrences.anonymous", "Anônimo")}
                 </span>
                 <span>{new Date(entry.created_at).toLocaleString()}</span>
@@ -71,7 +71,7 @@ export const OccurrenceTimelineLog: React.FC<OccurrenceTimelineLogProps> = ({
               )}
 
               {entry.status_to && (
-                <div className="text-xs font-semibold text-indigo-700 mb-1">
+                <div className="text-xs font-semibold text-primary-text mb-1">
                   {entry.status_from ? `${t(`occurrences.status.${entry.status_from}`)} ➔ ` : ""}
                   {t(`occurrences.status.${entry.status_to}`)}
                 </div>
@@ -83,7 +83,7 @@ export const OccurrenceTimelineLog: React.FC<OccurrenceTimelineLogProps> = ({
         ))}
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white border rounded-lg p-4 space-y-3 shadow-sm">
+      <form onSubmit={handleSubmit} className="bg-card border rounded-lg p-4 space-y-3 shadow-sm">
         <h4 className="text-sm font-medium text-gray-800">
           {t("occurrences.timeline.add_note", "Adicionar observação ou atualização")}
         </h4>
@@ -93,7 +93,7 @@ export const OccurrenceTimelineLog: React.FC<OccurrenceTimelineLogProps> = ({
           placeholder={t("occurrences.timeline.note_placeholder", "Escreva aqui a observação...")}
           rows={3}
           required
-          className="w-full border rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          className="w-full border rounded-md p-2 text-sm focus:ring-2 focus:ring-ring focus:border-primary"
         />
 
         <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
@@ -104,7 +104,7 @@ export const OccurrenceTimelineLog: React.FC<OccurrenceTimelineLogProps> = ({
                   type="checkbox"
                   checked={isInternalOnly}
                   onChange={(e) => setIsInternalOnly(e.target.checked)}
-                  className="rounded text-indigo-600 focus:ring-indigo-500"
+                  className="rounded text-primary focus:ring-ring"
                 />
                 {t("occurrences.timeline.internal_only_label", "Apenas interno (Administração)")}
               </label>
@@ -129,7 +129,7 @@ export const OccurrenceTimelineLog: React.FC<OccurrenceTimelineLogProps> = ({
           <button
             type="submit"
             disabled={addNoteMutation.isPending || !noteText.trim()}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary-foreground bg-primary rounded-md hover:bg-primary/90 disabled:opacity-50"
           >
             <Send className="w-3.5 h-3.5" />
             {t("occurrences.timeline.send", "Enviar")}

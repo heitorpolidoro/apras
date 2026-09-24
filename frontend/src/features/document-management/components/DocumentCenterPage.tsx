@@ -96,14 +96,14 @@ export const DocumentCenterPage: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <div className="flex items-center space-x-3">
-            <div className="p-2.5 bg-indigo-50 dark:bg-indigo-950/60 rounded-xl">
-              <FileText className="h-7 w-7 text-indigo-600 dark:text-indigo-400" />
+            <div className="p-2.5 bg-accent rounded-xl">
+              <FileText className="h-7 w-7 text-primary" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+              <h1 className="text-2xl font-bold text-foreground">
                 {t("documents.pageTitle", "Central de Documentos")}
               </h1>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
+              <p className="text-sm text-muted-foreground">
                 {t(
                   "documents.pageSubtitle",
                   "Repositório digital de arquivos legais, financeiros e administrativos da associação."
@@ -123,9 +123,9 @@ export const DocumentCenterPage: React.FC = () => {
                 setParentFolderIdForNew(null);
                 setFolderModalOpen(true);
               }}
-              className="border-slate-300 dark:border-slate-700"
+              className="border-input"
             >
-              <FolderPlus className="h-4 w-4 mr-2 text-indigo-600" />
+              <FolderPlus className="h-4 w-4 mr-2 text-primary" />
               <span>{t("documents.newFolder", "Nova Pasta")}</span>
             </Button>
 
@@ -135,7 +135,7 @@ export const DocumentCenterPage: React.FC = () => {
                 setVersionParentDoc(null);
                 setUploadModalOpen(true);
               }}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               <Plus className="h-4 w-4 mr-2" />
               <span>{t("documents.uploadDocument", "Novo Documento")}</span>
@@ -145,10 +145,10 @@ export const DocumentCenterPage: React.FC = () => {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-xs space-y-3">
+      <div className="bg-card border border-border rounded-xl p-4 shadow-xs space-y-3">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
           <div className="md:col-span-5 relative">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
               value={searchQuery}
@@ -192,7 +192,7 @@ export const DocumentCenterPage: React.FC = () => {
               onClick={() => refetchDocs()}
               title="Atualizar"
             >
-              <RefreshCw className="h-4 w-4 text-slate-500" />
+              <RefreshCw className="h-4 w-4 text-muted-foreground" />
             </Button>
           </div>
         </div>
@@ -220,18 +220,18 @@ export const DocumentCenterPage: React.FC = () => {
 
         <div className="flex-1 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+            <h2 className="text-lg font-bold text-foreground">
               {selectedFolderId
                 ? folders.find((f) => f.id === selectedFolderId)?.name || t("documents.documentsList", "Documentos")
                 : t("documents.allDocumentsTitle", "Todos os Documentos")}
             </h2>
-            <span className="text-xs text-slate-500 font-mono">
+            <span className="text-xs text-muted-foreground font-mono">
               {documentsData?.total || 0} {t("documents.itemsFound", "documento(s)")}
             </span>
           </div>
 
           {isLoadingDocs ? (
-            <div className="p-12 text-center text-slate-400">
+            <div className="p-12 text-center text-muted-foreground">
               {t("common.loading", "Carregando documentos...")}
             </div>
           ) : (

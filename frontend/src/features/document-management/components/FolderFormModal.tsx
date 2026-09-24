@@ -94,17 +94,17 @@ export const FolderFormModal: React.FC<FolderFormModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-xs"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/70 p-4 backdrop-blur-xs"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800"
+        className="relative w-full max-w-md bg-card rounded-2xl shadow-2xl overflow-hidden border border-border"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div className="flex items-center space-x-2">
-            <FolderPlus className="h-5 w-5 text-indigo-500" />
-            <h3 className="text-base font-bold text-slate-900 dark:text-white">
+            <FolderPlus className="h-5 w-5 text-primary" />
+            <h3 className="text-base font-bold text-foreground">
               {isEditMode
                 ? t("documents.editFolderTitle", "Editar Pasta")
                 : t("documents.newFolderTitle", "Criar Nova Pasta")}
@@ -113,7 +113,7 @@ export const FolderFormModal: React.FC<FolderFormModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-muted-foreground hover:bg-accent transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -140,7 +140,7 @@ export const FolderFormModal: React.FC<FolderFormModalProps> = ({
             <select
               value={parentId}
               onChange={(e) => setParentId(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm text-foreground focus:outline-hidden focus:ring-2 focus:ring-ring"
             >
               <option value="">{t("documents.noParent", "(Nenhuma - Pasta Raiz)")}</option>
               {folderOptions.map((f) => (
@@ -165,7 +165,7 @@ export const FolderFormModal: React.FC<FolderFormModalProps> = ({
                     type="checkbox"
                     checked={allowedRoles.includes(role.id)}
                     onChange={() => handleRoleToggle(role.id)}
-                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                    className="rounded border-input text-primary focus:ring-ring"
                   />
                   <span>{role.name}</span>
                 </label>
@@ -181,16 +181,16 @@ export const FolderFormModal: React.FC<FolderFormModalProps> = ({
               rows={2}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm text-foreground focus:outline-hidden focus:ring-2 focus:ring-ring"
               placeholder={t("documents.folderDescriptionPlaceholder", "Finalidade da pasta...")}
             />
           </div>
 
-          <div className="flex items-center justify-end space-x-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+          <div className="flex items-center justify-end space-x-3 pt-4 border-t border-border">
             <Button type="button" variant="outline" onClick={onClose}>
               {t("common.cancel", "Cancelar")}
             </Button>
-            <Button type="submit" disabled={isLoading} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+            <Button type="submit" disabled={isLoading} className="bg-primary hover:bg-primary/90 text-primary-foreground">
               <span>{isEditMode ? t("common.save", "Salvar") : t("documents.createFolder", "Criar Pasta")}</span>
             </Button>
           </div>

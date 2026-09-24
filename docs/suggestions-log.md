@@ -2225,3 +2225,88 @@ after the run is byte-identical to the one at the start.
 4. The hero's secondary CTA is an in-page `<a href="#landing-previews">`. Harmless, but
    note that it is the one anchor on the page that is not a router `Link`, so a future
    test that asserts "every anchor points at /login" would trip on it.
+
+## [APRAS-82] Migrate document and occurrence management to semantic theme tokens — 2026-09-24
+1. `frontend/src/__tests__/themeTokenMigration.test.ts` — the `byPath` index replacing
+   `files.find(...)` is a second optimisation beyond the memo hoist the spec names, and it
+   quietly changes a tie-break: `find` was first-wins, `new Map(files.map(...))` is
+   last-wins if a caller passes two entries for one path. `pinnedFiles()` de-duplicates
+   through a `Set`, so this cannot happen today, and the replaced code carried a comment
+   explicitly worrying about `violations` being exported and taking an arbitrary array. A
+   one-line note on `byPath` recording the tie-break would preserve that reasoning.
+2. Same file — the `MIGRATED_DIRECTORIES` doc comment still reads "each sibling appends
+   exactly one", now contradicted by the inline comment two lines below it. Harmless, and
+   APRAS-85 replaces the list wholesale; worth reconciling whenever that lands.
+3. `SCAN_MEMO` is never cleared and now retains every distinct source the mutated-argument
+   tests synthesise. Bounded by the test count and measured at 325 ms, so this is a note
+   rather than a concern — but if a future child pushes the exception count much higher,
+   the memory profile is the thing to look at, not the time.
+4. The spec's Expected Results asks the declared sub-AA list to carry the emerald-700/800/900
+   and amber-700 figures; the implementation puts them in a sibling `it.each` instead,
+   because they are all above 4.5:1 and `DECLARED` asserts sub-AA membership. That is the
+   better reading of the two, and I mention it only so the divergence is on the record.
+
+## [APRAS-81] Migrate project and asset management to semantic theme tokens — 2026-09-24
+- The marker's second guard ("exactly one sentence in the §1f Case 1 paragraph
+  begins `The second clause of the rule is`") closes the near-duplicate case only
+  while APRAS-83 carries the verbatim sentence its spec mandates. A paraphrase of
+  the ruling with neither the marker nor that opening would leave the file
+  stating the ruling twice while `grep -c -F` still prints `1`. Not blocking —
+  no mechanical check catches a paraphrase — but worth a sentence in APRAS-83's
+  spec forbidding any restatement of the §1f case 1 page-root extension other
+  than the verbatim one.
+- Once `BASE` is fixed, consider stating it once in a preamble the results
+  reference rather than repeating the full definition inside two results; the
+  repetition is what let the two copies drift from the spec body's own (correct)
+  primary definition, `git rev-parse HEAD` before the first commit.
+- `frontend/src/components/__tests__/TenantBrandReach.test.tsx` is claimed by
+  this task's path-scope result and is plausibly also touched by APRAS-83. The
+  result is content-identified ("two added cases that mount MilestoneTimeline and
+  AssetSummaryCards"), so it survives either order, but the implementer should
+  expect a textual merge conflict there.
+
+## [APRAS-81] Migrate project and asset management to semantic theme tokens — 2026-09-24
+- One sentence, cheap to add at implementation time and worth folding into the
+  results if they are ever touched again: say that an EMPTY commit-filter result
+  fails rather than passes. As written, the three filter-only results ("no
+  commit whose subject matches `[a-z]+\(APRAS-81\):` touches …", and the
+  path-scope set) pass vacuously if the implementer mis-subjects the commits, so
+  the scope guard would go quiet exactly when the convention it rests on was
+  broken. The mitigation already present is that the three `BASE`-anchored
+  results fail loudly in the same scenario (`git rev-parse "^"` → exit 128), so
+  QA cannot plausibly complete the list without noticing — which is why this is
+  a suggestion, not a blocking finding.
+- The two soft before/after claims noted in point 3 (`getConditionBadgeClass` /
+  `STATUS_BADGES` / `COLUMNS` "retain their original classes", and "the only red
+  that moves") would read more crisply if they named `git show "$BASE:<path>"`
+  inline the way the three explicit baseline results do, rather than leaving the
+  reader to infer it.
+- The spec asserts the commit convention holds project-wide; it holds for recent
+  history and is mandatory going forward, but 179 of 384 historical subjects do
+  not follow it. Softening that sentence to "the convention `CLAUDE.md`
+  mandates, followed by every recent commit" would keep the claim true without
+  weakening the mechanism, which only needs this task's own commits.
+
+## [APRAS-82] Migrate document and occurrence management to semantic theme tokens — 2026-09-24
+- Result 14 names an "APRAS-81 ledger arithmetic" block that does not exist:
+  APRAS-81 has not shipped (no commit, no ledger row, no exceptions entry, no
+  `describe`). The clause is vacuously true and nothing here is wrong, but the
+  three shipped children's blocks are the real coverage. If APRAS-81 lands
+  after this task, whoever writes it should note that APRAS-82 already appended
+  two `MIGRATED_DIRECTORIES` entries where the guard's own comment says "each
+  sibling appends exactly one" — the comment is now slightly behind its code,
+  even though the APRAS-82 block below it explains the exception.
+- `it("splits no status set…")` keys its mixed-span detection on GAP-TINT rows
+  only. That is faithful to the expected result, but it means an equivalent
+  split of a GAP-NO-TOKEN unit (the rose pair at `DocumentGridTable.tsx:166`,
+  say) would go unreported by this particular test. I confirmed the gap
+  experimentally — injecting `bg-card` into the rose span leaves the test
+  green. The guard proper and the status-set test still cover those classes, so
+  this is not a hole in the deliverable, but a future child widening the check
+  to "any kept tint unit" would close it.
+- `documentOccurrenceContrast.test.ts` re-derives palette luminances by reading
+  `node_modules/tailwindcss/theme.css`. That is the right source, but it ties
+  the fixture numbers to the installed Tailwind version; a minor bump that
+  nudges a palette entry would fail these tests with a confusing diff. A
+  one-line comment naming the Tailwind version the figures were measured
+  against would make that failure self-explaining.

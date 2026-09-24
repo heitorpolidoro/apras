@@ -5,6 +5,10 @@ import path from "node:path";
 import type { DerivedTheme, TenantProfile } from "../../api/tenantProfile";
 import TenantBrandTheme from "../TenantBrandTheme";
 import { Button } from "../ui/button";
+import { PDFViewerModal } from "../../features/document-management/components/PDFViewerModal";
+import { OccurrenceTable } from "../../features/occurrence-management/components/OccurrenceTable";
+import type { AssociationDocument } from "../../types/document";
+import type { Occurrence } from "../../types/occurrence";
 import { TENANT_BRAND_STYLE_ID } from "../../lib/brandStylesheet";
 
 /**
@@ -156,5 +160,154 @@ describe("the tenant's brand reaches a migrated component", () => {
       expect(screen.getByRole("button", { name: "Confirmar" })).toBeTruthy(),
     );
     expect(injected()).toBeNull();
+  });
+});
+
+/**
+ * APRAS-82's two migrated components, one from each directory it pins.
+ *
+ * Both are props-only — neither reaches for a query client — so they mount
+ * beside `TenantBrandTheme` exactly as the pilot's `Button` does.
+ */
+const DOCUMENT: AssociationDocument = {
+  id: "4c1d2e3f-0a1b-4c2d-8e3f-0a1b2c3d4e5f",
+  folder_id: "1a2b3c4d-5e6f-4a1b-8c2d-3e4f5a6b7c8d",
+  folder_name: "Atas",
+  title: "Ata da assembleia de março",
+  description: "Aprovação do orçamento anual",
+  file_url: "https://storage.example.com/ata.pdf",
+  file_size_bytes: 1048576,
+  mime_type: "application/pdf",
+  version_number: 2,
+  publication_year: 2026,
+  publication_month: 3,
+  tags: ["ata"],
+  uploaded_by_id: "9f8e7d6c-5b4a-4938-8271-605f4e3d2c1b",
+  uploader_name: "Síndico",
+  created_at: "2026-03-10T12:00:00Z",
+  updated_at: "2026-03-10T12:00:00Z",
+};
+
+const OCCURRENCE: Occurrence = {
+  id: "7b6a5948-3726-4514-8302-f1e0d9c8b7a6",
+  protocol_number: "OC-2026-0001",
+  lot_summary: "Quadra B, Lote 12",
+  reporter_name: "Morador",
+  is_anonymous: false,
+  is_public: true,
+  category: "NOISE",
+  title: "Som alto após as 22h",
+  description: "Festa na quadra B",
+  photo_urls: [],
+  status: "IN_PROGRESS",
+  priority: "HIGH",
+  created_at: "2026-03-10T12:00:00Z",
+  updated_at: "2026-03-10T12:00:00Z",
+};
+
+/**
+ * Every `class` value in `container`, split on whitespace into whole tokens.
+ *
+ * Whole tokens, never substrings: `bg-accent`, `hover:bg-accent` and
+ * `hover:bg-accent/80` are three distinct tokens and none of them matches
+ * another. A substring check would let `hover:bg-accent/80` satisfy an
+ * assertion about `bg-accent`, which is precisely the §1f distinction these
+ * two components are here to keep visible.
+ */
+const classTokens = (container: HTMLElement): Set<string> => {
+  const tokens = new Set<string>();
+  for (const element of container.querySelectorAll("[class]")) {
+    for (const token of (element.getAttribute("class") ?? "").split(/\s+/)) {
+      if (token.length > 0) {
+        tokens.add(token);
+      }
+    }
+  }
+  return tokens;
+};
+
+const brandedPrimary = () =>
+  window
+    .getComputedStyle(document.documentElement)
+    .getPropertyValue("--primary")
+    .trim();
+
+describe("the tenant's brand reaches APRAS-82's migrated components", () => {
+  it("paints the PDF viewer's download button with the brand fill", async () => {
+    profile.data = { ...PROFILE, theme: THEME };
+    const { container } = render(
+      <>
+        <TenantBrandTheme />
+        <PDFViewerModal
+          isOpen
+          document={DOCUMENT}
+          onClose={() => {}}
+          onDownload={() => {}}
+        />
+      </>,
+    );
+
+    await waitFor(() => expect(brandedPrimary()).toBe(THEME.light.primary));
+
+    const tokens = classTokens(container);
+
+    for (const expected of [
+      "bg-primary",
+      "hover:bg-primary/90",
+      "text-primary-foreground",
+      "text-primary",
+      "bg-card",
+      "bg-muted",
+      "bg-foreground/70",
+      "hover:bg-accent",
+    ]) {
+      expect(tokens).toContain(expected);
+    }
+    // The download button's *fill* migrated (§1f case 3), so this component
+    // carries no brand tint and paints no brand characters.
+    expect(tokens).not.toContain("bg-accent");
+    expect([...tokens].filter((token) => token.includes("primary-text"))).toEqual(
+      [],
+    );
+  });
+
+  it("paints the occurrence table's protocol and details link as brand characters", async () => {
+    profile.data = { ...PROFILE, theme: THEME };
+    const { container } = render(
+      <>
+        <TenantBrandTheme />
+        <OccurrenceTable
+          occurrences={[OCCURRENCE]}
+          isLoading={false}
+          onSelectOccurrence={() => {}}
+        />
+      </>,
+    );
+
+    await waitFor(() => expect(brandedPrimary()).toBe(THEME.light.primary));
+
+    const tokens = classTokens(container);
+
+    for (const expected of [
+      "text-primary-text",
+      "hover:text-primary-text",
+      "bg-accent",
+      "hover:bg-accent",
+      "hover:bg-accent/80",
+      "bg-card",
+      "bg-muted",
+      "border-border",
+    ]) {
+      expect(tokens).toContain(expected);
+    }
+    // Nothing in this component is an interactive brand *fill*.
+    for (const absent of [
+      "bg-primary",
+      "hover:bg-primary/90",
+      "text-primary-foreground",
+      "text-primary",
+    ]) {
+      expect(tokens).not.toContain(absent);
+    }
   });
 });

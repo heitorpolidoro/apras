@@ -1522,5 +1522,467 @@
     "class": "text-red-700",
     "code": "GAP-TINT",
     "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/document-management/components/DocumentGridTable.tsx",
+    "class": "text-slate-300",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/document-management/components/DocumentGridTable.tsx",
+    "class": "dark:text-slate-600",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/document-management/components/DocumentGridTable.tsx",
+    "class": "text-slate-800",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/document-management/components/DocumentGridTable.tsx",
+    "class": "dark:text-slate-200",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/document-management/components/DocumentGridTable.tsx",
+    "class": "text-slate-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/document-management/components/DocumentGridTable.tsx",
+    "class": "dark:text-slate-300",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/document-management/components/DocumentGridTable.tsx",
+    "class": "hover:text-emerald-600",
+    "code": "GAP-TINT",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/document-management/components/DocumentGridTable.tsx",
+    "class": "hover:bg-emerald-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/document-management/components/DocumentGridTable.tsx",
+    "class": "dark:hover:bg-emerald-950/50",
+    "code": "GAP-TINT",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/document-management/components/DocumentGridTable.tsx",
+    "class": "dark:hover:text-emerald-400",
+    "code": "GAP-TINT",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/document-management/components/DocumentGridTable.tsx",
+    "class": "hover:text-rose-600",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/document-management/components/DocumentGridTable.tsx",
+    "class": "hover:bg-rose-50",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/document-management/components/DocumentGridTable.tsx",
+    "class": "dark:hover:bg-rose-950/50",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/document-management/components/DocumentGridTable.tsx",
+    "class": "dark:hover:text-rose-400",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/document-management/components/DocumentUploadModal.tsx",
+    "class": "text-slate-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/document-management/components/DocumentUploadModal.tsx",
+    "class": "dark:text-slate-300",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/document-management/components/FolderFormModal.tsx",
+    "class": "text-slate-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/document-management/components/FolderFormModal.tsx",
+    "class": "dark:text-slate-300",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/document-management/components/FolderTreeSidebar.tsx",
+    "class": "text-slate-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/document-management/components/FolderTreeSidebar.tsx",
+    "class": "dark:text-slate-300",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/document-management/components/FolderTreeSidebar.tsx",
+    "class": "hover:text-rose-600",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/document-management/components/FolderTreeSidebar.tsx",
+    "class": "dark:hover:text-rose-400",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/NewOccurrenceModal.tsx",
+    "class": "bg-black/40",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/NewOccurrenceModal.tsx",
+    "class": "text-gray-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/NewOccurrenceModal.tsx",
+    "class": "text-gray-800",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/NewOccurrenceModal.tsx",
+    "class": "text-emerald-600",
+    "code": "GAP-TINT",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/NewOccurrenceModal.tsx",
+    "class": "text-gray-500",
+    "code": "GAP-TINT",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceBookPage.tsx",
+    "class": "text-gray-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceBookPage.tsx",
+    "class": "text-gray-800",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceDetailsView.tsx",
+    "class": "bg-black/40",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceDetailsView.tsx",
+    "class": "text-emerald-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceDetailsView.tsx",
+    "class": "bg-emerald-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceDetailsView.tsx",
+    "class": "border-emerald-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceDetailsView.tsx",
+    "class": "text-gray-600",
+    "code": "GAP-TINT",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceDetailsView.tsx",
+    "class": "bg-gray-100",
+    "code": "GAP-TINT",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceDetailsView.tsx",
+    "class": "border-gray-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceDetailsView.tsx",
+    "class": "text-gray-800",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceDetailsView.tsx",
+    "class": "text-gray-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceDetailsView.tsx",
+    "class": "text-emerald-900",
+    "code": "GAP-TINT",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceDetailsView.tsx",
+    "class": "text-emerald-600",
+    "code": "GAP-TINT",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceDetailsView.tsx",
+    "class": "text-emerald-800",
+    "code": "GAP-TINT",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceTable.tsx",
+    "class": "bg-amber-50",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceTable.tsx",
+    "class": "text-amber-700",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceTable.tsx",
+    "class": "border-amber-200",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceTable.tsx",
+    "class": "bg-blue-50",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceTable.tsx",
+    "class": "text-blue-700",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceTable.tsx",
+    "class": "border-blue-200",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceTable.tsx",
+    "class": "bg-indigo-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceTable.tsx",
+    "class": "text-indigo-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceTable.tsx",
+    "class": "border-indigo-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceTable.tsx",
+    "class": "bg-emerald-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceTable.tsx",
+    "class": "text-emerald-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceTable.tsx",
+    "class": "border-emerald-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceTable.tsx",
+    "class": "bg-rose-50",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceTable.tsx",
+    "class": "text-rose-700",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceTable.tsx",
+    "class": "border-rose-200",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceTable.tsx",
+    "class": "bg-gray-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceTable.tsx",
+    "class": "text-gray-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceTable.tsx",
+    "class": "border-gray-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceTable.tsx",
+    "class": "bg-rose-100",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceTable.tsx",
+    "class": "text-rose-800",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceTable.tsx",
+    "class": "bg-orange-100",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceTable.tsx",
+    "class": "text-orange-800",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceTable.tsx",
+    "class": "bg-sky-100",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceTable.tsx",
+    "class": "text-sky-800",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceTable.tsx",
+    "class": "bg-gray-100",
+    "code": "GAP-TINT",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceTable.tsx",
+    "class": "divide-gray-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceTable.tsx",
+    "class": "text-gray-800",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceTable.tsx",
+    "class": "text-emerald-600",
+    "code": "GAP-TINT",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceTable.tsx",
+    "class": "text-gray-400",
+    "code": "GAP-TINT",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceTimelineLog.tsx",
+    "class": "ring-gray-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceTimelineLog.tsx",
+    "class": "border-gray-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceTimelineLog.tsx",
+    "class": "text-amber-700",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceTimelineLog.tsx",
+    "class": "bg-amber-50",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceTimelineLog.tsx",
+    "class": "border-amber-200",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceTimelineLog.tsx",
+    "class": "text-gray-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/occurrence-management/components/OccurrenceTimelineLog.tsx",
+    "class": "text-gray-800",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-82"
   }
 ]
