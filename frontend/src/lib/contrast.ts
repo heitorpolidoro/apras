@@ -252,6 +252,48 @@ export const hexToOklch = (value: string): Oklch | null => {
   };
 };
 
+/**
+ * What a browser paints for `foreground` at `alpha` over `background`
+ * (APRAS-80's compositing model, APRAS-90's single home).
+ *
+ * An opacity modifier such as `/80` is not a colour the theme declares: the
+ * pixels someone reads are the blend, and measuring the token instead of the
+ * blend certifies a pair the screen never paints. Composited the way the paint
+ * pipeline does it — both colours taken to the 8-bit sRGB values the
+ * compositor holds ({@link oklchToHex}, which gamut-maps), blended in that
+ * space, and read back ({@link hexToOklch}). Blending the linear-light or the
+ * OKLab coordinates instead gives a different number, for a colour nobody
+ * renders.
+ *
+ * Like the rest of this module it only measures: it cannot produce a theme,
+ * and `backend/app/core/branding.py` remains the only derivation.
+ */
+export const compositeOver = (
+  foreground: Oklch,
+  background: Oklch,
+  alpha: number,
+): Oklch => {
+  const over = oklchToHex(foreground).slice(1);
+  const under = oklchToHex(background).slice(1);
+  const channels = [0, 2, 4].map((offset) =>
+    Math.round(
+      alpha * parseInt(over.slice(offset, offset + 2), 16) +
+        (1 - alpha) * parseInt(under.slice(offset, offset + 2), 16),
+    ),
+  );
+  const mixed = hexToOklch(
+    `#${channels.map((value) => value.toString(16).padStart(2, "0")).join("")}`,
+  );
+  // Unreachable: three rounded 0-255 channels always render as six hex
+  // digits. Kept, and ignored for coverage exactly as `gamutMap`'s fallback
+  // above is, because the alternative is a non-null assertion on a parse.
+  /* v8 ignore next 3 */
+  if (mixed === null) {
+    throw new Error("the composited colour is not a six-digit hex");
+  }
+  return mixed;
+};
+
 /** Read an emitted `oklch(L C H)` string back, or `null` if it is not one. */
 export const parseOklch = (value: string): Oklch | null => {
   const match = OKLCH_STRING.exec(value.trim());

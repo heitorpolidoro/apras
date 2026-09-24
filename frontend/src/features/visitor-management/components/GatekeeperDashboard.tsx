@@ -147,7 +147,7 @@ export const GatekeeperDashboard: React.FC = () => {
               <div className="text-2xl font-black text-primary-text leading-none">
                 {activeLogs.length}
               </div>
-              <div className="text-xs font-semibold text-primary-text/80">
+              <div className="text-xs font-semibold text-foreground">
                 {t("gatekeeper.activeVisitorsCount")}
               </div>
             </div>

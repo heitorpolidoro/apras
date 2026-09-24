@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>APRAS-90 — gatehouse counter label, decision taken</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+      /* The exact values measured at HEAD by importing frontend/src/lib/contrast.ts.
+         Hard-coded here on purpose: this document must show the pixels the product
+         paints, and a CDN Tailwind build cannot resolve --accent or --primary-text. */
+      :root {
+        --accent: #ecf4ef;        /* oklch(0.96 0.01 160) */
+        --primary-text: #177c52;  /* oklch(0.52 0.11 160) */
+        --primary: #009f68;       /* oklch(0.62 0.15 160) */
+        --border: #dfe7e2;        /* oklch(0.92 0.01 160) */
+        --composite-80: #429471;  /* --primary-text at 80% over --accent */
+        --foreground: #060a08;    /* oklch(0.14 0.01 160) */
+        --muted-foreground: #627068;
+      }
+      .daylight {
+        filter: brightness(var(--glare, 1)) contrast(var(--washout, 1));
+      }
+    </style>
+  </head>
+  <body class="bg-slate-100 min-h-screen text-slate-900 antialiased">
+    <main class="mx-auto max-w-4xl px-6 py-10 space-y-8">
+      <header class="space-y-2">
+        <p class="text-xs font-bold uppercase tracking-wider text-slate-500">
+          APRAS-90 &middot; legibility instrument &middot; decision taken
+        </p>
+        <h1 class="text-2xl font-black tracking-tight">
+          Gatehouse active-visitor counter — the label loses its brand tint
+        </h1>
+        <p class="text-sm text-slate-600 max-w-2xl">
+          <code>GatekeeperDashboard.tsx:150</code>. The label is
+          <code>text-xs font-semibold</code> — 12&nbsp;px, so it is <strong>normal</strong> text and
+          its floor is 4.5:1, not the 3:1 large-text allowance the number above it enjoys.
+          Both panels below are painted at the exact hexes measured at HEAD. The counter
+          <strong>number</strong> stays branded; only the <strong>label</strong> changes.
+        </p>
+      </header>
+
+      <!-- Decision banner -->
+      <section class="rounded-2xl border-2 border-emerald-600 bg-emerald-50 p-5 space-y-2">
+        <div class="flex items-center gap-2">
+          <i data-lucide="check-circle-2" class="size-5 text-emerald-700"></i>
+          <h2 class="font-bold text-emerald-900">Decision taken — this is no longer an open question</h2>
+        </div>
+        <p class="text-sm text-emerald-900">
+          The operator was asked whether the label should stay branded at
+          <code>text-primary-text</code> (4.6547, only 0.15 above the AA floor, on a token
+          re-derived per tenant with no cushion) or become <code>text-foreground</code>.
+        </p>
+        <p class="text-sm font-bold text-emerald-900">
+          The <strong>operator</strong> chose <code>text-foreground &middot; 17.7626</code>.
+          The counter <strong>number</strong> stays <code>text-primary-text</code>.
+        </p>
+        <p class="text-xs text-emerald-800">
+          The two rejected options are kept below for context, clearly marked. Nothing on this page
+          asks for an answer any more.
+        </p>
+      </section>
+
+      <!-- Daylight simulation -->
+      <section class="rounded-2xl border border-slate-200 bg-white p-5 space-y-4">
+        <div class="flex items-center gap-2">
+          <i data-lucide="sun" class="size-5 text-amber-500"></i>
+          <h2 class="font-bold">Daylight simulation</h2>
+        </div>
+        <p class="text-sm text-slate-600">
+          A tablet at a gate in direct sun loses contrast to screen glare. Drag to wash the
+          panels out and judge which label survives.
+        </p>
+        <div class="flex items-center gap-4">
+          <span class="text-xs font-semibold text-slate-500 w-20">Indoors</span>
+          <input
+            id="glare"
+            type="range"
+            min="0"
+            max="100"
+            value="0"
+            class="flex-1 accent-emerald-600"
+          />
+          <span class="text-xs font-semibold text-slate-500 w-24 text-right">Direct sun</span>
+        </div>
+      </section>
+
+      <!-- Before / after -->
+      <section class="grid gap-6 md:grid-cols-2">
+        <!-- BEFORE -->
+        <article class="rounded-2xl border border-slate-200 bg-white p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold">Before — at HEAD</h3>
+            <span class="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-bold text-red-800">
+              3.2883:1 · fails AA
+            </span>
+          </div>
+
+          <div
+            class="daylight flex items-center gap-3 rounded-2xl px-4 py-3"
+            style="background: var(--accent); border: 1px solid var(--border)"
+          >
+            <i data-lucide="users" class="size-6" style="color: var(--primary)"></i>
+            <div>
+              <div class="text-2xl font-black leading-none" style="color: var(--primary-text)">
+                7
+              </div>
+              <div class="text-xs font-semibold" style="color: var(--composite-80)">
+                Visitantes no local
+              </div>
+            </div>
+          </div>
+
+          <dl class="text-xs text-slate-600 space-y-1">
+            <div class="flex justify-between">
+              <dt>class</dt>
+              <dd><code>text-primary-text/80</code></dd>
+            </div>
+            <div class="flex justify-between">
+              <dt>composited paint</dt>
+              <dd><code>#429471</code> on <code>#ecf4ef</code></dd>
+            </div>
+          </dl>
+        </article>
+
+        <!-- AFTER -->
+        <article class="rounded-2xl border-2 border-emerald-500 bg-white p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold">After — this task (chosen)</h3>
+            <span class="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-800">
+              17.7626:1 · passes AA
+            </span>
+          </div>
+
+          <div
+            class="daylight flex items-center gap-3 rounded-2xl px-4 py-3"
+            style="background: var(--accent); border: 1px solid var(--border)"
+          >
+            <i data-lucide="users" class="size-6" style="color: var(--primary)"></i>
+            <div>
+              <div class="text-2xl font-black leading-none" style="color: var(--primary-text)">
+                7
+              </div>
+              <div class="text-xs font-semibold" style="color: var(--foreground)">
+                Visitantes no local
+              </div>
+            </div>
+          </div>
+
+          <dl class="text-xs text-slate-600 space-y-1">
+            <div class="flex justify-between">
+              <dt>label class</dt>
+              <dd><code>text-foreground</code></dd>
+            </div>
+            <div class="flex justify-between">
+              <dt>label paint</dt>
+              <dd><code>#060a08</code> on <code>#ecf4ef</code></dd>
+            </div>
+            <div class="flex justify-between">
+              <dt>number class (unchanged)</dt>
+              <dd><code>text-primary-text</code> · 4.6547</dd>
+            </div>
+          </dl>
+        </article>
+      </section>
+
+      <!-- The open question -->
+      <section class="rounded-2xl border border-amber-300 bg-amber-50 p-5 space-y-4">
+        <div class="flex items-center gap-2">
+          <i data-lucide="history" class="size-5 text-amber-600"></i>
+          <h2 class="font-bold text-amber-900">
+            The three options that were on the table (answered)
+          </h2>
+        </div>
+        <p class="text-sm text-amber-900">
+          <code>--primary-text</code> is re-derived per tenant with no cushion, so a tenant brand
+          could land that pair at exactly 4.50. The label is a caption, not brand, so §1k admits a
+          neutral foreground token. Toggle to compare — the third button is the one the operator
+          chose, and it is selected by default.
+        </p>
+
+        <div class="flex flex-wrap gap-2">
+          <button
+            data-variant="primary-text"
+            class="variant-btn rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors"
+          >
+            text-primary-text · 4.6547 (rejected)
+          </button>
+          <button
+            data-variant="muted-foreground"
+            class="variant-btn rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors"
+          >
+            text-muted-foreground · 4.6684 (rejected)
+          </button>
+          <button
+            data-variant="foreground"
+            class="variant-btn rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors"
+          >
+            text-foreground · 17.7626 &check; chosen
+          </button>
+        </div>
+
+        <div
+          id="variant-card"
+          class="daylight flex max-w-xs items-center gap-3 rounded-2xl px-4 py-3"
+          style="background: var(--accent); border: 1px solid var(--border)"
+        >
+          <i data-lucide="users" class="size-6" style="color: var(--primary)"></i>
+          <div>
+            <div class="text-2xl font-black leading-none" style="color: var(--primary-text)">7</div>
+            <div id="variant-label" class="text-xs font-semibold" style="color: #177c52">
+              Visitantes no local
+            </div>
+          </div>
+        </div>
+
+        <p class="text-xs text-amber-800">
+          Answered by the operator: <em>"gostei da opção: text-foreground · 17.7626"</em>. The spec
+          was revised accordingly — the product edit is a class substitution on line 150, not the
+          deletion of a <code>/80</code> as originally briefed.
+        </p>
+      </section>
+
+      <footer class="text-xs text-slate-500">
+        Every ratio on this page was measured by importing
+        <code>frontend/src/lib/contrast.ts</code> over the token values declared in
+        <code>frontend/src/index.css</code>'s <code>:root</code> block. None was reimplemented and
+        none was estimated by eye.
+      </footer>
+    </main>
+
+    <script>
+      lucide.createIcons();
+
+      const glare = document.getElementById("glare");
+      glare.addEventListener("input", () => {
+        const t = Number(glare.value) / 100;
+        document.documentElement.style.setProperty("--glare", String(1 + 0.35 * t));
+        document.documentElement.style.setProperty("--washout", String(1 - 0.45 * t));
+      });
+
+      const VARIANTS = {
+        "primary-text": "#177c52",
+        "muted-foreground": "#627068",
+        foreground: "#060a08",
+      };
+      const label = document.getElementById("variant-label");
+      const buttons = document.querySelectorAll(".variant-btn");
+
+      function select(name) {
+        label.style.color = VARIANTS[name];
+        buttons.forEach((button) => {
+          const on = button.dataset.variant === name;
+          button.className =
+            "variant-btn rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors " +
+            (on
+              ? "border-emerald-600 bg-emerald-600 text-white"
+              : "border-amber-300 bg-white text-amber-900 hover:bg-amber-100");
+        });
+      }
+
+      buttons.forEach((button) =>
+        button.addEventListener("click", () => select(button.dataset.variant)),
+      );
+      select("foreground");
+    </script>
+  </body>
+</html>

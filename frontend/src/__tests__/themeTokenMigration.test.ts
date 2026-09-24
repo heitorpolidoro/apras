@@ -929,7 +929,6 @@ describe("APRAS-80's ledger arithmetic", () => {
       "text-muted-foreground",
       "text-primary",
       "text-primary-text",
-      "text-primary-text/80",
       "text-primary-foreground",
       "text-destructive",
     ];

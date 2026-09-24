@@ -21,9 +21,9 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import {
+  compositeOver,
   contrastRatio,
   hexToOklch,
-  oklchToHex,
   parseOklch,
   MINIMUM_CONTRAST_RATIO,
   type Oklch,
@@ -33,6 +33,8 @@ import {
 const GRAPHICAL_CONTRAST_RATIO = 3;
 /** Every ratio below is published to four decimals; assert to ±0.001. */
 const DECIMALS = 3;
+/** The alpha APRAS-90 deleted from the counter label, as `/80` means it. */
+const COMPOSITED_ALPHA = 0.8;
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const FRONTEND_ROOT = path.resolve(HERE, "..", "..", "..", "..");
@@ -107,43 +109,6 @@ const palette = (name: string): Oklch => {
     c: Number(percent[2]),
     h: Number(percent[3]),
   };
-};
-
-/**
- * What a browser paints for `foreground` at `alpha` over `background`.
- *
- * §1i declares an opacity-modified target's alpha **unmeasured** — the row for
- * `text-primary-text/80` is `--primary-text` on `--accent` at 4.6547 — so this
- * is not the contract's number. It is what a person at the gate actually
- * reads, and this file measures it so that the sub-AA composite is *declared*
- * rather than hidden behind the row.
- *
- * Composited the way the paint pipeline does it: both colours are taken to the
- * 8-bit sRGB values the compositor holds (`oklchToHex`, which gamut-maps),
- * blended in that space, and read back (`hexToOklch`). Blending the
- * linear-light or the OKLab coordinates instead gives a different number for
- * a colour nobody renders.
- */
-const composite = (
-  foreground: Oklch,
-  background: Oklch,
-  alpha: number,
-): Oklch => {
-  const over = oklchToHex(foreground).slice(1);
-  const under = oklchToHex(background).slice(1);
-  const channels = [0, 2, 4].map((offset) =>
-    Math.round(
-      alpha * parseInt(over.slice(offset, offset + 2), 16) +
-        (1 - alpha) * parseInt(under.slice(offset, offset + 2), 16),
-    ),
-  );
-  const mixed = hexToOklch(
-    `#${channels.map((value) => value.toString(16).padStart(2, "0")).join("")}`,
-  );
-  if (mixed === null) {
-    throw new Error("the composited colour is not a six-digit hex");
-  }
-  return mixed;
 };
 
 /** One pair the migration moves: what it measured, and what it measures now. */
@@ -260,6 +225,25 @@ const CLEARED: readonly MovedPair[] = [
     floor: MINIMUM_CONTRAST_RATIO,
   },
   {
+    site: "GatekeeperDashboard:150 counter label (APRAS-90)",
+    move: "text-primary-text/80 -> text-foreground on bg-accent",
+    // The pair APRAS-80 could not repair: §1i forbade a migration child from
+    // deleting the `/80`, so it carried the modifier over and declared the
+    // sub-AA composite. APRAS-90 owns the repair, and the operator chose a
+    // neutral caption token over keeping the label branded at 4.6547 — 0.15
+    // above the floor on a token `build_theme` re-derives per tenant with no
+    // cushion. The counter *number* above stays branded.
+    before: () =>
+      contrastRatio(
+        compositeOver(token("primary-text"), token("accent"), COMPOSITED_ALPHA),
+        token("accent"),
+      ),
+    after: () => contrastRatio(token("foreground"), token("accent")),
+    publishedBefore: 3.2883,
+    publishedAfter: 17.7626,
+    floor: MINIMUM_CONTRAST_RATIO,
+  },
+  {
     site: "GatekeeperDashboard:147 active-visitor counter (§1k)",
     move: "text-indigo-700 on bg-indigo-50 -> text-primary-text on bg-accent",
     before: () => contrastRatio(palette("indigo-700"), palette("indigo-50")),
@@ -307,10 +291,11 @@ const CLEARED: readonly MovedPair[] = [
 /**
  * The pairs below AA **by decision**, declared rather than hidden.
  *
- * Nothing here is repaired by this task: the first is a pre-existing failure
- * the migration worsens under a rule (§1i) that makes the migration
- * mandatory, and the other three are classes this task leaves exactly as it
- * found them, measured so that a later reader does not attribute them to it.
+ * All three are classes APRAS-80 left exactly as it found them, measured so
+ * that a later reader does not attribute them to it. The fourth entry — the
+ * counter label's `/80` composite, the one failure the migration worsened —
+ * is gone from this list because APRAS-90 repaired it; it now sits in
+ * `CLEARED`, carrying the same 3.2883 as its `publishedBefore`.
  */
 const DECLARED_SUB_AA: readonly {
   site: string;
@@ -319,17 +304,6 @@ const DECLARED_SUB_AA: readonly {
   published: number;
   publishedBefore: number;
 }[] = [
-  {
-    site: "GatekeeperDashboard:150 counter label",
-    note: "text-indigo-600/80 -> text-primary-text/80 on bg-accent. §1i declares the alpha unmeasured, so the contract's row is --primary-text on --accent at 4.6547 and the migration is mandatory; deleting the /80 would be a markup change, which §1i forbids this task. Owned by the follow-up APRAS-90.",
-    measure: () =>
-      contrastRatio(
-        composite(token("primary-text"), token("accent"), 0.8),
-        token("accent"),
-      ),
-    publishedBefore: 4.0551,
-    published: 3.2883,
-  },
   {
     site: "AccessLogTimeline:59 timeline dot glyph, left branch",
     note: "text-slate-500 on bg-slate-100, kept whole under the triple rule. Below AA today and unchanged by this task.",
@@ -456,7 +430,7 @@ describe("the pairs APRAS-80 moves", () => {
     for (const pair of CLEARED) {
       expect(pair.after()).toBeGreaterThanOrEqual(pair.floor);
     }
-    expect(DECLARED_SUB_AA).toHaveLength(4);
+    expect(DECLARED_SUB_AA).toHaveLength(3);
   });
 });
 
@@ -470,12 +444,13 @@ describe("the pairs below AA by decision", () => {
     },
   );
 
-  it("records the /80 composite as worsened by the migration and the other three as untouched", () => {
-    const [composited, ...untouched] = DECLARED_SUB_AA;
-
-    expect(composited.publishedBefore).toBeCloseTo(4.0551, DECIMALS);
-    expect(composited.published).toBeLessThan(composited.publishedBefore);
-    for (const pair of untouched) {
+  it("records all three as untouched, the worsened composite having been repaired", () => {
+    // APRAS-80's own regression — `text-primary-text/80` at 3.2883, down from
+    // 4.0551 — was the one entry here whose `published` moved. APRAS-90
+    // deleted it from the markup, so every pair still declared is one no task
+    // in this chain has changed.
+    expect(DECLARED_SUB_AA).toHaveLength(3);
+    for (const pair of DECLARED_SUB_AA) {
       expect(pair.published).toBe(pair.publishedBefore);
     }
   });

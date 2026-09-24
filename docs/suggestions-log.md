@@ -1794,3 +1794,309 @@ after the run is byte-identical to the one at the start.
   failing. I re-ran the check with a generic semantic-token pattern and got the
   same answer today, so nothing is wrong now; deriving the pattern from the token
   names in `index.css`'s `:root` would keep it that way without upkeep.
+
+## [APRAS-81] Migrate project and asset management to semantic theme tokens — 2026-09-24
+
+- §"Every status set" row 11 cites `AssetTable:32–43` for
+  `getConditionBadgeClass` while §"The one swatch map" cites `:29–45` for the
+  same function (the declaration is at 29–45; 32–43 are its `return` lines).
+  Use one.
+- ER9 enumerates the `dark:` classes that must fall to zero. It is true as
+  written, but it silently omits the classes that are *partly* deleted
+  (`dark:border-slate-800` 16 of 27, `dark:bg-slate-800` 5 of 7,
+  `dark:border-slate-700` 2 of 4 — I verified each site). A reader may take the
+  list for the whole deletion set; a one-line note that 60 of the 83 deletions
+  are the enumerated classes and 23 are partial would close it.
+- §"Declared sub-AA" item 2 says "four sites (`AssetSummaryCards:52`,
+  `ConstructionTrackerPage:283,438,359/361`)", which reads as five. `359/361` is
+  one site (the gauge track and its fill); say so.
+- ER8's opening clause "no `text-red-*` class migrates" is contradicted by its
+  own closing clause (`hover:text-red-600` ×3 does migrate). Both are in the
+  same sentence so it is decidable, but "no bare `text-red-*`" would be cleaner.
+- The re-measurement, the contrast figures, the eslint baseline, the coverage
+  thresholds and the three predecessor ledger totals are all exact. The parts of
+  this spec that are right are right to the digit; the four findings above are
+  local and cheap.
+
+## [APRAS-81] Migrate project and asset management to semantic theme tokens — 2026-09-24
+
+- ER18's 883 ms and ER16's "375 errors + 2 warnings across 64 files" are
+  point-in-time measurements of an evolving tree. Both are already framed so the
+  decidable clause does not hinge on them ("under 2 s", "at most the 2 errors in
+  the touched files"), but if either drifts before implementation the QA agent
+  will see a mismatch in the prose half of the result. Worth the implementer
+  re-stating the measured figures in the PR body rather than treating the spec's
+  as authoritative.
+- The spec repeats three times that §1f/§1k verdicts are invisible to every test
+  and are a human review duty. That is correct and important; consider having the
+  developer surface the §1k site table in the PR description so the reviewer has
+  the checklist at hand without opening the spec.
+
+## [APRAS-82] Migrate document and occurrence management to semantic theme tokens — 2026-09-24
+
+- The contrast table's row "Tile and inline glyphs → `text-primary` … `--accent`
+  / `--muted` | Today **5.7621 / 6.4414**" has a wrong "Today" cell. 5.7621 is
+  right (`text-indigo-600` on `bg-indigo-50`), but the `--muted` sites are
+  `NewOccurrenceModal:136,140,154` on `bg-gray-50` and `OccurrenceDetailsView:173`
+  on `bg-slate-50`; `text-indigo-600` on `bg-gray-50` measures **6.1708**, not
+  6.4414 (6.4414 is the on-white/on-`--card` figure, carried into the wrong row).
+  No expected result depends on this cell, so it does not block, but it is the
+  one number in the document that does not reproduce and it should be corrected
+  in the same revision.
+- Expected result 9 says "grouping every grammar match … by `(file, class-context
+  span)`", but the badge-map returns in `OccurrenceTable.tsx` are string literals
+  outside any `className`/`cn`/`cva` context and so belong to no span. The answer
+  is the same either way (I checked), but the result should say what happens to
+  matches outside every span — excluded, or one bucket per file.
+- Expected result 13 pins "exactly 22 `dark:` classes remain" and lists 17
+  classes that must reach zero; those 17 account for 77 of the 78 deletions. The
+  78th — the single `dark:text-slate-300` at `DocumentGridTable:89`, whose base
+  `text-slate-600` migrates — is pinned only by the count, so an implementation
+  that deletes a different one of the 16 `dark:text-slate-300` occurrences still
+  satisfies the result. One clause naming `DocumentGridTable.tsx:89` would close
+  it.
+- The spec amends APRAS-78's "each sibling appends exactly one" comment in
+  `MIGRATED_DIRECTORIES` to allow two entries. It says so openly and the
+  operator's scope forces it, so it is not a contract extension in substance —
+  but it is the one place where "this task consumes the contract and may not
+  extend it" is not literally true, and the revision could say that in the
+  opening paragraph rather than only in §"The guard suite — what changes".
+
+## [APRAS-82] Migrate document and occurrence management to semantic theme tokens — 2026-09-24
+- Spec body, *What this proves, and what it misses*: "the indigo hue shift at
+  73 sites (plus **22** deleted `dark:` indigo siblings)" — the tree carries
+  **13** `dark:` indigo occurrences (`dark:text-indigo-400` 4,
+  `dark:hover:text-indigo-400` 4, `dark:hover:bg-indigo-950/50` 2,
+  `dark:bg-indigo-950/50` 2, `dark:bg-indigo-950/60` 1), all of them required
+  gone by expected result 13. The 22 appears to be the kept-`dark:` figure
+  reused by mistake. Narrative only — no expected result depends on it, so it
+  does not block — but it is worth correcting so the implementer does not go
+  hunting for nine more `dark:` indigo classes.
+- `docs/tasks/APRAS-82-spec.md` line 602 carries a doubled word, "and and
+  assert, **per component**". The copy on the task card is already clean;
+  only the spec file has it.
+
+## [APRAS-83] Migrate finance, purchases and access control to semantic theme tokens — 2026-09-24
+
+- Spec body, *§1k applied* / consequence 2: the download `<a>` is at
+  `InvoicePreviewModal.tsx:47`, not `:58`. The contrast table, the substitution
+  bullets and §1f case 3 all say `:47`; only consequence 2 says `:58`.
+- Spec body, consequence 4: "`purchase-management` contains no `indigo` class
+  at all. Its only brand-family occurrence is set 2's exception above" — set 2
+  is `AccessEventFeed:47,48`, which lives in `access-control`. The sentence
+  points at the wrong set; the claim it is trying to make (that
+  `PurchaseRequestsPage:198` already reads `bg-primary
+  text-primary-foreground`) is correct and verified in the source.
+- Result 15 would be easier to keep true across future children if it stated,
+  once, that each component's token list is over the rendered markup
+  *including* the `components/ui` primitives it composes. That single sentence
+  is what the SelectQuoteModal finding turns on.
+- Result 19's "the repository total stays at 375 errors + 2 warnings across 64
+  files" is verified at HEAD, but this task adds a new file
+  (`financePurchasesAccessContrast.test.ts`). Worth saying explicitly that the
+  new test file must lint clean so the 64-file count is unchanged.
+
+## [APRAS-83] Migrate finance, purchases and access control to semantic theme tokens — 2026-09-24
+
+- Result 15's three inclusion/exclusion lists are now the load-bearing
+  statement of which tokens a primitive contributes. When APRAS-90 or the
+  dark-mode follow-up changes `buttonVariants`, this test is the one that will
+  break in a non-obvious way; a one-line comment in
+  `TenantBrandReach.test.tsx` naming `components/ui/button.tsx`'s variant
+  strings as the source of `bg-primary`/`text-primary-foreground`/`border-input`
+  would save the next reader the derivation.
+- `ui/textarea` contributes `placeholder:text-muted-foreground`, and
+  `ui/button`'s outline contributes `hover:bg-accent`, both of which differ
+  from asserted tokens only by prefix. The result already forbids substring
+  matching; an explicit negative assertion that `hover:bg-accent` is present
+  but `bg-accent` is not, in `SelectQuoteModal`'s case, would make the strict
+  splitting self-evidencing rather than merely stipulated. Non-blocking.
+
+## [APRAS-84] Migrate media, feedback, announcements and packages to semantic tokens — 2026-09-24
+
+- **Result 21's "866 ms" is wall-clock and inherently noisy** — I measured
+  910 ms on the same commit. The operative requirement (every individual test
+  under 2 s; memo at module scope) is decidable and fine, but a QA agent
+  reading the parenthetical as an assertion could fail a correct
+  implementation. Phrasing it "≈866 ms, recorded as context, not asserted"
+  would remove the trap. Not blocking, because the clause describes a past
+  commit's state rather than anything the implementation can make true or
+  false.
+- **Body contrast table, last row**: `AnnouncementCard:72`'s
+  `hover:text-red-600` is attributed to a `--card` surface at 4.8073, but that
+  button also carries `hover:bg-gray-100 → hover:bg-accent`, so the glyph is
+  only ever painted while its surface is `--accent` — i.e. 4.2953, the same
+  number as `CommentThread:62` on `--muted` (`--accent` and `--muted` are
+  byte-identical in `:root`). No asserted value changes and result 7 already
+  declares the 4.2953 pair, so this is a label, not a number.
+- **Result 15 says "the token set is exactly as follows" and then gives
+  contains / contains-none lists.** The lists are what is decidable (the full
+  rendered set also holds layout tokens and kept palette classes), so "exactly"
+  can only mean "these assertions"; saying "asserts the following memberships
+  and non-memberships" would close the reading.
+- **Result 9** could note what happens to grammar matches that fall outside
+  every class-context span (the nine `getStatusBadgeClass` return-string
+  occurrences). The answer is zero either way, but an implementer deciding it
+  fresh may wonder.
+- Worth telling the developer that the guard comment "each sibling appends
+  exactly one" is being deliberately superseded by four entries (the spec says
+  so in § "The guard suite — what changes" item 1); that comment edit is easy
+  to miss in review.
+
+## [APRAS-85] Migrate the remaining feature directories and close the guard — 2026-09-24
+
+- §"The context-dependent cases", §1f case 3 reads "The band holds **3**
+  occurrences here, all `bg-emerald-700`" and then names the third as
+  `AuditTimeline:111`'s `text-emerald-600`. Measured, `bg-emerald-700` occurs
+  **twice** in the six trees. The sentence corrects itself in its own second
+  half and no expected result depends on it (result 14's "zero
+  `bg-emerald-700` after the change" is correct), so this is not blocking —
+  but "3 … all `bg-emerald-700`" should read "3 emerald 500–700 occurrences:
+  two `bg-emerald-700` and one `text-emerald-600`".
+- The intro (line 22) claims, unqualified, "any new hard-coded palette class
+  anywhere in the frontend fails CI by default", which §"What this proves"
+  later correctly narrows to "any new hard-coded palette class **matching
+  §3b**". Narrow the intro too, so the two sentences do not have to be read
+  together.
+- Result 8's "the class token `text-primary` appears **zero** times" is
+  correct under whitespace-split token equality but would fail a naive
+  substring grep, since the diff adds `text-primary-text` (×5) and
+  `text-primary-foreground` (×2). Result 18 spells the splitting rule out;
+  result 8 does not, and results are read one at a time. Adding "as a
+  whitespace-split class token, by exact equality" would make it decidable
+  without reading any other result.
+- On the operator question about §3b's side-qualified border blind spot
+  (`border-t-slate-400` ×5 in `TaskBoard`): the handling is **conservative,
+  not dishonest**. The five occurrences are measured, named with line numbers,
+  shown to belong to a set this child keeps anyway, the guard's claim is
+  narrowed to §3b-matching classes, and widening the grammar is correctly
+  identified as an amendment forbidden to every child. I would not block on
+  it, and no expected result depends on the answer.
+
+## [APRAS-85] Migrate the remaining feature directories and close the guard — 2026-09-24
+
+- Result 18's `TenantBrandReach` case is by some margin the longest single
+  expected result in the split and encodes two component fixtures plus two
+  exact token sets. It is decidable as written, so it is not a finding, but a
+  future child would be easier to QA if a result of that size were split into
+  one result per mounted component.
+- The operator question about §3b's blind spot on side-qualified border
+  utilities (`border-t-*`, `divide-y-*`; five occurrences today, all inside
+  kept set 8) is correctly non-blocking here, but it is the one thing that
+  survives "the guard is closed". Worth opening as a successor task to
+  APRAS-77 so the claim does not decay silently after this child ships.
+
+## [APRAS-87] Raise the active-tab label contrast, which fails WCAG AA — 2026-09-24
+
+- §3 says "The **17** `.tsx` files listed in §2a"; §2a lists **18** distinct
+  files (alert-modal, badge, button, LotDetailsView, Navbar, Sidebar,
+  LoginForm, ForgotPasswordPage, LoginPage, SignupPage, ResetPasswordPage,
+  BrandedEntryPage, AcceptInvitationPage, TaskCard, TaskBoard, TaskList,
+  AssigneePicker, GeneralDashboardPage). The per-line tables are authoritative
+  and complete, so nothing is lost — but the count should read 18.
+- §2c's `painted` column prints a hex for the *untinted* rows too
+  (`--background` `#fcfcfc`). Measuring those rows through that hex, the way
+  the tinted rows are measured, yields **5.0778** and **4.6522** instead of
+  the published `5.0622` / `4.6547`, which would fail results 4 and 7 while
+  looking like a faithful reading of the table. Worth one sentence saying the
+  untinted rows are measured on the parsed `oklch()` and the hex is
+  illustrative.
+- `lotManagementContrast.test.ts` drives `it.each(PRE_EXISTING_SUB_AA)`;
+  emptying the array leaves a `describe` with no test. Say whether the
+  `describe` is removed or replaced by an explicit
+  `expect(PRE_EXISTING_SUB_AA).toHaveLength(0)`, so the implementer does not
+  have to choose.
+- The mock's `--muted` is `#f2f7f5`; the token's real paint is `#ecf4ef`. No
+  sample's ratio depends on it, but matching it costs nothing.
+- Navbar.test's three assertions actually run against Sidebar markup
+  (`Navbar.tsx:64` renders `<Sidebar />`). Naming that in §3 would save the
+  implementer a minute of confusion about why `Navbar.tsx:155` is not the
+  element under test.
+
+## [APRAS-87] Raise the active-tab label contrast, which fails WCAG AA — 2026-09-24
+- Result 9 inherits the tree-wide `375 errors + 2 warnings` ESLint baseline from
+  the APRAS-81…85 family. It is safe today because all six specs assert the same
+  ceiling, but it is the only figure left in APRAS-87's results that a task
+  *outside* this family could invalidate. If a future non-family task changes the
+  baseline, this whole family of results needs re-measuring together; a
+  single published baseline constant that all six cite would remove the coupling.
+- The implementer should seed `GRAPHICAL_PRIMARY_SITES` by running the §3 scan at
+  their own HEAD rather than transcribing §2b, so that a sibling that landed in
+  the meantime is picked up automatically instead of turning the guard red on
+  first run. §5 implies this; saying it in §3 would make it an instruction rather
+  than an inference.
+
+## [APRAS-90] Drop the /80 opacity from brand text sitting on a brand tint — 2026-09-24
+
+- `lotManagementContrast.test.ts` does not currently declare a local
+  `composite`, so result 4's consolidation is complete as scoped — but once
+  `compositeOver` is exported from `contrast.ts`, a one-line note in
+  `docs/frontend/theme-token-mapping.md`'s tooling section would stop the next
+  migration child from writing a third copy. Out of scope here (§"Out of
+  scope" bars amending that file), so this is a suggestion for a later task, not
+  a finding.
+- `APRAS-85-spec.md:488` maintains a list of files permitted to contain a
+  palette class, and names `src/lib/contrast.ts`. Adding `compositeOver`
+  introduces no colour literal, so the list is unaffected — worth a sentence in
+  the spec body so the APRAS-85 developer does not re-derive the question.
+- The operator note asking whether the counter label should become
+  `text-foreground` (17.7626) rather than staying branded at 4.6547 is well
+  posed and correctly defaulted. I would nudge toward accepting it: the residual
+  the spec itself declares — a tenant brand can land this pair at exactly 4.50
+  with no cushion — is real, and a gatehouse caption in daylight is the worst
+  place to spend it. This is a judgement for the operator, not a finding.
+- The mock is the right artefact for the question asked. Rendering both
+  composites at the measured hexes with a brightness slider is a legibility
+  instrument, as claimed; no change requested.
+
+## [APRAS-90] Drop the /80 opacity from brand text sitting on a brand tint — 2026-09-24
+
+- Result 2's parenthetical about column counts (74 → 71) is helpful evidence
+  but is the one clause in the result set that a future whitespace-only change
+  elsewhere in the line could age out of truth. It is not a blocking risk (the
+  character-delta clause already pins the change), and it could simply be
+  dropped to a spec-body note rather than carried in the QA-visible result.
+- The operator question at the end of the spec (keep `text-primary-text` vs.
+  switch the caption to `text-foreground`, 17.7626 on `--accent`) is still
+  open and is worth a decision before implementation, since answering it
+  "yes" after the fact would change results 1, 6 and 8. The spec's documented
+  default (keep the brand token) makes this non-blocking.
+
+## [APRAS-90] Drop the /80 opacity from brand text sitting on a brand tint — 2026-09-24
+
+- Approach item 4 lists the sweep's negative controls as "`text-primary-text`,
+  `text-primary-foreground`, `text-primary`, `bg-primary/10` or
+  `text-muted-foreground/80`", while expected result 7 — correctly — also requires
+  `text-foreground`. The result governs, and an implementer satisfying result 7
+  automatically satisfies the Approach, so this is prose drift only; adding
+  `text-foreground` to the Approach sentence would remove the discrepancy.
+- Result 6 names `contrastRatio` and `parseOklch` as the imports it measures
+  through, but the composited half of the assertion also needs `compositeOver`
+  (Approach item 4 says so). Naming it in result 6 as well would make the result
+  fully self-contained for QA rather than relying on result 4 to supply it.
+- `docs/tasks/APRAS-90-mock.html`'s `#variant-label` still carries an inline
+  `style="color: #177c52"` (the rejected branded option) that the trailing
+  `select("foreground")` overwrites at load. Harmless, but changing the inline
+  default to `#060a08` would mean the page reads correctly even with scripting off.
+- The spec's Residual section is worth keeping verbatim as the task ships: after
+  this change 4.6547 is no longer this label's number but still governs
+  `AuthorizationFormModal:217,228` as normal text, and that is APRAS-88's
+  property. Nothing to change — flagged only so the sentence is not trimmed as
+  now-irrelevant during implementation.
+
+## [APRAS-90] Drop the /80 opacity from brand text sitting on a brand tint — 2026-09-24
+- `frontend/src/lib/contrast.ts:287-290` — the comment says flatly "Unreachable: three rounded 0-255 channels always render as six hex digits." That is true only because every caller passes `alpha` in `[0,1]`; with `alpha = 80` or `NaN` the channels leave `[0,255]` and the guard fires (verified). Now that the helper is exported and six sibling specs will call it, consider either narrowing the wording ("unreachable for `alpha` in [0,1], which is the only domain this helper accepts") or making the domain explicit in the JSDoc `@param`. Purely a documentation-precision point — the runtime behaviour is already correct and loud.
+- `frontend/src/__tests__/brandTextOpacity.test.ts:62,70` — `brandTextOpacityGrammar` and `indigoTextOpacityGrammar` are `export`ed from a test file that nothing imports. Harmless, but `const` would say more accurately that the grammar is private to this guard. (If the intent is for a sibling to reuse them, they belong in a shared helper rather than a test file — but YAGNI says leave that until a sibling actually needs it.)
+- Optional: the sweep matches any whitespace-split token in a source file, including one inside a comment or a plain string. That is conservative in the safe direction (false positive, never false negative) and I would not change it, but a future reader may be surprised, so a one-line note on `sweep()` could save them the trip.
+
+## [APRAS-90] Drop the /80 opacity from brand text sitting on a brand tint — 2026-09-24
+- Re-run the ER2 check against the real commit once it exists
+  (`git show --format= <commit> -- frontend/src/features/visitor-management/components/GatekeeperDashboard.tsx`),
+  since it was necessarily verified against the index here. Nothing in the index is
+  suspicious — index and worktree agree for every file the task owns — but the result
+  is worded against a commit that does not exist yet, and only the commit makes it
+  durable.
+- The mutation probe (ER5) showed the guard's failure message is already excellent: it
+  prints `<file>:<line> <class>`, which points a future author straight at the offending
+  site. No change wanted; noting it because it is the reason I could confirm the guard
+  is live rather than vacuous.
