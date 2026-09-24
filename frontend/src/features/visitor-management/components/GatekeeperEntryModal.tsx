@@ -45,14 +45,14 @@ export const GatekeeperEntryModal: React.FC<GatekeeperEntryModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-900">
+      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl">
         <div className="flex items-center justify-between border-b border-slate-100 pb-4 dark:border-slate-800">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+          <h3 className="text-lg font-bold text-foreground">
             {t("gatekeeper.confirmCheckIn")}
           </h3>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent"
           >
             <X className="size-5" />
           </button>
@@ -83,25 +83,25 @@ export const GatekeeperEntryModal: React.FC<GatekeeperEntryModalProps> = ({
         )}
 
         {/* Visitor Profile Details */}
-        <div className="mt-4 space-y-3 rounded-xl bg-slate-50 p-4 text-sm dark:bg-slate-800/50">
-          <div className="flex items-center gap-2 font-semibold text-slate-900 dark:text-white">
-            <User className="size-4 text-slate-400" />
+        <div className="mt-4 space-y-3 rounded-xl bg-muted p-4 text-sm">
+          <div className="flex items-center gap-2 font-semibold text-foreground">
+            <User className="size-4 text-muted-foreground" />
             {visitor.full_name}
           </div>
           {visitor.cpf && (
-            <div className="text-xs text-slate-500 dark:text-slate-400 pl-6">
+            <div className="text-xs text-muted-foreground pl-6">
               CPF: {visitor.cpf}
             </div>
           )}
           {visitor.company_name && (
-            <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300 text-xs">
-              <Building className="size-3.5 text-slate-400" />
+            <div className="flex items-center gap-2 text-muted-foreground text-xs">
+              <Building className="size-3.5 text-muted-foreground" />
               {visitor.company_name}
             </div>
           )}
           {visitor.vehicle_plate && (
-            <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300 text-xs">
-              <Car className="size-3.5 text-slate-400" />
+            <div className="flex items-center gap-2 text-muted-foreground text-xs">
+              <Car className="size-3.5 text-muted-foreground" />
               {visitor.vehicle_plate} {visitor.vehicle_model ? `(${visitor.vehicle_model})` : ""}
             </div>
           )}
@@ -109,17 +109,17 @@ export const GatekeeperEntryModal: React.FC<GatekeeperEntryModalProps> = ({
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+            <label className="block text-xs font-semibold text-muted-foreground mb-1">
               {t("gatekeeper.entryNotes")}
             </label>
             <div className="relative">
-              <FileText className="absolute left-3 top-2.5 size-4 text-slate-400" />
+              <FileText className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
               <input
                 type="text"
                 value={entryNotes}
                 onChange={(e) => setEntryNotes(e.target.value)}
                 placeholder="Ex: Entrega, Crachá #12, Mala de ferramentas..."
-                className="w-full rounded-lg border border-slate-300 pl-9 pr-3 py-2 text-sm bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                className="w-full rounded-lg border border-input pl-9 pr-3 py-2 text-sm bg-card text-foreground"
               />
             </div>
           </div>
@@ -128,7 +128,7 @@ export const GatekeeperEntryModal: React.FC<GatekeeperEntryModalProps> = ({
             <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
               {t("authorizations.cancel")}
             </Button>
-            <Button type="submit" disabled={isLoading || !isValidAccess} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+            <Button type="submit" disabled={isLoading || !isValidAccess} className="bg-primary hover:bg-primary/90 text-primary-foreground">
               {isLoading ? t("residents.saving") : t("gatekeeper.checkIn")}
             </Button>
           </div>

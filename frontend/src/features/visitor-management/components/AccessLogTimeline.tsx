@@ -36,14 +36,14 @@ export const AccessLogTimeline: React.FC<AccessLogTimelineProps> = ({
   return (
     <div className="space-y-3">
       {logs.length === 0 ? (
-        <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <Clock className="mx-auto size-8 text-slate-400 mb-2" />
-          <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
+        <div className="rounded-xl border border-border bg-card p-8 text-center shadow-sm">
+          <Clock className="mx-auto size-8 text-muted-foreground mb-2" />
+          <p className="text-sm font-medium text-muted-foreground">
             {t("accessLogs.empty")}
           </p>
         </div>
       ) : (
-        <div className="relative border-l-2 border-slate-200 dark:border-slate-800 ml-4 space-y-6 py-2">
+        <div className="relative border-l-2 border-border ml-4 space-y-6 py-2">
           {logs.map((log) => {
             const isCurrentlyOnSite = !log.exit_time;
             const visitorName = log.visitor?.full_name || "Visitor";
@@ -67,11 +67,11 @@ export const AccessLogTimeline: React.FC<AccessLogTimelineProps> = ({
                 </div>
 
                 {/* Card */}
-                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-900 dark:text-white text-base">
+                        <span className="font-bold text-foreground text-base">
                           {visitorName}
                         </span>
                         {isCurrentlyOnSite ? (
@@ -86,7 +86,7 @@ export const AccessLogTimeline: React.FC<AccessLogTimelineProps> = ({
                       </div>
 
                       {log.visitor?.company_name && (
-                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        <div className="text-xs text-muted-foreground mt-0.5">
                           {log.visitor.company_name} {log.visitor.vehicle_plate ? `• ${log.visitor.vehicle_plate}` : ""}
                         </div>
                       )}
@@ -103,7 +103,7 @@ export const AccessLogTimeline: React.FC<AccessLogTimelineProps> = ({
                   </div>
 
                   {/* Times */}
-                  <div className="mt-3 flex flex-wrap gap-4 text-xs text-slate-500 dark:text-slate-400 border-t border-slate-100 pt-3 dark:border-slate-800/80">
+                  <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted-foreground border-t border-slate-100 pt-3 dark:border-slate-800/80">
                     <div>
                       <span className="font-semibold text-slate-700 dark:text-slate-300">
                         {t("accessLogs.entryTime")}:
@@ -120,7 +120,7 @@ export const AccessLogTimeline: React.FC<AccessLogTimelineProps> = ({
                     )}
                     {log.entry_notes && (
                       <div className="flex items-center gap-1">
-                        <FileText className="size-3 text-slate-400" />
+                        <FileText className="size-3 text-muted-foreground" />
                         <span>{log.entry_notes}</span>
                       </div>
                     )}

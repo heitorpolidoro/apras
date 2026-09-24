@@ -1646,3 +1646,151 @@ after the run is byte-identical to the one at the start.
   a larger 4/6 → 0/6 — but the "confound measured away" phrasing is stronger than
   a single n=6 sample supports and would read better as "in this sample the
   confound did not fire".
+
+## [APRAS-75] Serve a public landing page at / to anonymous visitors — 2026-09-22
+
+- **Mock has a top header the spec's DOM-order list does not mention.** The mock
+  (`APRAS-75-mock.html:111-121`) opens the anonymous state with a minimal
+  `<header>` carrying the brand mark and a third "Entrar" CTA, while the spec's
+  structure list (lines 62-71) puts the product name inside the hero and names
+  only two CTAs (hero + repeat band). Not blocking — ER-4 asks for "at least one
+  link to `/login`" and for one `<h1>` and four scoped `<h2>`, all of which the
+  mock satisfies — but a sentence in §5 either sanctioning or excluding the top
+  bar would remove the last place where spec and mock can be read differently.
+- **§7's "holds the expected number of keys" leaves the number to the
+  implementer.** Self-consistent (the test and the locale files are written
+  together) and ER-7 only requires non-empty plus identical, so it is not a
+  verification gap. Worth pinning the count once the operator's copy arrives.
+- **"a landing-only element" is named but not fixed** in Test criteria (line 144)
+  and in the rewritten smoke case. `getByTestId("landing-capabilities")` is
+  already the obvious candidate and is landing-exclusive; naming it explicitly
+  would spare the implementer a choice.
+
+## [APRAS-80] Migrate visitor-management components to semantic theme tokens — 2026-09-24
+
+1. **Expected result 12 says "the five existing
+   `src/features/visitor-management/__tests__/*.test.tsx` suites".** That glob
+   actually matches seven files in the directory — the five component suites
+   plus `usePackages.test.tsx` and `useVisitors.test.tsx`. Test criterion 3 in
+   the spec body names the five explicitly and is unambiguous; only the
+   expected result's glob-plus-count is self-contradictory. Naming the five, or
+   saying "all `*.test.tsx` suites in that directory", removes the conflict.
+   Not blocking: passing all seven unmodified satisfies both readings.
+
+2. **Name the compositing method for the two `/80` figures.** The spec gives
+   4.0551 and 3.2883 and expected result 5 requires asserting them to ±0.001,
+   but `src/lib/contrast.ts` exports no alpha-composite helper, so the
+   implementer must write one. I confirmed the published numbers come from
+   standard CSS sRGB gamma-space blending (round-trip through `oklchToHex`,
+   mix the 8-bit channels at α = 0.8 over the background, `hexToOklch`, then
+   `contrastRatio`); a plausible alternative — lerping the OKLCH components —
+   gives 3.7568 and 3.2685 instead. One sentence naming the space would save a
+   round. Related: the spec should point at the APRAS-79 precedent file
+   `src/features/lot-management/__tests__/lotManagementContrast.test.ts` for
+   the percent-lightness `normalise()` helper, since `parseOklch`'s grammar
+   rejects Tailwind's `oklch(55.4% …)` form outright and `hexToOklch` rejects
+   `--color-white: #fff` (3-digit shorthand) — both are silent `null`s that
+   will cost the implementer time.
+
+3. **Two "Today" figures in the contrast table are labelled against the wrong
+   background.** The rows "Selected auth-type chip … Background `--accent`,
+   Today 7.2164" and "Counter number … Background `--accent`, Today 7.2164"
+   give the ratio of `indigo-700` on `indigo-50`, which is 7.2164; `indigo-700`
+   on `--accent` is 7.2080. The §1k table gets this right for AFM:217 by
+   writing the surface as "`bg-indigo-50` → `--accent`", and the intent is
+   clear from that, but the three rows that abbreviate to just `--accent` are
+   off by 0.0084 — more than the ±0.001 the test criterion demands. Write the
+   before-background and after-background separately in those rows.
+
+4. **The "guard cannot enforce per-site completeness" list is not exhaustive.**
+   It names `AccessLogTimeline.tsx` `text-slate-500` / `text-slate-600` /
+   `bg-slate-100` / `dark:text-slate-400`, `GatekeeperEntryModal.tsx` and
+   `VisitorTable.tsx` `text-red-600`, and `AuthorizationFormModal.tsx`
+   `text-indigo-600`. It omits `dark:border-slate-800`, which is split in four
+   files: kept at AFM:115 and :334, AQM:59, GEM:49 and QSM:59 (siblings of
+   `border-slate-100`) while being deleted at AFM:114, AQM:58, GEM:48 and
+   QSM:58 (siblings of `border-slate-200`). Also, `bg-slate-100` in
+   `AccessLogTimeline.tsx` is not actually split — all three occurrences (56,
+   59, 82) are kept. Neither error opens a verification hole, because a missed
+   deletion would push that file's remaining-match count above its per-file
+   figure and fail expected result 2; but the list is presented as the
+   reviewer's checklist, so it should be right.
+
+5. **Nit, not load-bearing:** the gatehouse reading says the `/80` label
+   "would have been 2.3635" under the old contract. Compositing `--primary`
+   at 80% over `--accent` by the same method that reproduces the other two
+   `/80` figures gives 2.4499. The counterfactual is not asserted by any
+   expected result, so nothing depends on it, but it is the only number in the
+   spec I could not reproduce.
+
+## [APRAS-80] Migrate visitor-management components to semantic theme tokens — 2026-09-24
+- Expected result 6 opens with "All twelve status sets stay whole: ... and
+  `VisitorAuthPage:144` still carry their original classes", and then, in the
+  same sentence, says `bg-card` is *migrated* at `:144`. The sentence resolves
+  itself — set 12's membership is the two border classes, and the trailing clause
+  names the migration explicitly — but a QA agent skimming the first clause could
+  read "original classes" as "the whole className at `:144` is untouched". If the
+  result is ever edited again, scoping the first clause to the enumerated set
+  members ("still carry their original set members") would remove the last bit of
+  slack.
+- The spec's own recommendation to open a tree-wide follow-up for "drop the `/80`
+  from brand text on a brand tint" (gatehouse reading item 2) is worth the
+  operator creating before this child ships, so the 3.2883 composite at
+  `GatekeeperDashboard:150` is tracked somewhere other than a spec body.
+- Expected result 13's "measured wall time reported in the implementation report"
+  is a reporting duty, not a pass/fail condition; it rides along with a
+  hard threshold in the same bullet so it is not a gate problem, but the
+  developer should be reminded that the 2 s per-test ceiling is the criterion.
+
+## [APRAS-80] Migrate visitor-management components to semantic theme tokens — 2026-09-24
+
+- **Form-control fills take `bg-card` here, while the pilot's own `ui/input.tsx`
+  and `ui/select.tsx` take `bg-background`.** The sixteen raw `<input>` /
+  `<select>` fills at `AuthorizationFormModal:161,170,177,186,194,305,316,330`,
+  `GatekeeperDashboard:182,201,276,286,344`, `GatekeeperEntryModal:122`,
+  `VisitorAuthPage:80,97` now carry `bg-card`, whereas
+  `frontend/src/components/ui/input.tsx:12` and
+  `frontend/src/components/ui/select.tsx:11` — migrated under APRAS-78 — carry
+  `border-input bg-background` for the same element kind. The two are
+  byte-identical in `:root` and diverge only under a tenant theme, so no test
+  here can see the difference, and the spec settles the question explicitly
+  with its own §1f case-1 reasoning ("a field sits on its panel rather than
+  being the page"). I am not blocking on a spec-sanctioned decision, but it is
+  a genuine divergence from the pilot's precedent for the identical widget, and
+  whichever way it is resolved it should be resolved *once*, tree-wide, before
+  children 4–8 replicate the choice across ~95 more files. Worth an operator
+  decision now rather than a re-migration later.
+- The contrast suite's `it("leaves nothing it moves undeclared")` re-asserts
+  the floor loop that `it.each(...)("clears its floor")` already covers, and
+  then pins `DECLARED_SUB_AA.length` to 4. The length pin is the load-bearing
+  half; the loop above it is dead weight. Non-blocking.
+- `describe("the measurement itself")` asserts
+  `STYLESHEET.toContain("--primary: oklch(0.65 0.15 160)")` — a literal of the
+  `.dark` value, in a file whose stated discipline is that no colour literal
+  appears. It is there to prove the `.dark` declaration exists and was *not*
+  read, which is a legitimate and well-commented exception, but it will need
+  updating if the dark scheme's brand value is ever retuned. Consider asserting
+  the structure (two `--primary` declarations, the `:root` one selected)
+  instead of the value. Non-blocking.
+
+## [APRAS-80] Migrate visitor-management components to semantic theme tokens — 2026-09-24
+
+- `visitorManagementContrast.test.ts:408` is the single hard-coded colour literal
+  in the file: `expect(STYLESHEET).toContain("--primary: oklch(0.65 0.15 160)")`,
+  inside `reads --primary from :root and never from .dark`. It is not a colour
+  input to any ratio — every measured colour goes through `token()` or
+  `palette()`, so the file-derived property expected result 5 asks for is intact
+  — but it couples this suite to the exact text of a `.dark` declaration the task
+  explicitly does not validate. A retune of the dark scheme would redden this
+  test for a reason unrelated to visitor management. The companion assertion on
+  the same line above, `expect(token("primary").l).toBeCloseTo(0.62, 2)`, already
+  proves the `:root` block is the one being read; asserting merely that
+  `STYLESHEET` contains `.dark` and that the two `--primary` lightnesses differ
+  would give the same protection without pinning a literal.
+
+- `MIGRATED_TARGETS` in the `splits no status set` test is a hand-maintained list
+  of 19 token classes. If a future sibling migration introduces a token not on
+  that list, the mixed-span check silently stops seeing those spans rather than
+  failing. I re-ran the check with a generic semantic-token pattern and got the
+  same answer today, so nothing is wrong now; deriving the pattern from the token
+  names in `index.css`'s `:root` would keep it that way without upkeep.

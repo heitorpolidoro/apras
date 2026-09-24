@@ -55,24 +55,24 @@ export const AuthorizationQrModal: React.FC<AuthorizationQrModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-900">
+      <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-xl">
         <div className="flex items-center justify-between border-b border-slate-100 pb-4 dark:border-slate-800">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <QrCode className="size-5 text-indigo-600 dark:text-indigo-400" />
+          <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+            <QrCode className="size-5 text-primary" />
             {t("authorizations.qrCodeTitle")}
           </h3>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent"
           >
             <X className="size-5" />
           </button>
         </div>
 
         <div className="mt-4 flex min-h-[220px] flex-col items-center justify-center gap-3">
-          {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+          {error && <p className="text-sm text-destructive">{error}</p>}
           {!error && !imageUrl && (
-            <p className="text-sm text-slate-500 dark:text-slate-400">
+            <p className="text-sm text-muted-foreground">
               {t("authorizations.loading")}
             </p>
           )}
@@ -80,7 +80,7 @@ export const AuthorizationQrModal: React.FC<AuthorizationQrModalProps> = ({
             <img
               src={imageUrl}
               alt={t("authorizations.qrCodeTitle")}
-              className="size-56 rounded-lg border border-slate-200 dark:border-slate-800"
+              className="size-56 rounded-lg border border-border"
             />
           )}
         </div>

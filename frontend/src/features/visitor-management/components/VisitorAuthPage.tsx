@@ -54,8 +54,8 @@ export const VisitorAuthPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-            <ShieldCheck className="size-7 text-indigo-600 dark:text-indigo-400" />
+          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+            <ShieldCheck className="size-7 text-primary" />
             {t("authorizations.title")}
           </h1>
         </div>
@@ -69,15 +69,15 @@ export const VisitorAuthPage: React.FC = () => {
       </div>
 
       {/* Filters Bar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center bg-white p-4 rounded-xl border border-slate-200 shadow-sm dark:bg-slate-900 dark:border-slate-800">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center bg-card p-4 rounded-xl border border-border shadow-sm">
         <div className="flex-1 min-w-[200px]">
-          <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
+          <label className="block text-xs font-semibold text-muted-foreground mb-1">
             {t("authorizations.lotSelect")}
           </label>
           <select
             value={effectiveLotId}
             onChange={(e) => setSelectedLotId(e.target.value)}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm bg-white dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-white"
+            className="w-full rounded-md border border-input px-3 py-2 text-sm bg-card text-foreground"
           >
             {lots.map((lot) => (
               <option key={lot.id} value={lot.id}>
@@ -88,13 +88,13 @@ export const VisitorAuthPage: React.FC = () => {
         </div>
 
         <div className="w-full sm:w-48">
-          <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
+          <label className="block text-xs font-semibold text-muted-foreground mb-1">
             {t("authorizations.status")}
           </label>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm bg-white dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-white"
+            className="w-full rounded-md border border-input px-3 py-2 text-sm bg-card text-foreground"
           >
             <option value="">{t("admin.filterAll")}</option>
             <option value="ACTIVE">{t("authorizations.statusActive")}</option>
@@ -106,11 +106,11 @@ export const VisitorAuthPage: React.FC = () => {
 
       {/* Content */}
       {isLoading ? (
-        <div className="p-8 text-center text-slate-500">{t("authorizations.loading")}</div>
+        <div className="p-8 text-center text-muted-foreground">{t("authorizations.loading")}</div>
       ) : !authsData || authsData.items.length === 0 ? (
-        <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <ShieldCheck className="mx-auto size-10 text-slate-400 mb-2" />
-          <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
+        <div className="rounded-xl border border-border bg-card p-8 text-center shadow-sm">
+          <ShieldCheck className="mx-auto size-10 text-muted-foreground mb-2" />
+          <p className="text-sm font-medium text-muted-foreground">
             {t("authorizations.empty")}
           </p>
         </div>
@@ -141,11 +141,11 @@ export const VisitorAuthPage: React.FC = () => {
       {/* Revoke Confirmation Modal */}
       {revokingAuth && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-sm rounded-xl border border-red-200 bg-white p-6 shadow-xl dark:border-red-900/50 dark:bg-slate-900">
-            <h3 className="text-base font-semibold text-red-600 dark:text-red-400">
+          <div className="w-full max-w-sm rounded-xl border border-red-200 bg-card p-6 shadow-xl dark:border-red-900/50">
+            <h3 className="text-base font-semibold text-destructive">
               {t("authorizations.revoke")}
             </h3>
-            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+            <p className="mt-2 text-sm text-muted-foreground">
               {t("authorizations.confirmRevoke", {
                 name: revokingAuth.visitor?.full_name || "Visitante",
               })}

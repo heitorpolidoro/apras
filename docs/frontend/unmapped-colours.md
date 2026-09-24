@@ -324,3 +324,127 @@ deleted alongside them (§1g), that accounts for all 520 palette occurrences in
 **148** distinct `(file, class)` pairs, which is the number of entries
 appended to `themeTokenMigration.exceptions.json`; eleven pairs play two
 roles in one file and carry the code §1h's precedence puts first.
+
+| APRAS-80 | frontend/src/features/visitor-management/components/AccessLogTimeline.tsx | 56 | border-white | GAP-NO-SURFACE | ring around the timeline dot, over a kept palette fill that carries no token |
+| APRAS-80 | frontend/src/features/visitor-management/components/AccessLogTimeline.tsx | 56 | bg-slate-100 | GAP-TINT | timeline status dot; the success and neutral state tints are semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/AccessLogTimeline.tsx | 56 | dark:border-slate-900 | GAP-NO-SURFACE | ring around the timeline dot, over a kept palette fill that carries no token |
+| APRAS-80 | frontend/src/features/visitor-management/components/AccessLogTimeline.tsx | 58 | bg-emerald-100 | GAP-TINT | timeline status dot; the success and neutral state tints are semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/AccessLogTimeline.tsx | 58 | text-emerald-600 | GAP-TINT | timeline status dot; the success and neutral state tints are semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/AccessLogTimeline.tsx | 58 | dark:bg-emerald-950 | GAP-TINT | timeline status dot; the success and neutral state tints are semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/AccessLogTimeline.tsx | 58 | dark:text-emerald-400 | GAP-TINT | timeline status dot; the success and neutral state tints are semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/AccessLogTimeline.tsx | 59 | bg-slate-100 | GAP-TINT | timeline status dot; the success and neutral state tints are semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/AccessLogTimeline.tsx | 59 | text-slate-500 | GAP-TINT | timeline status dot; the success and neutral state tints are semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/AccessLogTimeline.tsx | 59 | dark:bg-slate-800 | GAP-TINT | timeline status dot; the success and neutral state tints are semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/AccessLogTimeline.tsx | 59 | dark:text-slate-400 | GAP-TINT | timeline status dot; the success and neutral state tints are semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/AccessLogTimeline.tsx | 78 | bg-emerald-50 | GAP-TINT | on-site status badge tint; semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/AccessLogTimeline.tsx | 78 | text-emerald-700 | GAP-TINT | on-site status badge tint; semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/AccessLogTimeline.tsx | 78 | dark:bg-emerald-950/50 | GAP-TINT | on-site status badge tint; semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/AccessLogTimeline.tsx | 78 | dark:text-emerald-400 | GAP-TINT | on-site status badge tint; semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/AccessLogTimeline.tsx | 82 | bg-slate-100 | GAP-TINT | left-site status badge tint, the same ternary as the on-site branch; semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/AccessLogTimeline.tsx | 82 | text-slate-600 | GAP-TINT | left-site status badge tint, the same ternary as the on-site branch; semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/AccessLogTimeline.tsx | 82 | dark:bg-slate-800 | GAP-TINT | left-site status badge tint, the same ternary as the on-site branch; semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/AccessLogTimeline.tsx | 82 | dark:text-slate-400 | GAP-TINT | left-site status badge tint, the same ternary as the on-site branch; semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/AccessLogTimeline.tsx | 98 | bg-amber-600 | GAP-NO-TOKEN | check-out button fill; amber has no token at any scale |
+| APRAS-80 | frontend/src/features/visitor-management/components/AccessLogTimeline.tsx | 98 | text-white | GAP-NO-SURFACE | check-out button label over bg-amber-600, a palette colour with no row |
+| APRAS-80 | frontend/src/features/visitor-management/components/AccessLogTimeline.tsx | 98 | hover:bg-amber-700 | GAP-NO-TOKEN | check-out button fill; amber has no token at any scale |
+| APRAS-80 | frontend/src/features/visitor-management/components/AccessLogTimeline.tsx | 106 | border-slate-100 | GAP-BORDER-100 | hairline divider inside a card; applying border would make it read as a border |
+| APRAS-80 | frontend/src/features/visitor-management/components/AccessLogTimeline.tsx | 106 | dark:border-slate-800/80 | GAP-BORDER-100 | hairline divider inside a card; applying border would make it read as a border |
+| APRAS-80 | frontend/src/features/visitor-management/components/AccessLogTimeline.tsx | 108 | text-slate-700 | GAP-OUT-OF-BUDGET | inline time label; every candidate for neutral body text exceeds the budget (published 17.93) |
+| APRAS-80 | frontend/src/features/visitor-management/components/AccessLogTimeline.tsx | 108 | dark:text-slate-300 | GAP-OUT-OF-BUDGET | inline time label; every candidate for neutral body text exceeds the budget (published 17.93) |
+| APRAS-80 | frontend/src/features/visitor-management/components/AccessLogTimeline.tsx | 115 | text-slate-700 | GAP-OUT-OF-BUDGET | inline time label; every candidate for neutral body text exceeds the budget (published 17.93) |
+| APRAS-80 | frontend/src/features/visitor-management/components/AccessLogTimeline.tsx | 115 | dark:text-slate-300 | GAP-OUT-OF-BUDGET | inline time label; every candidate for neutral body text exceeds the budget (published 17.93) |
+| APRAS-80 | frontend/src/features/visitor-management/components/AuthorizationFormModal.tsx | 113 | bg-black/40 | GAP-OVERLAY | modal scrim; no overlay token exists |
+| APRAS-80 | frontend/src/features/visitor-management/components/AuthorizationFormModal.tsx | 115 | border-slate-100 | GAP-BORDER-100 | hairline divider under the modal header; applying border would make it read as a border |
+| APRAS-80 | frontend/src/features/visitor-management/components/AuthorizationFormModal.tsx | 115 | dark:border-slate-800 | GAP-BORDER-100 | hairline divider under the modal header; applying border would make it read as a border |
+| APRAS-80 | frontend/src/features/visitor-management/components/AuthorizationFormModal.tsx | 131 | border-red-200 | GAP-TINT | error alert tint; the surface has no row, so the text cannot migrate alone without failing AA |
+| APRAS-80 | frontend/src/features/visitor-management/components/AuthorizationFormModal.tsx | 131 | bg-red-50 | GAP-TINT | error alert tint; the surface has no row, so the text cannot migrate alone without failing AA |
+| APRAS-80 | frontend/src/features/visitor-management/components/AuthorizationFormModal.tsx | 131 | text-red-700 | GAP-TINT | error alert tint; the surface has no row, so the text cannot migrate alone without failing AA |
+| APRAS-80 | frontend/src/features/visitor-management/components/AuthorizationFormModal.tsx | 131 | dark:border-red-900/50 | GAP-TINT | error alert tint; the surface has no row, so the text cannot migrate alone without failing AA |
+| APRAS-80 | frontend/src/features/visitor-management/components/AuthorizationFormModal.tsx | 131 | dark:bg-red-950/50 | GAP-TINT | error alert tint; the surface has no row, so the text cannot migrate alone without failing AA |
+| APRAS-80 | frontend/src/features/visitor-management/components/AuthorizationFormModal.tsx | 131 | dark:text-red-400 | GAP-TINT | error alert tint; the surface has no row, so the text cannot migrate alone without failing AA |
+| APRAS-80 | frontend/src/features/visitor-management/components/AuthorizationFormModal.tsx | 140 | text-slate-700 | GAP-OUT-OF-BUDGET | form field label; every candidate for neutral body text exceeds the budget (published 17.93) |
+| APRAS-80 | frontend/src/features/visitor-management/components/AuthorizationFormModal.tsx | 140 | dark:text-slate-300 | GAP-OUT-OF-BUDGET | form field label; every candidate for neutral body text exceeds the budget (published 17.93) |
+| APRAS-80 | frontend/src/features/visitor-management/components/AuthorizationFormModal.tsx | 208 | text-slate-700 | GAP-OUT-OF-BUDGET | form field label; every candidate for neutral body text exceeds the budget (published 17.93) |
+| APRAS-80 | frontend/src/features/visitor-management/components/AuthorizationFormModal.tsx | 208 | dark:text-slate-300 | GAP-OUT-OF-BUDGET | form field label; every candidate for neutral body text exceeds the budget (published 17.93) |
+| APRAS-80 | frontend/src/features/visitor-management/components/AuthorizationFormModal.tsx | 218 | text-slate-700 | GAP-OUT-OF-BUDGET | unselected option label; every candidate for neutral body text exceeds the budget (published 17.93) |
+| APRAS-80 | frontend/src/features/visitor-management/components/AuthorizationFormModal.tsx | 218 | dark:text-slate-300 | GAP-OUT-OF-BUDGET | unselected option label; every candidate for neutral body text exceeds the budget (published 17.93) |
+| APRAS-80 | frontend/src/features/visitor-management/components/AuthorizationFormModal.tsx | 229 | text-slate-700 | GAP-OUT-OF-BUDGET | unselected option label; every candidate for neutral body text exceeds the budget (published 17.93) |
+| APRAS-80 | frontend/src/features/visitor-management/components/AuthorizationFormModal.tsx | 229 | dark:text-slate-300 | GAP-OUT-OF-BUDGET | unselected option label; every candidate for neutral body text exceeds the budget (published 17.93) |
+| APRAS-80 | frontend/src/features/visitor-management/components/AuthorizationFormModal.tsx | 239 | text-slate-700 | GAP-OUT-OF-BUDGET | form field label; every candidate for neutral body text exceeds the budget (published 17.93) |
+| APRAS-80 | frontend/src/features/visitor-management/components/AuthorizationFormModal.tsx | 239 | dark:text-slate-300 | GAP-OUT-OF-BUDGET | form field label; every candidate for neutral body text exceeds the budget (published 17.93) |
+| APRAS-80 | frontend/src/features/visitor-management/components/AuthorizationFormModal.tsx | 265 | text-slate-700 | GAP-OUT-OF-BUDGET | form field label; every candidate for neutral body text exceeds the budget (published 17.93) |
+| APRAS-80 | frontend/src/features/visitor-management/components/AuthorizationFormModal.tsx | 265 | dark:text-slate-300 | GAP-OUT-OF-BUDGET | form field label; every candidate for neutral body text exceeds the budget (published 17.93) |
+| APRAS-80 | frontend/src/features/visitor-management/components/AuthorizationFormModal.tsx | 298 | text-slate-700 | GAP-OUT-OF-BUDGET | form field label; every candidate for neutral body text exceeds the budget (published 17.93) |
+| APRAS-80 | frontend/src/features/visitor-management/components/AuthorizationFormModal.tsx | 298 | dark:text-slate-300 | GAP-OUT-OF-BUDGET | form field label; every candidate for neutral body text exceeds the budget (published 17.93) |
+| APRAS-80 | frontend/src/features/visitor-management/components/AuthorizationFormModal.tsx | 309 | text-slate-700 | GAP-OUT-OF-BUDGET | form field label; every candidate for neutral body text exceeds the budget (published 17.93) |
+| APRAS-80 | frontend/src/features/visitor-management/components/AuthorizationFormModal.tsx | 309 | dark:text-slate-300 | GAP-OUT-OF-BUDGET | form field label; every candidate for neutral body text exceeds the budget (published 17.93) |
+| APRAS-80 | frontend/src/features/visitor-management/components/AuthorizationFormModal.tsx | 323 | text-slate-700 | GAP-OUT-OF-BUDGET | form field label; every candidate for neutral body text exceeds the budget (published 17.93) |
+| APRAS-80 | frontend/src/features/visitor-management/components/AuthorizationFormModal.tsx | 323 | dark:text-slate-300 | GAP-OUT-OF-BUDGET | form field label; every candidate for neutral body text exceeds the budget (published 17.93) |
+| APRAS-80 | frontend/src/features/visitor-management/components/AuthorizationFormModal.tsx | 334 | border-slate-100 | GAP-BORDER-100 | hairline divider above the modal footer; applying border would make it read as a border |
+| APRAS-80 | frontend/src/features/visitor-management/components/AuthorizationFormModal.tsx | 334 | dark:border-slate-800 | GAP-BORDER-100 | hairline divider above the modal footer; applying border would make it read as a border |
+| APRAS-80 | frontend/src/features/visitor-management/components/AuthorizationQrModal.tsx | 57 | bg-black/40 | GAP-OVERLAY | modal scrim; no overlay token exists |
+| APRAS-80 | frontend/src/features/visitor-management/components/AuthorizationQrModal.tsx | 59 | border-slate-100 | GAP-BORDER-100 | hairline divider under the modal header; applying border would make it read as a border |
+| APRAS-80 | frontend/src/features/visitor-management/components/AuthorizationQrModal.tsx | 59 | dark:border-slate-800 | GAP-BORDER-100 | hairline divider under the modal header; applying border would make it read as a border |
+| APRAS-80 | frontend/src/features/visitor-management/components/GatekeeperDashboard.tsx | 159 | border-red-200 | GAP-TINT | scan error alert tint; the surface has no row, so the text cannot migrate alone without failing AA |
+| APRAS-80 | frontend/src/features/visitor-management/components/GatekeeperDashboard.tsx | 159 | bg-red-50 | GAP-TINT | scan error alert tint; the surface has no row, so the text cannot migrate alone without failing AA |
+| APRAS-80 | frontend/src/features/visitor-management/components/GatekeeperDashboard.tsx | 159 | text-red-700 | GAP-TINT | scan error alert tint; the surface has no row, so the text cannot migrate alone without failing AA |
+| APRAS-80 | frontend/src/features/visitor-management/components/GatekeeperDashboard.tsx | 159 | dark:border-red-900/50 | GAP-TINT | scan error alert tint; the surface has no row, so the text cannot migrate alone without failing AA |
+| APRAS-80 | frontend/src/features/visitor-management/components/GatekeeperDashboard.tsx | 159 | dark:bg-red-950/50 | GAP-TINT | scan error alert tint; the surface has no row, so the text cannot migrate alone without failing AA |
+| APRAS-80 | frontend/src/features/visitor-management/components/GatekeeperDashboard.tsx | 159 | dark:text-red-400 | GAP-TINT | scan error alert tint; the surface has no row, so the text cannot migrate alone without failing AA |
+| APRAS-80 | frontend/src/features/visitor-management/components/GatekeeperDashboard.tsx | 206 | divide-slate-100 | GAP-BORDER-100 | hairline row divider in the search result list; applying border would make it read as a border |
+| APRAS-80 | frontend/src/features/visitor-management/components/GatekeeperDashboard.tsx | 206 | dark:divide-slate-800/80 | GAP-BORDER-100 | hairline row divider in the search result list; applying border would make it read as a border |
+| APRAS-80 | frontend/src/features/visitor-management/components/GatekeeperDashboard.tsx | 318 | border-slate-100 | GAP-BORDER-100 | hairline divider between package rows; applying border would make it read as a border |
+| APRAS-80 | frontend/src/features/visitor-management/components/GatekeeperDashboard.tsx | 318 | dark:border-slate-800/80 | GAP-BORDER-100 | hairline divider between package rows; applying border would make it read as a border |
+| APRAS-80 | frontend/src/features/visitor-management/components/GatekeeperEntryModal.tsx | 47 | bg-black/40 | GAP-OVERLAY | modal scrim; no overlay token exists |
+| APRAS-80 | frontend/src/features/visitor-management/components/GatekeeperEntryModal.tsx | 49 | border-slate-100 | GAP-BORDER-100 | hairline divider under the modal header; applying border would make it read as a border |
+| APRAS-80 | frontend/src/features/visitor-management/components/GatekeeperEntryModal.tsx | 49 | dark:border-slate-800 | GAP-BORDER-100 | hairline divider under the modal header; applying border would make it read as a border |
+| APRAS-80 | frontend/src/features/visitor-management/components/GatekeeperEntryModal.tsx | 65 | bg-emerald-50 | GAP-TINT | valid access banner tint; semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/GatekeeperEntryModal.tsx | 65 | text-emerald-800 | GAP-TINT | valid access banner tint; semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/GatekeeperEntryModal.tsx | 65 | dark:bg-emerald-950/50 | GAP-TINT | valid access banner tint; semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/GatekeeperEntryModal.tsx | 65 | dark:text-emerald-300 | GAP-TINT | valid access banner tint; semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/GatekeeperEntryModal.tsx | 66 | bg-red-50 | GAP-TINT | invalid access banner tint; semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/GatekeeperEntryModal.tsx | 66 | text-red-800 | GAP-TINT | invalid access banner tint; semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/GatekeeperEntryModal.tsx | 66 | dark:bg-red-950/50 | GAP-TINT | invalid access banner tint; semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/GatekeeperEntryModal.tsx | 66 | dark:text-red-300 | GAP-TINT | invalid access banner tint; semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/GatekeeperEntryModal.tsx | 70 | text-emerald-600 | GAP-TINT | valid access banner icon, the same variant as the banner; semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/GatekeeperEntryModal.tsx | 70 | dark:text-emerald-400 | GAP-TINT | valid access banner icon, the same variant as the banner; semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/GatekeeperEntryModal.tsx | 72 | text-red-600 | GAP-TINT | invalid access banner icon, the same variant as the banner; semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/GatekeeperEntryModal.tsx | 72 | dark:text-red-400 | GAP-TINT | invalid access banner icon, the same variant as the banner; semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/GatekeeperEntryModal.tsx | 80 | bg-red-50 | GAP-TINT | check-in error box tint; the surface has no row, so the text cannot migrate alone without failing AA |
+| APRAS-80 | frontend/src/features/visitor-management/components/GatekeeperEntryModal.tsx | 80 | text-red-700 | GAP-TINT | check-in error box tint; the surface has no row, so the text cannot migrate alone without failing AA |
+| APRAS-80 | frontend/src/features/visitor-management/components/GatekeeperEntryModal.tsx | 80 | dark:bg-red-950/50 | GAP-TINT | check-in error box tint; the surface has no row, so the text cannot migrate alone without failing AA |
+| APRAS-80 | frontend/src/features/visitor-management/components/GatekeeperEntryModal.tsx | 80 | dark:text-red-400 | GAP-TINT | check-in error box tint; the surface has no row, so the text cannot migrate alone without failing AA |
+| APRAS-80 | frontend/src/features/visitor-management/components/QrScannerModal.tsx | 57 | bg-black/40 | GAP-OVERLAY | modal scrim; no overlay token exists |
+| APRAS-80 | frontend/src/features/visitor-management/components/QrScannerModal.tsx | 59 | border-slate-100 | GAP-BORDER-100 | hairline divider under the modal header; applying border would make it read as a border |
+| APRAS-80 | frontend/src/features/visitor-management/components/QrScannerModal.tsx | 59 | dark:border-slate-800 | GAP-BORDER-100 | hairline divider under the modal header; applying border would make it read as a border |
+| APRAS-80 | frontend/src/features/visitor-management/components/VisitorAuthPage.tsx | 143 | bg-black/40 | GAP-OVERLAY | modal scrim; no overlay token exists |
+| APRAS-80 | frontend/src/features/visitor-management/components/VisitorAuthPage.tsx | 144 | border-red-200 | GAP-TINT | revoke dialog border; the red border has no row while the panel surface takes its own row |
+| APRAS-80 | frontend/src/features/visitor-management/components/VisitorAuthPage.tsx | 144 | dark:border-red-900/50 | GAP-TINT | revoke dialog border; the red border has no row while the panel surface takes its own row |
+| APRAS-80 | frontend/src/features/visitor-management/components/VisitorTable.tsx | 26 | bg-emerald-50 | GAP-TINT | active status badge tint; semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/VisitorTable.tsx | 26 | text-emerald-700 | GAP-TINT | active status badge tint; semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/VisitorTable.tsx | 26 | dark:bg-emerald-950/50 | GAP-TINT | active status badge tint; semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/VisitorTable.tsx | 26 | dark:text-emerald-400 | GAP-TINT | active status badge tint; semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/VisitorTable.tsx | 33 | bg-amber-50 | GAP-NO-TOKEN | expired status badge tint; amber has no token at any scale |
+| APRAS-80 | frontend/src/features/visitor-management/components/VisitorTable.tsx | 33 | text-amber-700 | GAP-NO-TOKEN | expired status badge tint; amber has no token at any scale |
+| APRAS-80 | frontend/src/features/visitor-management/components/VisitorTable.tsx | 33 | dark:bg-amber-950/50 | GAP-NO-TOKEN | expired status badge tint; amber has no token at any scale |
+| APRAS-80 | frontend/src/features/visitor-management/components/VisitorTable.tsx | 33 | dark:text-amber-400 | GAP-NO-TOKEN | expired status badge tint; amber has no token at any scale |
+| APRAS-80 | frontend/src/features/visitor-management/components/VisitorTable.tsx | 40 | bg-red-50 | GAP-TINT | revoked status badge tint; semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/VisitorTable.tsx | 40 | text-red-700 | GAP-TINT | revoked status badge tint; semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/VisitorTable.tsx | 40 | dark:bg-red-950/50 | GAP-TINT | revoked status badge tint; semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/VisitorTable.tsx | 40 | dark:text-red-400 | GAP-TINT | revoked status badge tint; semantic status colour, never brand |
+| APRAS-80 | frontend/src/features/visitor-management/components/VisitorTable.tsx | 119 | text-red-600 | GAP-TINT | revoke control tint; the border and hover fill have no row, so the text cannot migrate alone |
+| APRAS-80 | frontend/src/features/visitor-management/components/VisitorTable.tsx | 119 | border-red-200 | GAP-TINT | revoke control tint; the border and hover fill have no row, so the text cannot migrate alone |
+| APRAS-80 | frontend/src/features/visitor-management/components/VisitorTable.tsx | 119 | hover:bg-red-50 | GAP-TINT | revoke control tint; the border and hover fill have no row, so the text cannot migrate alone |
+| APRAS-80 | frontend/src/features/visitor-management/components/VisitorTable.tsx | 119 | dark:text-red-400 | GAP-TINT | revoke control tint; the border and hover fill have no row, so the text cannot migrate alone |
+| APRAS-80 | frontend/src/features/visitor-management/components/VisitorTable.tsx | 119 | dark:border-red-900/50 | GAP-TINT | revoke control tint; the border and hover fill have no row, so the text cannot migrate alone |
+| APRAS-80 | frontend/src/features/visitor-management/components/VisitorTable.tsx | 119 | dark:hover:bg-red-950/50 | GAP-TINT | revoke control tint; the border and hover fill have no row, so the text cannot migrate alone |
+
+**APRAS-80 total — 113 occurrences:** 61 `GAP-TINT`, 22
+`GAP-OUT-OF-BUDGET`, 16 `GAP-BORDER-100`, 6 `GAP-NO-TOKEN`, 5 `GAP-OVERLAY`,
+3 `GAP-NO-SURFACE`.
+With the 193 occurrences migrated to a token and the 158 `dark:` siblings
+deleted alongside them (§1g), that accounts for all 464 palette occurrences in
+`frontend/src/features/visitor-management/components/`. The two halves close
+independently: 254 non-`dark:` = 193 + 61, and 210 `dark:` = 158 + 52. The 113
+occupy **84** distinct `(file, class)` pairs, which is the number of entries
+appended to `themeTokenMigration.exceptions.json`.

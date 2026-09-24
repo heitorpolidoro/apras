@@ -1018,5 +1018,509 @@
     "class": "text-slate-700",
     "code": "GAP-OUT-OF-BUDGET",
     "task": "APRAS-79"
+  },
+  {
+    "file": "src/features/visitor-management/components/AccessLogTimeline.tsx",
+    "class": "bg-amber-600",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/AccessLogTimeline.tsx",
+    "class": "bg-emerald-100",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/AccessLogTimeline.tsx",
+    "class": "bg-emerald-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/AccessLogTimeline.tsx",
+    "class": "bg-slate-100",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/AccessLogTimeline.tsx",
+    "class": "border-slate-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/AccessLogTimeline.tsx",
+    "class": "border-white",
+    "code": "GAP-NO-SURFACE",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/AccessLogTimeline.tsx",
+    "class": "dark:bg-emerald-950",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/AccessLogTimeline.tsx",
+    "class": "dark:bg-emerald-950/50",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/AccessLogTimeline.tsx",
+    "class": "dark:bg-slate-800",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/AccessLogTimeline.tsx",
+    "class": "dark:border-slate-800/80",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/AccessLogTimeline.tsx",
+    "class": "dark:border-slate-900",
+    "code": "GAP-NO-SURFACE",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/AccessLogTimeline.tsx",
+    "class": "dark:text-emerald-400",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/AccessLogTimeline.tsx",
+    "class": "dark:text-slate-300",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/AccessLogTimeline.tsx",
+    "class": "dark:text-slate-400",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/AccessLogTimeline.tsx",
+    "class": "hover:bg-amber-700",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/AccessLogTimeline.tsx",
+    "class": "text-emerald-600",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/AccessLogTimeline.tsx",
+    "class": "text-emerald-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/AccessLogTimeline.tsx",
+    "class": "text-slate-500",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/AccessLogTimeline.tsx",
+    "class": "text-slate-600",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/AccessLogTimeline.tsx",
+    "class": "text-slate-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/AccessLogTimeline.tsx",
+    "class": "text-white",
+    "code": "GAP-NO-SURFACE",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/AuthorizationFormModal.tsx",
+    "class": "bg-black/40",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/AuthorizationFormModal.tsx",
+    "class": "bg-red-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/AuthorizationFormModal.tsx",
+    "class": "border-red-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/AuthorizationFormModal.tsx",
+    "class": "border-slate-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/AuthorizationFormModal.tsx",
+    "class": "dark:bg-red-950/50",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/AuthorizationFormModal.tsx",
+    "class": "dark:border-red-900/50",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/AuthorizationFormModal.tsx",
+    "class": "dark:border-slate-800",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/AuthorizationFormModal.tsx",
+    "class": "dark:text-red-400",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/AuthorizationFormModal.tsx",
+    "class": "dark:text-slate-300",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/AuthorizationFormModal.tsx",
+    "class": "text-red-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/AuthorizationFormModal.tsx",
+    "class": "text-slate-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/AuthorizationQrModal.tsx",
+    "class": "bg-black/40",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/AuthorizationQrModal.tsx",
+    "class": "border-slate-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/AuthorizationQrModal.tsx",
+    "class": "dark:border-slate-800",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/GatekeeperDashboard.tsx",
+    "class": "bg-red-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/GatekeeperDashboard.tsx",
+    "class": "border-red-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/GatekeeperDashboard.tsx",
+    "class": "border-slate-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/GatekeeperDashboard.tsx",
+    "class": "dark:bg-red-950/50",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/GatekeeperDashboard.tsx",
+    "class": "dark:border-red-900/50",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/GatekeeperDashboard.tsx",
+    "class": "dark:border-slate-800/80",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/GatekeeperDashboard.tsx",
+    "class": "dark:divide-slate-800/80",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/GatekeeperDashboard.tsx",
+    "class": "dark:text-red-400",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/GatekeeperDashboard.tsx",
+    "class": "divide-slate-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/GatekeeperDashboard.tsx",
+    "class": "text-red-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/GatekeeperEntryModal.tsx",
+    "class": "bg-black/40",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/GatekeeperEntryModal.tsx",
+    "class": "bg-emerald-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/GatekeeperEntryModal.tsx",
+    "class": "bg-red-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/GatekeeperEntryModal.tsx",
+    "class": "border-slate-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/GatekeeperEntryModal.tsx",
+    "class": "dark:bg-emerald-950/50",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/GatekeeperEntryModal.tsx",
+    "class": "dark:bg-red-950/50",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/GatekeeperEntryModal.tsx",
+    "class": "dark:border-slate-800",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/GatekeeperEntryModal.tsx",
+    "class": "dark:text-emerald-300",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/GatekeeperEntryModal.tsx",
+    "class": "dark:text-emerald-400",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/GatekeeperEntryModal.tsx",
+    "class": "dark:text-red-300",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/GatekeeperEntryModal.tsx",
+    "class": "dark:text-red-400",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/GatekeeperEntryModal.tsx",
+    "class": "text-emerald-600",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/GatekeeperEntryModal.tsx",
+    "class": "text-emerald-800",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/GatekeeperEntryModal.tsx",
+    "class": "text-red-600",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/GatekeeperEntryModal.tsx",
+    "class": "text-red-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/GatekeeperEntryModal.tsx",
+    "class": "text-red-800",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/QrScannerModal.tsx",
+    "class": "bg-black/40",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/QrScannerModal.tsx",
+    "class": "border-slate-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/QrScannerModal.tsx",
+    "class": "dark:border-slate-800",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/VisitorAuthPage.tsx",
+    "class": "bg-black/40",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/VisitorAuthPage.tsx",
+    "class": "border-red-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/VisitorAuthPage.tsx",
+    "class": "dark:border-red-900/50",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/VisitorTable.tsx",
+    "class": "bg-amber-50",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/VisitorTable.tsx",
+    "class": "bg-emerald-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/VisitorTable.tsx",
+    "class": "bg-red-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/VisitorTable.tsx",
+    "class": "border-red-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/VisitorTable.tsx",
+    "class": "dark:bg-amber-950/50",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/VisitorTable.tsx",
+    "class": "dark:bg-emerald-950/50",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/VisitorTable.tsx",
+    "class": "dark:bg-red-950/50",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/VisitorTable.tsx",
+    "class": "dark:border-red-900/50",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/VisitorTable.tsx",
+    "class": "dark:hover:bg-red-950/50",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/VisitorTable.tsx",
+    "class": "dark:text-amber-400",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/VisitorTable.tsx",
+    "class": "dark:text-emerald-400",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/VisitorTable.tsx",
+    "class": "dark:text-red-400",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/VisitorTable.tsx",
+    "class": "hover:bg-red-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/VisitorTable.tsx",
+    "class": "text-amber-700",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/VisitorTable.tsx",
+    "class": "text-emerald-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/VisitorTable.tsx",
+    "class": "text-red-600",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
+  },
+  {
+    "file": "src/features/visitor-management/components/VisitorTable.tsx",
+    "class": "text-red-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-80"
   }
 ]

@@ -48,9 +48,9 @@ export const VisitorTable: React.FC<VisitorTableProps> = ({
   };
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
       <table className="w-full text-left text-sm">
-        <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold text-slate-500 uppercase dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400">
+        <thead className="border-b border-border bg-muted text-xs font-semibold text-muted-foreground uppercase">
           <tr>
             <th className="px-4 py-3">{t("visitors.fullName")}</th>
             <th className="px-4 py-3">{t("visitors.companyName")}</th>
@@ -60,7 +60,7 @@ export const VisitorTable: React.FC<VisitorTableProps> = ({
             <th className="px-4 py-3 text-right">{t("lots.actions")}</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+        <tbody className="divide-y divide-border">
           {authorizations.map((auth) => {
             const visitorName = auth.visitor?.full_name || "N/A";
             const company = auth.visitor?.company_name || "-";
@@ -69,29 +69,29 @@ export const VisitorTable: React.FC<VisitorTableProps> = ({
             return (
               <tr
                 key={auth.id}
-                className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors"
+                className="hover:bg-accent/50 transition-colors"
               >
-                <td className="px-4 py-3.5 font-medium text-slate-900 dark:text-white">
+                <td className="px-4 py-3.5 font-medium text-foreground">
                   <div>{visitorName}</div>
                   {auth.visitor?.cpf && (
-                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                    <div className="text-xs text-muted-foreground">
                       CPF: {auth.visitor.cpf}
                     </div>
                   )}
                 </td>
-                <td className="px-4 py-3.5 text-slate-600 dark:text-slate-300">
+                <td className="px-4 py-3.5 text-muted-foreground">
                   <span className="inline-flex items-center gap-1">
-                    <Building className="size-3.5 text-slate-400" />
+                    <Building className="size-3.5 text-muted-foreground" />
                     {company}
                   </span>
                 </td>
-                <td className="px-4 py-3.5 text-slate-600 dark:text-slate-300">
+                <td className="px-4 py-3.5 text-muted-foreground">
                   <span className="inline-flex items-center gap-1 font-mono text-xs">
-                    <Car className="size-3.5 text-slate-400" />
+                    <Car className="size-3.5 text-muted-foreground" />
                     {plate}
                   </span>
                 </td>
-                <td className="px-4 py-3.5 text-slate-600 dark:text-slate-300">
+                <td className="px-4 py-3.5 text-muted-foreground">
                   <span className="text-xs font-semibold uppercase tracking-wider">
                     {auth.auth_type === "SINGLE"
                       ? t("authorizations.single")

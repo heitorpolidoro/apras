@@ -32,6 +32,7 @@ import { describe, expect, it } from "vitest";
 export const MIGRATED_DIRECTORIES: readonly string[] = [
   "src/components/ui",
   "src/features/lot-management/components",
+  "src/features/visitor-management/components",
 ];
 
 /** The eight gap codes of §1h, in precedence order. Closed set: an entry
@@ -478,6 +479,9 @@ describe("MIGRATED_DIRECTORIES", () => {
     expect(MIGRATED_DIRECTORIES).toContain(
       "src/features/lot-management/components",
     );
+    expect(MIGRATED_DIRECTORIES).toContain(
+      "src/features/visitor-management/components",
+    );
     expect(new Set(MIGRATED_DIRECTORIES).size).toBe(
       MIGRATED_DIRECTORIES.length,
     );
@@ -495,6 +499,9 @@ describe("MIGRATED_DIRECTORIES", () => {
     );
     expect(PINNED.map((file) => file.file)).toContain(
       "src/features/lot-management/components/LotTable.tsx",
+    );
+    expect(PINNED.map((file) => file.file)).toContain(
+      "src/features/visitor-management/components/GatekeeperDashboard.tsx",
     );
     expect(
       PINNED.every((file) =>
@@ -758,6 +765,209 @@ describe("APRAS-79's ledger arithmetic", () => {
     expect(PINNED.filter((file) => file.file.startsWith(DIRECTORY))).toHaveLength(
       9,
     );
+  });
+
+  it("keeps every `why` under 120 characters and off the code", () => {
+    for (const row of rows) {
+      expect(row.why.length).toBeLessThanOrEqual(120);
+      expect(row.why).not.toContain("GAP-");
+    }
+  });
+});
+
+describe("APRAS-80's ledger arithmetic", () => {
+  // Appended, directory-scoped, in the shape APRAS-79 established. Nothing
+  // above this line is edited by this child.
+  const DIRECTORY = "src/features/visitor-management/components/";
+  const rows = LEDGER.filter((row) =>
+    toSrcRelative(row.file).startsWith(DIRECTORY),
+  );
+  const count = (code: string) => rows.filter((row) => row.code === code).length;
+  const files = PINNED.filter((file) => file.file.startsWith(DIRECTORY));
+  const matchesOn = (name: string, line: number): string[] => {
+    const file = `${DIRECTORY}${name}`;
+    const source = files.find((pinned) => pinned.file === file);
+
+    return matchesIn(file, source?.source ?? "")
+      .filter((match) => match.line === line)
+      .map((match) => match.text);
+  };
+
+  it("pins the directory's eight source files", () => {
+    expect(files).toHaveLength(8);
+  });
+
+  it("logs 113 occurrences under six codes", () => {
+    expect(rows).toHaveLength(113);
+    expect(count("GAP-TINT")).toBe(61);
+    expect(count("GAP-OUT-OF-BUDGET")).toBe(22);
+    expect(count("GAP-BORDER-100")).toBe(16);
+    expect(count("GAP-NO-TOKEN")).toBe(6);
+    expect(count("GAP-OVERLAY")).toBe(5);
+    expect(count("GAP-NO-SURFACE")).toBe(3);
+  });
+
+  it("uses no code it does not account for", () => {
+    // No chart series, no avatar fill and no category-per-enum badge set in
+    // this directory: every badge set in it encodes a *status*.
+    expect(count("GAP-SWATCH")).toBe(0);
+    expect(count("GAP-UNLISTED")).toBe(0);
+  });
+
+  it("leaves 113 of the directory's 464 palette occurrences in place", () => {
+    // 464 = 193 migrated + 158 deleted `dark:` siblings + 113 left and logged,
+    // with both halves closing independently: 254 non-`dark:` = 193 + 61 and
+    // 210 `dark:` = 158 + 52.
+    const remaining = files.flatMap((file) =>
+      matchesIn(file.file, file.source),
+    );
+
+    expect(remaining).toHaveLength(113);
+    expect(
+      remaining.filter((match) => match.text.startsWith("dark:")),
+    ).toHaveLength(52);
+  });
+
+  it("excepts the 84 distinct (file, class) pairs those 113 occupy", () => {
+    const entries = EXCEPTIONS.filter((entry) =>
+      entry.file.startsWith(DIRECTORY),
+    );
+    const pairs = new Set(
+      rows.map((row) => `${toSrcRelative(row.file)} :: ${row.class}`),
+    );
+
+    expect(entries).toHaveLength(84);
+    expect(pairs.size).toBe(84);
+    expect(entries.every((entry) => entry.task === "APRAS-80")).toBe(true);
+  });
+
+  it("carries no six-digit hex literal in any of the eight files", () => {
+    for (const file of files) {
+      expect(file.source).not.toMatch(hexGrammar());
+    }
+  });
+
+  it("keeps all twelve status sets whole, each member on its own line", () => {
+    // Every member of every set, at the line the spec names. A future edit
+    // that migrated one member of a set — splitting a ternary branch away
+    // from the ternary it belongs to — fails here before the guard sees it.
+    const sets: ReadonlyArray<readonly [string, number, readonly string[]]> = [
+      ["AccessLogTimeline.tsx", 56, ["border-white", "bg-slate-100"]],
+      [
+        "AccessLogTimeline.tsx",
+        58,
+        ["bg-emerald-100", "text-emerald-600", "dark:bg-emerald-950"],
+      ],
+      [
+        "AccessLogTimeline.tsx",
+        59,
+        ["bg-slate-100", "text-slate-500", "dark:bg-slate-800"],
+      ],
+      ["AccessLogTimeline.tsx", 78, ["bg-emerald-50", "text-emerald-700"]],
+      ["AccessLogTimeline.tsx", 82, ["bg-slate-100", "text-slate-600"]],
+      [
+        "AuthorizationFormModal.tsx",
+        131,
+        ["border-red-200", "bg-red-50", "text-red-700"],
+      ],
+      [
+        "GatekeeperDashboard.tsx",
+        159,
+        ["border-red-200", "bg-red-50", "text-red-700"],
+      ],
+      ["GatekeeperEntryModal.tsx", 65, ["bg-emerald-50", "text-emerald-800"]],
+      ["GatekeeperEntryModal.tsx", 66, ["bg-red-50", "text-red-800"]],
+      ["GatekeeperEntryModal.tsx", 70, ["text-emerald-600"]],
+      ["GatekeeperEntryModal.tsx", 72, ["text-red-600"]],
+      ["GatekeeperEntryModal.tsx", 80, ["bg-red-50", "text-red-700"]],
+      ["VisitorTable.tsx", 26, ["bg-emerald-50", "text-emerald-700"]],
+      ["VisitorTable.tsx", 40, ["bg-red-50", "text-red-700"]],
+      [
+        "VisitorTable.tsx",
+        119,
+        ["text-red-600", "border-red-200", "hover:bg-red-50"],
+      ],
+      ["VisitorAuthPage.tsx", 144, ["border-red-200"]],
+    ];
+    const ledgered = new Set(
+      rows.map((row) => `${toSrcRelative(row.file)} :: ${row.class}`),
+    );
+
+    for (const [name, line, members] of sets) {
+      const onThatLine = matchesOn(name, line);
+      for (const member of members) {
+        expect(onThatLine).toContain(member);
+        expect(ledgered).toContain(`${DIRECTORY}${name} :: ${member}`);
+      }
+    }
+  });
+
+  it("splits no status set: exactly one span mixes a migrated class with a kept tint", () => {
+    // A split set is, by construction, a class-context span holding both a
+    // migrated occurrence and a kept `GAP-TINT` occurrence. Run mechanically
+    // over every span in the directory, the check must return exactly one —
+    // `VisitorAuthPage:144`, where the kept `border-red-200` sits beside the
+    // migrated `bg-card`. That span is not a split set: the panel's neutral
+    // surface takes its §1f case 1 row, the panel's red border has no row,
+    // and the red foreground for that panel lives on a different element.
+    // A span mixing a migrated occurrence with a kept occurrence under any
+    // *other* gap code is expected and is not counted here.
+    const MIGRATED_TARGETS = [
+      "bg-card",
+      "bg-muted",
+      "bg-accent",
+      "bg-accent/50",
+      "bg-primary",
+      "hover:bg-accent",
+      "hover:bg-accent/50",
+      "hover:bg-primary/90",
+      "border-border",
+      "border-input",
+      "border-primary",
+      "divide-border",
+      "text-foreground",
+      "text-muted-foreground",
+      "text-primary",
+      "text-primary-text",
+      "text-primary-text/80",
+      "text-primary-foreground",
+      "text-destructive",
+    ];
+    const target = new RegExp(
+      String.raw`(?<![\w-])(?:${MIGRATED_TARGETS.map((name) =>
+        name.replace("/", String.raw`\/`),
+      ).join("|")})(?![\w-])`,
+      "g",
+    );
+    const tinted = new Set(
+      rows
+        .filter((row) => row.code === "GAP-TINT")
+        .map((row) => `${toSrcRelative(row.file)} :: ${row.line} :: ${row.class}`),
+    );
+    const mixed: string[] = [];
+
+    for (const { file, source } of files) {
+      for (const [start, end] of classContexts(source)) {
+        const span = source.slice(start, end);
+        if ([...span.matchAll(target)].length === 0) {
+          continue;
+        }
+        // Matched on the span's own offsets, never by searching the file for
+        // the class text: several spans carry the same class, and an
+        // `indexOf` would attribute one span's occurrence to another.
+        for (const match of span.matchAll(paletteGrammar())) {
+          const line = lineOf(source, start + (match.index ?? 0));
+          if (tinted.has(`${file} :: ${line} :: ${match[0]}`)) {
+            mixed.push(`${file}:${line} ${match[0]}`);
+            break;
+          }
+        }
+      }
+    }
+
+    expect([...new Set(mixed)]).toEqual([
+      "src/features/visitor-management/components/VisitorAuthPage.tsx:144 border-red-200",
+    ]);
   });
 
   it("keeps every `why` under 120 characters and off the code", () => {

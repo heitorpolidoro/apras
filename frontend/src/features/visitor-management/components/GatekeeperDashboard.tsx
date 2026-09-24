@@ -125,11 +125,11 @@ export const GatekeeperDashboard: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-            <Building2 className="size-7 text-indigo-600 dark:text-indigo-400" />
+          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+            <Building2 className="size-7 text-primary" />
             {t("gatekeeper.title")}
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-sm text-muted-foreground">
             {t("gatekeeper.subtitle")}
           </p>
         </div>
@@ -141,13 +141,13 @@ export const GatekeeperDashboard: React.FC = () => {
           </Button>
 
           {/* Active Visitors Counter */}
-          <div className="flex items-center gap-3 rounded-2xl bg-indigo-50 px-4 py-3 border border-indigo-100 dark:bg-indigo-950/40 dark:border-indigo-900/50">
-            <Users className="size-6 text-indigo-600 dark:text-indigo-400" />
+          <div className="flex items-center gap-3 rounded-2xl bg-accent px-4 py-3 border border-border">
+            <Users className="size-6 text-primary" />
             <div>
-              <div className="text-2xl font-black text-indigo-700 dark:text-indigo-300 leading-none">
+              <div className="text-2xl font-black text-primary-text leading-none">
                 {activeLogs.length}
               </div>
-              <div className="text-xs font-semibold text-indigo-600/80 dark:text-indigo-400">
+              <div className="text-xs font-semibold text-primary-text/80">
                 {t("gatekeeper.activeVisitorsCount")}
               </div>
             </div>
@@ -165,21 +165,21 @@ export const GatekeeperDashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Search & Terminal */}
         <div className="lg:col-span-1 space-y-4">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-4">
-            <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <Search className="size-4 text-indigo-600" />
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm space-y-4">
+            <h2 className="text-base font-bold text-foreground flex items-center gap-2">
+              <Search className="size-4 text-primary" />
               {t("gatekeeper.searchVisitor")}
             </h2>
 
             {/* Target Lot Selector */}
             <div>
-              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">
                 {t("authorizations.lotSelect")} *
               </label>
               <select
                 value={selectedLotId}
                 onChange={(e) => setSelectedLotId(e.target.value)}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm bg-white dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-white"
+                className="w-full rounded-md border border-input px-3 py-2 text-sm bg-card text-foreground"
               >
                 <option value="">-- {t("authorizations.lotSelect")} --</option>
                 {lots.map((lot) => (
@@ -192,13 +192,13 @@ export const GatekeeperDashboard: React.FC = () => {
 
             {/* Search Input */}
             <div className="relative">
-              <Search className="absolute left-3 top-2.5 size-4 text-slate-400" />
+              <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder={t("visitors.searchPlaceholder")}
-                className="w-full rounded-md border border-slate-300 pl-9 pr-3 py-2 text-sm bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                className="w-full rounded-md border border-input pl-9 pr-3 py-2 text-sm bg-card text-foreground"
               />
             </div>
 
@@ -207,13 +207,13 @@ export const GatekeeperDashboard: React.FC = () => {
               {visitorsData?.items.map((visitor) => (
                 <div
                   key={visitor.id}
-                  className="flex items-center justify-between p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg transition-colors"
+                  className="flex items-center justify-between p-3 hover:bg-accent rounded-lg transition-colors"
                 >
                   <div>
-                    <div className="font-semibold text-slate-900 dark:text-white text-sm">
+                    <div className="font-semibold text-foreground text-sm">
                       {visitor.full_name}
                     </div>
-                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                    <div className="text-xs text-muted-foreground">
                       {visitor.company_name || visitor.vehicle_plate || visitor.cpf || "Sem dados adicionais"}
                     </div>
                   </div>
@@ -222,7 +222,7 @@ export const GatekeeperDashboard: React.FC = () => {
                     size="sm"
                     disabled={!selectedLotId || checkInMutation.isPending}
                     onClick={() => handleSelectVisitorForCheckIn(visitor)}
-                    className="gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                    className="gap-1 bg-primary hover:bg-primary/90 text-primary-foreground"
                   >
                     <LogIn className="size-3.5" />
                     {t("gatekeeper.checkIn")}
@@ -235,9 +235,9 @@ export const GatekeeperDashboard: React.FC = () => {
 
         {/* Right Column: Timeline & On-Site Feed */}
         <div className="lg:col-span-2 space-y-4">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-4">
-              <History className="size-5 text-indigo-600 dark:text-indigo-400" />
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <h2 className="text-base font-bold text-foreground flex items-center gap-2 mb-4">
+              <History className="size-5 text-primary" />
               {t("accessLogs.title")}
             </h2>
 
@@ -261,9 +261,9 @@ export const GatekeeperDashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Log Arrival Form */}
         <div className="lg:col-span-1 space-y-4">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-4">
-            <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <PackageIcon className="size-4 text-indigo-600" />
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm space-y-4">
+            <h2 className="text-base font-bold text-foreground flex items-center gap-2">
+              <PackageIcon className="size-4 text-primary" />
               {t("packages.title", "Encomendas")}
             </h2>
 
@@ -273,7 +273,7 @@ export const GatekeeperDashboard: React.FC = () => {
                 value={packageDescription}
                 onChange={(e) => setPackageDescription(e.target.value)}
                 placeholder={t("packages.description", "Descrição")}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm bg-white dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-white"
+                className="w-full rounded-md border border-input px-3 py-2 text-sm bg-card text-foreground"
               />
             </div>
 
@@ -283,14 +283,14 @@ export const GatekeeperDashboard: React.FC = () => {
                 value={packageCarrier}
                 onChange={(e) => setPackageCarrier(e.target.value)}
                 placeholder={t("packages.carrier", "Transportadora")}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm bg-white dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-white"
+                className="w-full rounded-md border border-input px-3 py-2 text-sm bg-card text-foreground"
               />
             </div>
 
             <Button
               disabled={!selectedLotId || createPackageMutation.isPending}
               onClick={handleLogPackageArrival}
-              className="w-full gap-1 bg-indigo-600 hover:bg-indigo-700 text-white"
+              className="w-full gap-1 bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               <PackageIcon className="size-3.5" />
               {t("packages.logArrival", "Registrar Encomenda")}
@@ -300,14 +300,14 @@ export const GatekeeperDashboard: React.FC = () => {
 
         {/* Right Column: Awaiting Pickup Queue */}
         <div className="lg:col-span-2 space-y-4">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-4">
-              <PackageIcon className="size-5 text-indigo-600 dark:text-indigo-400" />
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <h2 className="text-base font-bold text-foreground flex items-center gap-2 mb-4">
+              <PackageIcon className="size-5 text-primary" />
               {t("packages.awaitingPickup", "Encomendas Aguardando Retirada")}
             </h2>
 
             {packageQueue.length === 0 ? (
-              <p className="text-sm text-slate-500 dark:text-slate-400">
+              <p className="text-sm text-muted-foreground">
                 {t("packages.noPackages", "Nenhuma encomenda aguardando retirada.")}
               </p>
             ) : (
@@ -319,16 +319,16 @@ export const GatekeeperDashboard: React.FC = () => {
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <div className="font-semibold text-slate-900 dark:text-white text-sm">
+                        <div className="font-semibold text-foreground text-sm">
                           {pkg.lot_summary
                             ? `${t("lots.block")} ${pkg.lot_summary.block}, ${t("lots.lotNumber")} ${pkg.lot_summary.lot_number}`
                             : ""}
                         </div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400 flex gap-2">
+                        <div className="text-xs text-muted-foreground flex gap-2">
                           {pkg.description && <span>{pkg.description}</span>}
                           {pkg.carrier && <span>{pkg.carrier}</span>}
                         </div>
-                        <div className="text-xs text-slate-400 dark:text-slate-500">
+                        <div className="text-xs text-muted-foreground">
                           {new Date(pkg.received_at).toLocaleString()}
                         </div>
                       </div>
@@ -341,13 +341,13 @@ export const GatekeeperDashboard: React.FC = () => {
                           setPickupNotes((prev) => ({ ...prev, [pkg.id]: e.target.value }))
                         }
                         placeholder={t("packages.pickedUpBy", "Retirado por: ___")}
-                        className="flex-1 rounded-md border border-slate-300 px-3 py-1.5 text-xs bg-white dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-white"
+                        className="flex-1 rounded-md border border-input px-3 py-1.5 text-xs bg-card text-foreground"
                       />
                       <Button
                         size="sm"
                         disabled={markPickedUpMutation.isPending}
                         onClick={() => handleConfirmPickup(pkg.id)}
-                        className="gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                        className="gap-1 bg-primary hover:bg-primary/90 text-primary-foreground"
                       >
                         {t("packages.confirmPickup", "Confirmar Retirada")}
                       </Button>
