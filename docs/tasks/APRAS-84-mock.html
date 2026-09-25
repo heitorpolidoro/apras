@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>APRAS-84 — o controle de zoom do recorte de foto (decidido)</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 32px 28px 64px;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #ffffff; color: #0f172b; line-height: 1.5;
+  }
+  h1 { font-size: 22px; margin: 0 0 6px; }
+  h2 { font-size: 16px; margin: 40px 0 10px; padding-top: 18px; border-top: 1px solid #e2e8f0; }
+  p  { margin: 0 0 10px; max-width: 78ch; font-size: 14px; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px;
+         background: #f1f5f9; padding: 1px 5px; border-radius: 4px; }
+  .lede { color: #45556c; }
+
+  .decided {
+    background: #052e16; color: #fff; border-radius: 10px; padding: 16px 18px;
+    max-width: 95ch; margin: 14px 0 4px; font-size: 14.5px;
+  }
+  .decided strong { color: #bbf7d0; }
+  .decided .sub { display: block; margin-top: 8px; font-size: 13.5px; opacity: .93; }
+  .decided code { background: rgba(255,255,255,.14); color: #e7f7ec; }
+
+  /* ---- brand selector ---- */
+  .brands { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 6px; }
+  .brand {
+    display: flex; align-items: center; gap: 8px; cursor: pointer;
+    border: 1px solid #cad5e2; background: #fff; border-radius: 8px;
+    padding: 7px 12px 7px 9px; font: inherit; font-size: 13px; color: #0f172b;
+  }
+  .brand:hover { background: #f8fafc; }
+  .brand[aria-pressed="true"] { border-color: #0f172b; box-shadow: inset 0 0 0 1px #0f172b; font-weight: 600; }
+  .chip { width: 16px; height: 16px; border-radius: 4px; border: 1px solid rgba(0,0,0,.14); }
+
+  /* ---- the loud warning ---- */
+  #alarm {
+    display: none; margin: 16px 0 4px; padding: 14px 16px; border-radius: 10px;
+    background: #7f1d1d; color: #fff; font-size: 15px; font-weight: 600; max-width: 95ch;
+  }
+  #alarm.on { display: block; }
+  #alarm .sub { display: block; font-weight: 400; font-size: 13.5px; margin-top: 6px; opacity: .92; }
+
+  /* ---- the option panels ---- */
+  .states { display: flex; flex-wrap: wrap; gap: 22px; margin-top: 18px; align-items: flex-start; }
+  .state { width: 372px; }
+  .state > .name { font-size: 13px; font-weight: 700; letter-spacing: .02em; margin-bottom: 2px; }
+  .state > .sub  { font-size: 12px; color: #45556c; margin-bottom: 10px; min-height: 46px; }
+  .state > .why  { font-size: 12px; margin: 8px 0 0; color: #7f1d1d; min-height: 32px; }
+  .chosen .name { color: #14532d; }
+  .chosen { outline: 3px solid #14532d; outline-offset: 10px; border-radius: 6px; }
+  .chosen .why { color: #14532d; }
+  .tag { display: inline-block; font-size: 10.5px; font-weight: 700; letter-spacing: .04em;
+         padding: 1px 7px; border-radius: 999px; vertical-align: 2px; margin-right: 6px; }
+  .tag.ok  { background: #dcfce7; color: #14532d; }
+  .tag.no  { background: #fee2e2; color: #7f1d1d; }
+  .tag.now { background: #e2e8f0; color: #314158; }
+
+  /* ---- the real component, at true size ---- */
+  /* AvatarCropEditor.tsx:62  flex flex-col items-center space-y-4 p-4 rounded-lg border */
+  .panel {
+    display: flex; flex-direction: column; align-items: center; gap: 16px;
+    padding: 16px; border-radius: 8px; border-width: 1px; border-style: solid;
+  }
+  /* :63  text-sm font-semibold */
+  .panel h4 { font-size: 14px; font-weight: 600; margin: 0; }
+  /* :65  relative w-64 h-64 border-2 border-dashed rounded-full overflow-hidden */
+  .stage {
+    position: relative; width: 256px; height: 256px; border-width: 2px; border-style: dashed;
+    border-radius: 9999px; overflow: hidden; display: flex; align-items: center; justify-content: center;
+    color: rgba(255,255,255,.34); font-size: 12px;
+  }
+  /* :69  w-full max-w-xs space-y-2 */
+  .zoom { width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 8px; }
+  /* :70  flex items-center justify-between text-xs */
+  .zoomrow { display: flex; align-items: center; justify-content: space-between; font-size: 12px; }
+
+  /* :81  w-full h-1 rounded-lg appearance-none accent-* — drawn deterministically,
+     so the comparison does not depend on this browser's native range widget. */
+  .track { position: relative; width: 100%; height: 4px; border-radius: 8px; }
+  .track .thumb {
+    position: absolute; top: 50%; left: 42%; width: 16px; height: 16px; border-radius: 9999px;
+    transform: translate(-50%, -50%);
+  }
+  .native { width: 100%; height: 4px; border-radius: 8px; appearance: none; -webkit-appearance: none;
+            cursor: pointer; margin: 0; }
+  .nativenote { font-size: 11px; color: #62748e; margin-top: -2px; }
+
+  /* :86  px-3 py-1 text-xs font-medium rounded-md border */
+  .rotate { padding: 4px 12px; font-size: 12px; font-weight: 500; border-radius: 6px;
+            border-width: 1px; border-style: solid; background: #fff; }
+
+  /* ---- ratios ---- */
+  .ratios { margin-top: 12px; font-size: 12.5px; }
+  .ratios div { display: flex; justify-content: space-between; gap: 8px; padding: 3px 0;
+                border-bottom: 1px dotted #e2e8f0; }
+  .badge { font-weight: 700; font-size: 11px; padding: 1px 7px; border-radius: 999px; }
+  .pass { background: #dcfce7; color: #14532d; }
+  .fail { background: #fee2e2; color: #7f1d1d; }
+  .num { font-variant-numeric: tabular-nums; }
+
+  table { border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+  th, td { border: 1px solid #e2e8f0; padding: 6px 10px; text-align: left; }
+  th { background: #f8fafc; font-weight: 600; }
+  td.n { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.bad td { background: #fef2f2; }
+  .note { background: #f8fafc; border: 1px solid #cad5e2; border-radius: 10px; padding: 16px 18px; max-width: 95ch; }
+  .note h3 { margin: 0 0 8px; font-size: 15px; }
+  .note ul { margin: 8px 0 0; padding-left: 20px; font-size: 14px; }
+  .note li { margin-bottom: 6px; }
+</style>
+</head>
+<body>
+
+<h1>APRAS-84 — o controle de zoom, no recorte da foto de perfil</h1>
+<p class="lede">
+  Tela: <code>AvatarCropEditor</code> (painel <code>:62</code>, controle <code>:81</code>).
+  O controle tem duas partes: o <strong>trilho</strong>, a barrinha de 4&nbsp;px embaixo do
+  círculo de recorte, e a <strong>bolinha</strong>, o ponto que se arrasta. Todas as razões de
+  contraste desta página foram medidas importando <code>frontend/src/lib/contrast.ts</code>, e
+  todos os temas saíram de <code>build_theme</code> em
+  <code>backend/app/core/branding.py</code> — a única derivação de tema do repositório.
+  Nenhuma conta foi refeita à mão.
+</p>
+
+<div class="decided">
+  <strong>DECIDIDO PELO OPERADOR:</strong> as duas partes trocam de papel. O
+  <strong>trilho passa a ser da cor da marca</strong> (<code>bg-slate-300</code> →
+  <code>bg-primary</code>) e a <strong>bolinha passa a ser a cor que o tema garante legível
+  sobre a marca</strong> (<code>accent-indigo-600</code> →
+  <code>accent-primary-foreground</code>).
+  <span class="sub">
+    Hoje é o contrário: bolinha da marca, trilho cinza fixo. A troca mantém o controle
+    acompanhando a marca do condomínio — que era a intenção original — e é a única combinação
+    testada em que <em>as duas</em> partes alcançam o piso de 3:1 da WCAG 1.4.11.
+    Este arquivo já mostra a combinação escolhida como estado decidido; as opções recusadas
+    continuam desenhadas ao lado, para registro.
+  </span>
+</div>
+
+<h2>Os seis temas: o padrão do produto e cinco marcas de condomínio</h2>
+<p class="lede">
+  O primeiro botão é o <strong>tema padrão do produto</strong>, escrito à mão em
+  <code>frontend/src/index.css</code> — não é marca de condomínio nenhuma. Os cinco
+  seguintes são marcas que um síndico digita, e aí o tema inteiro é rederivado pelo
+  <code>build_theme</code> do servidor. Troque o tema abaixo e veja o controle acompanhar
+  em todas as opções ao mesmo tempo.
+</p>
+<div class="brands" id="brands"></div>
+<div id="alarm"></div>
+
+<h2>As cinco combinações, no painel de verdade</h2>
+<p class="lede">
+  A combinação com contorno verde é a escolhida. As outras quatro estão aqui só para registro:
+  cada uma traz, em vermelho, a razão pela qual foi recusada.
+</p>
+<div class="states" id="states"></div>
+
+<h2>Todas as medidas, marca a marca</h2>
+<p class="lede">
+  <strong>Trilho × painel</strong> é a barra contra o fundo do painel: decide se a barra é
+  visível. <strong>Bolinha × trilho</strong> é o ponto que se arrasta contra a própria barra:
+  decide se dá para ver onde se pega. O piso é 3:1 nos dois casos, porque nenhuma das duas
+  partes desenha texto.
+</p>
+<div id="tables"></div>
+
+<h2>Por que as outras não serviam — a geometria, em uma frase</h2>
+<div class="note">
+  <h3>A bolinha da marca fica na lightness 0,62, que é um tom médio.</h3>
+  <p>
+    Para um trilho contrastar com um ponto de tom médio, o trilho precisa ser bem mais claro ou
+    bem mais escuro do que ele. Bem mais claro some dentro do painel, que também é claro. Então
+    sobravam dois caminhos: <strong>escurecer o trilho</strong> — e aí o trilho deixa de
+    acompanhar a marca, que era exatamente o que se queria — ou <strong>trocar qual das duas
+    partes carrega a cor da marca</strong>. O operador escolheu a troca.
+  </p>
+  <p style="margin-top:10px">
+    <strong>E a bolinha, agora, é a única parte com garantia.</strong> O par
+    <code>primary-foreground</code> sobre <code>primary</code> é um dos oito pares que
+    <code>build_theme</code> mede antes de aceitar uma paleta: um condomínio que digitar uma cor
+    em que a bolinha ficaria ilegível sobre o próprio trilho recebe 422 e a paleta não é salva.
+    O trilho não tem essa proteção — veja o aviso abaixo.
+  </p>
+</div>
+
+<h2>O risco aceito, dito por extenso</h2>
+<div class="note" style="border-color:#fca5a5;background:#fef2f2">
+  <h3>O trilho acompanha a marca, e marcas claras deixam o trilho quase invisível.</h3>
+  <p>
+    Com o tema padrão do produto — que não é uma marca de condomínio, e sim o que <code>index.css</code> traz escrito — o trilho mede <strong>3,0427</strong> — passa o piso de 3:1 por
+    <strong>0,0427</strong> de margem. Com verde digitado, vermelho, azul e roxo passa com
+    folga. Com um <strong>amarelo claro</strong> (<code>#facc15</code>) mede
+    <strong>1,3661</strong>, que <em>não</em> passa e é <em>pior do que os 1,4181 de hoje</em>.
+  </p>
+  <p>
+    Não existe guarda para isso no repositório: <code>--border</code>, <code>--input</code> e
+    <code>--ring</code> ficam de fora dos pares medidos por decisão da APRAS-68, e acrescentar
+    um piso gráfico ao contrato de recusa do <code>build_theme</code> passaria a rejeitar
+    paletas que hoje estão salvas e funcionando. <strong>O operador aceitou esse risco
+    conscientemente.</strong> O que a APRAS-84 faz é registrar o número: o teste de contraste
+    novo carrega a tabela acima como dado e marca o amarelo claro como falha esperada e
+    nomeada. O conserto de 1.4.11 em toda a árvore continua sendo da APRAS-90.
+  </p>
+</div>
+
+<h2>Perguntas em aberto</h2>
+<div class="note">
+  <h3>Nenhuma.</h3>
+  <p>
+    A pergunta que este mock trazia antes — qual das partes carrega a cor da marca — foi
+    respondida pelo operador em favor de <strong>trilho da marca, bolinha com a cor legível
+    sobre a marca</strong>. Nada mais nesta tarefa depende de decisão sua.
+  </p>
+</div>
+
+<script>
+/* Seis temas. O PRIMEIRO é o padrão do produto: seus valores são os tokens escritos à mão
+   em frontend/src/index.css (--primary linha 39, --muted linha 55), e não saída de build_theme.
+   Os CINCO seguintes são marcas digitadas por um síndico, emitidas por build_theme
+   (backend/app/core/branding.py) no modo simples. Todos convertidos para hexadecimal por
+   oklchToHex de frontend/src/lib/contrast.ts. */
+const BRANDS = [
+  { id:"verde-padrao", name:"Padrão do produto (index.css)", swatch:"#009f68",
+    primary:"#009f68", muted:"#ecf4ef", primaryForeground:"#040e08",
+    mutedForeground:"#627068", foreground:"#060a08", border:"#dfe7e2",
+    marcaTrack:3.0427, escolhidaThumb:5.7588, escuroTrack:4.6684, escuroThumb:1.5343 },
+  { id:"verde-digitado", name:"Verde digitado (#059669)", swatch:"#20966c",
+    primary:"#20966c", muted:"#ecf4f0", primaryForeground:"#040e09",
+    mutedForeground:"#627068", foreground:"#060a08", border:"#dfe7e3",
+    marcaTrack:3.3246, escolhidaThumb:5.2705, escuroTrack:4.6679, escuroThumb:1.4041 },
+  { id:"vermelho", name:"Vermelho (#dc2626)", swatch:"#df2224",
+    primary:"#df2224", muted:"#f8efee", primaryForeground:"#f8f8f8",
+    mutedForeground:"#7a6b68", foreground:"#0d0807", border:"#ebe2e1",
+    marcaTrack:4.2451, escolhidaThumb:4.5159, escuroTrack:4.5325, escuroThumb:1.0677 },
+  { id:"azul", name:"Azul (#2563eb)", swatch:"#2463ef",
+    primary:"#2463ef", muted:"#eef2f9", primaryForeground:"#f8f8f8",
+    mutedForeground:"#696f7b", foreground:"#07090d", border:"#e1e5eb",
+    marcaTrack:4.5361, escolhidaThumb:4.8098, escuroTrack:4.5063, escuroThumb:1.0066 },
+  { id:"roxo", name:"Roxo (#7c3aed)", swatch:"#7945df",
+    primary:"#7945df", muted:"#f2f1f8", primaryForeground:"#f8f8f8",
+    mutedForeground:"#6f6d7a", foreground:"#09080d", border:"#e4e3eb",
+    marcaTrack:4.9895, escolhidaThumb:5.3007, escuroTrack:4.5220, escuroThumb:1.1034 },
+  { id:"amarelo", name:"Amarelo claro (#facc15)", swatch:"#f9cc21",
+    primary:"#f9cc21", muted:"#f4f2ea", primaryForeground:"#0e0b03",
+    mutedForeground:"#736f62", foreground:"#0b0905", border:"#e7e4dd",
+    marcaTrack:1.3661, escolhidaThumb:12.8247, escuroTrack:4.5028, escuroThumb:3.2961 },
+];
+
+/* A paleta de hoje, de node_modules/tailwindcss/theme.css, convertida por oklchToHex. */
+const TODAY = { panel:"#f8fafc", panelBorder:"#e2e8f0", title:"#314158", stage:"#0f172b",
+                stageBorder:"#7d87ff", label:"#45556c", track:"#cad5e2", thumb:"#4f39f6",
+                trackPanel:1.4181, thumbTrack:4.3394 };
+
+const FLOOR = 3;
+const fmt = (n) => n.toFixed(4).replace(".", ",");
+const badge = (n) => `<span class="badge ${n >= FLOOR ? "pass" : "fail"}">${n >= FLOOR ? "PASSA 3:1" : "FALHA 3:1"}</span>`;
+
+function panelHtml(o) {
+  return `
+  <div class="panel" style="background:${o.panel};border-color:${o.panelBorder}">
+    <h4 style="color:${o.title}">Ajustar Recorte da Foto</h4>
+    <div class="stage" style="background:${o.stage};border-color:${o.stageBorder}">pré-visualização</div>
+    <div class="zoom">
+      <div class="zoomrow" style="color:${o.label}"><span>Zoom</span><span>142%</span></div>
+      <div class="track" style="background:${o.track}"><span class="thumb" style="background:${o.thumb}"></span></div>
+      <input class="native" type="range" min="1" max="3" step="0.1" value="1.8"
+             style="background:${o.track};accent-color:${o.thumb}" />
+      <div class="nativenote">acima, desenhado; abaixo, o <code>input[type=range]</code> real deste navegador</div>
+    </div>
+    <button class="rotate" style="color:${o.title};border-color:${o.panelBorder}">Girar 90°</button>
+  </div>`;
+}
+
+function render(brand) {
+  const base = { title:TODAY.title, panel:brand.muted, panelBorder:brand.border,
+                 stage:brand.foreground, stageBorder:brand.primary, label:brand.mutedForeground };
+
+  const states = [
+    { name:'<span class="tag now">HOJE</span>TRILHO CINZA FIXO, BOLINHA DA MARCA',
+      sub:"Trilho <code>bg-slate-300</code>, bolinha <code>accent-indigo-600</code>, painel <code>bg-slate-50</code>. O cinza é o mesmo em todo condomínio; só a bolinha acompanha a marca.",
+      why:"Estado atual. O trilho já hoje não alcança 3:1 — é o defeito que esta tarefa conserta.",
+      chosen:false,
+      look:{ panel:TODAY.panel, panelBorder:TODAY.panelBorder, title:TODAY.title, stage:TODAY.stage,
+             stageBorder:TODAY.stageBorder, label:TODAY.label, track:TODAY.track, thumb:TODAY.thumb },
+      trackPanel:TODAY.trackPanel, thumbTrack:TODAY.thumbTrack },
+
+    { name:'<span class="tag ok">ESCOLHIDA</span>TRILHO DA MARCA, BOLINHA COM A COR LEGÍVEL SOBRE A MARCA',
+      sub:"Trilho <code>bg-primary</code>, bolinha <code>accent-primary-foreground</code>, painel <code>bg-muted</code>. As duas partes trocam de papel.",
+      why:"Escolhida pelo operador: o controle continua acompanhando a marca e as duas partes alcançam 3:1. A bolinha ainda tem a garantia de 4,5:1 que o servidor impõe na hora de salvar a paleta.",
+      chosen:true,
+      look:{ ...base, track:brand.primary, thumb:brand.primaryForeground },
+      trackPanel:brand.marcaTrack, thumbTrack:brand.escolhidaThumb },
+
+    { name:'<span class="tag no">RECUSADA</span>TRILHO DA MARCA, BOLINHA DA MARCA',
+      sub:"Trilho <code>bg-primary</code>, bolinha <code>accent-primary</code>, painel <code>bg-muted</code>. Era o que o rascunho anterior do spec propunha.",
+      why:"Recusada: as duas partes ficam exatamente da mesma cor, 1,0000. A bolinha some dentro da barra e só se distingue pela sombra que o navegador desenha.",
+      chosen:false,
+      look:{ ...base, track:brand.primary, thumb:brand.primary },
+      trackPanel:brand.marcaTrack, thumbTrack:1.0 },
+
+    { name:'<span class="tag no">RECUSADA</span>TRILHO CINZA-ESCURO, BOLINHA DA MARCA',
+      sub:"Trilho <code>bg-muted-foreground</code>, bolinha <code>accent-primary</code>, painel <code>bg-muted</code>. Era a segunda opção que o rascunho anterior oferecia.",
+      why:"Recusada por dois motivos: o trilho deixa de acompanhar a marca, e a bolinha contra esse trilho nunca tinha sido medida — mede abaixo de 3:1 em cinco dos seis temas medidos (o padrão do produto e quatro das cinco marcas).",
+      chosen:false,
+      look:{ ...base, track:brand.mutedForeground, thumb:brand.primary },
+      trackPanel:brand.escuroTrack, thumbTrack:brand.escuroThumb },
+
+    { name:'<span class="tag no">RECUSADA</span>TRILHO E PAINEL DA MESMA COR',
+      sub:"Trilho <code>bg-muted</code>, bolinha <code>accent-primary</code>, painel <code>bg-muted</code>: é o que a tabela publicada daria sem nenhuma emenda.",
+      why:"Recusada: trilho e painel são o mesmo token, 1,0000. A barra desaparece por completo.",
+      chosen:false,
+      look:{ ...base, track:brand.muted, thumb:brand.primary },
+      trackPanel:1.0, thumbTrack:brand.marcaTrack },
+  ];
+
+  document.getElementById("states").innerHTML = states.map((s) => `
+    <div class="state ${s.chosen ? "chosen" : ""}">
+      <div class="name">${s.name}</div>
+      <div class="sub">${s.sub}</div>
+      ${panelHtml(s.look)}
+      <div class="ratios">
+        <div><span>trilho × painel</span><span><span class="num">${fmt(s.trackPanel)}</span> ${badge(s.trackPanel)}</span></div>
+        <div><span>bolinha × trilho</span><span><span class="num">${fmt(s.thumbTrack)}</span> ${badge(s.thumbTrack)}</span></div>
+      </div>
+      <p class="why">${s.why}</p>
+    </div>`).join("");
+
+  const alarm = document.getElementById("alarm");
+  if (brand.marcaTrack < FLOOR) {
+    alarm.className = "on";
+    alarm.innerHTML =
+      `ATENÇÃO — nesta marca (${brand.name}) o trilho da combinação ESCOLHIDA NÃO alcança 3:1: mede ` +
+      `<span class="num">${fmt(brand.marcaTrack)}</span>, pior do que os ` +
+      `<span class="num">${fmt(TODAY.trackPanel)}</span> de hoje.` +
+      `<span class="sub">A cor da marca é rederivada por condomínio. Marcas claras (amarelo, ` +
+      `bege, verde-limão) deixam o trilho quase invisível. Este é o risco que o operador aceitou ` +
+      `conscientemente; a bolinha continua legível (` +
+      `<span class="num">${fmt(brand.escolhidaThumb)}</span>) porque esse par o servidor garante. ` +
+      `Com o tema padrão do produto a combinação escolhida passa por 0,0427 de margem.</span>`;
+  } else {
+    alarm.className = "";
+    alarm.innerHTML = "";
+  }
+
+  document.getElementById("tables").innerHTML = `
+    <table>
+      <thead><tr>
+        <th>Marca</th>
+        <th>ESCOLHIDA<br>trilho × painel</th>
+        <th>ESCOLHIDA<br>bolinha × trilho</th>
+        <th>RECUSADA: trilho e bolinha da marca<br>bolinha × trilho</th>
+        <th>RECUSADA: trilho cinza-escuro<br>trilho × painel</th>
+        <th>RECUSADA: trilho cinza-escuro<br>bolinha × trilho</th>
+      </tr></thead>
+      <tbody>
+        <tr><td>HOJE (trilho cinza fixo, bolinha da marca)</td>
+            <td class="n">${fmt(TODAY.trackPanel)} ✗</td><td class="n">${fmt(TODAY.thumbTrack)} ✓</td>
+            <td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
+        ${BRANDS.map((b) => `
+        <tr class="${b.marcaTrack < FLOOR ? "bad" : ""}">
+          <td>${b.name}</td>
+          <td class="n">${fmt(b.marcaTrack)} ${b.marcaTrack >= FLOOR ? "✓" : "✗"}</td>
+          <td class="n">${fmt(b.escolhidaThumb)} ✓</td>
+          <td class="n">1,0000 ✗</td>
+          <td class="n">${fmt(b.escuroTrack)} ✓</td>
+          <td class="n">${fmt(b.escuroThumb)} ${b.escuroThumb >= FLOOR ? "✓" : "✗"}</td>
+        </tr>`).join("")}
+      </tbody>
+    </table>
+    <p class="lede" style="margin-top:8px">
+      ✓ alcança 3:1 &nbsp;·&nbsp; ✗ não alcança. A linha destacada é o único dos seis temas em que a
+      combinação escolhida fica pior do que está hoje — o risco aceito, descrito abaixo.
+      A combinação ESCOLHIDA é a única das cinco sem nenhum ✗ no tema padrão do produto.
+    </p>`;
+}
+
+const bar = document.getElementById("brands");
+bar.innerHTML = BRANDS.map((b, i) => `
+  <button class="brand" type="button" data-i="${i}" aria-pressed="${i === 0}">
+    <span class="chip" style="background:${b.swatch}"></span>${b.name}
+  </button>`).join("");
+bar.addEventListener("click", (event) => {
+  const button = event.target.closest(".brand");
+  if (!button) return;
+  [...bar.children].forEach((child) => child.setAttribute("aria-pressed", String(child === button)));
+  render(BRANDS[Number(button.dataset.i)]);
+});
+render(BRANDS[0]);
+</script>
+</body>
+</html>

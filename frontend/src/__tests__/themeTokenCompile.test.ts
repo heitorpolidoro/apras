@@ -98,7 +98,7 @@ const ROWS: readonly Row[] = [
   { source: "bg-slate-200", target: "bg-accent", dL: 3.1, dE: 3.54 },
   { source: "bg-gray-200", target: "bg-muted", dL: 3.2, dE: 3.45 },
   { source: "bg-gray-200", target: "bg-accent", dL: 3.2, dE: 3.45 },
-  { source: "bg-slate-300", target: "bg-muted", dL: 9.1, dE: 9.43 },
+  { source: "bg-slate-300", target: "bg-primary", dL: 24.9, dE: 29.21 },
   { source: "bg-slate-900", target: "bg-foreground", dL: 6.8, dE: 8.2 },
   { source: "bg-slate-950", target: "bg-foreground", dL: 1.1, dE: 4.69 },
 
@@ -131,7 +131,7 @@ const ROWS: readonly Row[] = [
   { source: "bg-indigo-600", target: "bg-primary", dL: 10.9, dE: 37.24 },
   { source: "text-indigo-600", target: "text-primary-text", dL: 0.9, dE: 32.71 },
   { source: "border-indigo-600", target: "border-primary", dL: 10.9, dE: 37.24 },
-  { source: "accent-indigo-600", target: "accent-primary", dL: 10.9, dE: 37.24 },
+  { source: "accent-indigo-600", target: "accent-primary-foreground", dL: 36.1, dE: 45.18 },
   { source: "bg-indigo-700", target: "bg-primary/90", dL: 16.3, dE: 37.33, alpha: 90 },
   { source: "text-indigo-700", target: "text-primary-text", dL: 6.3, dE: 31.25 },
   { source: "text-indigo-800", target: "text-primary-text", dL: 12.2, dE: 29.11 },

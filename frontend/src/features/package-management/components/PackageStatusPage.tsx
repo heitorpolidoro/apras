@@ -23,34 +23,34 @@ export const PackageStatusPage: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl space-y-6">
-      <div className="flex items-center gap-3 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-        <div className="p-3 bg-indigo-50 text-indigo-600 rounded-lg">
+      <div className="flex items-center gap-3 bg-card p-6 rounded-xl border border-border shadow-sm">
+        <div className="p-3 bg-accent text-primary rounded-lg">
           <PackageIcon className="w-6 h-6" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-foreground">
             {t("packages.pageTitle", "Encomendas")}
           </h1>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             {t("packages.pageSubtitle", "Acompanhe as encomendas recebidas para o seu lote.")}
           </p>
         </div>
       </div>
 
       {!isLoading && lotsWithPackages.length === 0 && (
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm text-sm text-gray-500">
+        <div className="bg-card p-6 rounded-xl border border-border shadow-sm text-sm text-muted-foreground">
           {t("packages.noLinkedLots", "Você não está vinculado a nenhum lote.")}
         </div>
       )}
 
       {lotsWithPackages.map(({ lot, packages }) => (
-        <div key={lot.id} className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4">
-          <h2 className="text-base font-bold text-gray-900">
+        <div key={lot.id} className="bg-card p-6 rounded-xl border border-border shadow-sm space-y-4">
+          <h2 className="text-base font-bold text-foreground">
             {t("lots.block")} {lot.block}, {t("lots.lotNumber")} {lot.lot_number}
           </h2>
 
           {packages.length === 0 ? (
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted-foreground">
               {t("packages.noPackages", "Nenhuma encomenda aguardando retirada.")}
             </p>
           ) : (
@@ -62,15 +62,15 @@ export const PackageStatusPage: React.FC = () => {
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="text-sm font-semibold text-gray-900 flex gap-2">
+                      <div className="text-sm font-semibold text-foreground flex gap-2">
                         {pkg.description && <span>{pkg.description}</span>}
                         {pkg.carrier && <span>{pkg.carrier}</span>}
                       </div>
-                      <div className="text-xs text-gray-400">
+                      <div className="text-xs text-muted-foreground">
                         {new Date(pkg.received_at).toLocaleString()}
                       </div>
                     </div>
-                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-700">
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-gray-700">
                       {t(`packages.status.${pkg.status}`, pkg.status)}
                     </span>
                   </div>
@@ -84,13 +84,13 @@ export const PackageStatusPage: React.FC = () => {
                           setPickupNotes((prev) => ({ ...prev, [pkg.id]: e.target.value }))
                         }
                         placeholder={t("packages.pickedUpBy", "Retirado por: ___")}
-                        className="flex-1 rounded-md border border-gray-300 px-3 py-1.5 text-xs bg-white text-gray-900"
+                        className="flex-1 rounded-md border border-input px-3 py-1.5 text-xs bg-card text-foreground"
                       />
                       <Button
                         size="sm"
                         disabled={markPickedUpMutation.isPending}
                         onClick={() => handleConfirmPickup(pkg.id)}
-                        className="gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                        className="gap-1 bg-primary hover:bg-primary/90 text-primary-foreground"
                       >
                         {t("packages.iPickedThisUp", "Já retirei")}
                       </Button>

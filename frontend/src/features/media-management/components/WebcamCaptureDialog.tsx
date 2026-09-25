@@ -99,15 +99,15 @@ export const WebcamCaptureDialog: React.FC<WebcamCaptureDialogProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50">
+      <div className="bg-card rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border border-border">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-muted">
           <h3 className="font-semibold text-slate-800 text-base">Capturar Foto da Câmera</h3>
           <button
             onClick={() => {
               stopStream();
               onClose();
             }}
-            className="text-slate-400 hover:text-slate-600 font-bold text-lg"
+            className="text-muted-foreground hover:text-muted-foreground font-bold text-lg"
           >
             &times;
           </button>
@@ -119,11 +119,11 @@ export const WebcamCaptureDialog: React.FC<WebcamCaptureDialogProps> = ({
               {cameraError}
             </div>
           ) : capturedUrl ? (
-            <div className="relative w-full max-w-sm aspect-video rounded-lg overflow-hidden border border-slate-300">
+            <div className="relative w-full max-w-sm aspect-video rounded-lg overflow-hidden border border-input">
               <img src={capturedUrl} alt="Captured" className="w-full h-full object-cover" />
             </div>
           ) : (
-            <div className="relative w-full max-w-sm aspect-video bg-slate-900 rounded-lg overflow-hidden border border-slate-800 flex items-center justify-center">
+            <div className="relative w-full max-w-sm aspect-video bg-foreground rounded-lg overflow-hidden border border-slate-800 flex items-center justify-center">
               <video
                 ref={videoRef}
                 autoPlay
@@ -137,14 +137,14 @@ export const WebcamCaptureDialog: React.FC<WebcamCaptureDialogProps> = ({
           <canvas ref={canvasRef} className="hidden" />
         </div>
 
-        <div className="flex items-center justify-end space-x-3 px-5 py-4 bg-slate-50 border-t border-slate-100">
+        <div className="flex items-center justify-end space-x-3 px-5 py-4 bg-muted border-t border-slate-100">
           <button
             type="button"
             onClick={() => {
               stopStream();
               onClose();
             }}
-            className="px-4 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100"
+            className="px-4 py-2 text-xs font-medium text-slate-700 bg-card border border-input rounded-lg hover:bg-accent"
           >
             Cancelar
           </button>
@@ -161,7 +161,7 @@ export const WebcamCaptureDialog: React.FC<WebcamCaptureDialogProps> = ({
               <button
                 type="button"
                 onClick={handleConfirm}
-                className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700"
+                className="px-4 py-2 text-xs font-semibold text-primary-foreground bg-primary rounded-lg hover:bg-primary/90"
               >
                 Usar Esta Foto
               </button>
@@ -171,7 +171,7 @@ export const WebcamCaptureDialog: React.FC<WebcamCaptureDialogProps> = ({
               type="button"
               disabled={!!cameraError}
               onClick={handleTakeSnapshot}
-              className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+              className="px-4 py-2 text-xs font-semibold text-primary-foreground bg-primary rounded-lg hover:bg-primary/90 disabled:opacity-50"
             >
               Capturar Foto
             </button>

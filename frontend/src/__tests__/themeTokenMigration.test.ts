@@ -46,6 +46,12 @@ export const MIGRATED_DIRECTORIES: readonly string[] = [
   "src/features/finance/components",
   "src/features/purchase-management/components",
   "src/features/access-control/components",
+  // APRAS-84's operator-given scope is four directories, so this child appends
+  // four entries where its siblings appended one, two or three.
+  "src/features/media-management/components",
+  "src/features/feedback-management/components",
+  "src/features/announcement-feed/components",
+  "src/features/package-management/components",
 ];
 
 /** The eight gap codes of §1h, in precedence order. Closed set: an entry
@@ -532,6 +538,18 @@ describe("MIGRATED_DIRECTORIES", () => {
     expect(MIGRATED_DIRECTORIES).toContain(
       "src/features/access-control/components",
     );
+    expect(MIGRATED_DIRECTORIES).toContain(
+      "src/features/media-management/components",
+    );
+    expect(MIGRATED_DIRECTORIES).toContain(
+      "src/features/feedback-management/components",
+    );
+    expect(MIGRATED_DIRECTORIES).toContain(
+      "src/features/announcement-feed/components",
+    );
+    expect(MIGRATED_DIRECTORIES).toContain(
+      "src/features/package-management/components",
+    );
     expect(new Set(MIGRATED_DIRECTORIES).size).toBe(
       MIGRATED_DIRECTORIES.length,
     );
@@ -573,6 +591,18 @@ describe("MIGRATED_DIRECTORIES", () => {
     );
     expect(PINNED.map((file) => file.file)).toContain(
       "src/features/access-control/components/DeviceTable.tsx",
+    );
+    expect(PINNED.map((file) => file.file)).toContain(
+      "src/features/media-management/components/PhotoApprovalQueuePage.tsx",
+    );
+    expect(PINNED.map((file) => file.file)).toContain(
+      "src/features/feedback-management/components/FeedbackInboxTable.tsx",
+    );
+    expect(PINNED.map((file) => file.file)).toContain(
+      "src/features/announcement-feed/components/MediaCarousel.tsx",
+    );
+    expect(PINNED.map((file) => file.file)).toContain(
+      "src/features/package-management/components/PackageStatusPage.tsx",
     );
     expect(
       PINNED.every((file) =>
@@ -2501,6 +2531,560 @@ describe("APRAS-83's ledger arithmetic", () => {
         .filter((file) => file.file.startsWith(PURCHASES))
         .flatMap((file) => [...file.source.matchAll(/\bdark:/g)]),
     ).toHaveLength(0);
+  });
+
+  it("keeps every `why` under 120 characters and off the code", () => {
+    for (const row of rows) {
+      expect(row.why.length).toBeLessThanOrEqual(120);
+      expect(row.why).not.toContain("GAP-");
+    }
+  });
+});
+
+describe("APRAS-84's ledger arithmetic", () => {
+  // Appended, directory-scoped, in the shape APRAS-79, APRAS-80, APRAS-82,
+  // APRAS-81 and APRAS-83 established. Nothing above this line is edited by
+  // this child beyond the four `MIGRATED_DIRECTORIES` entries and their eight
+  // `toContain` assertions; the scan memo is already at module scope, hoisted
+  // by APRAS-82, so this child verifies the hoist still holds under a larger
+  // input and changes nothing.
+  //
+  // Four directories, because the operator scoped this child that way. What
+  // makes them a coherent unit, and what no earlier child had: **not one of
+  // the 351 occurrences carries a `dark:` variant**, so §1g never fires —
+  // zero deletions, zero orphan siblings, zero `dark:` rows.
+  const MEDIA = "src/features/media-management/components/";
+  const FEEDBACK = "src/features/feedback-management/components/";
+  const ANNOUNCEMENTS = "src/features/announcement-feed/components/";
+  const PACKAGES = "src/features/package-management/components/";
+  const DIRECTORIES = [MEDIA, FEEDBACK, ANNOUNCEMENTS, PACKAGES];
+  const inDirectories = (file: string) =>
+    DIRECTORIES.some((directory) => file.startsWith(directory));
+  const rows = LEDGER.filter((row) => inDirectories(toSrcRelative(row.file)));
+  const count = (code: string) =>
+    rows.filter((row) => row.code === code).length;
+  const files = PINNED.filter((file) => inDirectories(file.file));
+  const sourceOf = (name: string) =>
+    files.find((file) => file.file.endsWith(`/${name}`))?.source ?? "";
+  const matchesOn = (name: string, line: number): string[] => {
+    const file = files.find((pinned) => pinned.file.endsWith(`/${name}`));
+
+    return matchesIn(file?.file ?? "", file?.source ?? "")
+      .filter((match) => match.line === line)
+      .map((match) => match.text);
+  };
+  /**
+   * One file's source as whole tokens, split on whitespace and on the
+   * delimiters a class string can sit inside.
+   *
+   * Whole tokens, never substrings: `accent-primary` and
+   * `accent-primary-foreground` are two tokens and neither matches the other,
+   * which is the distinction §7's amendment turns on.
+   */
+  const tokensOf = (name: string): string[] =>
+    sourceOf(name)
+      .split(/[\s"'`{}()<>,;]+/)
+      .filter((token) => token.length > 0);
+  const occurrences = (needle: string) =>
+    files.flatMap((file) =>
+      tokensOf(file.file.split("/").pop() ?? "").filter(
+        (token) => token === needle,
+      ),
+    );
+
+  it("pins the four directories' five, five, five and one source files", () => {
+    expect(PINNED.filter((file) => file.file.startsWith(MEDIA))).toHaveLength(
+      5,
+    );
+    expect(
+      PINNED.filter((file) => file.file.startsWith(FEEDBACK)),
+    ).toHaveLength(5);
+    expect(
+      PINNED.filter((file) => file.file.startsWith(ANNOUNCEMENTS)),
+    ).toHaveLength(5);
+    expect(
+      PINNED.filter((file) => file.file.startsWith(PACKAGES)),
+    ).toHaveLength(1);
+    // Sixteen, not the seventeen the task reported: `package-management` holds
+    // one component, and its second non-test file is `hooks/usePackages.ts`,
+    // which the non-recursive walk does not reach and which carries no palette
+    // class. The occurrence count is unaffected.
+    expect(files).toHaveLength(16);
+  });
+
+  it("logs 109 occurrences under six codes", () => {
+    expect(rows).toHaveLength(109);
+    expect(count("GAP-OUT-OF-BUDGET")).toBe(47);
+    expect(count("GAP-TINT")).toBe(28);
+    expect(count("GAP-NO-TOKEN")).toBe(14);
+    expect(count("GAP-BORDER-100")).toBe(9);
+    expect(count("GAP-OVERLAY")).toBe(8);
+    // The first child to use the no-surface code outside the pilot.
+    expect(count("GAP-NO-SURFACE")).toBe(3);
+  });
+
+  it("uses no code it does not account for", () => {
+    expect(count("GAP-SWATCH")).toBe(0);
+    expect(count("GAP-UNLISTED")).toBe(0);
+    expect(rows.every((row) => row.task === "APRAS-84")).toBe(true);
+  });
+
+  it("leaves 109 of the quartet's 351 palette occurrences in place", () => {
+    // 351 = 242 migrated + 109 left and logged, with no third term: §1g's
+    // `dark:` half is empty on both sides here.
+    const remainingIn = (directory: string) =>
+      files
+        .filter((file) => file.file.startsWith(directory))
+        .flatMap((file) => matchesIn(file.file, file.source));
+    const remaining = files.flatMap((file) =>
+      matchesIn(file.file, file.source),
+    );
+
+    expect(remaining).toHaveLength(109);
+    expect(remainingIn(MEDIA)).toHaveLength(49);
+    expect(remainingIn(FEEDBACK)).toHaveLength(43);
+    expect(remainingIn(ANNOUNCEMENTS)).toHaveLength(15);
+    expect(remainingIn(PACKAGES)).toHaveLength(2);
+    // The one file that migrates completely, with no ledger row.
+    expect(matchesIn("", sourceOf("AnnouncementFeedPage.tsx"))).toHaveLength(0);
+  });
+
+  it("carries no `dark:` occurrence before or after, so §1g never fires", () => {
+    // The whole of this child's risk sits in §1f, §1j and §1k. An implementer
+    // who finds a `dark:` class in these four directories has mis-measured.
+    for (const file of files) {
+      expect(file.source).not.toMatch(/\bdark:/);
+    }
+    expect(
+      rows.filter((row) => row.class.startsWith("dark:")),
+    ).toHaveLength(0);
+  });
+
+  it("excepts the 80 distinct (file, class) pairs those 109 occupy", () => {
+    const entries = EXCEPTIONS.filter((entry) => inDirectories(entry.file));
+    const pairs = new Set(
+      rows.map((row) => `${toSrcRelative(row.file)} :: ${row.class}`),
+    );
+
+    expect(entries).toHaveLength(80);
+    expect(pairs.size).toBe(80);
+    expect(entries.every((entry) => entry.task === "APRAS-84")).toBe(true);
+    expect(
+      entries.filter((entry) => entry.file.startsWith(MEDIA)),
+    ).toHaveLength(36);
+    expect(
+      entries.filter((entry) => entry.file.startsWith(FEEDBACK)),
+    ).toHaveLength(33);
+    expect(
+      entries.filter((entry) => entry.file.startsWith(ANNOUNCEMENTS)),
+    ).toHaveLength(9);
+    expect(
+      entries.filter((entry) => entry.file.startsWith(PACKAGES)),
+    ).toHaveLength(2);
+  });
+
+  it("resolves the one class logged twice in one file by §1h precedence", () => {
+    // `FeedbackInboxTable.tsx`'s `text-gray-700` is status set 1's neutral
+    // `default` branch at line 19 and an ordinary table cell at line 82. The
+    // ledger is per occurrence and carries a line, so both are logged under
+    // their own code; the exceptions file is keyed `(file, class)` and carries
+    // one, so the pair takes the earlier of the two in `GAP_CODES`, which is
+    // declared in precedence order.
+    const both = rows.filter(
+      (row) =>
+        toSrcRelative(row.file) === `${FEEDBACK}FeedbackInboxTable.tsx` &&
+        row.class === "text-gray-700",
+    );
+
+    expect(both.map((row) => row.code).sort()).toEqual([
+      "GAP-OUT-OF-BUDGET",
+      "GAP-TINT",
+    ]);
+    expect(
+      GAP_CODES.indexOf("GAP-TINT") < GAP_CODES.indexOf("GAP-OUT-OF-BUDGET"),
+    ).toBe(true);
+    expect(
+      EXCEPTIONS.find(
+        (entry) =>
+          entry.file === `${FEEDBACK}FeedbackInboxTable.tsx` &&
+          entry.class === "text-gray-700",
+      )?.code,
+    ).toBe("GAP-TINT");
+  });
+
+  it("carries no six-digit hex literal in any of the sixteen files", () => {
+    for (const file of files) {
+      expect(file.source).not.toMatch(hexGrammar());
+    }
+  });
+
+  it("keeps all twelve status sets whole, each member still on its line", () => {
+    // A ternary's or a lookup map's branches are one set. 44 classes over the
+    // twelve sets, every one of them with a ledger row. Sets 1, 2, 5, 9, 10
+    // and 11 are blocked by a family with no token (amber in five, rose in the
+    // sixth); 4, 6, 7 and 8 are red tint triples; 3 is blocked by
+    // `bg-emerald-50` and `text-emerald-900`; 12 is §1f case 3's
+    // non-interactive status glyph.
+    const sets: ReadonlyArray<readonly [string, number, readonly string[]]> = [
+      // 1 — `getStatusBadgeClass`, three branches, the third of them neutral.
+      ["FeedbackInboxTable.tsx", 15, ["bg-amber-50", "text-amber-700", "border-amber-200"]],
+      ["FeedbackInboxTable.tsx", 17, ["bg-emerald-50", "text-emerald-700", "border-emerald-200"]],
+      ["FeedbackInboxTable.tsx", 19, ["bg-gray-50", "text-gray-700", "border-gray-200"]],
+      // 2 — the ANSWERED / PENDING ternary.
+      ["FeedbackHistoryList.tsx", 66, ["bg-emerald-50", "text-emerald-700", "border-emerald-200"]],
+      ["FeedbackHistoryList.tsx", 67, ["bg-amber-50", "text-amber-700", "border-amber-200"]],
+      // 3 — the board-response panel.
+      ["FeedbackDetailsView.tsx", 75, ["bg-emerald-50", "border-emerald-200"]],
+      ["FeedbackDetailsView.tsx", 76, ["text-emerald-900"]],
+      ["FeedbackDetailsView.tsx", 77, ["text-emerald-600"]],
+      ["FeedbackDetailsView.tsx", 80, ["text-emerald-800"]],
+      // 4 — the reject button, a destructive *control* that nonetheless stays.
+      ["PhotoApprovalQueuePage.tsx", 106, ["text-red-700", "bg-red-50", "hover:bg-red-100", "border-red-200"]],
+      // 5 — the "Tirar Outra" button.
+      ["WebcamCaptureDialog.tsx", 157, ["text-amber-700", "bg-amber-50", "border-amber-300", "hover:bg-amber-100"]],
+      // 6, 7 and 8 — the three error alerts, the same three classes each.
+      ["PhotoApprovalQueuePage.tsx", 53, ["bg-red-50", "text-red-700", "border-red-200"]],
+      ["PhotoUploadModal.tsx", 87, ["bg-red-50", "text-red-700", "border-red-200"]],
+      ["WebcamCaptureDialog.tsx", 118, ["bg-red-50", "text-red-700", "border-red-200"]],
+      // 9 — the pending count chip.
+      ["PhotoApprovalQueuePage.tsx", 44, ["bg-amber-100", "text-amber-800"]],
+      // 10 — the "Em Aprovação" badge.
+      ["AvatarWithFallback.tsx", 48, ["bg-amber-500/90", "text-white"]],
+      // 11 — the unread badge.
+      ["FeedbackHistoryList.tsx", 51, ["bg-rose-500", "text-white"]],
+      // 12 — the read-receipt glyph, §1f case 3's non-interactive branch.
+      ["AnnouncementCard.tsx", 53, ["text-emerald-600"]],
+    ];
+    const ledgered = new Set(
+      rows.map((row) => `${row.class} in ${toSrcRelative(row.file)}`),
+    );
+    let members = 0;
+
+    for (const [name, line, classes] of sets) {
+      const onThatLine = matchesOn(name, line);
+      const file = files.find((pinned) => pinned.file.endsWith(`/${name}`));
+      for (const member of classes) {
+        expect(onThatLine).toContain(member);
+        expect(ledgered).toContain(`${member} in ${file?.file ?? ""}`);
+        members += 1;
+      }
+    }
+    expect(members).toBe(44);
+  });
+
+  it("splits no status set: no span mixes a migrated class with a kept tint", () => {
+    // The same mechanical check the siblings ran, over this child's targets.
+    // This is the first child with **zero** mixed spans: no
+    // `QuoteComparisonTable`-shaped span occurs here. Spans mixing a migrated
+    // occurrence with a kept occurrence under any *other* code are expected
+    // and not counted — `FeedbackDetailsView:49`'s category chip, where
+    // `bg-gray-100` and `border-gray-200` migrate beside a kept
+    // out-of-budget `text-gray-800`, is the commonest shape.
+    const MIGRATED_TARGETS = [
+      "bg-card",
+      "bg-card/80",
+      "bg-card/70",
+      "hover:bg-card",
+      "focus:bg-card",
+      "bg-muted",
+      "bg-accent",
+      "hover:bg-accent",
+      "hover:bg-accent/80",
+      "bg-primary",
+      "hover:bg-primary/90",
+      "bg-foreground",
+      "bg-destructive",
+      "hover:bg-destructive",
+      "border-border",
+      "border-input",
+      "border-primary",
+      "focus:ring-ring",
+      "accent-primary-foreground",
+      "text-foreground",
+      "text-muted-foreground",
+      "hover:text-muted-foreground",
+      "text-primary",
+      "hover:text-primary",
+      "text-primary-text",
+      "hover:text-primary-text",
+      "text-primary-foreground",
+      "text-destructive",
+      "hover:text-destructive",
+      "text-destructive-foreground",
+    ];
+    const target = new RegExp(
+      String.raw`(?<![\w-])(?:${MIGRATED_TARGETS.map((name) =>
+        name.replace("/", String.raw`\/`),
+      ).join("|")})(?![\w-])`,
+      "g",
+    );
+    const tinted = new Set(
+      rows
+        .filter((row) => row.code === "GAP-TINT")
+        .map(
+          (row) => `${toSrcRelative(row.file)} :: ${row.line} :: ${row.class}`,
+        ),
+    );
+    const mixed: string[] = [];
+
+    for (const { file, source } of files) {
+      for (const [start, end] of classContexts(source)) {
+        const span = source.slice(start, end);
+        if ([...span.matchAll(target)].length === 0) {
+          continue;
+        }
+        for (const match of span.matchAll(paletteGrammar())) {
+          const line = lineOf(source, start + (match.index ?? 0));
+          if (tinted.has(`${file} :: ${line} :: ${match[0]}`)) {
+            mixed.push(`${file}:${line} ${match[0]}`);
+            break;
+          }
+        }
+      }
+    }
+
+    expect([...new Set(mixed)]).toEqual([]);
+  });
+
+  it("routes exactly four brand-text occurrences to the character token", () => {
+    // §1k: the element paints glyphs of text, so the floor is 4.5:1 and the
+    // token is `*-primary-text`. Two call sites, two occurrences each — the
+    // resting class and its `hover:` variant. `FeedbackInboxTable`'s is §1k's
+    // "mixed element wins for text": one `currentColor` paints both the
+    // `<Eye/>` and the label "Ver Detalhes".
+    const characters = (name: string) =>
+      tokensOf(name).filter(
+        (token) =>
+          token === "text-primary-text" || token === "hover:text-primary-text",
+      );
+
+    expect(characters("PhotoUploadModal.tsx").sort()).toEqual([
+      "hover:text-primary-text",
+      "text-primary-text",
+    ]);
+    expect(characters("FeedbackInboxTable.tsx").sort()).toEqual([
+      "hover:text-primary-text",
+      "text-primary-text",
+    ]);
+    for (const file of files) {
+      const name = file.file.split("/").pop() ?? "";
+      if (name !== "PhotoUploadModal.tsx" && name !== "FeedbackInboxTable.tsx") {
+        expect(characters(name)).toHaveLength(0);
+      }
+      // `-primary-text` never appears on a non-`text-` utility anywhere.
+      expect(
+        [...file.source.matchAll(/[\w:-]*-primary-text\b/g)].every((match) =>
+          /(?:^|:)text-primary-text$/.test(match[0]),
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it("routes nine text-prefixed brand occurrences to the graphical token", () => {
+    const perFile: ReadonlyArray<readonly [string, number]> = [
+      ["FeedbackChannelPage.tsx", 2],
+      ["AnnouncementFeedPage.tsx", 1],
+      ["AnnouncementFormModal.tsx", 2],
+      ["PackageStatusPage.tsx", 1],
+      ["NewFeedbackForm.tsx", 1],
+      ["FeedbackHistoryList.tsx", 1],
+    ];
+    let total = 0;
+
+    for (const [name, expected] of perFile) {
+      expect(
+        tokensOf(name).filter((token) => token === "text-primary"),
+      ).toHaveLength(expected);
+      total += expected;
+    }
+    // The ninth is `AnnouncementCard`'s `hover:` variant.
+    expect(
+      tokensOf("AnnouncementCard.tsx").filter(
+        (token) => token === "hover:text-primary",
+      ),
+    ).toHaveLength(1);
+    expect(total + 1).toBe(9);
+    // No indigo of any prefix or variant survives anywhere in the quartet.
+    for (const file of files) {
+      expect(file.source).not.toMatch(/\bindigo-/);
+    }
+  });
+
+  it("puts the brand on the zoom-slider track and its foreground on the thumb", () => {
+    // §7, the one operator-authorised decision this child carries. The track
+    // takes the tenant's brand and the thumb takes the token the theme
+    // guarantees is legible on it — the swap of the colour-carrying roles the
+    // operator chose after every other candidate was measured. Both halves are
+    // graphical (an `<input type="range">` paints no glyphs), so 3:1 is the
+    // floor for both, and both clear it: 3.0427 and 5.7588.
+    const slider = /<input\b[\s\S]*?className="([^"]*)"[\s\S]*?\/>/.exec(
+      sourceOf("AvatarCropEditor.tsx"),
+    )?.[1];
+    const tokens = (slider ?? "").split(/\s+/);
+
+    expect(tokens).toContain("bg-primary");
+    expect(tokens).toContain("accent-primary-foreground");
+    // Whitespace-split token equality, so `accent-primary` does not match
+    // `accent-primary-foreground` — the distinction §7 turns on.
+    for (const absent of [
+      "bg-muted",
+      "bg-slate-300",
+      "accent-indigo-600",
+      "accent-primary",
+    ]) {
+      expect(tokens).not.toContain(absent);
+    }
+    // The panel that encloses the slider is the `bg-muted` the track is
+    // measured against.
+    expect(sourceOf("AvatarCropEditor.tsx")).toContain(
+      "p-4 bg-muted rounded-lg border border-border",
+    );
+    // §1i: one class swapped for one class, none added and none removed.
+    expect(tokens).toHaveLength(7);
+    // Neither source class survives anywhere in the quartet, and neither is
+    // logged — both migrate.
+    for (const file of files) {
+      expect(file.source).not.toContain("bg-slate-300");
+      expect(file.source).not.toContain("accent-indigo");
+    }
+    expect(rows.some((row) => row.class === "bg-slate-300")).toBe(false);
+  });
+
+  it("produces bg-primary 14 times and bg-muted 24, with no bg-slate-300 among them", () => {
+    // 11 from `bg-indigo-600`, 2 from `bg-emerald-600` and 1 from the slider
+    // track — which is *not* §1f case 2, whose candidate set is `muted` /
+    // `accent` and whose scope is the 50/100/200 scales.
+    expect(occurrences("bg-primary")).toHaveLength(14);
+    // `bg-slate-50` 9, `bg-gray-50` 7 of 8, `bg-gray-100` 6, and one each of
+    // `bg-slate-100` and `bg-slate-200`.
+    expect(occurrences("bg-muted")).toHaveLength(24);
+    // 15 §1f case 2 interaction fills plus `hover:bg-indigo-100`, which
+    // reaches `accent` through §1e's own brand-tint row rather than case 2.
+    expect(occurrences("hover:bg-accent")).toHaveLength(16);
+    expect(occurrences("bg-accent")).toHaveLength(4);
+  });
+
+  it("sends all 41 white surfaces to the card family and none to background", () => {
+    // §1f case 1. No white fill here is a page shell: the four page roots are
+    // bare `container`/`p-6` wrappers carrying no background class at all, so
+    // the page surface is `App.tsx`'s `min-h-screen bg-background` and nothing
+    // here competes with it. None is a floating layer with popover semantics.
+    expect(occurrences("bg-card")).toHaveLength(34);
+    expect(occurrences("focus:bg-card")).toHaveLength(2);
+    expect(occurrences("hover:bg-card")).toHaveLength(2);
+    expect(occurrences("bg-card/80")).toHaveLength(2);
+    expect(occurrences("bg-card/70")).toHaveLength(1);
+    expect(occurrences("bg-background")).toHaveLength(0);
+    expect(occurrences("bg-popover")).toHaveLength(0);
+    // The two `focus:bg-white` selects are the one genuinely new shape: their
+    // resting fill is case 2's `bg-muted` and their focus fill is case 1's
+    // `bg-card`, because case 2's candidate set does not contain `card` and
+    // case 1's does not contain `accent`.
+    expect(sourceOf("FeedbackChannelPage.tsx")).toContain(
+      "bg-muted focus:bg-card",
+    );
+    // The four page roots declare no background class at all.
+    for (const name of [
+      "FeedbackChannelPage.tsx",
+      "AnnouncementFeedPage.tsx",
+      "PackageStatusPage.tsx",
+      "PhotoApprovalQueuePage.tsx",
+    ]) {
+      expect(/^\s*<div className="[^"]*"/m.exec(sourceOf(name))?.[0]).not.toMatch(
+        /\bbg-/,
+      );
+    }
+  });
+
+  it("splits emerald four to twelve and red five to thirteen", () => {
+    // The two interactive emerald fills migrate, carrying their `hover:` with
+    // them; the other twelve are status tints or glyphs and stay.
+    for (const name of ["PhotoApprovalQueuePage.tsx", "PackageStatusPage.tsx"]) {
+      expect(sourceOf(name)).toContain(
+        "bg-primary hover:bg-primary/90",
+      );
+    }
+    expect(occurrences("hover:bg-primary/90")).toHaveLength(12);
+    // Five red occurrences migrate. The confirm-reject button at :150 is a
+    // solid fill with every member rowed; the reject button at :106 is the
+    // free-standing destructive control §1j would send to `text-destructive`,
+    // except that its `text-red-700` shares a class string with two rowless
+    // classes, so the unit rule freezes the whole set. A reviewer should check
+    // precisely these two against each other.
+    expect(matchesOn("PhotoApprovalQueuePage.tsx", 150)).toEqual([]);
+    expect(matchesOn("PhotoApprovalQueuePage.tsx", 106)).toHaveLength(4);
+    expect(occurrences("text-destructive-foreground")).toHaveLength(1);
+    expect(occurrences("bg-destructive")).toHaveLength(1);
+    // §1e gives `bg-red-700` the plain `*-destructive` row with no `/90`
+    // target, so this pair loses its interaction distinction and §1i forbids
+    // repairing it in place.
+    expect(occurrences("hover:bg-destructive")).toHaveLength(1);
+    expect(occurrences("text-destructive")).toHaveLength(1);
+    expect(occurrences("hover:text-destructive")).toHaveLength(2);
+    const remaining = files.flatMap((file) =>
+      matchesIn(file.file, file.source).map((match) => match.text),
+    );
+
+    expect(
+      remaining.filter((text) => /-emerald-/.test(text)),
+    ).toHaveLength(12);
+    expect(remaining.filter((text) => /-red-/.test(text))).toHaveLength(13);
+  });
+
+  it("carries every opacity modifier over verbatim and creates no brand-text alpha", () => {
+    const remaining = files.flatMap((file) =>
+      matchesIn(file.file, file.source).map((match) => match.text),
+    );
+
+    expect(occurrences("bg-card/80")).toHaveLength(2);
+    expect(occurrences("bg-card/70")).toHaveLength(1);
+    expect(occurrences("hover:bg-accent/80")).toHaveLength(2);
+    // The eight `bg-black/N` scrims are §1h code 1 and stay as they are; the
+    // three floating white surfaces in `MediaCarousel` are controls and an
+    // indicator painted *on top of* media, not scrims, so code 1 does not
+    // reach them and the §1b row governs.
+    expect(remaining.filter((text) => text === "bg-black/20")).toHaveLength(1);
+    expect(remaining.filter((text) => text === "bg-black/40")).toHaveLength(3);
+    expect(remaining.filter((text) => text === "bg-black/60")).toHaveLength(3);
+    expect(remaining.filter((text) => text === "bg-black/80")).toHaveLength(1);
+    expect(remaining.filter((text) => text === "bg-amber-500/90")).toHaveLength(
+      1,
+    );
+    for (const file of files) {
+      for (const dropped of [
+        "hover:bg-indigo-700",
+        "hover:bg-emerald-700",
+        "hover:bg-gray-50/80",
+        "bg-white/",
+      ]) {
+        expect(file.source).not.toContain(dropped);
+      }
+      // No APRAS-90 site: every opacity modifier this child carries or creates
+      // is a background utility.
+      expect(file.source).not.toMatch(/text-primary(?:-text)?\/\d/);
+    }
+  });
+
+  it("keeps text-white at exactly the three rowless surfaces", () => {
+    const remaining = files.flatMap((file) =>
+      matchesIn(file.file, file.source).filter(
+        (match) => match.text === "text-white",
+      ),
+    );
+
+    expect(remaining.map((match) => match.file).sort()).toEqual(
+      [
+        `${FEEDBACK}FeedbackHistoryList.tsx`,
+        `${MEDIA}AvatarWithFallback.tsx`,
+        `${MEDIA}PhotoApprovalQueuePage.tsx`,
+      ].sort(),
+    );
+    expect(
+      rows.filter((row) => row.class === "text-white").map((row) => row.code),
+    ).toEqual(["GAP-NO-SURFACE", "GAP-NO-SURFACE", "GAP-NO-SURFACE"]);
+    // The other thirteen baseline occurrences.
+    expect(occurrences("text-primary-foreground")).toHaveLength(12);
+    expect(occurrences("text-destructive-foreground")).toHaveLength(1);
   });
 
   it("keeps every `why` under 120 characters and off the code", () => {

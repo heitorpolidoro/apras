@@ -31,16 +31,16 @@ export const AnnouncementFeedPage: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-2xl space-y-6">
-      <div className="flex items-center justify-between gap-4 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+      <div className="flex items-center justify-between gap-4 bg-card p-6 rounded-xl border border-border shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="p-3 bg-indigo-50 text-indigo-600 rounded-lg">
+          <div className="p-3 bg-accent text-primary rounded-lg">
             <Megaphone className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-2xl font-bold text-foreground">
               {t("announcements.page_title", "Comunicados e Notícias")}
             </h1>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted-foreground">
               {t("announcements.page_subtitle", "Fique por dentro das novidades do condomínio.")}
             </p>
           </div>
@@ -49,7 +49,7 @@ export const AnnouncementFeedPage: React.FC = () => {
         {isPublisher && (
           <button
             onClick={openCreateModal}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-colors shrink-0"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg shadow-sm transition-colors shrink-0"
           >
             <Plus className="w-4 h-4" />
             {t("announcements.new_announcement_btn", "Novo Comunicado")}
@@ -58,13 +58,13 @@ export const AnnouncementFeedPage: React.FC = () => {
       </div>
 
       {isLoading && (
-        <p className="text-sm text-gray-500 text-center">
+        <p className="text-sm text-muted-foreground text-center">
           {t("common.loading", "Carregando...")}
         </p>
       )}
 
       {!isLoading && (data?.items.length ?? 0) === 0 && (
-        <p className="text-sm text-gray-400 text-center bg-white p-6 rounded-xl border border-gray-200">
+        <p className="text-sm text-muted-foreground text-center bg-card p-6 rounded-xl border border-border">
           {t("announcements.empty_feed", "Nenhum comunicado publicado até o momento.")}
         </p>
       )}

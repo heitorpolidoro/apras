@@ -33,7 +33,7 @@ export const AvatarWithFallback: React.FC<AvatarWithFallbackProps> = ({
   const showImage = photoUrl && status === 'APPROVED';
 
   return (
-    <div className={`relative inline-flex items-center justify-center rounded-full overflow-hidden bg-slate-200 text-slate-700 font-semibold border border-slate-300 ${sizeClasses} ${className}`}>
+    <div className={`relative inline-flex items-center justify-center rounded-full overflow-hidden bg-muted text-slate-700 font-semibold border border-input ${sizeClasses} ${className}`}>
       {showImage ? (
         <img
           src={photoUrl}

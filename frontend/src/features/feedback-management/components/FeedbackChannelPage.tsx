@@ -27,15 +27,15 @@ export const FeedbackChannelPage: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl space-y-6">
-      <div className="flex items-center gap-3 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-        <div className="p-3 bg-indigo-50 text-indigo-600 rounded-lg">
+      <div className="flex items-center gap-3 bg-card p-6 rounded-xl border border-border shadow-sm">
+        <div className="p-3 bg-accent text-primary rounded-lg">
           <MessageCircle className="w-6 h-6" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-foreground">
             {t("feedback.page_title", "Fale Conosco")}
           </h1>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             {t(
               "feedback.page_subtitle",
               "Envie críticas, sugestões e elogios diretamente para a diretoria."
@@ -46,16 +46,16 @@ export const FeedbackChannelPage: React.FC = () => {
 
       {isManagement ? (
         <>
-          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-3">
+          <div className="bg-card p-4 rounded-xl border border-border shadow-sm space-y-3">
             <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-              <Filter className="w-4 h-4 text-indigo-600" />
+              <Filter className="w-4 h-4 text-primary" />
               {t("feedback.filters.title", "Filtros")}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value as FeedbackCategory | "")}
-                className="w-full px-3 py-2 text-sm border rounded-lg text-gray-800 bg-gray-50 focus:bg-white"
+                className="w-full px-3 py-2 text-sm border rounded-lg text-gray-800 bg-muted focus:bg-card"
               >
                 <option value="">{t("feedback.filters.all_categories", "Todas as Categorias")}</option>
                 <option value="CRITICISM">{t("feedback.category_labels.CRITICISM", "Crítica")}</option>
@@ -67,7 +67,7 @@ export const FeedbackChannelPage: React.FC = () => {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as FeedbackStatus | "")}
-                className="w-full px-3 py-2 text-sm border rounded-lg text-gray-800 bg-gray-50 focus:bg-white"
+                className="w-full px-3 py-2 text-sm border rounded-lg text-gray-800 bg-muted focus:bg-card"
               >
                 <option value="">{t("feedback.filters.all_statuses", "Todos os Status")}</option>
                 <option value="PENDING">{t("feedback.status.PENDING", "Pendente")}</option>
@@ -87,7 +87,7 @@ export const FeedbackChannelPage: React.FC = () => {
           <NewFeedbackForm />
 
           <div>
-            <h2 className="text-lg font-bold text-gray-900 mb-3">
+            <h2 className="text-lg font-bold text-foreground mb-3">
               {t("feedback.history_title", "Meu Histórico")}
             </h2>
             <FeedbackHistoryList

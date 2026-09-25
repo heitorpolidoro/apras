@@ -59,15 +59,15 @@ export const AvatarCropEditor: React.FC<AvatarCropEditorProps> = ({
   };
 
   return (
-    <div className="flex flex-col items-center space-y-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+    <div className="flex flex-col items-center space-y-4 p-4 bg-muted rounded-lg border border-border">
       <h4 className="text-sm font-semibold text-slate-700">Ajustar Recorte da Foto</h4>
 
-      <div className="relative w-64 h-64 border-2 border-dashed border-indigo-400 rounded-full overflow-hidden bg-slate-900 flex items-center justify-center">
+      <div className="relative w-64 h-64 border-2 border-dashed border-primary rounded-full overflow-hidden bg-foreground flex items-center justify-center">
         <canvas ref={canvasRef} width={256} height={256} className="w-full h-full object-cover" />
       </div>
 
       <div className="w-full max-w-xs space-y-2">
-        <div className="flex items-center justify-between text-xs text-slate-600">
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>Zoom</span>
           <span>{Math.round(zoom * 100)}%</span>
         </div>
@@ -78,7 +78,7 @@ export const AvatarCropEditor: React.FC<AvatarCropEditorProps> = ({
           step="0.1"
           value={zoom}
           onChange={(e) => setZoom(parseFloat(e.target.value))}
-          className="w-full h-1 bg-slate-300 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+          className="w-full h-1 bg-primary rounded-lg appearance-none cursor-pointer accent-primary-foreground"
         />
       </div>
 
@@ -86,7 +86,7 @@ export const AvatarCropEditor: React.FC<AvatarCropEditorProps> = ({
         <button
           type="button"
           onClick={() => setRotation((prev) => (prev + 90) % 360)}
-          className="px-3 py-1 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-100"
+          className="px-3 py-1 text-xs font-medium text-slate-700 bg-card border border-input rounded-md hover:bg-accent"
         >
           Girar 90°
         </button>
@@ -96,14 +96,14 @@ export const AvatarCropEditor: React.FC<AvatarCropEditorProps> = ({
         <button
           type="button"
           onClick={onCancel}
-          className="px-4 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-100"
+          className="px-4 py-2 text-xs font-medium text-slate-700 bg-card border border-input rounded-md hover:bg-accent"
         >
           Cancelar
         </button>
         <button
           type="button"
           onClick={handleConfirmCrop}
-          className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 rounded-md hover:bg-indigo-700 shadow-sm"
+          className="px-4 py-2 text-xs font-semibold text-primary-foreground bg-primary rounded-md hover:bg-primary/90 shadow-sm"
         >
           Confirmar Recorte
         </button>

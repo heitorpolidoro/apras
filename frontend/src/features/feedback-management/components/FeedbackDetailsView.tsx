@@ -25,8 +25,8 @@ export const FeedbackDetailsView: React.FC<FeedbackDetailsViewProps> = ({
   if (isLoading || !feedback) {
     return (
       <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-xl p-8 max-w-2xl w-full text-center">
-          <p className="text-gray-500">{t("common.loading", "Carregando...")}</p>
+        <div className="bg-card rounded-xl p-8 max-w-2xl w-full text-center">
+          <p className="text-muted-foreground">{t("common.loading", "Carregando...")}</p>
         </div>
       </div>
     );
@@ -43,19 +43,19 @@ export const FeedbackDetailsView: React.FC<FeedbackDetailsViewProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
-      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full my-8 flex flex-col max-h-[90vh]">
+      <div className="bg-card rounded-xl shadow-xl max-w-2xl w-full my-8 flex flex-col max-h-[90vh]">
         <div className="flex items-center justify-between p-6 border-b">
           <div className="space-y-1">
-            <span className="bg-gray-100 text-gray-800 px-2 py-0.5 rounded border border-gray-200 font-medium text-xs">
+            <span className="bg-muted text-gray-800 px-2 py-0.5 rounded border border-border font-medium text-xs">
               {t(`feedback.category_labels.${feedback.category}`, feedback.category)}
             </span>
-            <h2 className="text-lg font-bold text-gray-900">
+            <h2 className="text-lg font-bold text-foreground">
               {feedback.reporter_name || t("feedback.anonymous", "Anônimo")}
             </h2>
           </div>
           <button
             onClick={onClose}
-            className="p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+            className="p-1 text-muted-foreground hover:text-muted-foreground rounded-lg hover:bg-accent"
           >
             <X className="w-6 h-6" />
           </button>
@@ -66,7 +66,7 @@ export const FeedbackDetailsView: React.FC<FeedbackDetailsViewProps> = ({
             <h3 className="text-sm font-semibold text-gray-700 mb-1">
               {t("feedback.message", "Mensagem")}
             </h3>
-            <p className="text-gray-800 bg-gray-50 p-4 rounded-lg text-sm whitespace-pre-wrap">
+            <p className="text-gray-800 bg-muted p-4 rounded-lg text-sm whitespace-pre-wrap">
               {feedback.message}
             </p>
           </div>
@@ -84,7 +84,7 @@ export const FeedbackDetailsView: React.FC<FeedbackDetailsViewProps> = ({
           )}
 
           {canRespond && (
-            <form onSubmit={handleRespond} className="bg-slate-50 border p-4 rounded-lg space-y-3">
+            <form onSubmit={handleRespond} className="bg-muted border p-4 rounded-lg space-y-3">
               <h3 className="text-sm font-semibold text-gray-800">
                 {t("feedback.respond_title", "Responder")}
               </h3>
@@ -94,12 +94,12 @@ export const FeedbackDetailsView: React.FC<FeedbackDetailsViewProps> = ({
                 value={responseText}
                 onChange={(e) => setResponseText(e.target.value)}
                 placeholder={t("feedback.respond_placeholder", "Escreva a resposta da diretoria...")}
-                className="w-full text-xs border rounded p-2 text-gray-800 bg-white"
+                className="w-full text-xs border rounded p-2 text-gray-800 bg-card"
               />
               <button
                 type="submit"
                 disabled={respondMutation.isPending || !responseText.trim()}
-                className="px-3 py-1.5 text-xs font-medium text-white bg-indigo-600 rounded hover:bg-indigo-700 disabled:opacity-50"
+                className="px-3 py-1.5 text-xs font-medium text-primary-foreground bg-primary rounded hover:bg-primary/90 disabled:opacity-50"
               >
                 {t("feedback.send_response", "Enviar Resposta")}
               </button>

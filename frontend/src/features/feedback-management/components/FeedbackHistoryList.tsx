@@ -18,7 +18,7 @@ export const FeedbackHistoryList: React.FC<FeedbackHistoryListProps> = ({
 
   if (isLoading) {
     return (
-      <div className="p-8 text-center text-gray-500 bg-white rounded-xl border">
+      <div className="p-8 text-center text-muted-foreground bg-card rounded-xl border">
         {t("common.loading", "Carregando...")}
       </div>
     );
@@ -26,8 +26,8 @@ export const FeedbackHistoryList: React.FC<FeedbackHistoryListProps> = ({
 
   if (items.length === 0) {
     return (
-      <div className="p-12 text-center bg-white rounded-xl border space-y-2">
-        <p className="text-gray-500 font-medium">
+      <div className="p-12 text-center bg-card rounded-xl border space-y-2">
+        <p className="text-muted-foreground font-medium">
           {t("feedback.no_records_history", "Nenhuma mensagem enviada ainda")}
         </p>
       </div>
@@ -35,14 +35,14 @@ export const FeedbackHistoryList: React.FC<FeedbackHistoryListProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm divide-y divide-gray-100">
+    <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm divide-y divide-gray-100">
       {items.map((item) => {
         const isUnread = item.status === "ANSWERED" && !item.response_seen_by_reporter;
         return (
           <button
             key={item.id}
             onClick={() => onSelectFeedback(item.id)}
-            className="w-full text-left px-4 py-3 hover:bg-gray-50/80 transition-colors flex items-center justify-between gap-3"
+            className="w-full text-left px-4 py-3 hover:bg-accent/80 transition-colors flex items-center justify-between gap-3"
           >
             <div className="flex items-center gap-2 min-w-0">
               {isUnread && (
@@ -54,7 +54,7 @@ export const FeedbackHistoryList: React.FC<FeedbackHistoryListProps> = ({
                   {t("feedback.unread_badge", "Novo")}
                 </span>
               )}
-              <span className="bg-gray-100 text-gray-800 px-2 py-0.5 rounded border border-gray-200 font-medium text-[11px]">
+              <span className="bg-muted text-gray-800 px-2 py-0.5 rounded border border-border font-medium text-[11px]">
                 {t(`feedback.category_labels.${item.category}`, item.category)}
               </span>
               <span className="truncate text-sm text-gray-800">{item.message}</span>
@@ -69,7 +69,7 @@ export const FeedbackHistoryList: React.FC<FeedbackHistoryListProps> = ({
               >
                 {t(`feedback.status.${item.status}`, item.status)}
               </span>
-              <Eye className="w-3.5 h-3.5 text-indigo-500" />
+              <Eye className="w-3.5 h-3.5 text-primary" />
             </div>
           </button>
         );

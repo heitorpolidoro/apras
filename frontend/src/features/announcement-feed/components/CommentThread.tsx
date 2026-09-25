@@ -46,20 +46,20 @@ export const CommentThread: React.FC<CommentThreadProps> = ({ announcementId, co
           return (
             <div
               key={comment.id}
-              className="flex items-start justify-between gap-2 text-sm bg-gray-50 rounded-lg px-3 py-2"
+              className="flex items-start justify-between gap-2 text-sm bg-muted rounded-lg px-3 py-2"
             >
               <div>
                 <span className="font-semibold text-gray-800">
                   {comment.author_name ?? t("announcements.unknown_author", "Usuário")}
                 </span>{" "}
-                <span className="text-gray-600">{comment.content}</span>
+                <span className="text-muted-foreground">{comment.content}</span>
               </div>
               {canDelete && (
                 <button
                   type="button"
                   aria-label={t("announcements.delete_comment", "Excluir comentário")}
                   onClick={() => handleDelete(comment.id)}
-                  className="text-gray-400 hover:text-red-600 shrink-0"
+                  className="text-muted-foreground hover:text-destructive shrink-0"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -68,7 +68,7 @@ export const CommentThread: React.FC<CommentThreadProps> = ({ announcementId, co
           );
         })}
         {comments.length === 0 && (
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-muted-foreground">
             {t("announcements.no_comments", "Nenhum comentário ainda.")}
           </p>
         )}
@@ -81,13 +81,13 @@ export const CommentThread: React.FC<CommentThreadProps> = ({ announcementId, co
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder={t("announcements.comment_placeholder", "Escreva um comentário...")}
-            className="flex-1 text-sm border rounded-full px-4 py-2 text-gray-800 focus:ring-2 focus:ring-indigo-500"
+            className="flex-1 text-sm border rounded-full px-4 py-2 text-gray-800 focus:ring-2 focus:ring-ring"
           />
           <button
             type="submit"
             disabled={addComment.isPending || !content.trim()}
             aria-label={t("announcements.send_comment", "Enviar comentário")}
-            className="p-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full disabled:opacity-50"
+            className="p-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full disabled:opacity-50"
           >
             <Send className="w-4 h-4" />
           </button>

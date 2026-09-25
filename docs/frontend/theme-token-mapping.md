@@ -112,11 +112,15 @@ extend `build_theme`, a backend change).
 
 `GAP` is a fourth value of the budget-class column, not a separate concept: it
 is what a `moves` row becomes when the operator decision does not name it. The
-**four** named moves are:
+**five** named moves are:
 
-1. the **indigo family**, which since APRAS-88 names **two** targets —
-   `*-primary` for graphical objects and **`*-primary-text` for characters**
-   (§1k);
+1. the **indigo family**, which since APRAS-88 names **two** targets and since
+   APRAS-84 names **three** — `*-primary` for graphical objects,
+   **`*-primary-text` for characters** (§1k), and
+   **`accent-primary-foreground` for `accent-indigo-600`**, the one `accent-`
+   utility in the tree, at ΔE 45.18. The third has to be named because ΔE
+   45.18 is over 12, which makes the row `moves`, and a `moves` row the
+   operator decision does not name is a `GAP`;
 2. **`text-*-400` → `text-muted-foreground`**;
 3. **`text-white` → `text-primary-foreground`**;
 4. **`text-emerald-500` → `text-primary-text`**, at ΔE 18.60 (APRAS-88,
@@ -124,7 +128,14 @@ is what a `moves` row becomes when the operator decision does not name it. The
    `noted` and inside budget: retargeting it to the darker text token pushes
    4 occurrences past every emerald figure this document published. The
    alternative — a new gap code — is worse, because it reopens a set §1h
-   requires to stay closed at eight.
+   requires to stay closed at eight;
+5. **`bg-slate-300` → `bg-primary`**, at ΔE 29.21 (APRAS-84). The zoom-slider
+   track at `AvatarCropEditor.tsx`, the tree's only occurrence of that class.
+   Named for the same budget reason: the operator decided the track carries the
+   tenant's brand and the thumb carries the token the theme guarantees is
+   legible on it, which is a swap of the colour-carrying roles rather than a
+   call-site judgement. §1f case 2 cannot reach it — case 2's candidate set is
+   `muted` / `accent` and its scope is the 50/100/200 scales.
 
 ## 1b. Neutral surfaces
 
@@ -137,7 +148,7 @@ is what a `moves` row becomes when the operator decision does not name it. The
 | `bg-gray-100` | `bg-muted` / **§1f case 2** | 96.70 → 96.00 | 0.70 | 1.32 | invisible |
 | `bg-slate-200` | `bg-muted` / **§1f case 2** | 92.90 → 96.00 | 3.10 | 3.54 | noted |
 | `bg-gray-200` | `bg-muted` / **§1f case 2** | 92.80 → 96.00 | 3.20 | 3.45 | noted |
-| `bg-slate-300` | `bg-muted` | 86.90 → 96.00 | 9.10 | 9.43 | noted (lightens) |
+| `bg-slate-300` | `bg-primary` | 86.90 → 62.00 | 24.90 | 29.21 | moves (**named**) |
 | `bg-slate-900` | `bg-foreground` | 20.80 → 14.00 | 6.80 | 8.20 | noted |
 | `bg-slate-950` | `bg-foreground` | 12.90 → 14.00 | 1.10 | 4.69 | noted |
 
@@ -182,7 +193,8 @@ The four `divide-` classes present in the tree (13 occurrences) are covered:
 | `bg-indigo-500` / `border-indigo-500` | `*-primary` | 58.50 → 62.00 | 3.50 | 33.15 | moves (**named**) |
 | `text-indigo-500` (**§1k**) | `text-primary-text` | 58.50 → 52.00 | 6.50 | 30.66 | moves (**named**) |
 | `ring-indigo-500` | `ring-ring` | 58.50 → 62.00 | 3.50 | 33.15 | moves (**named**) |
-| `bg-indigo-600` / `border-indigo-600` / `accent-indigo-600` | `*-primary` | 51.10 → 62.00 | 10.90 | 37.24 | moves (**named**) |
+| `bg-indigo-600` / `border-indigo-600` | `*-primary` | 51.10 → 62.00 | 10.90 | 37.24 | moves (**named**) |
+| `accent-indigo-600` | `accent-primary-foreground` | 51.10 → 15.00 | 36.10 | 45.18 | moves (**named**) |
 | `text-indigo-600` (**§1k**) | `text-primary-text` | 51.10 → 52.00 | 0.90 | 32.71 | moves (**named**) |
 | `bg-indigo-700` | `bg-primary` (see §1i for `/90`) | 45.70 → 62.00 | 16.30 | 37.33 | moves (**named**) |
 | `text-indigo-700` (**§1k**) | `text-primary-text` | 45.70 → 52.00 | 6.30 | 31.25 | moves (**named**) |
@@ -496,7 +508,7 @@ with **no residue**.
 | Verdict | Classes | Occ. |
 | --- | --- | --- |
 | §1b `bg-*-50/100/200` → `bg-muted` / `bg-accent` | `bg-slate-50` 41, `bg-slate-100` 38, `bg-gray-50` 33, `bg-gray-100` 30, `bg-slate-200` 4, `bg-gray-200` 2 | 148 |
-| §1b `bg-slate-300` → `bg-muted` | `bg-slate-300` 1 | 1 |
+| §1b `bg-slate-300` → `bg-primary` | `bg-slate-300` 1 | 1 |
 | §1b `bg-*-900/950` → `bg-foreground` | `bg-slate-950` 4, `bg-slate-900` 3 | 7 |
 | §1c → `border-border` / `divide-border` | `border-gray-200` 107, `border-slate-200` 90, `divide-slate-200` 5, `divide-gray-200` 1 | 203 |
 | §1c → `border-input` | `border-slate-300` 56, `border-gray-300` 24 | 80 |

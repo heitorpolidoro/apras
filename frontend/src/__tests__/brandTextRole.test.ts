@@ -478,6 +478,59 @@ export const GRAPHICAL_PRIMARY_SITES: readonly GraphicalPrimarySite[] = [
     element: "the `<ScanFace />` in the register-device modal header",
     why: ICON_ONLY,
   },
+  // APRAS-84's nine new graphical sites — eight `text-indigo-*` icons, tiles
+  // and form controls plus one `hover:` variant, all routed to the brand
+  // token by §1k's question. A pure append, exactly as this file's header
+  // anticipates: a sibling of APRAS-77 can only add to the set. Its two
+  // *character* sites — `PhotoUploadModal`'s "Ajustar Recorte" button and
+  // `FeedbackInboxTable`'s "Ver Detalhes" button, the latter an icon and a
+  // label painted from one `currentColor` — take `text-primary-text` instead
+  // and so are correctly absent here.
+  {
+    file: "features/feedback-management/components/FeedbackChannelPage.tsx",
+    element: "the page-header icon tile wrapping `<MessageCircle />`",
+    why: ICON_WRAPPER,
+  },
+  {
+    file: "features/feedback-management/components/FeedbackChannelPage.tsx",
+    element: "the `<Filter />` icon in the filter-bar heading",
+    why: ICON_ONLY,
+  },
+  {
+    file: "features/feedback-management/components/FeedbackHistoryList.tsx",
+    element: "the trailing `<Eye />` of a history row (the only `text-indigo-500`)",
+    why: ICON_ONLY,
+  },
+  {
+    file: "features/feedback-management/components/NewFeedbackForm.tsx",
+    element: "the send-anonymously `<input type=\"checkbox\">`",
+    why: FORM_CONTROL,
+  },
+  {
+    file: "features/announcement-feed/components/AnnouncementCard.tsx",
+    element: "the edit-announcement `<button>` (`hover:text-primary`)",
+    why: ICON_WRAPPER,
+  },
+  {
+    file: "features/announcement-feed/components/AnnouncementFeedPage.tsx",
+    element: "the page-header icon tile wrapping `<Megaphone />`",
+    why: ICON_WRAPPER,
+  },
+  {
+    file: "features/announcement-feed/components/AnnouncementFormModal.tsx",
+    element: "the `<Plus />` modal-title icon",
+    why: ICON_ONLY,
+  },
+  {
+    file: "features/announcement-feed/components/AnnouncementFormModal.tsx",
+    element: "the `<Paperclip />` inside the attach-media `<label>`",
+    why: ICON_ONLY,
+  },
+  {
+    file: "features/package-management/components/PackageStatusPage.tsx",
+    element: "the page-header icon tile wrapping `<PackageIcon />`",
+    why: ICON_WRAPPER,
+  },
 ];
 
 /** The declared entries, counted per file, for the equivalence below. */

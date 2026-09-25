@@ -36,11 +36,11 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({ announcement
   };
 
   return (
-    <article className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-4">
+    <article className="bg-card rounded-xl border border-border shadow-sm p-5 space-y-4">
       <header className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-lg font-bold text-gray-900">{announcement.title}</h3>
-          <p className="text-xs text-gray-500">
+          <h3 className="text-lg font-bold text-foreground">{announcement.title}</h3>
+          <p className="text-xs text-muted-foreground">
             {announcement.author_name ?? t("announcements.unknown_author", "Usuário")} ·{" "}
             {new Date(announcement.created_at).toLocaleDateString()}
           </p>
@@ -61,7 +61,7 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({ announcement
                 type="button"
                 aria-label={t("announcements.edit", "Editar comunicado")}
                 onClick={() => onEdit?.(announcement)}
-                className="p-1.5 text-gray-400 hover:text-indigo-600 rounded-md hover:bg-gray-100"
+                className="p-1.5 text-muted-foreground hover:text-primary rounded-md hover:bg-accent"
               >
                 <Pencil className="w-4 h-4" />
               </button>
@@ -69,7 +69,7 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({ announcement
                 type="button"
                 aria-label={t("announcements.delete", "Excluir comunicado")}
                 onClick={handleDelete}
-                className="p-1.5 text-gray-400 hover:text-red-600 rounded-md hover:bg-gray-100"
+                className="p-1.5 text-muted-foreground hover:text-destructive rounded-md hover:bg-accent"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -82,7 +82,7 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({ announcement
 
       {announcement.media.length > 0 && <MediaCarousel media={announcement.media} />}
 
-      <div className="flex items-center gap-1.5 text-xs text-gray-500">
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <MessageCircle className="w-3.5 h-3.5" />
         {t("announcements.comment_count", "{{count}} comentários", {
           count: announcement.comment_count,

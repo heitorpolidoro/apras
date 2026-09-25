@@ -21,6 +21,14 @@ import type { CashBalance } from "../../types/finance";
 import type { PurchaseQuote } from "../../types/purchase";
 import type { AccessDevice } from "../../types/accessControl";
 import { TENANT_BRAND_STYLE_ID } from "../../lib/brandStylesheet";
+import { AvatarWithFallback } from "../../features/media-management/components/AvatarWithFallback";
+import { AvatarCropEditor } from "../../features/media-management/components/AvatarCropEditor";
+import { FeedbackInboxTable } from "../../features/feedback-management/components/FeedbackInboxTable";
+import { MediaCarousel } from "../../features/announcement-feed/components/MediaCarousel";
+import { PackageStatusPage } from "../../features/package-management/components/PackageStatusPage";
+import type { Feedback } from "../../types/feedback";
+import type { AnnouncementMedia } from "../../types/announcement";
+import type { Package } from "../../types/package";
 
 /**
  * The brand-reach proof (APRAS-78 §4c).
@@ -101,6 +109,45 @@ vi.mock("../../hooks/useTenantProfile", () => ({
 
 vi.mock("../../features/user-administration/context/AuthContext", () => ({
   useAuth: () => ({ isAuthenticated: true }),
+}));
+
+/**
+ * `PackageStatusPage` is the one component here that reaches for data rather
+ * than taking it as props, and its two hooks live in two different modules —
+ * the list in `package-management`, the mutation in `visitor-management` — so
+ * each needs its own `vi.mock`. Everything else on this page is props-only.
+ */
+const PACKAGE: Package = vi.hoisted(() => ({
+  id: "b2c3d4e5-6f70-4812-9345-67890abcdef1",
+  lot_id: "c3d4e5f6-7081-4923-a456-7890abcdef12",
+  lot_summary: null,
+  received_by_id: null,
+  received_by_name: "Portaria",
+  description: "Caixa da farmácia",
+  carrier: "Correios",
+  received_at: "2026-02-10T09:30:00Z",
+  status: "AWAITING_PICKUP",
+  picked_up_at: null,
+  picked_up_by_id: null,
+  picked_up_by_name: null,
+  picked_up_by_notes: null,
+}));
+
+vi.mock("../../features/package-management/hooks/usePackages", () => ({
+  useMyPackages: () => ({
+    lotsWithPackages: [
+      {
+        lot: { id: "c3d4e5f6-7081-4923-a456-7890abcdef12", block: "B", lot_number: "12" },
+        packages: [PACKAGE],
+        isLoading: false,
+      },
+    ],
+    isLoading: false,
+  }),
+}));
+
+vi.mock("../../features/visitor-management/hooks/usePackages", () => ({
+  useMarkPackagePickedUp: () => ({ mutateAsync: async () => {}, isPending: false }),
 }));
 
 /** `--primary` as the unbranded app declares it, read from the stylesheet
@@ -624,6 +671,293 @@ describe("the tenant's brand reaches APRAS-83's migrated components", () => {
       "bg-muted",
       "text-primary-foreground",
       "text-destructive",
+    ]) {
+      expect(tokens).not.toContain(absent);
+    }
+  });
+});
+
+const FEEDBACK: Feedback = {
+  id: "d4e5f607-8192-4a34-b567-890abcdef123",
+  reporter_user_id: null,
+  reporter_name: "Ana Souza",
+  is_anonymous: false,
+  category: "SUGGESTION",
+  message: "Sugiro instalar bicicletário coberto.",
+  status: "PENDING",
+  board_response: null,
+  responded_by_id: null,
+  responded_by_name: null,
+  responded_at: null,
+  response_seen_by_reporter: false,
+  created_at: "2026-02-09T12:00:00Z",
+};
+
+/** The first is deliberately **not** an `IMAGE`, so the PDF link renders; two
+ *  items is what makes both nav buttons and both dots render. */
+const MEDIA: AnnouncementMedia[] = [
+  {
+    id: "e5f60718-2930-4b45-c678-90abcdef1234",
+    announcement_id: "f6071829-3041-4c56-d789-0abcdef12345",
+    media_type: "PDF",
+    url: "https://example.invalid/ata.pdf",
+    mime_type: "application/pdf",
+    file_size_bytes: 22_144,
+    order_index: 0,
+    created_at: "2026-02-08T08:00:00Z",
+  },
+  {
+    id: "07182930-4152-4d67-e890-abcdef123456",
+    announcement_id: "f6071829-3041-4c56-d789-0abcdef12345",
+    media_type: "IMAGE",
+    url: "https://example.invalid/foto.jpg",
+    mime_type: "image/jpeg",
+    file_size_bytes: 91_002,
+    order_index: 1,
+    created_at: "2026-02-08T08:05:00Z",
+  },
+];
+
+describe("the tenant's brand reaches APRAS-84's migrated components", () => {
+  it("paints the avatar fallback on the neutral fill, with no brand token at all", async () => {
+    profile.data = { ...PROFILE, theme: THEME };
+    const { container } = render(
+      <>
+        <TenantBrandTheme />
+        <AvatarWithFallback name="Ana Souza" status="PENDING_APPROVAL" />
+      </>,
+    );
+
+    await waitFor(() => expect(brandedPrimary()).toBe(THEME.light.primary));
+
+    const tokens = classTokens(container);
+
+    // Renders no `components/ui/` primitive, so this set is entirely its own.
+    // `text-slate-700`, `bg-amber-500/90` and `text-white` are the three kept
+    // classes: the avatar fill's foreground is out of budget, and the badge is
+    // status set 10, whose amber carries no token and whose label therefore has
+    // no surface to be named against.
+    for (const expected of [
+      "bg-muted",
+      "border-input",
+      "text-slate-700",
+      "bg-amber-500/90",
+      "text-white",
+    ]) {
+      expect(tokens).toContain(expected);
+    }
+    for (const absent of [
+      "bg-card",
+      "bg-primary",
+      "text-primary",
+      "text-primary-text",
+      "text-primary-foreground",
+      "text-muted-foreground",
+      "text-foreground",
+      "bg-accent",
+      "text-destructive",
+    ]) {
+      expect(tokens).not.toContain(absent);
+    }
+  });
+
+  it("paints the inbox table's details control as brand characters", async () => {
+    profile.data = { ...PROFILE, theme: THEME };
+    const { container } = render(
+      <>
+        <TenantBrandTheme />
+        <FeedbackInboxTable
+          items={[FEEDBACK]}
+          isLoading={false}
+          onSelectFeedback={() => {}}
+        />
+      </>,
+    );
+
+    await waitFor(() => expect(brandedPrimary()).toBe(THEME.light.primary));
+
+    const tokens = classTokens(container);
+
+    // §1k's "mixed element wins for text": the control paints an `<Eye/>` and
+    // the label "Ver Detalhes" from one `currentColor`, so it takes the
+    // character token. Splitting is strict, so `hover:bg-accent` and
+    // `hover:bg-accent/80` are two distinct tokens and neither matches
+    // `bg-accent`.
+    for (const expected of [
+      "bg-card",
+      "border-border",
+      "bg-muted",
+      "text-muted-foreground",
+      "text-foreground",
+      "text-primary-text",
+      "hover:text-primary-text",
+      "bg-accent",
+      "hover:bg-accent",
+      "hover:bg-accent/80",
+    ]) {
+      expect(tokens).toContain(expected);
+    }
+    for (const absent of [
+      "text-primary",
+      "bg-primary",
+      "text-primary-foreground",
+      "text-destructive",
+      "border-input",
+      "bg-background",
+    ]) {
+      expect(tokens).not.toContain(absent);
+    }
+  });
+
+  it("paints the carousel's floating controls on the card family", async () => {
+    profile.data = { ...PROFILE, theme: THEME };
+    const { container } = render(
+      <>
+        <TenantBrandTheme />
+        <MediaCarousel media={MEDIA} />
+      </>,
+    );
+
+    await waitFor(() => expect(brandedPrimary()).toBe(THEME.light.primary));
+
+    const tokens = classTokens(container);
+
+    // The three floating white surfaces are controls and an indicator painted
+    // *on top of* media, not scrims, so §1h code 1 does not reach them and the
+    // §1b row governs: `bg-card/80`, `hover:bg-card` and `bg-card/70`, each an
+    // opacity modifier carried over verbatim. The active dot is the one brand
+    // fill, and the `<FileText/>` the one destructive glyph.
+    for (const expected of [
+      "bg-muted",
+      "bg-card",
+      "bg-card/80",
+      "bg-card/70",
+      "hover:bg-card",
+      "hover:bg-accent",
+      "text-destructive",
+      "bg-primary",
+    ]) {
+      expect(tokens).toContain(expected);
+    }
+    for (const absent of [
+      "text-primary",
+      "text-primary-text",
+      "text-primary-foreground",
+      "border-border",
+      "bg-accent",
+      "text-muted-foreground",
+      "text-foreground",
+    ]) {
+      expect(tokens).not.toContain(absent);
+    }
+  });
+
+  it("paints the zoom slider's track with the brand and its thumb with the foreground", async () => {
+    profile.data = { ...PROFILE, theme: THEME };
+    const { container } = render(
+      <>
+        <TenantBrandTheme />
+        <AvatarCropEditor
+          imageSrc="https://example.invalid/foto.jpg"
+          onCropComplete={() => {}}
+          onCancel={() => {}}
+        />
+      </>,
+    );
+
+    await waitFor(() => expect(brandedPrimary()).toBe(THEME.light.primary));
+
+    const tokens = classTokens(container);
+
+    // §7's amendment, pinned here. Takes props only and renders no
+    // `components/ui/` primitive, so this set is entirely its own.
+    for (const expected of [
+      "bg-muted",
+      "border-border",
+      "text-slate-700",
+      "bg-foreground",
+      "border-primary",
+      "text-muted-foreground",
+      "bg-primary",
+      "accent-primary-foreground",
+      "bg-card",
+      "border-input",
+      "hover:bg-accent",
+      "text-primary-foreground",
+      "hover:bg-primary/90",
+    ]) {
+      expect(tokens).toContain(expected);
+    }
+    // `accent-primary` is excluded by whitespace-split token equality, which
+    // does not treat it as matching `accent-primary-foreground`. That is the
+    // distinction the operator's decision turns on: the earlier draft pinned
+    // `accent-primary` here and would have put the thumb at 1.0000 on its own
+    // track.
+    for (const absent of [
+      "accent-primary",
+      "accent-indigo-600",
+      "bg-slate-300",
+      "text-primary",
+      "text-primary-text",
+      "text-destructive",
+      "bg-accent",
+      "bg-background",
+      "text-foreground",
+    ]) {
+      expect(tokens).not.toContain(absent);
+    }
+    // The track and the thumb are the same element — the `<input type="range">`
+    // — and not two different ones that happen to carry one token each.
+    const slider = container.querySelector('input[type="range"]');
+    const sliderTokens = (slider?.getAttribute("class") ?? "").split(/\s+/);
+
+    expect(sliderTokens).toContain("bg-primary");
+    expect(sliderTokens).toContain("accent-primary-foreground");
+    expect(sliderTokens).not.toContain("accent-primary");
+    expect(sliderTokens).not.toContain("bg-muted");
+  });
+
+  it("paints the package page's pickup button with the brand fill", async () => {
+    profile.data = { ...PROFILE, theme: THEME };
+    const { container } = render(
+      <>
+        <TenantBrandTheme />
+        <PackageStatusPage />
+      </>,
+    );
+
+    await waitFor(() => expect(brandedPrimary()).toBe(THEME.light.primary));
+
+    const tokens = classTokens(container);
+
+    // The only site in this child that renders a `components/ui` primitive.
+    // Its `<Button>` carries no `variant`, so `buttonVariants` already emits
+    // `bg-primary text-primary-foreground hover:bg-primary/90` while the
+    // component's own `className` overrides it with the same three tokens after
+    // migration; `cn`'s `twMerge` collapses each duplicate to one. §1i forbids
+    // *deleting* the now-redundant override — that is a markup change — so it
+    // stays, and the rendered result is unchanged either way.
+    for (const expected of [
+      "bg-card",
+      "border-border",
+      "bg-accent",
+      "bg-muted",
+      "border-input",
+      "text-primary",
+      "text-foreground",
+      "text-muted-foreground",
+      "text-gray-700",
+      "bg-primary",
+      "text-primary-foreground",
+      "hover:bg-primary/90",
+    ]) {
+      expect(tokens).toContain(expected);
+    }
+    for (const absent of [
+      "text-primary-text",
+      "text-destructive",
+      "bg-background",
+      "hover:bg-accent",
     ]) {
       expect(tokens).not.toContain(absent);
     }

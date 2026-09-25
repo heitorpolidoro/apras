@@ -29,7 +29,7 @@ export const FeedbackInboxTable: React.FC<FeedbackInboxTableProps> = ({
 
   if (isLoading) {
     return (
-      <div className="p-8 text-center text-gray-500 bg-white rounded-xl border">
+      <div className="p-8 text-center text-muted-foreground bg-card rounded-xl border">
         {t("common.loading", "Carregando...")}
       </div>
     );
@@ -37,8 +37,8 @@ export const FeedbackInboxTable: React.FC<FeedbackInboxTableProps> = ({
 
   if (items.length === 0) {
     return (
-      <div className="p-12 text-center bg-white rounded-xl border space-y-2">
-        <p className="text-gray-500 font-medium">
+      <div className="p-12 text-center bg-card rounded-xl border space-y-2">
+        <p className="text-muted-foreground font-medium">
           {t("feedback.no_records_inbox", "Nenhuma mensagem recebida ainda")}
         </p>
       </div>
@@ -46,10 +46,10 @@ export const FeedbackInboxTable: React.FC<FeedbackInboxTableProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+    <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm text-gray-600">
-          <thead className="bg-gray-50 text-xs font-semibold uppercase text-gray-500 border-b">
+        <table className="w-full text-left text-sm text-muted-foreground">
+          <thead className="bg-muted text-xs font-semibold uppercase text-muted-foreground border-b">
             <tr>
               <th className="px-4 py-3">{t("feedback.table.category", "Categoria")}</th>
               <th className="px-4 py-3">{t("feedback.table.message", "Mensagem")}</th>
@@ -61,13 +61,13 @@ export const FeedbackInboxTable: React.FC<FeedbackInboxTableProps> = ({
           </thead>
           <tbody className="divide-y divide-gray-100">
             {items.map((item) => (
-              <tr key={item.id} className="hover:bg-gray-50/80 transition-colors">
+              <tr key={item.id} className="hover:bg-accent/80 transition-colors">
                 <td className="px-4 py-3 text-xs">
-                  <span className="bg-gray-100 text-gray-800 px-2 py-0.5 rounded border border-gray-200 font-medium">
+                  <span className="bg-muted text-gray-800 px-2 py-0.5 rounded border border-border font-medium">
                     {t(`feedback.category_labels.${item.category}`, item.category)}
                   </span>
                 </td>
-                <td className="px-4 py-3 font-medium text-gray-900">
+                <td className="px-4 py-3 font-medium text-foreground">
                   <span className="truncate max-w-xs block">{item.message}</span>
                 </td>
                 <td className="px-4 py-3 text-xs">
@@ -82,13 +82,13 @@ export const FeedbackInboxTable: React.FC<FeedbackInboxTableProps> = ({
                 <td className="px-4 py-3 text-xs text-gray-700">
                   {item.reporter_name || t("feedback.anonymous", "Anônimo")}
                 </td>
-                <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
+                <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                   {new Date(item.created_at).toLocaleDateString()}
                 </td>
                 <td className="px-4 py-3 text-right">
                   <button
                     onClick={() => onSelectFeedback(item.id)}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 rounded-md transition-colors"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-primary-text hover:text-primary-text bg-accent hover:bg-accent rounded-md transition-colors"
                   >
                     <Eye className="w-3.5 h-3.5" />
                     {t("feedback.view_details", "Ver Detalhes")}

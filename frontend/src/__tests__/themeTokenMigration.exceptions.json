@@ -4054,5 +4054,485 @@
     "class": "text-gray-700",
     "code": "GAP-OUT-OF-BUDGET",
     "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/announcement-feed/components/AnnouncementCard.tsx",
+    "class": "text-emerald-600",
+    "code": "GAP-TINT",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/announcement-feed/components/AnnouncementCard.tsx",
+    "class": "text-gray-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/announcement-feed/components/AnnouncementFormModal.tsx",
+    "class": "bg-black/40",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/announcement-feed/components/AnnouncementFormModal.tsx",
+    "class": "text-gray-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/announcement-feed/components/AnnouncementFormModal.tsx",
+    "class": "text-gray-800",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/announcement-feed/components/CommentThread.tsx",
+    "class": "border-gray-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/announcement-feed/components/CommentThread.tsx",
+    "class": "text-gray-800",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/announcement-feed/components/MediaCarousel.tsx",
+    "class": "text-gray-800",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/announcement-feed/components/MediaCarousel.tsx",
+    "class": "text-gray-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/feedback-management/components/FeedbackChannelPage.tsx",
+    "class": "text-gray-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/feedback-management/components/FeedbackChannelPage.tsx",
+    "class": "text-gray-800",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/feedback-management/components/FeedbackDetailsView.tsx",
+    "class": "bg-black/40",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/feedback-management/components/FeedbackDetailsView.tsx",
+    "class": "text-gray-800",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/feedback-management/components/FeedbackDetailsView.tsx",
+    "class": "text-gray-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/feedback-management/components/FeedbackDetailsView.tsx",
+    "class": "bg-emerald-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/feedback-management/components/FeedbackDetailsView.tsx",
+    "class": "border-emerald-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/feedback-management/components/FeedbackDetailsView.tsx",
+    "class": "text-emerald-900",
+    "code": "GAP-TINT",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/feedback-management/components/FeedbackDetailsView.tsx",
+    "class": "text-emerald-600",
+    "code": "GAP-TINT",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/feedback-management/components/FeedbackDetailsView.tsx",
+    "class": "text-emerald-800",
+    "code": "GAP-TINT",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/feedback-management/components/FeedbackHistoryList.tsx",
+    "class": "divide-gray-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/feedback-management/components/FeedbackHistoryList.tsx",
+    "class": "bg-rose-500",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/feedback-management/components/FeedbackHistoryList.tsx",
+    "class": "text-white",
+    "code": "GAP-NO-SURFACE",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/feedback-management/components/FeedbackHistoryList.tsx",
+    "class": "text-gray-800",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/feedback-management/components/FeedbackHistoryList.tsx",
+    "class": "bg-emerald-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/feedback-management/components/FeedbackHistoryList.tsx",
+    "class": "border-emerald-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/feedback-management/components/FeedbackHistoryList.tsx",
+    "class": "text-emerald-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/feedback-management/components/FeedbackHistoryList.tsx",
+    "class": "bg-amber-50",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/feedback-management/components/FeedbackHistoryList.tsx",
+    "class": "border-amber-200",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/feedback-management/components/FeedbackHistoryList.tsx",
+    "class": "text-amber-700",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/feedback-management/components/FeedbackInboxTable.tsx",
+    "class": "bg-amber-50",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/feedback-management/components/FeedbackInboxTable.tsx",
+    "class": "border-amber-200",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/feedback-management/components/FeedbackInboxTable.tsx",
+    "class": "text-amber-700",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/feedback-management/components/FeedbackInboxTable.tsx",
+    "class": "bg-emerald-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/feedback-management/components/FeedbackInboxTable.tsx",
+    "class": "border-emerald-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/feedback-management/components/FeedbackInboxTable.tsx",
+    "class": "text-emerald-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/feedback-management/components/FeedbackInboxTable.tsx",
+    "class": "bg-gray-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/feedback-management/components/FeedbackInboxTable.tsx",
+    "class": "border-gray-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/feedback-management/components/FeedbackInboxTable.tsx",
+    "class": "text-gray-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/feedback-management/components/FeedbackInboxTable.tsx",
+    "class": "divide-gray-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/feedback-management/components/FeedbackInboxTable.tsx",
+    "class": "text-gray-800",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/feedback-management/components/NewFeedbackForm.tsx",
+    "class": "text-gray-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/feedback-management/components/NewFeedbackForm.tsx",
+    "class": "text-gray-800",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/media-management/components/AvatarCropEditor.tsx",
+    "class": "text-slate-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/media-management/components/AvatarWithFallback.tsx",
+    "class": "text-slate-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/media-management/components/AvatarWithFallback.tsx",
+    "class": "bg-amber-500/90",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/media-management/components/AvatarWithFallback.tsx",
+    "class": "text-white",
+    "code": "GAP-NO-SURFACE",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/media-management/components/PhotoApprovalQueuePage.tsx",
+    "class": "text-slate-800",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/media-management/components/PhotoApprovalQueuePage.tsx",
+    "class": "bg-amber-100",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/media-management/components/PhotoApprovalQueuePage.tsx",
+    "class": "text-amber-800",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/media-management/components/PhotoApprovalQueuePage.tsx",
+    "class": "bg-red-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/media-management/components/PhotoApprovalQueuePage.tsx",
+    "class": "border-red-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/media-management/components/PhotoApprovalQueuePage.tsx",
+    "class": "text-red-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/media-management/components/PhotoApprovalQueuePage.tsx",
+    "class": "text-slate-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/media-management/components/PhotoApprovalQueuePage.tsx",
+    "class": "bg-black/20",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/media-management/components/PhotoApprovalQueuePage.tsx",
+    "class": "text-white",
+    "code": "GAP-NO-SURFACE",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/media-management/components/PhotoApprovalQueuePage.tsx",
+    "class": "border-slate-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/media-management/components/PhotoApprovalQueuePage.tsx",
+    "class": "hover:bg-red-100",
+    "code": "GAP-TINT",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/media-management/components/PhotoApprovalQueuePage.tsx",
+    "class": "bg-black/60",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/media-management/components/PhotoApprovalQueuePage.tsx",
+    "class": "bg-black/80",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/media-management/components/PhotoUploadModal.tsx",
+    "class": "bg-black/60",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/media-management/components/PhotoUploadModal.tsx",
+    "class": "border-slate-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/media-management/components/PhotoUploadModal.tsx",
+    "class": "text-slate-800",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/media-management/components/PhotoUploadModal.tsx",
+    "class": "bg-red-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/media-management/components/PhotoUploadModal.tsx",
+    "class": "border-red-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/media-management/components/PhotoUploadModal.tsx",
+    "class": "text-red-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/media-management/components/PhotoUploadModal.tsx",
+    "class": "text-slate-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/media-management/components/WebcamCaptureDialog.tsx",
+    "class": "bg-black/60",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/media-management/components/WebcamCaptureDialog.tsx",
+    "class": "border-slate-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/media-management/components/WebcamCaptureDialog.tsx",
+    "class": "text-slate-800",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/media-management/components/WebcamCaptureDialog.tsx",
+    "class": "bg-red-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/media-management/components/WebcamCaptureDialog.tsx",
+    "class": "border-red-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/media-management/components/WebcamCaptureDialog.tsx",
+    "class": "text-red-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/media-management/components/WebcamCaptureDialog.tsx",
+    "class": "border-slate-800",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/media-management/components/WebcamCaptureDialog.tsx",
+    "class": "text-slate-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/media-management/components/WebcamCaptureDialog.tsx",
+    "class": "bg-amber-50",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/media-management/components/WebcamCaptureDialog.tsx",
+    "class": "border-amber-300",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/media-management/components/WebcamCaptureDialog.tsx",
+    "class": "hover:bg-amber-100",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/media-management/components/WebcamCaptureDialog.tsx",
+    "class": "text-amber-700",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/package-management/components/PackageStatusPage.tsx",
+    "class": "border-gray-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/package-management/components/PackageStatusPage.tsx",
+    "class": "text-gray-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-84"
   }
 ]

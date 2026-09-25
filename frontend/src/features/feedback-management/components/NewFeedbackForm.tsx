@@ -28,9 +28,9 @@ export const NewFeedbackForm: React.FC = () => {
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4"
+      className="bg-card p-6 rounded-xl border border-border shadow-sm space-y-4"
     >
-      <h2 className="text-lg font-bold text-gray-900">
+      <h2 className="text-lg font-bold text-foreground">
         {t("feedback.form_title", "Enviar Mensagem")}
       </h2>
 
@@ -41,7 +41,7 @@ export const NewFeedbackForm: React.FC = () => {
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value as FeedbackCategory)}
-          className="w-full text-sm border rounded-md p-2 text-gray-800 bg-white"
+          className="w-full text-sm border rounded-md p-2 text-gray-800 bg-card"
         >
           <option value="CRITICISM">{t("feedback.category_labels.CRITICISM", "Crítica")}</option>
           <option value="SUGGESTION">{t("feedback.category_labels.SUGGESTION", "Sugestão")}</option>
@@ -63,23 +63,23 @@ export const NewFeedbackForm: React.FC = () => {
             "feedback.message_placeholder",
             "Escreva sua crítica, sugestão ou elogio..."
           )}
-          className="w-full text-sm border rounded-md p-2 text-gray-800 focus:ring-2 focus:ring-indigo-500"
+          className="w-full text-sm border rounded-md p-2 text-gray-800 focus:ring-2 focus:ring-ring"
         />
       </div>
 
-      <label className="flex items-center gap-2 p-3 border rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+      <label className="flex items-center gap-2 p-3 border rounded-lg cursor-pointer bg-muted hover:bg-accent">
         <input
           type="checkbox"
           checked={isAnonymous}
           onChange={(e) => setIsAnonymous(e.target.checked)}
-          className="rounded text-indigo-600"
+          className="rounded text-primary"
         />
         <div className="text-xs">
           <span className="font-semibold text-gray-800 flex items-center gap-1">
-            <EyeOff className="w-3.5 h-3.5 text-gray-500" />
+            <EyeOff className="w-3.5 h-3.5 text-muted-foreground" />
             {t("feedback.anonymous_toggle", "Enviar anonimamente")}
           </span>
-          <p className="text-gray-500 text-[10px]">
+          <p className="text-muted-foreground text-[10px]">
             {t("feedback.anonymous_hint", "Ocultar sua identidade da diretoria.")}
           </p>
         </div>
@@ -88,7 +88,7 @@ export const NewFeedbackForm: React.FC = () => {
       <button
         type="submit"
         disabled={createMutation.isPending || !message.trim()}
-        className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-colors disabled:opacity-50"
+        className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg shadow-sm transition-colors disabled:opacity-50"
       >
         <Send className="w-4 h-4" />
         {t("feedback.submit", "Enviar")}

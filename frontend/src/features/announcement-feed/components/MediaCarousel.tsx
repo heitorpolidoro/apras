@@ -21,7 +21,7 @@ export const MediaCarousel: React.FC<MediaCarouselProps> = ({ media }) => {
 
   return (
     <div
-      className="relative w-full bg-gray-100 rounded-lg overflow-hidden"
+      className="relative w-full bg-muted rounded-lg overflow-hidden"
       data-testid="media-carousel"
     >
       {current.media_type === "IMAGE" ? (
@@ -35,10 +35,10 @@ export const MediaCarousel: React.FC<MediaCarouselProps> = ({ media }) => {
           href={current.url}
           target="_blank"
           rel="noreferrer"
-          className="flex items-center gap-3 p-6 bg-white hover:bg-gray-50 transition-colors"
+          className="flex items-center gap-3 p-6 bg-card hover:bg-accent transition-colors"
           data-testid="pdf-attachment-link"
         >
-          <FileText className="w-8 h-8 text-red-600" />
+          <FileText className="w-8 h-8 text-destructive" />
           <span className="text-sm font-semibold text-gray-800">
             {t("announcements.open_pdf", "Abrir documento PDF")}
           </span>
@@ -51,7 +51,7 @@ export const MediaCarousel: React.FC<MediaCarouselProps> = ({ media }) => {
             type="button"
             onClick={goPrev}
             aria-label={t("announcements.carousel_prev", "Anterior")}
-            className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 bg-white/80 hover:bg-white rounded-full shadow"
+            className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 bg-card/80 hover:bg-card rounded-full shadow"
           >
             <ChevronLeft className="w-4 h-4 text-gray-700" />
           </button>
@@ -59,7 +59,7 @@ export const MediaCarousel: React.FC<MediaCarouselProps> = ({ media }) => {
             type="button"
             onClick={goNext}
             aria-label={t("announcements.carousel_next", "Próximo")}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-white/80 hover:bg-white rounded-full shadow"
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-card/80 hover:bg-card rounded-full shadow"
           >
             <ChevronRight className="w-4 h-4 text-gray-700" />
           </button>
@@ -68,7 +68,7 @@ export const MediaCarousel: React.FC<MediaCarouselProps> = ({ media }) => {
               <span
                 key={m.id}
                 className={`w-1.5 h-1.5 rounded-full ${
-                  i === index ? "bg-indigo-600" : "bg-white/70"
+                  i === index ? "bg-primary" : "bg-card/70"
                 }`}
               />
             ))}

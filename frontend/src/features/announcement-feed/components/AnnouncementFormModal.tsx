@@ -62,17 +62,17 @@ const AnnouncementFormModalContent: React.FC<
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
-      <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 space-y-6">
+      <div className="bg-card rounded-xl shadow-xl max-w-lg w-full p-6 space-y-6">
         <div className="flex items-center justify-between border-b pb-4">
-          <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-            <Plus className="w-5 h-5 text-indigo-600" />
+          <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+            <Plus className="w-5 h-5 text-primary" />
             {isEditing
               ? t("announcements.edit_title", "Editar Comunicado")
               : t("announcements.new_title", "Novo Comunicado")}
           </h2>
           <button
             onClick={onClose}
-            className="p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+            className="p-1 text-muted-foreground hover:text-muted-foreground rounded-lg hover:bg-accent"
           >
             <X className="w-5 h-5" />
           </button>
@@ -89,7 +89,7 @@ const AnnouncementFormModalContent: React.FC<
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={t("announcements.title_placeholder", "Ex: Assembleia Geral Ordinária")}
-              className="w-full text-sm border rounded-md p-2 text-gray-800 focus:ring-2 focus:ring-indigo-500"
+              className="w-full text-sm border rounded-md p-2 text-gray-800 focus:ring-2 focus:ring-ring"
             />
           </div>
 
@@ -103,13 +103,13 @@ const AnnouncementFormModalContent: React.FC<
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder={t("announcements.content_placeholder", "Escreva o comunicado...")}
-              className="w-full text-sm border rounded-md p-2 text-gray-800 focus:ring-2 focus:ring-indigo-500"
+              className="w-full text-sm border rounded-md p-2 text-gray-800 focus:ring-2 focus:ring-ring"
             />
           </div>
 
           <div>
-            <label className="flex items-center gap-2 p-3 border rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 text-xs font-semibold text-gray-700">
-              <Paperclip className="w-4 h-4 text-indigo-600" />
+            <label className="flex items-center gap-2 p-3 border rounded-lg cursor-pointer bg-muted hover:bg-accent text-xs font-semibold text-gray-700">
+              <Paperclip className="w-4 h-4 text-primary" />
               {file ? file.name : t("announcements.attach_media", "Anexar imagem ou PDF")}
               <input
                 type="file"
@@ -124,14 +124,14 @@ const AnnouncementFormModalContent: React.FC<
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
+              className="px-4 py-2 text-xs font-medium text-gray-700 bg-muted hover:bg-accent rounded-md"
             >
               {t("common.cancel", "Cancelar")}
             </button>
             <button
               type="submit"
               disabled={isPending || !title.trim() || !content.trim()}
-              className="px-4 py-2 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md disabled:opacity-50"
+              className="px-4 py-2 text-xs font-medium text-primary-foreground bg-primary hover:bg-primary/90 rounded-md disabled:opacity-50"
             >
               {isEditing
                 ? t("announcements.save", "Salvar Alterações")

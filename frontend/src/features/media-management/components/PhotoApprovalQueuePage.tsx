@@ -33,10 +33,10 @@ export const PhotoApprovalQueuePage: React.FC = () => {
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Fila de Aprovação de Fotos</h1>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-muted-foreground">
             Gerencie e valide fotos de moradores e visitantes antes de estarem ativas no sistema.
           </p>
         </div>
@@ -48,13 +48,13 @@ export const PhotoApprovalQueuePage: React.FC = () => {
       </div>
 
       {isLoading ? (
-        <div className="p-12 text-center text-slate-500">Carregando fila de aprovação...</div>
+        <div className="p-12 text-center text-muted-foreground">Carregando fila de aprovação...</div>
       ) : error ? (
         <div className="p-4 bg-red-50 text-red-700 text-sm rounded-lg border border-red-200">
           Erro ao carregar fotos pendentes.
         </div>
       ) : !data?.items || data.items.length === 0 ? (
-        <div className="p-12 text-center text-slate-500 bg-white rounded-xl border border-slate-200">
+        <div className="p-12 text-center text-muted-foreground bg-card rounded-xl border border-border">
           Nenhuma foto aguardando aprovação no momento.
         </div>
       ) : (
@@ -62,10 +62,10 @@ export const PhotoApprovalQueuePage: React.FC = () => {
           {data.items.map((asset) => (
             <div
               key={asset.id}
-              className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col justify-between"
+              className="bg-card rounded-xl border border-border shadow-sm overflow-hidden flex flex-col justify-between"
             >
               <div className="p-4 space-y-3">
-                <div className="flex items-center justify-between text-xs text-slate-500">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span className="font-semibold text-slate-700 uppercase tracking-wide">
                     {asset.entity_type}
                   </span>
@@ -73,7 +73,7 @@ export const PhotoApprovalQueuePage: React.FC = () => {
                 </div>
 
                 <div
-                  className="relative w-full h-48 bg-slate-100 rounded-lg overflow-hidden cursor-pointer group"
+                  className="relative w-full h-48 bg-muted rounded-lg overflow-hidden cursor-pointer group"
                   onClick={() => setPreviewAsset(asset)}
                 >
                   <img
@@ -86,7 +86,7 @@ export const PhotoApprovalQueuePage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="text-xs space-y-1 text-slate-600">
+                <div className="text-xs space-y-1 text-muted-foreground">
                   <p>
                     <strong className="text-slate-700">Enviado por:</strong>{' '}
                     {asset.uploaded_by_name || 'Usuário'}
@@ -98,7 +98,7 @@ export const PhotoApprovalQueuePage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex items-center space-x-2 p-4 bg-slate-50 border-t border-slate-100">
+              <div className="flex items-center space-x-2 p-4 bg-muted border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => handleOpenRejectModal(asset.id)}
@@ -111,7 +111,7 @@ export const PhotoApprovalQueuePage: React.FC = () => {
                   type="button"
                   onClick={() => handleApprove(asset.id)}
                   disabled={approveMutation.isPending}
-                  className="flex-1 py-2 px-3 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors shadow-sm"
+                  className="flex-1 py-2 px-3 text-xs font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg transition-colors shadow-sm"
                 >
                   Aprovar
                 </button>
@@ -124,22 +124,22 @@ export const PhotoApprovalQueuePage: React.FC = () => {
       {/* Reject Reason Modal */}
       {rejectingPhotoId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 space-y-4">
+          <div className="bg-card rounded-xl shadow-2xl w-full max-w-md p-6 space-y-4">
             <h3 className="text-lg font-bold text-slate-800">Motivo da Rejeição</h3>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted-foreground">
               Descreva o motivo da rejeição da foto (ex: desfocada, escura, rosto encoberto).
             </p>
             <textarea
               value={rejectionReason}
               onChange={(e) => setRejectionReason(e.target.value)}
               placeholder="Informe o motivo da rejeição..."
-              className="w-full h-24 p-3 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              className="w-full h-24 p-3 text-xs border border-input rounded-lg focus:ring-2 focus:ring-ring focus:outline-none"
             />
             <div className="flex items-center justify-end space-x-3 pt-2">
               <button
                 type="button"
                 onClick={() => setRejectingPhotoId(null)}
-                className="px-4 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100"
+                className="px-4 py-2 text-xs font-medium text-slate-700 bg-card border border-input rounded-lg hover:bg-accent"
               >
                 Cancelar
               </button>
@@ -147,7 +147,7 @@ export const PhotoApprovalQueuePage: React.FC = () => {
                 type="button"
                 disabled={!rejectionReason.trim() || rejectMutation.isPending}
                 onClick={handleConfirmReject}
-                className="px-4 py-2 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg disabled:opacity-50"
+                className="px-4 py-2 text-xs font-semibold text-destructive-foreground bg-destructive hover:bg-destructive rounded-lg disabled:opacity-50"
               >
                 Confirmar Rejeição
               </button>
@@ -162,7 +162,7 @@ export const PhotoApprovalQueuePage: React.FC = () => {
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 cursor-pointer"
           onClick={() => setPreviewAsset(null)}
         >
-          <div className="relative max-w-3xl max-h-[85vh] bg-white rounded-xl overflow-hidden shadow-2xl p-2">
+          <div className="relative max-w-3xl max-h-[85vh] bg-card rounded-xl overflow-hidden shadow-2xl p-2">
             <img src={previewAsset.url} alt="Full resolution" className="max-h-[80vh] w-auto object-contain rounded-lg" />
           </div>
         </div>
