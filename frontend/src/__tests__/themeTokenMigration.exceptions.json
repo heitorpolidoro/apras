@@ -3184,5 +3184,875 @@
     "class": "dark:border-slate-800",
     "code": "GAP-BORDER-100",
     "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/access-control/components/AccessEventFeed.tsx",
+    "class": "dark:divide-slate-800/80",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/AccessEventFeed.tsx",
+    "class": "divide-slate-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/AccessEventFeed.tsx",
+    "class": "text-emerald-500",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/AccessEventFeed.tsx",
+    "class": "text-red-500",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/AccessEventFeed.tsx",
+    "class": "bg-emerald-100",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/AccessEventFeed.tsx",
+    "class": "dark:bg-emerald-950/50",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/AccessEventFeed.tsx",
+    "class": "dark:text-emerald-400",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/AccessEventFeed.tsx",
+    "class": "text-emerald-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/AccessEventFeed.tsx",
+    "class": "bg-red-100",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/AccessEventFeed.tsx",
+    "class": "dark:bg-red-950/50",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/AccessEventFeed.tsx",
+    "class": "dark:text-red-400",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/AccessEventFeed.tsx",
+    "class": "text-red-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/DeviceTable.tsx",
+    "class": "bg-emerald-100",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/DeviceTable.tsx",
+    "class": "dark:bg-emerald-950/50",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/DeviceTable.tsx",
+    "class": "dark:text-emerald-400",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/DeviceTable.tsx",
+    "class": "text-emerald-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/DeviceTable.tsx",
+    "class": "bg-slate-100",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/DeviceTable.tsx",
+    "class": "dark:bg-slate-800",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/DeviceTable.tsx",
+    "class": "dark:text-slate-400",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/DeviceTable.tsx",
+    "class": "text-slate-600",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/DeviceTable.tsx",
+    "class": "bg-amber-100",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/DeviceTable.tsx",
+    "class": "dark:bg-amber-950/50",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/DeviceTable.tsx",
+    "class": "dark:text-amber-400",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/DeviceTable.tsx",
+    "class": "text-amber-700",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/DeviceTable.tsx",
+    "class": "border-slate-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/DeviceTable.tsx",
+    "class": "dark:border-slate-800",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/DeviceTable.tsx",
+    "class": "dark:divide-slate-800/80",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/DeviceTable.tsx",
+    "class": "divide-slate-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/FacialTemplateSyncPanel.tsx",
+    "class": "bg-emerald-100",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/FacialTemplateSyncPanel.tsx",
+    "class": "dark:bg-emerald-950/50",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/FacialTemplateSyncPanel.tsx",
+    "class": "dark:text-emerald-400",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/FacialTemplateSyncPanel.tsx",
+    "class": "text-emerald-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/FacialTemplateSyncPanel.tsx",
+    "class": "bg-amber-100",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/FacialTemplateSyncPanel.tsx",
+    "class": "dark:bg-amber-950/50",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/FacialTemplateSyncPanel.tsx",
+    "class": "dark:text-amber-400",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/FacialTemplateSyncPanel.tsx",
+    "class": "text-amber-700",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/FacialTemplateSyncPanel.tsx",
+    "class": "bg-red-100",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/FacialTemplateSyncPanel.tsx",
+    "class": "dark:bg-red-950/50",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/FacialTemplateSyncPanel.tsx",
+    "class": "dark:text-red-400",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/FacialTemplateSyncPanel.tsx",
+    "class": "text-red-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/FacialTemplateSyncPanel.tsx",
+    "class": "bg-red-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/FacialTemplateSyncPanel.tsx",
+    "class": "border-red-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/FacialTemplateSyncPanel.tsx",
+    "class": "dark:border-red-900/50",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/FacialTemplateSyncPanel.tsx",
+    "class": "border-slate-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/FacialTemplateSyncPanel.tsx",
+    "class": "dark:border-slate-800",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/RegisterDeviceModal.tsx",
+    "class": "bg-black/40",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/RegisterDeviceModal.tsx",
+    "class": "border-slate-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/RegisterDeviceModal.tsx",
+    "class": "dark:border-slate-800",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/RegisterDeviceModal.tsx",
+    "class": "bg-red-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/RegisterDeviceModal.tsx",
+    "class": "border-red-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/RegisterDeviceModal.tsx",
+    "class": "dark:bg-red-950/50",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/RegisterDeviceModal.tsx",
+    "class": "dark:border-red-900/50",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/RegisterDeviceModal.tsx",
+    "class": "dark:text-red-400",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/RegisterDeviceModal.tsx",
+    "class": "text-red-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/RegisterDeviceModal.tsx",
+    "class": "dark:text-slate-300",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/access-control/components/RegisterDeviceModal.tsx",
+    "class": "text-slate-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/BudgetLineFormModal.tsx",
+    "class": "border-slate-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/BudgetLineFormModal.tsx",
+    "class": "dark:border-slate-800",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/BudgetLineFormModal.tsx",
+    "class": "bg-black/60",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/BudgetVsActualTable.tsx",
+    "class": "border-slate-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/BudgetVsActualTable.tsx",
+    "class": "dark:border-slate-800",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/BudgetVsActualTable.tsx",
+    "class": "dark:text-slate-200",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/BudgetVsActualTable.tsx",
+    "class": "text-slate-800",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/BudgetVsActualTable.tsx",
+    "class": "text-emerald-600",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/BudgetVsActualTable.tsx",
+    "class": "text-red-600",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/CashBalanceCard.tsx",
+    "class": "bg-emerald-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/CashBalanceCard.tsx",
+    "class": "dark:bg-emerald-950",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/CashBalanceCard.tsx",
+    "class": "dark:text-emerald-400",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/CashBalanceCard.tsx",
+    "class": "text-emerald-600",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/CashBalanceCard.tsx",
+    "class": "bg-red-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/CashBalanceCard.tsx",
+    "class": "dark:bg-red-950",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/CashBalanceCard.tsx",
+    "class": "dark:text-red-400",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/CashBalanceCard.tsx",
+    "class": "text-red-600",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/CategoryFormModal.tsx",
+    "class": "border-slate-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/CategoryFormModal.tsx",
+    "class": "dark:border-slate-800",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/CategoryFormModal.tsx",
+    "class": "bg-black/60",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/CategoryTransactionDrilldown.tsx",
+    "class": "border-slate-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/CategoryTransactionDrilldown.tsx",
+    "class": "dark:border-slate-800",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/CategoryTransactionDrilldown.tsx",
+    "class": "dark:text-slate-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/CategoryTransactionDrilldown.tsx",
+    "class": "text-slate-300",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/StatementChart.tsx",
+    "class": "bg-emerald-500",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/StatementChart.tsx",
+    "class": "bg-red-500",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/StatementTable.tsx",
+    "class": "border-slate-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/StatementTable.tsx",
+    "class": "dark:border-slate-800",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/StatementTable.tsx",
+    "class": "dark:text-slate-200",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/StatementTable.tsx",
+    "class": "text-slate-800",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/StatementTable.tsx",
+    "class": "dark:text-emerald-400",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/StatementTable.tsx",
+    "class": "text-emerald-600",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/StatementTable.tsx",
+    "class": "dark:text-red-400",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/StatementTable.tsx",
+    "class": "text-red-600",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/TransactionFormModal.tsx",
+    "class": "border-slate-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/TransactionFormModal.tsx",
+    "class": "dark:border-slate-800",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/finance/components/TransactionFormModal.tsx",
+    "class": "bg-black/60",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/PurchaseRequestDetailModal.tsx",
+    "class": "bg-black/50",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/PurchaseRequestDetailModal.tsx",
+    "class": "text-gray-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/PurchaseRequestDetailModal.tsx",
+    "class": "text-gray-800",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/PurchaseRequestDetailModal.tsx",
+    "class": "bg-amber-50",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/PurchaseRequestDetailModal.tsx",
+    "class": "border-amber-200",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/PurchaseRequestDetailModal.tsx",
+    "class": "text-amber-800",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/PurchaseRequestDetailModal.tsx",
+    "class": "text-amber-900",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/PurchaseRequestDetailModal.tsx",
+    "class": "bg-emerald-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/PurchaseRequestDetailModal.tsx",
+    "class": "border-emerald-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/PurchaseRequestDetailModal.tsx",
+    "class": "text-emerald-600",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/PurchaseRequestDetailModal.tsx",
+    "class": "text-emerald-900",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/PurchaseRequestDetailModal.tsx",
+    "class": "text-emerald-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/PurchaseRequestFormModal.tsx",
+    "class": "bg-black/50",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/PurchaseRequestFormModal.tsx",
+    "class": "bg-red-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/PurchaseRequestFormModal.tsx",
+    "class": "border-red-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/PurchaseRequestFormModal.tsx",
+    "class": "text-red-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/PurchaseRequestFormModal.tsx",
+    "class": "text-gray-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/PurchaseRequestFormModal.tsx",
+    "class": "bg-amber-50",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/PurchaseRequestFormModal.tsx",
+    "class": "border-amber-200",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/PurchaseRequestFormModal.tsx",
+    "class": "text-amber-800",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/PurchaseRequestFormModal.tsx",
+    "class": "text-gray-800",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/PurchaseRequestsPage.tsx",
+    "class": "text-amber-600",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/PurchaseRequestsPage.tsx",
+    "class": "bg-black/50",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/QuoteComparisonTable.tsx",
+    "class": "text-amber-700",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/QuoteComparisonTable.tsx",
+    "class": "text-sky-700",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/QuoteComparisonTable.tsx",
+    "class": "text-emerald-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/QuoteComparisonTable.tsx",
+    "class": "text-gray-900",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/QuoteComparisonTable.tsx",
+    "class": "bg-red-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/QuoteComparisonTable.tsx",
+    "class": "border-red-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/QuoteComparisonTable.tsx",
+    "class": "text-red-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/QuoteComparisonTable.tsx",
+    "class": "bg-emerald-50/60",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/QuoteComparisonTable.tsx",
+    "class": "border-gray-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/QuoteComparisonTable.tsx",
+    "class": "bg-emerald-50/40",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/QuoteComparisonTable.tsx",
+    "class": "border-emerald-300",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/QuoteComparisonTable.tsx",
+    "class": "border-gray-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/QuoteComparisonTable.tsx",
+    "class": "text-gray-800",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/QuoteFormModal.tsx",
+    "class": "bg-black/50",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/QuoteFormModal.tsx",
+    "class": "bg-red-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/QuoteFormModal.tsx",
+    "class": "border-red-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/QuoteFormModal.tsx",
+    "class": "text-red-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/QuoteFormModal.tsx",
+    "class": "text-gray-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/QuoteFormModal.tsx",
+    "class": "text-amber-600",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/SelectQuoteModal.tsx",
+    "class": "bg-black/50",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/SelectQuoteModal.tsx",
+    "class": "bg-red-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/SelectQuoteModal.tsx",
+    "class": "border-red-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/SelectQuoteModal.tsx",
+    "class": "text-red-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/SelectQuoteModal.tsx",
+    "class": "bg-amber-50",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/SelectQuoteModal.tsx",
+    "class": "border-amber-200",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/SelectQuoteModal.tsx",
+    "class": "text-amber-600",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/SelectQuoteModal.tsx",
+    "class": "text-amber-900",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/SelectQuoteModal.tsx",
+    "class": "text-amber-700",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-83"
+  },
+  {
+    "file": "src/features/purchase-management/components/SelectQuoteModal.tsx",
+    "class": "text-gray-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-83"
   }
 ]

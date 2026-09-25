@@ -24,7 +24,7 @@ export const BudgetVsActualTable: React.FC<BudgetVsActualTableProps> = ({
 
   if (isLoading) {
     return (
-      <p className="text-sm text-slate-500 dark:text-slate-400">
+      <p className="text-sm text-muted-foreground">
         {t("common.loading", "Carregando...")}
       </p>
     );
@@ -34,7 +34,7 @@ export const BudgetVsActualTable: React.FC<BudgetVsActualTableProps> = ({
 
   if (rows.length === 0) {
     return (
-      <p className="text-sm text-slate-500 dark:text-slate-400">
+      <p className="text-sm text-muted-foreground">
         {t(
           "finance.budgetVsActual.empty",
           "Nenhuma categoria orçamentária para este ano."
@@ -46,7 +46,7 @@ export const BudgetVsActualTable: React.FC<BudgetVsActualTableProps> = ({
   return (
     <table className="w-full text-sm">
       <thead>
-        <tr className="text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
+        <tr className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border">
           <th className="py-2 w-6" />
           <th className="py-2">{t("finance.budgetVsActual.category", "Categoria")}</th>
           <th className="py-2 text-right">
@@ -70,16 +70,16 @@ export const BudgetVsActualTable: React.FC<BudgetVsActualTableProps> = ({
             <React.Fragment key={row.category_id}>
               <tr
                 data-testid={`budget-row-${row.category_id}`}
-                className="border-t border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                className="border-t border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-accent"
                 onClick={() =>
                   setExpandedCategoryId(isExpanded ? null : row.category_id)
                 }
               >
                 <td className="py-2 pl-1">
                   {isExpanded ? (
-                    <ChevronDown className="w-4 h-4 text-slate-400" />
+                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
                   ) : (
-                    <ChevronRight className="w-4 h-4 text-slate-400" />
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
                   )}
                 </td>
                 <td className="py-2 font-medium text-slate-800 dark:text-slate-200">
@@ -101,7 +101,7 @@ export const BudgetVsActualTable: React.FC<BudgetVsActualTableProps> = ({
                 >
                   {formatCurrency(row.variance_amount)}
                   {row.variance_pct !== null && (
-                    <span className="text-xs font-normal text-slate-400 ml-1">
+                    <span className="text-xs font-normal text-muted-foreground ml-1">
                       ({row.variance_pct.toFixed(1)}%)
                     </span>
                   )}
@@ -109,7 +109,7 @@ export const BudgetVsActualTable: React.FC<BudgetVsActualTableProps> = ({
               </tr>
               {isExpanded && (
                 <tr>
-                  <td colSpan={5} className="bg-slate-50 dark:bg-slate-900/60 px-4 py-3">
+                  <td colSpan={5} className="bg-muted px-4 py-3">
                     <CategoryTransactionDrilldown
                       categoryId={row.category_id}
                       fiscalYear={fiscalYear}

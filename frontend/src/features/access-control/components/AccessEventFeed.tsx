@@ -12,7 +12,7 @@ export const AccessEventFeed: React.FC<AccessEventFeedProps> = ({ events }) => {
 
   if (events.length === 0) {
     return (
-      <p className="p-6 text-center text-sm text-slate-500 dark:text-slate-400">
+      <p className="p-6 text-center text-sm text-muted-foreground">
         {t("accessControl.noEvents")}
       </p>
     );
@@ -29,12 +29,12 @@ export const AccessEventFeed: React.FC<AccessEventFeedProps> = ({ events }) => {
               <XCircle className="size-5 text-red-500" />
             )}
             <div>
-              <div className="text-sm font-semibold text-slate-900 dark:text-white">
+              <div className="text-sm font-semibold text-foreground">
                 {event.resident_id
                   ? event.resident_id
                   : t("accessControl.unrecognized")}
               </div>
-              <div className="text-xs text-slate-500 dark:text-slate-400">
+              <div className="text-xs text-muted-foreground">
                 {new Date(event.event_time).toLocaleString()}
                 {event.confidence_score != null &&
                   ` · ${t("accessControl.confidence")}: ${(event.confidence_score * 100).toFixed(0)}%`}

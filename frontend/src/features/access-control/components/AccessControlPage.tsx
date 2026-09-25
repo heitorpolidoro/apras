@@ -30,11 +30,11 @@ export const AccessControlPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-            <ScanFace className="size-7 text-indigo-600 dark:text-indigo-400" />
+          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+            <ScanFace className="size-7 text-primary" />
             {t("accessControl.title")}
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-sm text-muted-foreground">
             {t("accessControl.subtitle")}
           </p>
         </div>
@@ -45,7 +45,7 @@ export const AccessControlPage: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 overflow-x-auto">
+        <div className="lg:col-span-2 rounded-2xl border border-border bg-card shadow-sm overflow-x-auto">
           <DeviceTable
             devices={devices}
             onRegenerateKey={handleRegenerateKey}

@@ -56,7 +56,7 @@ export const DeviceTable: React.FC<DeviceTableProps> = ({
 
   if (devices.length === 0) {
     return (
-      <p className="p-6 text-center text-sm text-slate-500 dark:text-slate-400">
+      <p className="p-6 text-center text-sm text-muted-foreground">
         {t("accessControl.noDevices")}
       </p>
     );
@@ -65,7 +65,7 @@ export const DeviceTable: React.FC<DeviceTableProps> = ({
   return (
     <table className="w-full text-sm">
       <thead>
-        <tr className="border-b border-slate-100 text-left text-xs font-semibold uppercase text-slate-500 dark:border-slate-800 dark:text-slate-400">
+        <tr className="border-b border-slate-100 text-left text-xs font-semibold uppercase text-muted-foreground dark:border-slate-800">
           <th className="py-2 pr-4">{t("accessControl.deviceName")}</th>
           <th className="py-2 pr-4">{t("accessControl.deviceLocation")}</th>
           <th className="py-2 pr-4">{t("accessControl.deviceStatus")}</th>
@@ -76,16 +76,16 @@ export const DeviceTable: React.FC<DeviceTableProps> = ({
       <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
         {devices.map((device) => (
           <tr key={device.id}>
-            <td className="py-3 pr-4 font-semibold text-slate-900 dark:text-white">
+            <td className="py-3 pr-4 font-semibold text-foreground">
               {device.name}
             </td>
-            <td className="py-3 pr-4 text-slate-500 dark:text-slate-400">
+            <td className="py-3 pr-4 text-muted-foreground">
               {device.location || "-"}
             </td>
             <td className="py-3 pr-4">
               <StatusBadge status={device.status} />
             </td>
-            <td className="py-3 pr-4 text-slate-500 dark:text-slate-400">
+            <td className="py-3 pr-4 text-muted-foreground">
               {device.last_seen_at ? new Date(device.last_seen_at).toLocaleString() : "-"}
             </td>
             <td className="py-3 pr-4">
@@ -100,7 +100,7 @@ export const DeviceTable: React.FC<DeviceTableProps> = ({
                 {t("accessControl.regenerateKey")}
               </Button>
               {revealedKey?.deviceId === device.id && (
-                <div className="mt-2 rounded-md border border-indigo-200 bg-indigo-50 p-2 text-xs font-mono text-indigo-700 dark:border-indigo-900/50 dark:bg-indigo-950/40 dark:text-indigo-300 break-all">
+                <div className="mt-2 rounded-md border border-border bg-accent p-2 text-xs font-mono text-primary-text break-all">
                   {revealedKey.key}
                 </div>
               )}

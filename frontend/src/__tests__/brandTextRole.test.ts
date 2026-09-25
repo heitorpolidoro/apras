@@ -424,6 +424,60 @@ export const GRAPHICAL_PRIMARY_SITES: readonly GraphicalPrimarySite[] = [
     element: "the movement-history `<Button>` (`hover:text-primary`)",
     why: ICON_WRAPPER,
   },
+  // APRAS-83's ten new graphical sites — nine `text-indigo-*` icons and one
+  // `text-emerald-600` control glyph, all migrated to the brand token by §1k's
+  // question. A pure append, exactly as this file's header anticipates: a
+  // sibling of APRAS-77 can only add to the set.
+  {
+    file: "features/finance/components/CashBalanceCard.tsx",
+    element: "the `<Wallet />` inside the balance tile's `bg-accent` square",
+    why: ICON_ONLY,
+  },
+  {
+    file: "features/finance/components/CategoryTransactionDrilldown.tsx",
+    element: "the view-invoice `<button>` whose only child is `<FileText />`",
+    why: ICON_WRAPPER,
+  },
+  {
+    file: "features/finance/components/FinanceDashboardPage.tsx",
+    element: "the `<Wallet />` in the page-header card title",
+    why: ICON_ONLY,
+  },
+  {
+    file: "features/finance/components/InvoicePreviewModal.tsx",
+    element: "the `<FileText />` in the invoice-preview modal header",
+    why: ICON_ONLY,
+  },
+  {
+    file: "features/purchase-management/components/QuoteComparisonTable.tsx",
+    element: "the `<Award />` inside the choose-quote ghost `<Button>`",
+    why: ICON_ONLY,
+  },
+  {
+    file: "features/access-control/components/AccessControlPage.tsx",
+    element: "the `<ScanFace />` in the page-header `<h1>`",
+    why: ICON_ONLY,
+  },
+  {
+    file: "features/access-control/components/FacialTemplateSyncPanel.tsx",
+    element: "the `<ScanFace />` in the sync-panel `<h2>`",
+    why: ICON_ONLY,
+  },
+  {
+    file: "features/access-control/components/GateMonitorPage.tsx",
+    element: "the `<Radio />` in the page-header `<h1>`",
+    why: ICON_ONLY,
+  },
+  {
+    file: "features/access-control/components/GateMonitorPage.tsx",
+    element: "the per-device `<Icon />` in a gate chip",
+    why: ICON_ONLY,
+  },
+  {
+    file: "features/access-control/components/RegisterDeviceModal.tsx",
+    element: "the `<ScanFace />` in the register-device modal header",
+    why: ICON_ONLY,
+  },
 ];
 
 /** The declared entries, counted per file, for the equivalence below. */

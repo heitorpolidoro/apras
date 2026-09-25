@@ -73,9 +73,9 @@ export const SelectQuoteModal: React.FC<SelectQuoteModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-lg w-full overflow-hidden">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900">
+      <div className="bg-card rounded-xl shadow-xl max-w-lg w-full overflow-hidden">
+        <div className="flex items-center justify-between p-6 border-b border-border">
+          <h2 className="text-xl font-bold text-foreground">
             {t("purchases.decision.title", "Escolher Orçamento")}
           </h2>
           <Button variant="ghost" size="sm" onClick={onClose} aria-label="close">
@@ -90,18 +90,18 @@ export const SelectQuoteModal: React.FC<SelectQuoteModalProps> = ({
             </div>
           )}
 
-          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-            <p className="text-sm font-semibold text-gray-900">
+          <div className="rounded-lg border border-border bg-muted p-4">
+            <p className="text-sm font-semibold text-foreground">
               {quote.supplier_name}
             </p>
-            <p className="text-xs text-gray-600 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               {t("purchases.items.coverage", {
                 quoted: quote.quoted_item_count,
                 total: requestItemCount,
                 defaultValue: "Cobertura: {{quoted}} de {{total}} itens",
               })}{" "}
               ·{" "}
-              <span className="font-semibold text-gray-900">
+              <span className="font-semibold text-foreground">
                 {formatCurrency(quote.total_price)}
               </span>
             </p>
@@ -194,7 +194,7 @@ export const SelectQuoteModal: React.FC<SelectQuoteModalProps> = ({
             )}
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
             <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
               {t("purchases.actions.cancel", "Cancelar")}
             </Button>

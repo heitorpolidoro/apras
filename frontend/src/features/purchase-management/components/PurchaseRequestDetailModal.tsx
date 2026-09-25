@@ -79,14 +79,14 @@ export const PurchaseRequestDetailModal: React.FC<
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[92vh] overflow-y-auto">
-        <div className="flex items-start justify-between p-6 border-b border-gray-200">
+      <div className="bg-card rounded-xl shadow-xl max-w-4xl w-full max-h-[92vh] overflow-y-auto">
+        <div className="flex items-start justify-between p-6 border-b border-border">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">
+            <h2 className="text-xl font-bold text-foreground">
               {detail?.title ?? t("purchases.detail.title", "Pedido de Compra")}
             </h2>
             {detail && (
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 {t("purchases.requestedBy", "Aberto por")}:{" "}
                 {detail.requested_by_name ?? "—"} •{" "}
                 {formatDateTime(detail.created_at)}
@@ -114,7 +114,7 @@ export const PurchaseRequestDetailModal: React.FC<
         </div>
 
         {isLoading && !detail && (
-          <div className="p-6 text-sm text-gray-500">
+          <div className="p-6 text-sm text-muted-foreground">
             {t("purchases.loading", "Carregando...")}
           </div>
         )}
@@ -160,7 +160,7 @@ export const PurchaseRequestDetailModal: React.FC<
 
             <section>
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-bold text-gray-900">
+                <h3 className="text-sm font-bold text-foreground">
                   {t("purchases.detail.quotes", "Orçamentos")} ({detail.quotes.length})
                 </h3>
                 {quotesEditable && (
@@ -178,7 +178,7 @@ export const PurchaseRequestDetailModal: React.FC<
               </div>
 
               {!quotesEditable && (
-                <p className="text-xs text-gray-500 mb-3">
+                <p className="text-xs text-muted-foreground mb-3">
                   {t(
                     "purchases.quote.frozen",
                     "Os orçamentos deste pedido estão congelados.",
@@ -187,7 +187,7 @@ export const PurchaseRequestDetailModal: React.FC<
               )}
 
               {detail.quotes.length === 0 ? (
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-muted-foreground">
                   {t("purchases.quote.noQuotes", "Nenhum orçamento registrado neste pedido.")}
                 </p>
               ) : (
@@ -224,13 +224,13 @@ export const PurchaseRequestDetailModal: React.FC<
               )}
             </section>
 
-            <section className="border-t border-gray-200 pt-4">
-              <h3 className="text-sm font-bold text-gray-900 mb-2">
+            <section className="border-t border-border pt-4">
+              <h3 className="text-sm font-bold text-foreground mb-2">
                 {t("purchases.decision.panelTitle", "Decisão registrada")}
               </h3>
 
               {!detail.current_decision ? (
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-muted-foreground">
                   {t("purchases.decision.noDecision", "Nenhum orçamento escolhido até agora.")}
                 </p>
               ) : (
@@ -268,7 +268,7 @@ export const PurchaseRequestDetailModal: React.FC<
                         <div
                           key={decision.id}
                           data-testid={`decision-row-${decision.id}`}
-                          className="rounded-lg border border-gray-200 bg-gray-50 p-3"
+                          className="rounded-lg border border-border bg-muted p-3"
                         >
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-xs font-semibold text-gray-700">
@@ -282,7 +282,7 @@ export const PurchaseRequestDetailModal: React.FC<
                           <p className="text-sm text-gray-700">
                             {decision.justification}
                           </p>
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-muted-foreground mt-1">
                             {t("purchases.decision.decidedBy", "Decidido por")}:{" "}
                             {decision.decided_by_name ?? "—"} •{" "}
                             {formatDateTime(decision.decided_at)}
@@ -296,7 +296,7 @@ export const PurchaseRequestDetailModal: React.FC<
           </div>
         )}
 
-        <div className="flex justify-end p-6 border-t border-gray-200">
+        <div className="flex justify-end p-6 border-t border-border">
           <Button variant="outline" onClick={onClose}>
             {t("purchases.actions.close", "Fechar")}
           </Button>

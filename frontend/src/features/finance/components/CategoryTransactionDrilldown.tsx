@@ -21,7 +21,7 @@ export const CategoryTransactionDrilldown: React.FC<
 
   if (isLoading) {
     return (
-      <p className="text-sm text-slate-500 dark:text-slate-400 py-3">
+      <p className="text-sm text-muted-foreground py-3">
         {t("common.loading", "Carregando...")}
       </p>
     );
@@ -31,7 +31,7 @@ export const CategoryTransactionDrilldown: React.FC<
 
   if (transactions.length === 0) {
     return (
-      <p className="text-sm text-slate-500 dark:text-slate-400 py-3">
+      <p className="text-sm text-muted-foreground py-3">
         {t("finance.drilldown.empty", "Nenhuma transação neste período.")}
       </p>
     );
@@ -41,7 +41,7 @@ export const CategoryTransactionDrilldown: React.FC<
     <>
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          <tr className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             <th className="py-1.5">{t("finance.drilldown.date", "Data")}</th>
             <th className="py-1.5">
               {t("finance.drilldown.description", "Descrição")}
@@ -66,7 +66,7 @@ export const CategoryTransactionDrilldown: React.FC<
                     type="button"
                     aria-label={t("finance.drilldown.viewInvoice", "Ver nota fiscal")}
                     onClick={() => setPreviewUrl(txn.invoice_file_url as string)}
-                    className="inline-flex items-center justify-center p-1.5 rounded-md text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950 transition-colors"
+                    className="inline-flex items-center justify-center p-1.5 rounded-md text-primary hover:bg-accent transition-colors"
                   >
                     <FileText className="h-4 w-4" />
                   </button>

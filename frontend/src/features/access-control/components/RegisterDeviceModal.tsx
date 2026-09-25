@@ -47,18 +47,18 @@ export const RegisterDeviceModal: React.FC<RegisterDeviceModalProps> = ({
       data-testid="register-device-modal"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
     >
-      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-900">
+      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl">
         <div className="flex items-center justify-between border-b border-slate-100 pb-4 dark:border-slate-800">
           <div className="flex items-center gap-2">
-            <ScanFace className="size-5 text-indigo-600 dark:text-indigo-400" />
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+            <ScanFace className="size-5 text-primary" />
+            <h2 className="text-lg font-bold text-foreground">
               {t("accessControl.registerDevice")}
             </h2>
           </div>
           <button
             onClick={onClose}
             aria-label={t("accessControl.close")}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent"
           >
             <X className="size-5" />
           </button>
@@ -79,7 +79,7 @@ export const RegisterDeviceModal: React.FC<RegisterDeviceModalProps> = ({
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm bg-white dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-white"
+              className="w-full rounded-md border border-input px-3 py-2 text-sm bg-card text-foreground"
             />
           </div>
           <div>
@@ -90,7 +90,7 @@ export const RegisterDeviceModal: React.FC<RegisterDeviceModalProps> = ({
               type="text"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm bg-white dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-white"
+              className="w-full rounded-md border border-input px-3 py-2 text-sm bg-card text-foreground"
             />
           </div>
 

@@ -895,3 +895,216 @@ the two directories. The two halves close independently: 447 non-`dark:` =
 distinct `(file, class)` pairs — 101 in `project-management`, 99 in
 `asset-management` — which is the number of entries appended to
 `themeTokenMigration.exceptions.json`.
+
+## APRAS-83 — `finance`, `purchase-management` and `access-control`
+
+Child 6 of 8. Three directories, because the operator scoped this child that
+way: `frontend/src/features/finance/components` (ten files),
+`frontend/src/features/purchase-management/components` (six) and
+`frontend/src/features/access-control/components` (six).
+
+| task | file | line | class | code | why |
+| --- | --- | --- | --- | --- | --- |
+| APRAS-83 | frontend/src/features/access-control/components/AccessEventFeed.tsx | 22 | dark:divide-slate-800/80 | GAP-BORDER-100 | dark sibling of the kept row divider; it stays with its base |
+| APRAS-83 | frontend/src/features/access-control/components/AccessEventFeed.tsx | 22 | divide-slate-100 | GAP-BORDER-100 | row divider at the 100 step, below the weight the border token carries; migrating it would thicken it |
+| APRAS-83 | frontend/src/features/access-control/components/AccessEventFeed.tsx | 27 | text-emerald-500 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/access-control/components/AccessEventFeed.tsx | 29 | text-red-500 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/access-control/components/AccessEventFeed.tsx | 47 | bg-emerald-100 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/access-control/components/AccessEventFeed.tsx | 47 | dark:bg-emerald-950/50 | GAP-TINT | dark sibling of the kept status colour; it stays with its base |
+| APRAS-83 | frontend/src/features/access-control/components/AccessEventFeed.tsx | 47 | dark:text-emerald-400 | GAP-TINT | dark sibling of the kept status colour; it stays with its base |
+| APRAS-83 | frontend/src/features/access-control/components/AccessEventFeed.tsx | 47 | text-emerald-700 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/access-control/components/AccessEventFeed.tsx | 48 | bg-red-100 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/access-control/components/AccessEventFeed.tsx | 48 | dark:bg-red-950/50 | GAP-TINT | dark sibling of the kept status colour; it stays with its base |
+| APRAS-83 | frontend/src/features/access-control/components/AccessEventFeed.tsx | 48 | dark:text-red-400 | GAP-TINT | dark sibling of the kept status colour; it stays with its base |
+| APRAS-83 | frontend/src/features/access-control/components/AccessEventFeed.tsx | 48 | text-red-700 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/access-control/components/DeviceTable.tsx | 18 | bg-emerald-100 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/access-control/components/DeviceTable.tsx | 18 | dark:bg-emerald-950/50 | GAP-TINT | dark sibling of the kept status colour; it stays with its base |
+| APRAS-83 | frontend/src/features/access-control/components/DeviceTable.tsx | 18 | dark:text-emerald-400 | GAP-TINT | dark sibling of the kept status colour; it stays with its base |
+| APRAS-83 | frontend/src/features/access-control/components/DeviceTable.tsx | 18 | text-emerald-700 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/access-control/components/DeviceTable.tsx | 22 | bg-slate-100 | GAP-TINT | kept because its ternary partner is a status colour; a set migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/access-control/components/DeviceTable.tsx | 22 | dark:bg-slate-800 | GAP-TINT | kept because its ternary partner is a status colour; a set migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/access-control/components/DeviceTable.tsx | 22 | dark:text-slate-400 | GAP-TINT | kept because its ternary partner is a status colour; a set migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/access-control/components/DeviceTable.tsx | 22 | text-slate-600 | GAP-TINT | kept because its ternary partner is a status colour; a set migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/access-control/components/DeviceTable.tsx | 26 | bg-amber-100 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/access-control/components/DeviceTable.tsx | 26 | dark:bg-amber-950/50 | GAP-NO-TOKEN | dark sibling of the kept status colour; it stays with its base |
+| APRAS-83 | frontend/src/features/access-control/components/DeviceTable.tsx | 26 | dark:text-amber-400 | GAP-NO-TOKEN | dark sibling of the kept status colour; it stays with its base |
+| APRAS-83 | frontend/src/features/access-control/components/DeviceTable.tsx | 26 | text-amber-700 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/access-control/components/DeviceTable.tsx | 68 | border-slate-100 | GAP-BORDER-100 | hairline at the 100 step, below the weight the border token carries; migrating it would thicken the rule |
+| APRAS-83 | frontend/src/features/access-control/components/DeviceTable.tsx | 68 | dark:border-slate-800 | GAP-BORDER-100 | dark sibling of the kept hairline; it stays with its base |
+| APRAS-83 | frontend/src/features/access-control/components/DeviceTable.tsx | 76 | dark:divide-slate-800/80 | GAP-BORDER-100 | dark sibling of the kept row divider; it stays with its base |
+| APRAS-83 | frontend/src/features/access-control/components/DeviceTable.tsx | 76 | divide-slate-100 | GAP-BORDER-100 | row divider at the 100 step, below the weight the border token carries; migrating it would thicken it |
+| APRAS-83 | frontend/src/features/access-control/components/FacialTemplateSyncPanel.tsx | 8 | bg-emerald-100 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/access-control/components/FacialTemplateSyncPanel.tsx | 8 | dark:bg-emerald-950/50 | GAP-TINT | dark sibling of the kept status colour; it stays with its base |
+| APRAS-83 | frontend/src/features/access-control/components/FacialTemplateSyncPanel.tsx | 8 | dark:text-emerald-400 | GAP-TINT | dark sibling of the kept status colour; it stays with its base |
+| APRAS-83 | frontend/src/features/access-control/components/FacialTemplateSyncPanel.tsx | 8 | text-emerald-700 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/access-control/components/FacialTemplateSyncPanel.tsx | 9 | bg-amber-100 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/access-control/components/FacialTemplateSyncPanel.tsx | 9 | dark:bg-amber-950/50 | GAP-NO-TOKEN | dark sibling of the kept status colour; it stays with its base |
+| APRAS-83 | frontend/src/features/access-control/components/FacialTemplateSyncPanel.tsx | 9 | dark:text-amber-400 | GAP-NO-TOKEN | dark sibling of the kept status colour; it stays with its base |
+| APRAS-83 | frontend/src/features/access-control/components/FacialTemplateSyncPanel.tsx | 9 | text-amber-700 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/access-control/components/FacialTemplateSyncPanel.tsx | 10 | bg-red-100 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/access-control/components/FacialTemplateSyncPanel.tsx | 10 | dark:bg-red-950/50 | GAP-TINT | dark sibling of the kept status colour; it stays with its base |
+| APRAS-83 | frontend/src/features/access-control/components/FacialTemplateSyncPanel.tsx | 10 | dark:text-red-400 | GAP-TINT | dark sibling of the kept status colour; it stays with its base |
+| APRAS-83 | frontend/src/features/access-control/components/FacialTemplateSyncPanel.tsx | 10 | text-red-700 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/access-control/components/FacialTemplateSyncPanel.tsx | 58 | bg-red-50 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/access-control/components/FacialTemplateSyncPanel.tsx | 58 | border-red-200 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/access-control/components/FacialTemplateSyncPanel.tsx | 58 | dark:bg-red-950/50 | GAP-TINT | dark sibling of the kept status colour; it stays with its base |
+| APRAS-83 | frontend/src/features/access-control/components/FacialTemplateSyncPanel.tsx | 58 | dark:border-red-900/50 | GAP-TINT | dark sibling of the kept status colour; it stays with its base |
+| APRAS-83 | frontend/src/features/access-control/components/FacialTemplateSyncPanel.tsx | 58 | dark:text-red-400 | GAP-TINT | dark sibling of the kept status colour; it stays with its base |
+| APRAS-83 | frontend/src/features/access-control/components/FacialTemplateSyncPanel.tsx | 58 | text-red-700 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/access-control/components/FacialTemplateSyncPanel.tsx | 64 | border-slate-100 | GAP-BORDER-100 | hairline at the 100 step, below the weight the border token carries; migrating it would thicken the rule |
+| APRAS-83 | frontend/src/features/access-control/components/FacialTemplateSyncPanel.tsx | 64 | dark:border-slate-800 | GAP-BORDER-100 | dark sibling of the kept hairline; it stays with its base |
+| APRAS-83 | frontend/src/features/access-control/components/RegisterDeviceModal.tsx | 48 | bg-black/40 | GAP-OVERLAY | modal scrim; a scrim is an opacity over whatever is behind it, not a surface with a token |
+| APRAS-83 | frontend/src/features/access-control/components/RegisterDeviceModal.tsx | 51 | border-slate-100 | GAP-BORDER-100 | hairline at the 100 step, below the weight the border token carries; migrating it would thicken the rule |
+| APRAS-83 | frontend/src/features/access-control/components/RegisterDeviceModal.tsx | 51 | dark:border-slate-800 | GAP-BORDER-100 | dark sibling of the kept hairline; it stays with its base |
+| APRAS-83 | frontend/src/features/access-control/components/RegisterDeviceModal.tsx | 68 | bg-red-50 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/access-control/components/RegisterDeviceModal.tsx | 68 | border-red-200 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/access-control/components/RegisterDeviceModal.tsx | 68 | dark:bg-red-950/50 | GAP-TINT | dark sibling of the kept status colour; it stays with its base |
+| APRAS-83 | frontend/src/features/access-control/components/RegisterDeviceModal.tsx | 68 | dark:border-red-900/50 | GAP-TINT | dark sibling of the kept status colour; it stays with its base |
+| APRAS-83 | frontend/src/features/access-control/components/RegisterDeviceModal.tsx | 68 | dark:text-red-400 | GAP-TINT | dark sibling of the kept status colour; it stays with its base |
+| APRAS-83 | frontend/src/features/access-control/components/RegisterDeviceModal.tsx | 68 | text-red-700 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/access-control/components/RegisterDeviceModal.tsx | 75 | dark:text-slate-300 | GAP-OUT-OF-BUDGET | dark sibling of kept body text; it stays with its base |
+| APRAS-83 | frontend/src/features/access-control/components/RegisterDeviceModal.tsx | 75 | text-slate-700 | GAP-OUT-OF-BUDGET | body text one step off the foreground token; the move is outside the budget the table publishes |
+| APRAS-83 | frontend/src/features/access-control/components/RegisterDeviceModal.tsx | 86 | dark:text-slate-300 | GAP-OUT-OF-BUDGET | dark sibling of kept body text; it stays with its base |
+| APRAS-83 | frontend/src/features/access-control/components/RegisterDeviceModal.tsx | 86 | text-slate-700 | GAP-OUT-OF-BUDGET | body text one step off the foreground token; the move is outside the budget the table publishes |
+| APRAS-83 | frontend/src/features/access-control/components/RegisterDeviceModal.tsx | 97 | border-slate-100 | GAP-BORDER-100 | hairline at the 100 step, below the weight the border token carries; migrating it would thicken the rule |
+| APRAS-83 | frontend/src/features/access-control/components/RegisterDeviceModal.tsx | 97 | dark:border-slate-800 | GAP-BORDER-100 | dark sibling of the kept hairline; it stays with its base |
+| APRAS-83 | frontend/src/features/finance/components/BudgetLineFormModal.tsx | 53 | border-slate-100 | GAP-BORDER-100 | hairline at the 100 step, below the weight the border token carries; migrating it would thicken the rule |
+| APRAS-83 | frontend/src/features/finance/components/BudgetLineFormModal.tsx | 53 | dark:border-slate-800 | GAP-BORDER-100 | dark sibling of the kept hairline; it stays with its base |
+| APRAS-83 | frontend/src/features/finance/components/BudgetLineFormModal.tsx | 138 | border-slate-100 | GAP-BORDER-100 | hairline at the 100 step, below the weight the border token carries; migrating it would thicken the rule |
+| APRAS-83 | frontend/src/features/finance/components/BudgetLineFormModal.tsx | 138 | dark:border-slate-800 | GAP-BORDER-100 | dark sibling of the kept hairline; it stays with its base |
+| APRAS-83 | frontend/src/features/finance/components/BudgetLineFormModal.tsx | 166 | bg-black/60 | GAP-OVERLAY | modal scrim; a scrim is an opacity over whatever is behind it, not a surface with a token |
+| APRAS-83 | frontend/src/features/finance/components/BudgetVsActualTable.tsx | 73 | border-slate-100 | GAP-BORDER-100 | hairline at the 100 step, below the weight the border token carries; migrating it would thicken the rule |
+| APRAS-83 | frontend/src/features/finance/components/BudgetVsActualTable.tsx | 73 | dark:border-slate-800 | GAP-BORDER-100 | dark sibling of the kept hairline; it stays with its base |
+| APRAS-83 | frontend/src/features/finance/components/BudgetVsActualTable.tsx | 85 | dark:text-slate-200 | GAP-OUT-OF-BUDGET | dark sibling of kept body text; it stays with its base |
+| APRAS-83 | frontend/src/features/finance/components/BudgetVsActualTable.tsx | 85 | text-slate-800 | GAP-OUT-OF-BUDGET | body text one step off the foreground token; the move is outside the budget the table publishes |
+| APRAS-83 | frontend/src/features/finance/components/BudgetVsActualTable.tsx | 99 | text-emerald-600 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/finance/components/BudgetVsActualTable.tsx | 99 | text-red-600 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/finance/components/CashBalanceCard.tsx | 40 | bg-emerald-50 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/finance/components/CashBalanceCard.tsx | 40 | dark:bg-emerald-950 | GAP-TINT | dark sibling of the kept status colour; it stays with its base |
+| APRAS-83 | frontend/src/features/finance/components/CashBalanceCard.tsx | 41 | dark:text-emerald-400 | GAP-TINT | dark sibling of the kept status colour; it stays with its base |
+| APRAS-83 | frontend/src/features/finance/components/CashBalanceCard.tsx | 41 | text-emerald-600 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/finance/components/CashBalanceCard.tsx | 47 | dark:text-emerald-400 | GAP-TINT | dark sibling of the kept status colour; it stays with its base |
+| APRAS-83 | frontend/src/features/finance/components/CashBalanceCard.tsx | 47 | text-emerald-600 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/finance/components/CashBalanceCard.tsx | 54 | bg-red-50 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/finance/components/CashBalanceCard.tsx | 54 | dark:bg-red-950 | GAP-TINT | dark sibling of the kept status colour; it stays with its base |
+| APRAS-83 | frontend/src/features/finance/components/CashBalanceCard.tsx | 55 | dark:text-red-400 | GAP-TINT | dark sibling of the kept status colour; it stays with its base |
+| APRAS-83 | frontend/src/features/finance/components/CashBalanceCard.tsx | 55 | text-red-600 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/finance/components/CashBalanceCard.tsx | 61 | dark:text-red-400 | GAP-TINT | dark sibling of the kept status colour; it stays with its base |
+| APRAS-83 | frontend/src/features/finance/components/CashBalanceCard.tsx | 61 | text-red-600 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/finance/components/CategoryFormModal.tsx | 43 | border-slate-100 | GAP-BORDER-100 | hairline at the 100 step, below the weight the border token carries; migrating it would thicken the rule |
+| APRAS-83 | frontend/src/features/finance/components/CategoryFormModal.tsx | 43 | dark:border-slate-800 | GAP-BORDER-100 | dark sibling of the kept hairline; it stays with its base |
+| APRAS-83 | frontend/src/features/finance/components/CategoryFormModal.tsx | 84 | border-slate-100 | GAP-BORDER-100 | hairline at the 100 step, below the weight the border token carries; migrating it would thicken the rule |
+| APRAS-83 | frontend/src/features/finance/components/CategoryFormModal.tsx | 84 | dark:border-slate-800 | GAP-BORDER-100 | dark sibling of the kept hairline; it stays with its base |
+| APRAS-83 | frontend/src/features/finance/components/CategoryFormModal.tsx | 110 | bg-black/60 | GAP-OVERLAY | modal scrim; a scrim is an opacity over whatever is behind it, not a surface with a token |
+| APRAS-83 | frontend/src/features/finance/components/CategoryTransactionDrilldown.tsx | 59 | border-slate-100 | GAP-BORDER-100 | hairline at the 100 step, below the weight the border token carries; migrating it would thicken the rule |
+| APRAS-83 | frontend/src/features/finance/components/CategoryTransactionDrilldown.tsx | 59 | dark:border-slate-800 | GAP-BORDER-100 | dark sibling of the kept hairline; it stays with its base |
+| APRAS-83 | frontend/src/features/finance/components/CategoryTransactionDrilldown.tsx | 79 | dark:text-slate-700 | GAP-OUT-OF-BUDGET | dark sibling of kept body text; it stays with its base |
+| APRAS-83 | frontend/src/features/finance/components/CategoryTransactionDrilldown.tsx | 79 | text-slate-300 | GAP-OUT-OF-BUDGET | empty-state glyph; no row at the 300 step, and repairing its contrast in place is APRAS-90's work |
+| APRAS-83 | frontend/src/features/finance/components/StatementChart.tsx | 53 | bg-emerald-500 | GAP-SWATCH | credit bar of the statement chart; a chart series encodes its own meaning and must not follow the brand |
+| APRAS-83 | frontend/src/features/finance/components/StatementChart.tsx | 59 | bg-red-500 | GAP-SWATCH | debit bar of the statement chart; a chart series encodes its own meaning and must not follow the brand |
+| APRAS-83 | frontend/src/features/finance/components/StatementTable.tsx | 36 | border-slate-100 | GAP-BORDER-100 | hairline at the 100 step, below the weight the border token carries; migrating it would thicken the rule |
+| APRAS-83 | frontend/src/features/finance/components/StatementTable.tsx | 36 | dark:border-slate-800 | GAP-BORDER-100 | dark sibling of the kept hairline; it stays with its base |
+| APRAS-83 | frontend/src/features/finance/components/StatementTable.tsx | 38 | dark:text-slate-200 | GAP-OUT-OF-BUDGET | dark sibling of kept body text; it stays with its base |
+| APRAS-83 | frontend/src/features/finance/components/StatementTable.tsx | 38 | text-slate-800 | GAP-OUT-OF-BUDGET | body text one step off the foreground token; the move is outside the budget the table publishes |
+| APRAS-83 | frontend/src/features/finance/components/StatementTable.tsx | 41 | dark:text-emerald-400 | GAP-TINT | dark sibling of the kept status colour; it stays with its base |
+| APRAS-83 | frontend/src/features/finance/components/StatementTable.tsx | 41 | text-emerald-600 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/finance/components/StatementTable.tsx | 44 | dark:text-red-400 | GAP-TINT | dark sibling of the kept status colour; it stays with its base |
+| APRAS-83 | frontend/src/features/finance/components/StatementTable.tsx | 44 | text-red-600 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/finance/components/StatementTable.tsx | 47 | dark:text-slate-200 | GAP-OUT-OF-BUDGET | dark sibling of kept body text; it stays with its base |
+| APRAS-83 | frontend/src/features/finance/components/StatementTable.tsx | 47 | text-slate-800 | GAP-OUT-OF-BUDGET | body text one step off the foreground token; the move is outside the budget the table publishes |
+| APRAS-83 | frontend/src/features/finance/components/TransactionFormModal.tsx | 67 | border-slate-100 | GAP-BORDER-100 | hairline at the 100 step, below the weight the border token carries; migrating it would thicken the rule |
+| APRAS-83 | frontend/src/features/finance/components/TransactionFormModal.tsx | 67 | dark:border-slate-800 | GAP-BORDER-100 | dark sibling of the kept hairline; it stays with its base |
+| APRAS-83 | frontend/src/features/finance/components/TransactionFormModal.tsx | 193 | border-slate-100 | GAP-BORDER-100 | hairline at the 100 step, below the weight the border token carries; migrating it would thicken the rule |
+| APRAS-83 | frontend/src/features/finance/components/TransactionFormModal.tsx | 193 | dark:border-slate-800 | GAP-BORDER-100 | dark sibling of the kept hairline; it stays with its base |
+| APRAS-83 | frontend/src/features/finance/components/TransactionFormModal.tsx | 220 | bg-black/60 | GAP-OVERLAY | modal scrim; a scrim is an opacity over whatever is behind it, not a surface with a token |
+| APRAS-83 | frontend/src/features/purchase-management/components/PurchaseRequestDetailModal.tsx | 81 | bg-black/50 | GAP-OVERLAY | modal scrim; a scrim is an opacity over whatever is behind it, not a surface with a token |
+| APRAS-83 | frontend/src/features/purchase-management/components/PurchaseRequestDetailModal.tsx | 126 | text-gray-700 | GAP-OUT-OF-BUDGET | body text one step off the foreground token; the move is outside the budget the table publishes |
+| APRAS-83 | frontend/src/features/purchase-management/components/PurchaseRequestDetailModal.tsx | 129 | text-gray-800 | GAP-OUT-OF-BUDGET | body text one step off the foreground token; the move is outside the budget the table publishes |
+| APRAS-83 | frontend/src/features/purchase-management/components/PurchaseRequestDetailModal.tsx | 136 | bg-amber-50 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/PurchaseRequestDetailModal.tsx | 136 | border-amber-200 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/PurchaseRequestDetailModal.tsx | 137 | text-amber-800 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/PurchaseRequestDetailModal.tsx | 140 | text-amber-900 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/PurchaseRequestDetailModal.tsx | 148 | text-gray-700 | GAP-OUT-OF-BUDGET | body text one step off the foreground token; the move is outside the budget the table publishes |
+| APRAS-83 | frontend/src/features/purchase-management/components/PurchaseRequestDetailModal.tsx | 151 | text-gray-800 | GAP-OUT-OF-BUDGET | body text one step off the foreground token; the move is outside the budget the table publishes |
+| APRAS-83 | frontend/src/features/purchase-management/components/PurchaseRequestDetailModal.tsx | 237 | bg-emerald-50 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/PurchaseRequestDetailModal.tsx | 237 | border-emerald-200 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/PurchaseRequestDetailModal.tsx | 239 | text-emerald-600 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/PurchaseRequestDetailModal.tsx | 240 | text-emerald-900 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/PurchaseRequestDetailModal.tsx | 248 | text-emerald-900 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/PurchaseRequestDetailModal.tsx | 251 | text-emerald-700 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/PurchaseRequestDetailModal.tsx | 261 | text-gray-700 | GAP-OUT-OF-BUDGET | body text one step off the foreground token; the move is outside the budget the table publishes |
+| APRAS-83 | frontend/src/features/purchase-management/components/PurchaseRequestDetailModal.tsx | 274 | text-gray-700 | GAP-OUT-OF-BUDGET | body text one step off the foreground token; the move is outside the budget the table publishes |
+| APRAS-83 | frontend/src/features/purchase-management/components/PurchaseRequestDetailModal.tsx | 282 | text-gray-700 | GAP-OUT-OF-BUDGET | body text one step off the foreground token; the move is outside the budget the table publishes |
+| APRAS-83 | frontend/src/features/purchase-management/components/PurchaseRequestFormModal.tsx | 165 | bg-black/50 | GAP-OVERLAY | modal scrim; a scrim is an opacity over whatever is behind it, not a surface with a token |
+| APRAS-83 | frontend/src/features/purchase-management/components/PurchaseRequestFormModal.tsx | 184 | bg-red-50 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/PurchaseRequestFormModal.tsx | 184 | border-red-200 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/PurchaseRequestFormModal.tsx | 184 | text-red-700 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/PurchaseRequestFormModal.tsx | 192 | text-gray-700 | GAP-OUT-OF-BUDGET | body text one step off the foreground token; the move is outside the budget the table publishes |
+| APRAS-83 | frontend/src/features/purchase-management/components/PurchaseRequestFormModal.tsx | 210 | text-gray-700 | GAP-OUT-OF-BUDGET | body text one step off the foreground token; the move is outside the budget the table publishes |
+| APRAS-83 | frontend/src/features/purchase-management/components/PurchaseRequestFormModal.tsx | 229 | text-gray-700 | GAP-OUT-OF-BUDGET | body text one step off the foreground token; the move is outside the budget the table publishes |
+| APRAS-83 | frontend/src/features/purchase-management/components/PurchaseRequestFormModal.tsx | 281 | bg-amber-50 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/PurchaseRequestFormModal.tsx | 281 | border-amber-200 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/PurchaseRequestFormModal.tsx | 281 | text-amber-800 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/PurchaseRequestFormModal.tsx | 302 | text-gray-800 | GAP-OUT-OF-BUDGET | body text one step off the foreground token; the move is outside the budget the table publishes |
+| APRAS-83 | frontend/src/features/purchase-management/components/PurchaseRequestsPage.tsx | 294 | text-amber-600 | GAP-NO-TOKEN | amber has no row at any scale; adding a warning token is out of this child's scope |
+| APRAS-83 | frontend/src/features/purchase-management/components/PurchaseRequestsPage.tsx | 331 | bg-black/50 | GAP-OVERLAY | modal scrim; a scrim is an opacity over whatever is behind it, not a surface with a token |
+| APRAS-83 | frontend/src/features/purchase-management/components/PurchaseRequestsPage.tsx | 364 | bg-black/50 | GAP-OVERLAY | modal scrim; a scrim is an opacity over whatever is behind it, not a surface with a token |
+| APRAS-83 | frontend/src/features/purchase-management/components/QuoteComparisonTable.tsx | 198 | text-amber-700 | GAP-NO-TOKEN | amber has no row at any scale; adding a warning token is out of this child's scope |
+| APRAS-83 | frontend/src/features/purchase-management/components/QuoteComparisonTable.tsx | 231 | text-sky-700 | GAP-NO-TOKEN | informational note; no sky token exists at any scale, and adding one is out of this child's scope |
+| APRAS-83 | frontend/src/features/purchase-management/components/QuoteComparisonTable.tsx | 337 | text-emerald-700 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/QuoteComparisonTable.tsx | 337 | text-gray-900 | GAP-TINT | kept because its ternary partner is a status colour; a set migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/QuoteComparisonTable.tsx | 386 | bg-red-50 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/QuoteComparisonTable.tsx | 386 | border-red-200 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/QuoteComparisonTable.tsx | 386 | text-red-700 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/QuoteComparisonTable.tsx | 406 | bg-emerald-50/60 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/QuoteComparisonTable.tsx | 430 | border-gray-100 | GAP-BORDER-100 | hairline at the 100 step, below the weight the border token carries; migrating it would thicken the rule |
+| APRAS-83 | frontend/src/features/purchase-management/components/QuoteComparisonTable.tsx | 447 | bg-emerald-50/40 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/QuoteComparisonTable.tsx | 458 | border-gray-100 | GAP-BORDER-100 | hairline at the 100 step, below the weight the border token carries; migrating it would thicken the rule |
+| APRAS-83 | frontend/src/features/purchase-management/components/QuoteComparisonTable.tsx | 466 | bg-emerald-50/40 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/QuoteComparisonTable.tsx | 486 | border-gray-100 | GAP-BORDER-100 | hairline at the 100 step, below the weight the border token carries; migrating it would thicken the rule |
+| APRAS-83 | frontend/src/features/purchase-management/components/QuoteComparisonTable.tsx | 494 | bg-emerald-50/40 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/QuoteComparisonTable.tsx | 527 | bg-emerald-50/40 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/QuoteComparisonTable.tsx | 527 | border-emerald-300 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/QuoteComparisonTable.tsx | 528 | border-gray-200 | GAP-TINT | kept because its ternary partner is a status colour; a set migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/QuoteComparisonTable.tsx | 562 | text-gray-800 | GAP-OUT-OF-BUDGET | body text one step off the foreground token; the move is outside the budget the table publishes |
+| APRAS-83 | frontend/src/features/purchase-management/components/QuoteComparisonTable.tsx | 578 | text-gray-800 | GAP-OUT-OF-BUDGET | body text one step off the foreground token; the move is outside the budget the table publishes |
+| APRAS-83 | frontend/src/features/purchase-management/components/QuoteComparisonTable.tsx | 586 | text-gray-800 | GAP-OUT-OF-BUDGET | body text one step off the foreground token; the move is outside the budget the table publishes |
+| APRAS-83 | frontend/src/features/purchase-management/components/QuoteFormModal.tsx | 265 | bg-black/50 | GAP-OVERLAY | modal scrim; a scrim is an opacity over whatever is behind it, not a surface with a token |
+| APRAS-83 | frontend/src/features/purchase-management/components/QuoteFormModal.tsx | 280 | bg-red-50 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/QuoteFormModal.tsx | 280 | border-red-200 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/QuoteFormModal.tsx | 280 | text-red-700 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/QuoteFormModal.tsx | 288 | text-gray-700 | GAP-OUT-OF-BUDGET | body text one step off the foreground token; the move is outside the budget the table publishes |
+| APRAS-83 | frontend/src/features/purchase-management/components/QuoteFormModal.tsx | 306 | text-gray-700 | GAP-OUT-OF-BUDGET | body text one step off the foreground token; the move is outside the budget the table publishes |
+| APRAS-83 | frontend/src/features/purchase-management/components/QuoteFormModal.tsx | 350 | text-gray-700 | GAP-OUT-OF-BUDGET | body text one step off the foreground token; the move is outside the budget the table publishes |
+| APRAS-83 | frontend/src/features/purchase-management/components/QuoteFormModal.tsx | 396 | text-gray-700 | GAP-OUT-OF-BUDGET | body text one step off the foreground token; the move is outside the budget the table publishes |
+| APRAS-83 | frontend/src/features/purchase-management/components/QuoteFormModal.tsx | 498 | text-gray-700 | GAP-OUT-OF-BUDGET | body text one step off the foreground token; the move is outside the budget the table publishes |
+| APRAS-83 | frontend/src/features/purchase-management/components/QuoteFormModal.tsx | 512 | text-gray-700 | GAP-OUT-OF-BUDGET | body text one step off the foreground token; the move is outside the budget the table publishes |
+| APRAS-83 | frontend/src/features/purchase-management/components/QuoteFormModal.tsx | 553 | text-amber-600 | GAP-NO-TOKEN | amber has no row at any scale; adding a warning token is out of this child's scope |
+| APRAS-83 | frontend/src/features/purchase-management/components/SelectQuoteModal.tsx | 75 | bg-black/50 | GAP-OVERLAY | modal scrim; a scrim is an opacity over whatever is behind it, not a surface with a token |
+| APRAS-83 | frontend/src/features/purchase-management/components/SelectQuoteModal.tsx | 88 | bg-red-50 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/SelectQuoteModal.tsx | 88 | border-red-200 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/SelectQuoteModal.tsx | 88 | text-red-700 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/SelectQuoteModal.tsx | 113 | bg-amber-50 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/SelectQuoteModal.tsx | 113 | border-amber-200 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/SelectQuoteModal.tsx | 116 | text-amber-600 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/SelectQuoteModal.tsx | 117 | text-amber-900 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/SelectQuoteModal.tsx | 140 | bg-amber-50 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/SelectQuoteModal.tsx | 140 | border-amber-200 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/SelectQuoteModal.tsx | 143 | text-amber-600 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/SelectQuoteModal.tsx | 144 | text-amber-900 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/SelectQuoteModal.tsx | 159 | text-amber-700 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-83 | frontend/src/features/purchase-management/components/SelectQuoteModal.tsx | 173 | text-gray-700 | GAP-OUT-OF-BUDGET | body text one step off the foreground token; the move is outside the budget the table publishes |
+| APRAS-83 | frontend/src/features/purchase-management/components/SelectQuoteModal.tsx | 188 | text-amber-600 | GAP-NO-TOKEN | amber has no row at any scale; adding a warning token is out of this child's scope |
+
+**APRAS-83 total — 190 occurrences:** 83 `GAP-TINT`, 33 `GAP-OUT-OF-BUDGET`,
+33 `GAP-BORDER-100`, 29 `GAP-NO-TOKEN`, 10 `GAP-OVERLAY` and 2 `GAP-SWATCH` —
+the first child to use the swatch code, at the two bars of the statement
+chart. No `GAP-NO-SURFACE` and no `GAP-UNLISTED`.
+With the 233 occurrences migrated to a token and the 111 `dark:` siblings
+deleted alongside them (§1g), that accounts for all 534 palette occurrences in
+the three directories. The two halves close independently: 372 non-`dark:` =
+233 + 139, and 162 `dark:` = 111 + 51. Per directory, 49 of the 190 stay in
+`finance`, 78 in `purchase-management` and 63 in `access-control`. The 190
+occupy **145** distinct `(file, class)` pairs — 37 in `finance`, 52 in
+`purchase-management` and 56 in `access-control` — which is the number of
+entries appended to `themeTokenMigration.exceptions.json`.

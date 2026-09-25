@@ -35,9 +35,9 @@ export const FacialTemplateSyncPanel: React.FC = () => {
   };
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-4">
-      <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-        <ScanFace className="size-5 text-indigo-600 dark:text-indigo-400" />
+    <div className="rounded-2xl border border-border bg-card p-5 shadow-sm space-y-4">
+      <h2 className="text-base font-bold text-foreground flex items-center gap-2">
+        <ScanFace className="size-5 text-primary" />
         {t("accessControl.facialTemplateSync")}
       </h2>
 
@@ -47,7 +47,7 @@ export const FacialTemplateSyncPanel: React.FC = () => {
           value={residentId}
           onChange={(e) => setResidentId(e.target.value)}
           placeholder={t("accessControl.residentIdPlaceholder")}
-          className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm bg-white dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-white"
+          className="flex-1 rounded-md border border-input px-3 py-2 text-sm bg-card text-foreground"
         />
         <Button type="submit" variant="outline">
           {t("accessControl.search")}
@@ -61,9 +61,9 @@ export const FacialTemplateSyncPanel: React.FC = () => {
       )}
 
       {searchedId && (
-        <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/40 space-y-3">
+        <div className="rounded-xl border border-slate-100 bg-muted p-4 dark:border-slate-800 space-y-3">
           {isFetching ? (
-            <p className="text-sm text-slate-500 dark:text-slate-400">{t("accessControl.loading")}</p>
+            <p className="text-sm text-muted-foreground">{t("accessControl.loading")}</p>
           ) : template ? (
             <div className="flex items-center justify-between">
               <span
@@ -71,12 +71,12 @@ export const FacialTemplateSyncPanel: React.FC = () => {
               >
                 {t(`accessControl.syncStatus${template.sync_status}`)}
               </span>
-              <span className="text-xs text-slate-500 dark:text-slate-400">
+              <span className="text-xs text-muted-foreground">
                 {template.synced_at ? new Date(template.synced_at).toLocaleString() : ""}
               </span>
             </div>
           ) : (
-            <p className="text-sm text-slate-500 dark:text-slate-400">
+            <p className="text-sm text-muted-foreground">
               {t("accessControl.noTemplateSynced")}
             </p>
           )}

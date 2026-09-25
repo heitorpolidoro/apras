@@ -63,15 +63,15 @@ const TransactionFormInner: React.FC<
   };
 
   return (
-    <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 my-8 overflow-hidden">
+    <div className="relative w-full max-w-lg bg-card rounded-2xl shadow-xl border border-border my-8 overflow-hidden">
       <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800">
-        <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+        <h3 className="text-lg font-bold text-foreground">
           {t("finance.transactionModal.title", "Nova Transação")}
         </h3>
         <button
           type="button"
           onClick={onClose}
-          className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg"
+          className="p-1.5 text-muted-foreground hover:text-muted-foreground rounded-lg"
         >
           <X className="w-5 h-5" />
         </button>
@@ -186,7 +186,7 @@ const TransactionFormInner: React.FC<
             type="file"
             accept="application/pdf"
             onChange={(e) => setInvoiceFile(e.target.files?.[0] ?? null)}
-            className="block w-full text-sm text-slate-600 dark:text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+            className="block w-full text-sm text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-accent file:text-primary-text hover:file:bg-accent"
           />
         </div>
 

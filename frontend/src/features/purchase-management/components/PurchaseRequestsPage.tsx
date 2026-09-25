@@ -145,10 +145,10 @@ export const PurchaseRequestsPage: React.FC = () => {
     <div className="p-8 max-w-7xl mx-auto">
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-black text-gray-900">
+          <h1 className="text-2xl font-black text-foreground">
             {t("purchases.pageTitle", "Cotações de Compra")}
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             {t(
               "purchases.pageSubtitle",
               "Pedidos de compra, orçamentos de fornecedores e a escolha justificada.",
@@ -173,14 +173,14 @@ export const PurchaseRequestsPage: React.FC = () => {
             <div
               key={card.key}
               data-testid={`purchase-summary-${card.key}`}
-              className="rounded-xl border border-gray-200 bg-white p-4 flex items-center gap-3"
+              className="rounded-xl border border-border bg-card p-4 flex items-center gap-3"
             >
               <Icon className="w-5 h-5 text-primary" />
               <div>
-                <p className="text-xs text-gray-500 uppercase font-semibold">
+                <p className="text-xs text-muted-foreground uppercase font-semibold">
                   {card.label}
                 </p>
-                <p className="text-xl font-bold text-gray-900">{card.value}</p>
+                <p className="text-xl font-bold text-foreground">{card.value}</p>
               </div>
             </div>
           );
@@ -196,7 +196,7 @@ export const PurchaseRequestsPage: React.FC = () => {
             className={
               activeTab === tab
                 ? "px-3 py-1.5 rounded-md text-sm font-semibold bg-primary text-primary-foreground"
-                : "px-3 py-1.5 rounded-md text-sm font-semibold text-gray-600 hover:bg-gray-100"
+                : "px-3 py-1.5 rounded-md text-sm font-semibold text-muted-foreground hover:bg-accent"
             }
           >
             {t(`purchases.tabs.${tab}`, tab)}
@@ -205,7 +205,7 @@ export const PurchaseRequestsPage: React.FC = () => {
       </div>
 
       <div className="relative mb-4">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
           className="pl-9"
           value={searchQuery}
@@ -218,9 +218,9 @@ export const PurchaseRequestsPage: React.FC = () => {
       </div>
 
       {isLoading && !listData ? (
-        <p className="text-sm text-gray-500">{t("purchases.loading", "Carregando...")}</p>
+        <p className="text-sm text-muted-foreground">{t("purchases.loading", "Carregando...")}</p>
       ) : listData && listData.items.length === 0 ? (
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted-foreground">
           {t("purchases.noRequestsFound", "Nenhum pedido de compra encontrado.")}
         </p>
       ) : (
@@ -229,23 +229,23 @@ export const PurchaseRequestsPage: React.FC = () => {
             <div
               key={request.id}
               data-testid={`purchase-request-row-${request.id}`}
-              className="rounded-xl border border-gray-200 bg-white p-4 flex items-start justify-between gap-4"
+              className="rounded-xl border border-border bg-card p-4 flex items-start justify-between gap-4"
             >
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-semibold text-gray-900">
+                  <span className="font-semibold text-foreground">
                     {request.title}
                   </span>
                   <Badge variant={STATUS_BADGE_VARIANT[request.status]}>
                     {t(`purchases.status.${request.status}`, request.status)}
                   </Badge>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   {t("purchases.requestedBy", "Aberto por")}:{" "}
                   {request.requested_by_name ?? "—"} •{" "}
                   {formatDateTime(request.created_at)}
                 </p>
-                <p className="text-xs text-gray-600 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   {request.quote_count} {t("purchases.quoteCount", "orçamentos")}
                   {request.lowest_quote_total !== null && (
                     <>
@@ -300,7 +300,7 @@ export const PurchaseRequestsPage: React.FC = () => {
                   title={t("purchases.actions.delete", "Excluir")}
                   onClick={() => setRequestToDelete(request)}
                 >
-                  <Trash2 className="w-4 h-4 text-red-500" />
+                  <Trash2 className="w-4 h-4 text-destructive" />
                 </Button>
               </div>
             </div>
@@ -329,11 +329,11 @@ export const PurchaseRequestsPage: React.FC = () => {
 
       {requestToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
-            <h3 className="text-lg font-bold text-gray-900">
+          <div className="bg-card rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
+            <h3 className="text-lg font-bold text-foreground">
               {t("purchases.deleteConfirmTitle", "Excluir Pedido de Compra")}
             </h3>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-muted-foreground">
               {t(
                 "purchases.deleteConfirmMessage",
                 "Tem certeza de que deseja excluir o pedido '{{title}}'? Os orçamentos e as justificativas registradas também serão removidos.",
@@ -362,11 +362,11 @@ export const PurchaseRequestsPage: React.FC = () => {
 
       {requestToCancel && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
-            <h3 className="text-lg font-bold text-gray-900">
+          <div className="bg-card rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
+            <h3 className="text-lg font-bold text-foreground">
               {t("purchases.cancelConfirmTitle", "Cancelar Pedido de Compra")}
             </h3>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-muted-foreground">
               {t(
                 "purchases.cancelConfirmMessage",
                 "Tem certeza de que deseja cancelar o pedido '{{title}}'? Não será possível reabri-lo.",

@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>APRAS-83 — Decision mock: page shell background on the Finance dashboard</title>
+<style>
+  /* Standalone: no CDN, no network. All CSS inline, all colours real oklch(). */
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: oklch(0.14 0.01 160);
+    background: #ffffff;
+  }
+
+  /* ---- The three candidate page-shell colours ------------------------- */
+  /* TODAY   bg-slate-50   oklch(98.4% 0.003 247.858)   node_modules/tailwindcss/theme.css:214 */
+  /* OPT A   bg-background oklch(0.99 0 0)              frontend/src/index.css:33  (fixed constant) */
+  /* OPT B   bg-muted      oklch(0.96 0.01 <brand hue>) frontend/src/index.css:55  (placed at brand hue) */
+  :root {
+    --brand-hue: 160;
+    --shell: oklch(98.4% 0.003 247.858);
+    --card: oklch(1 0 0);                       /* --card, fixed constant */
+    --border: oklch(0.92 0.01 var(--brand-hue));/* --border, at brand hue */
+    --muted-fg: oklch(0.53 0.02 var(--brand-hue));
+    --fg: oklch(0.14 0.01 var(--brand-hue));
+    --primary: oklch(0.55 0.15 var(--brand-hue));
+    --accent-soft: oklch(0.96 0.03 var(--brand-hue));
+  }
+
+  header.doc {
+    padding: 20px 24px;
+    border-bottom: 1px solid oklch(0.92 0 0);
+  }
+  header.doc h1 { margin: 0 0 4px; font-size: 18px; }
+  header.doc p { margin: 0; font-size: 13px; color: oklch(0.45 0 0); max-width: 90ch; }
+
+  .controls {
+    display: flex; flex-wrap: wrap; gap: 28px;
+    padding: 16px 24px;
+    border-bottom: 1px solid oklch(0.92 0 0);
+    position: sticky; top: 0; background: #fff; z-index: 10;
+  }
+  .control-group h3 {
+    margin: 0 0 8px; font-size: 11px; letter-spacing: .06em;
+    text-transform: uppercase; color: oklch(0.45 0 0);
+  }
+  .seg { display: flex; gap: 6px; flex-wrap: wrap; }
+  .seg button {
+    font: inherit; font-size: 13px; cursor: pointer;
+    padding: 7px 12px; border-radius: 8px;
+    border: 1px solid oklch(0.85 0 0); background: #fff;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .seg button[aria-pressed="true"] {
+    border-color: oklch(0.45 0 0); background: oklch(0.96 0 0); font-weight: 600;
+  }
+  .swatch { width: 14px; height: 14px; border-radius: 4px; border: 1px solid oklch(0.82 0 0); }
+
+  .readout {
+    padding: 10px 24px; font-size: 12px; color: oklch(0.42 0 0);
+    border-bottom: 1px solid oklch(0.92 0 0); font-variant-numeric: tabular-nums;
+  }
+  .readout code { font-size: 12px; background: oklch(0.96 0 0); padding: 1px 5px; border-radius: 4px; }
+  .readout .row { margin: 3px 0; }
+
+  /* ---- The reduced FinanceDashboardPage ------------------------------- */
+  /* Structure mirrors frontend/src/features/finance/components/FinanceDashboardPage.tsx:47-141 */
+  .page {
+    background: var(--shell);           /* <- the element under decision (line 48) */
+    padding: 24px;
+    display: flex; flex-direction: column; gap: 24px;   /* space-y-6 */
+    min-height: 70vh;
+    transition: background-color .18s ease;
+  }
+  .surface {                             /* every bg-white card on the page */
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .page-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 16px; border-radius: 16px; padding: 22px;
+    box-shadow: 0 1px 2px oklch(0 0 0 / 0.05);
+  }
+  .page-header h2 { margin: 0; font-size: 20px; display: flex; align-items: center; gap: 9px; }
+  .page-header p { margin: 5px 0 0; font-size: 13px; color: var(--muted-fg); max-width: 60ch; }
+  .actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .btn-outline {
+    font: inherit; font-size: 13px; padding: 6px 11px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--card); color: var(--fg);
+  }
+  .btn-primary {
+    font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 8px;
+    border: none; background: var(--primary); color: #fff; font-weight: 600;
+  }
+  select.year {
+    font: inherit; font-size: 13px; padding: 6px 9px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--card); color: var(--fg);
+  }
+
+  .balance-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .balance-card { display: flex; align-items: center; gap: 14px; }
+  .icon-tile {
+    width: 44px; height: 44px; border-radius: 10px; flex: 0 0 auto;
+    background: var(--accent-soft); color: var(--primary);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .kicker {
+    font-size: 11px; font-weight: 700; letter-spacing: .05em;
+    text-transform: uppercase; color: var(--muted-fg); margin: 0;
+  }
+  .amount { margin: 3px 0 0; font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .pos { color: oklch(0.55 0.13 150); }
+  .neg { color: oklch(0.55 0.19 25); }
+
+  .card-title { margin: 0 0 14px; font-size: 15px; font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+  thead th {
+    text-align: left; font-size: 11px; letter-spacing: .05em; text-transform: uppercase;
+    color: var(--muted-fg); padding: 6px 0; border-bottom: 1px solid var(--border);
+  }
+  tbody td { padding: 7px 0; border-bottom: 1px solid oklch(0.95 0.005 var(--brand-hue)); }
+  tbody tr:last-child td { border-bottom: 0; }
+  .num { text-align: right; }
+  .badge {
+    display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px;
+    border-radius: 999px; background: var(--accent-soft); color: var(--primary);
+  }
+  .badge.over { background: oklch(0.94 0.04 25); color: oklch(0.5 0.17 25); }
+
+  /* statement mini-chart, stands in for StatementChart */
+  .chart { display: flex; align-items: flex-end; gap: 10px; height: 110px; margin-bottom: 16px; }
+  .chart .month { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; }
+  .chart .bars { display: flex; gap: 3px; align-items: flex-end; height: 92px; }
+  .chart .bar { flex: 1; border-radius: 3px 3px 0 0; }
+  .chart .bar.in { background: oklch(0.72 0.12 150); }
+  .chart .bar.out { background: oklch(0.72 0.14 25); }
+  .chart .label { font-size: 10px; color: var(--muted-fg); text-align: center; }
+
+  .note {
+    margin: 0; padding: 18px 24px; font-size: 13.5px; line-height: 1.6;
+    border-top: 1px solid oklch(0.92 0 0); max-width: 92ch;
+  }
+  .note h3 { margin: 0 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: oklch(0.45 0 0); }
+  .note.pt { background: oklch(0.975 0.01 90); border-left: 4px solid oklch(0.75 0.11 90); }
+  .note.rec { background: oklch(0.975 0.012 240); border-left: 4px solid oklch(0.7 0.1 240); }
+  .sidebyside { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  .sidebyside > div { padding: 0; }
+  .ab-label {
+    font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+    padding: 8px 24px; color: oklch(0.35 0 0); background: oklch(0.97 0 0);
+    border-bottom: 1px solid oklch(0.92 0 0); border-top: 1px solid oklch(0.92 0 0);
+  }
+  .mini { padding: 20px; display: flex; flex-direction: column; gap: 14px; min-height: 260px; }
+  .mini .surface { padding: 14px; }
+</style>
+</head>
+<body>
+
+<header class="doc">
+  <h1>APRAS-83 — page shell background on the Finance dashboard</h1>
+  <p>
+    <code>FinanceDashboardPage.tsx:48</code> is the page root. It is
+    <code>min-h-screen bg-slate-50 dark:bg-slate-950 …</code> today. This mock renders the real
+    (reduced) screen so the background choice can be judged by looking. Everything below uses the
+    literal <code>oklch()</code> values shipped in the repo; nothing is approximated.
+    <strong>Answer with one letter: A or B.</strong>
+  </p>
+</header>
+
+<div class="controls">
+  <div class="control-group">
+    <h3>Page shell (the element under decision)</h3>
+    <div class="seg" id="shell-seg">
+      <button data-shell="today" aria-pressed="false">
+        <span class="swatch" style="background: oklch(98.4% 0.003 247.858)"></span>TODAY — bg-slate-50
+      </button>
+      <button data-shell="a" aria-pressed="false">
+        <span class="swatch" id="sw-a" style="background: oklch(0.99 0 0)"></span>OPTION A — bg-background
+      </button>
+      <button data-shell="b" aria-pressed="true">
+        <span class="swatch" id="sw-b"></span>OPTION B — bg-muted (spec's current choice)
+      </button>
+    </div>
+  </div>
+
+  <div class="control-group">
+    <h3>Tenant brand hue (simple mode)</h3>
+    <div class="seg" id="hue-seg">
+      <button data-hue="160" aria-pressed="true"><span class="swatch" style="background: oklch(0.55 0.15 160)"></span>Verde (padrão) · h 160</button>
+      <button data-hue="25" aria-pressed="false"><span class="swatch" style="background: oklch(0.55 0.18 25)"></span>Vermelho · h 25</button>
+      <button data-hue="255" aria-pressed="false"><span class="swatch" style="background: oklch(0.55 0.17 255)"></span>Azul · h 255</button>
+      <button data-hue="310" aria-pressed="false"><span class="swatch" style="background: oklch(0.55 0.19 310)"></span>Roxo · h 310</button>
+    </div>
+  </div>
+</div>
+
+<div class="readout" id="readout"></div>
+
+<!-- ===================== THE SCREEN ===================== -->
+<main class="page" id="page">
+
+  <!-- page header card — FinanceDashboardPage.tsx:49-120 -->
+  <div class="surface page-header">
+    <div>
+      <h2>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary)">
+          <path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/>
+          <path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/>
+        </svg>
+        Área Financeira
+      </h2>
+      <p>Saldo de caixa, extrato de entradas/saídas e execução orçamentária da associação.</p>
+    </div>
+    <div class="actions">
+      <select class="year"><option>2026</option></select>
+      <button class="btn-outline">Nova Categoria</button>
+      <button class="btn-outline">Novo Orçamento</button>
+      <button class="btn-primary">+ Nova Transação</button>
+    </div>
+  </div>
+
+  <!-- CashBalanceCard.tsx:21-… — three bg-white tiles in a grid -->
+  <div class="balance-grid">
+    <div class="surface balance-card">
+      <div class="icon-tile">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 7V4H5a2 2 0 0 0 0 4h15v9a1 1 0 0 1-1 1H5a2 2 0 0 1-2-2V5"/></svg>
+      </div>
+      <div><p class="kicker">Saldo Atual</p><p class="amount">R$ 184.320,55</p></div>
+    </div>
+    <div class="surface balance-card">
+      <div class="icon-tile">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 16V8m-3 3 3-3 3 3"/></svg>
+      </div>
+      <div><p class="kicker">Entradas no Ano</p><p class="amount pos">R$ 612.900,00</p></div>
+    </div>
+    <div class="surface balance-card">
+      <div class="icon-tile">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v8m-3-3 3 3 3-3"/></svg>
+      </div>
+      <div><p class="kicker">Saídas no Ano</p><p class="amount neg">R$ 428.579,45</p></div>
+    </div>
+  </div>
+
+  <!-- statement card — FinanceDashboardPage.tsx:124-130 (StatementChart + StatementTable) -->
+  <div class="surface">
+    <h3 class="card-title">Extrato de Entradas e Saídas</h3>
+    <div class="chart" id="chart"></div>
+    <table>
+      <thead>
+        <tr><th>Mês</th><th class="num">Entradas</th><th class="num">Saídas</th><th class="num">Líquido</th><th class="num">Saldo Acumulado</th></tr>
+      </thead>
+      <tbody id="statement-body"></tbody>
+    </table>
+  </div>
+
+  <!-- budget card — FinanceDashboardPage.tsx:132-141 (BudgetVsActualTable) -->
+  <div class="surface">
+    <h3 class="card-title">Orçado vs. Executado</h3>
+    <table>
+      <thead>
+        <tr><th>Categoria</th><th class="num">Orçado</th><th class="num">Executado</th><th class="num">Variação</th><th class="num">Status</th></tr>
+      </thead>
+      <tbody id="budget-body"></tbody>
+    </table>
+  </div>
+</main>
+<!-- =================== /THE SCREEN ====================== -->
+
+<div class="ab-label">Side by side — A (bg-background) vs B (bg-muted), at the brand hue selected above</div>
+<div class="sidebyside">
+  <div>
+    <div class="mini" id="mini-a" style="background: oklch(0.99 0 0)">
+      <div class="surface"><p class="kicker">Saldo Atual</p><p class="amount">R$ 184.320,55</p></div>
+      <div class="surface"><p class="kicker">Entradas</p><p class="amount pos">R$ 612.900,00</p></div>
+      <div class="surface"><p class="kicker">Saídas</p><p class="amount neg">R$ 428.579,45</p></div>
+      <div style="font-size:11px;color:var(--muted-fg)">A — <code>bg-background</code> · oklch(0.99 0 0) · chroma 0, same for every condomínio</div>
+    </div>
+  </div>
+  <div>
+    <div class="mini" id="mini-b">
+      <div class="surface"><p class="kicker">Saldo Atual</p><p class="amount">R$ 184.320,55</p></div>
+      <div class="surface"><p class="kicker">Entradas</p><p class="amount pos">R$ 612.900,00</p></div>
+      <div class="surface"><p class="kicker">Saídas</p><p class="amount neg">R$ 428.579,45</p></div>
+      <div style="font-size:11px;color:var(--muted-fg)">B — <code>bg-muted</code> · oklch(0.96 0.01 h) · <span id="mini-b-hue"></span></div>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  <h3>Why this screen in particular</h3>
+  <p>
+    The finance dashboard is a <strong>dense screen of white cards</strong>: a header card, three balance
+    tiles, a statement card and a budget card, separated by a 24px gutter
+    (<code>space-y-6</code> + <code>p-4 sm:p-6 lg:p-8</code>). The page shell is therefore almost never seen as a
+    field — it is seen as the <em>negative space between cards</em>, in thin strips, plus the margin
+    around them.
+  </p>
+  <p>
+    Honestly: that makes the decision <strong>less visually consequential here than on the construction
+    screen</strong> (APRAS-81), where larger areas of shell are exposed. Option B's tint reaches the eye
+    only in those strips, against pure white <code>--card</code>. But it also makes B's contribution
+    <em>structural rather than decorative</em>: a shell one step darker (0.96 vs 0.984/0.99) is what makes
+    the cards read as cards at all. Option A at 0.99 sits only 0.01 L above the card's 1.0 — the card edges
+    then rely almost entirely on <code>--border</code>, not on the shell. Look at the side-by-side above with
+    that in mind, not at the colour of the field.
+  </p>
+</div>
+
+<div class="note pt">
+  <h3>O que você está escolhendo (pt-BR)</h3>
+  <p>
+    A escolha é esta: <strong>a Opção A deixa o fundo da página igual para todos os condomínios</strong> —
+    <code>--background</code> é uma constante fixa, cinza-neutro puro, sem nenhuma cor; ela não muda de
+    condomínio para condomínio. <strong>A Opção B faz o fundo da página carregar um toque da cor da marca
+    de cada condomínio</strong> — <code>--muted</code> é calculado na matiz da marca do tenant, então a
+    página inteira fica levemente esverdeada, avermelhada, azulada ou arroxeada conforme o condomínio.
+    É um tom muito sutil (croma 0,01), mas está presente em toda a área entre os cards. Em resumo:
+    <em>fundo neutro e idêntico para todo mundo (A)</em> versus <em>fundo com uma pitada da identidade
+    visual de cada condomínio (B)</em>. Use os botões de matiz acima para ver a diferença.
+  </p>
+  <p style="font-size:12.5px;color:oklch(0.42 0 0)">
+    Observação técnica: isto vale para o <strong>modo simples</strong> de branding, em que só a marca é
+    informada e o resto é derivado. No <strong>modo avançado</strong>, o tenant escreve as 13
+    <code>AUTHORED_KEYS</code> — inclusive <code>background</code> — e aí as duas opções passam a ser
+    controladas pelo tenant, e a diferença entre A e B deixa de ser "neutro vs. marca".
+  </p>
+</div>
+
+<div class="note rec">
+  <h3>Recommendation (one sentence, clearly labelled as such)</h3>
+  <p>
+    <strong>Recommendation:</strong> Option A (<code>bg-background</code>, with §1f case 1 amended so a page
+    root maps to <code>bg-background</code> regardless of its source colour), because it keeps the one
+    surface that is never a component neutral and tenant-independent, and it is the reading that makes
+    APRAS-81 and APRAS-83 resolve identically instead of each inventing its own answer.
+  </p>
+</div>
+
+<script>
+/* ---- real values, verified in-repo -------------------------------------
+   TODAY : oklch(98.4% 0.003 247.858)  node_modules/tailwindcss/theme.css:214
+   A     : oklch(0.99 0 0)             frontend/src/index.css:33
+                                       backend/app/core/branding.py:162,609
+                                       _LIGHT_BACKGROUND = (0.99, 0.0, 0.0), fixed constant
+   B     : oklch(0.96 0.01 <hue>)      frontend/src/index.css:55
+                                       backend/app/core/branding.py:165,612
+                                       _LIGHT_MUTED = (0.96, 0.01) placed _at(hue)
+------------------------------------------------------------------------ */
+const TODAY = { L: 0.984, C: 0.003, H: 247.858, css: 'oklch(98.4% 0.003 247.858)' };
+const OPT_A = { L: 0.990, C: 0.000, H: 0 };
+const OPT_B = { L: 0.960, C: 0.010 };  /* H = brand hue */
+
+let shell = 'b';
+let hue = 160;
+
+const page = document.getElementById('page');
+const readout = document.getElementById('readout');
+
+function mutedCss(h) { return `oklch(0.96 0.01 ${h})`; }
+
+function shellCss() {
+  if (shell === 'today') return TODAY.css;
+  if (shell === 'a') return 'oklch(0.99 0 0)';
+  return mutedCss(hue);
+}
+
+function render() {
+  document.documentElement.style.setProperty('--brand-hue', hue);
+  document.documentElement.style.setProperty('--shell', shellCss());
+  document.getElementById('sw-b').style.background = mutedCss(hue);
+  document.getElementById('mini-b').style.background = mutedCss(hue);
+  document.getElementById('mini-b-hue').textContent = 'hue ' + hue + ' — tinted by the tenant brand';
+
+  const dA = (OPT_A.L - TODAY.L);
+  const dB = (OPT_B.L - TODAY.L);
+  const active =
+    shell === 'today' ? 'TODAY (bg-slate-50)' :
+    shell === 'a'     ? 'OPTION A (bg-background)' :
+                        'OPTION B (bg-muted)';
+
+  readout.innerHTML = `
+    <div class="row"><strong>Shell now rendering:</strong> ${active} — <code>${shellCss()}</code></div>
+    <div class="row">TODAY <code>bg-slate-50</code> — L <strong>0.984</strong>, chroma 0.003 at hue 247.9
+      (a faint cool blue; it is <em>not</em> achromatic today) · reference point</div>
+    <div class="row">OPTION A <code>bg-background</code> — L <strong>0.990</strong>, chroma <strong>0</strong>
+      · ΔL vs today <strong>${dA >= 0 ? '+' : ''}${(dA * 100).toFixed(1)} pp (lighter)</strong>
+      · chroma −0.003 (fully neutral) · identical for every tenant</div>
+    <div class="row">OPTION B <code>bg-muted</code> — L <strong>0.960</strong>, chroma <strong>0.010</strong> at hue ${hue}
+      · ΔL vs today <strong>${(dB * 100).toFixed(1)} pp (darker)</strong>
+      · chroma ×3.3 vs today and rotated to the brand hue · changes per tenant</div>
+    <div class="row">Card surface for comparison: <code>--card</code> = oklch(1 0 0), L 1.000 —
+      so the shell-to-card step is ${shell === 'today' ? '0.016' : shell === 'a' ? '0.010' : '0.040'} L.</div>
+  `;
+}
+
+document.getElementById('shell-seg').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-shell]');
+  if (!b) return;
+  shell = b.dataset.shell;
+  document.querySelectorAll('#shell-seg button').forEach(x =>
+    x.setAttribute('aria-pressed', String(x === b)));
+  render();
+});
+
+document.getElementById('hue-seg').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-hue]');
+  if (!b) return;
+  hue = Number(b.dataset.hue);
+  document.querySelectorAll('#hue-seg button').forEach(x =>
+    x.setAttribute('aria-pressed', String(x === b)));
+  render();
+});
+
+/* ---- mock data --------------------------------------------------------- */
+const statement = [
+  { m: '01/2026', inc: 52400, exp: 38120 },
+  { m: '02/2026', inc: 51980, exp: 41050 },
+  { m: '03/2026', inc: 53110, exp: 35980 },
+  { m: '04/2026', inc: 52400, exp: 44210 },
+  { m: '05/2026', inc: 50890, exp: 33470 },
+  { m: '06/2026', inc: 54220, exp: 39980 },
+];
+const fmt = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+let running = 96000;
+document.getElementById('statement-body').innerHTML = statement.map(r => {
+  const net = r.inc - r.exp;
+  running += net;
+  return `<tr>
+    <td style="font-weight:600">${r.m}</td>
+    <td class="num pos">${fmt(r.inc)}</td>
+    <td class="num neg">${fmt(r.exp)}</td>
+    <td class="num" style="font-weight:600">${fmt(net)}</td>
+    <td class="num" style="font-weight:700">${fmt(running)}</td>
+  </tr>`;
+}).join('');
+
+const maxV = Math.max(...statement.flatMap(r => [r.inc, r.exp]));
+document.getElementById('chart').innerHTML = statement.map(r => `
+  <div class="month">
+    <div class="bars">
+      <div class="bar in"  style="height:${(r.inc / maxV * 100).toFixed(1)}%"></div>
+      <div class="bar out" style="height:${(r.exp / maxV * 100).toFixed(1)}%"></div>
+    </div>
+    <div class="label">${r.m.slice(0, 2)}</div>
+  </div>`).join('');
+
+const budget = [
+  { c: 'Taxa condominial',   p: 624000, e: 615600, over: false },
+  { c: 'Manutenção predial', p: 96000,  e: 112400, over: true  },
+  { c: 'Segurança',          p: 144000, e: 141200, over: false },
+  { c: 'Limpeza e jardim',   p: 72000,  e: 69850,  over: false },
+  { c: 'Água e energia',     p: 108000, e: 121300, over: true  },
+];
+document.getElementById('budget-body').innerHTML = budget.map(r => `
+  <tr>
+    <td style="font-weight:600">${r.c}</td>
+    <td class="num">${fmt(r.p)}</td>
+    <td class="num">${fmt(r.e)}</td>
+    <td class="num ${r.over ? 'neg' : 'pos'}">${(r.e - r.p >= 0 ? '+' : '')}${fmt(r.e - r.p)}</td>
+    <td class="num"><span class="badge ${r.over ? 'over' : ''}">${r.over ? 'Acima' : 'Dentro'}</span></td>
+  </tr>`).join('');
+
+render();
+</script>
+</body>
+</html>

@@ -45,16 +45,16 @@ export const FinanceDashboardPage: React.FC = () => {
   const entries = statement?.entries ?? [];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-4 sm:p-6 lg:p-8 space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+    <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8 space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-card p-6 rounded-2xl border border-border shadow-xs">
         <div>
           <div className="flex items-center gap-2.5">
-            <Wallet className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+            <Wallet className="w-7 h-7 text-primary" />
+            <h1 className="text-2xl font-bold text-foreground">
               {t("finance.pageTitle", "Área Financeira")}
             </h1>
           </div>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             {t(
               "finance.pageSubtitle",
               "Saldo de caixa, extrato de entradas/saídas e execução orçamentária da associação."
@@ -70,7 +70,7 @@ export const FinanceDashboardPage: React.FC = () => {
             id="fiscal-year-select"
             value={fiscalYear}
             onChange={(e) => setFiscalYear(Number(e.target.value))}
-            className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-white"
+            className="rounded-lg border border-input bg-card px-3 py-2 text-sm text-foreground"
           >
             {[currentYear - 1, currentYear, currentYear + 1].map((year) => (
               <option key={year} value={year}>
@@ -110,7 +110,7 @@ export const FinanceDashboardPage: React.FC = () => {
           {canCreateTransaction && (
             <Button
               onClick={() => setTransactionModalOpen(true)}
-              className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white"
+              className="flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               <Plus className="w-4 h-4" />
               <span>{t("finance.newTransaction", "Nova Transação")}</span>
@@ -121,16 +121,16 @@ export const FinanceDashboardPage: React.FC = () => {
 
       <CashBalanceCard balance={balance} isLoading={isLoadingBalance} />
 
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm space-y-4">
-        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
+      <div className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-4">
+        <h2 className="text-base font-bold text-foreground">
           {t("finance.statement.title", "Extrato de Entradas e Saídas")}
         </h2>
         <StatementChart entries={entries} />
         <StatementTable entries={entries} />
       </div>
 
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm space-y-4">
-        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
+      <div className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-4">
+        <h2 className="text-base font-bold text-foreground">
           {t("finance.budgetVsActual.title", "Orçado vs. Executado")}
         </h2>
         <BudgetVsActualTable

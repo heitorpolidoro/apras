@@ -263,9 +263,9 @@ export const QuoteFormModal: React.FC<QuoteFormModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900">
+      <div className="bg-card rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b border-border">
+          <h2 className="text-xl font-bold text-foreground">
             {quote
               ? t("purchases.quote.editTitle", "Editar Orçamento")
               : t("purchases.quote.createTitle", "Novo Orçamento")}
@@ -318,11 +318,11 @@ export const QuoteFormModal: React.FC<QuoteFormModalProps> = ({
             />
           </div>
 
-          <div className="border-t border-gray-200 pt-4">
-            <h3 className="text-sm font-bold text-gray-900">
+          <div className="border-t border-border pt-4">
+            <h3 className="text-sm font-bold text-foreground">
               {t("purchases.items.quoteTitle", "Itens do pedido")}
             </h3>
-            <p className="text-xs text-gray-500 mb-3">
+            <p className="text-xs text-muted-foreground mb-3">
               {t(
                 "purchases.items.quoteHint",
                 "Preencha o preço dos itens que este fornecedor cota. Deixe em branco o que ele não atende — não será somado.",
@@ -330,7 +330,7 @@ export const QuoteFormModal: React.FC<QuoteFormModalProps> = ({
             </p>
 
             {requestItems.length === 0 && (
-              <p className="text-xs text-gray-500 mb-3" data-testid="no-request-items">
+              <p className="text-xs text-muted-foreground mb-3" data-testid="no-request-items">
                 {t(
                   "purchases.items.requestHasNone",
                   "Este pedido não enumerou itens. Adicione abaixo o que o fornecedor está cotando.",
@@ -345,7 +345,7 @@ export const QuoteFormModal: React.FC<QuoteFormModalProps> = ({
                   <div
                     key={item.id}
                     data-testid={`quote-line-${item.id}`}
-                    className="rounded-lg border border-gray-200 p-3"
+                    className="rounded-lg border border-border p-3"
                   >
                     <div className="text-xs font-semibold text-gray-700 mb-2">
                       {item.quantity} × {item.description}
@@ -380,7 +380,7 @@ export const QuoteFormModal: React.FC<QuoteFormModalProps> = ({
                       />
                     </div>
                     <div
-                      className="mt-2 text-right text-xs text-gray-600"
+                      className="mt-2 text-right text-xs text-muted-foreground"
                       data-testid={`quote-line-total-${item.id}`}
                     >
                       {isPriced(row)
@@ -418,7 +418,7 @@ export const QuoteFormModal: React.FC<QuoteFormModalProps> = ({
                 <div
                   key={index}
                   data-testid={`quote-extra-${index}`}
-                  className="rounded-lg border border-dashed border-gray-300 p-3"
+                  className="rounded-lg border border-dashed border-input p-3"
                 >
                   <div className="grid grid-cols-2 gap-2">
                     <Input
@@ -471,7 +471,7 @@ export const QuoteFormModal: React.FC<QuoteFormModalProps> = ({
                   </div>
                   <div className="mt-2 flex items-center justify-between">
                     <span
-                      className="text-xs text-gray-600"
+                      className="text-xs text-muted-foreground"
                       data-testid={`quote-extra-total-${index}`}
                     >
                       {formatCurrency(extraLineTotal(row))}
@@ -486,7 +486,7 @@ export const QuoteFormModal: React.FC<QuoteFormModalProps> = ({
                         setExtras((current) => current.filter((_, i) => i !== index))
                       }
                     >
-                      <Trash2 className="w-4 h-4 text-red-500" />
+                      <Trash2 className="w-4 h-4 text-destructive" />
                     </Button>
                   </div>
                 </div>
@@ -494,12 +494,12 @@ export const QuoteFormModal: React.FC<QuoteFormModalProps> = ({
             </div>
           </div>
 
-          <div className="rounded-lg bg-gray-50 border border-gray-200 px-4 py-3 flex items-center justify-between">
+          <div className="rounded-lg bg-muted border border-border px-4 py-3 flex items-center justify-between">
             <span className="text-xs font-semibold text-gray-700 uppercase">
               {t("purchases.quote.total", "Total do orçamento")}
             </span>
             <span
-              className="text-lg font-bold text-gray-900"
+              className="text-lg font-bold text-foreground"
               data-testid="quote-total"
             >
               {formatCurrency(total)}
@@ -525,9 +525,9 @@ export const QuoteFormModal: React.FC<QuoteFormModalProps> = ({
             />
           </div>
 
-          <div className="border-t border-gray-200 pt-4">
+          <div className="border-t border-border pt-4">
             <div className="flex items-center justify-between mb-1">
-              <h3 className="text-sm font-bold text-gray-900">
+              <h3 className="text-sm font-bold text-foreground">
                 {t("purchases.extraFields.title", "Campos extras")}
               </h3>
               <Button
@@ -543,7 +543,7 @@ export const QuoteFormModal: React.FC<QuoteFormModalProps> = ({
                 {t("purchases.extraFields.add", "Adicionar campo")}
               </Button>
             </div>
-            <p className="text-xs text-gray-500 mb-3">
+            <p className="text-xs text-muted-foreground mb-3">
               {t(
                 "purchases.extraFields.hint",
                 "Adicione informações livres deste orçamento (até 20 campos).",
@@ -593,14 +593,14 @@ export const QuoteFormModal: React.FC<QuoteFormModalProps> = ({
                       )
                     }
                   >
-                    <Trash2 className="w-4 h-4 text-red-500" />
+                    <Trash2 className="w-4 h-4 text-destructive" />
                   </Button>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
             <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
               {t("purchases.actions.cancel", "Cancelar")}
             </Button>

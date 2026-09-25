@@ -156,7 +156,7 @@ export const QuoteComparisonTable: React.FC<QuoteComparisonTableProps> = ({
       <span>{value}</span>
     ) : (
       <span
-        className="text-gray-400"
+        className="text-muted-foreground"
         title={t("purchases.comparison.notProvided", "Não informado")}
       >
         —
@@ -176,16 +176,16 @@ export const QuoteComparisonTable: React.FC<QuoteComparisonTableProps> = ({
   const gridCell = (line: PurchaseQuoteItem | undefined, isExtra: boolean) => {
     if (!line) {
       return isExtra ? null : (
-        <span className="text-gray-400">
+        <span className="text-muted-foreground">
           {t("purchases.items.notQuoted", "Não cotado")}
         </span>
       );
     }
     return (
       <div className="space-y-0.5">
-        {line.model && <div className="text-xs text-gray-600">{line.model}</div>}
+        {line.model && <div className="text-xs text-muted-foreground">{line.model}</div>}
         <div>{formatCurrency(line.unit_price)}</div>
-        <div className="text-xs font-semibold text-gray-900">
+        <div className="text-xs font-semibold text-foreground">
           {formatCurrency(line.line_total)}
         </div>
       </div>
@@ -239,7 +239,7 @@ export const QuoteComparisonTable: React.FC<QuoteComparisonTableProps> = ({
     <div className="flex flex-wrap items-center gap-1">
       {attachmentLink(quote) ?? (!canUpload ? cell(null) : null)}
       {!quotesEditable && quote.attachment_url && (
-        <span className="inline-flex items-center gap-1 text-[11px] text-gray-400">
+        <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
           <Lock className="w-3 h-3" />
           {t("purchases.attachment.readOnly", "somente leitura")}
         </span>
@@ -280,7 +280,7 @@ export const QuoteComparisonTable: React.FC<QuoteComparisonTableProps> = ({
               title={t("purchases.attachment.remove", "Remover")}
               onClick={() => onRemoveAttachment(quote)}
             >
-              <Trash2 className="w-4 h-4 text-red-500" />
+              <Trash2 className="w-4 h-4 text-destructive" />
             </Button>
           )}
         </>
@@ -297,7 +297,7 @@ export const QuoteComparisonTable: React.FC<QuoteComparisonTableProps> = ({
           title={t("purchases.actions.chooseQuote", "Escolher este Orçamento")}
           onClick={() => onChoose(quote)}
         >
-          <Award className="w-4 h-4 text-emerald-600" />
+          <Award className="w-4 h-4 text-primary" />
         </Button>
       )}
       {quotesEditable && (
@@ -316,7 +316,7 @@ export const QuoteComparisonTable: React.FC<QuoteComparisonTableProps> = ({
             title={t("purchases.actions.deleteQuote", "Excluir Orçamento")}
             onClick={() => onDelete(quote)}
           >
-            <Trash2 className="w-4 h-4 text-red-500" />
+            <Trash2 className="w-4 h-4 text-destructive" />
           </Button>
         </>
       )}
@@ -366,7 +366,7 @@ export const QuoteComparisonTable: React.FC<QuoteComparisonTableProps> = ({
   return (
     <div className="space-y-3" data-testid="quote-comparison">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs text-gray-500">
+        <span className="text-xs text-muted-foreground">
           {t("purchases.attachment.hint", "PDF, PNG ou JPEG · até 5 MB")}
         </span>
         <Button
@@ -395,18 +395,18 @@ export const QuoteComparisonTable: React.FC<QuoteComparisonTableProps> = ({
         <table className="w-full border-collapse text-left">
           <thead>
             <tr>
-              <th className="w-44 border-b border-gray-200 p-2 text-xs font-semibold uppercase text-gray-500">
+              <th className="w-44 border-b border-border p-2 text-xs font-semibold uppercase text-muted-foreground">
                 {t("purchases.comparison.field", "Campo")}
               </th>
               {ordered.map((quote) => (
                 <th
                   key={quote.id}
                   data-testid={`quote-row-${quote.id}`}
-                  className={`border-b border-gray-200 p-2 align-top ${
+                  className={`border-b border-border p-2 align-top ${
                     quote.is_lowest_price ? "bg-emerald-50/60" : ""
                   }`}
                 >
-                  <div className="flex flex-wrap items-center gap-1 font-semibold text-gray-900">
+                  <div className="flex flex-wrap items-center gap-1 font-semibold text-foreground">
                     {quote.supplier_name}
                     {badges(quote)}
                   </div>
@@ -420,7 +420,7 @@ export const QuoteComparisonTable: React.FC<QuoteComparisonTableProps> = ({
               <tr>
                 <td
                   colSpan={ordered.length + 1}
-                  className="pt-2 pb-1 text-[11px] font-semibold uppercase text-gray-400"
+                  className="pt-2 pb-1 text-[11px] font-semibold uppercase text-muted-foreground"
                 >
                   {t("purchases.items.gridTitle", "Itens")}
                 </td>
@@ -428,7 +428,7 @@ export const QuoteComparisonTable: React.FC<QuoteComparisonTableProps> = ({
             )}
             {gridRows.map((row) => (
               <tr key={row.key} className="border-b border-gray-100">
-                <td className="p-2 text-xs font-semibold text-gray-600">
+                <td className="p-2 text-xs font-semibold text-muted-foreground">
                   {row.quantity} × {row.description}
                   {row.isExtra && (
                     <Badge variant="secondary" className="ml-1">
@@ -456,7 +456,7 @@ export const QuoteComparisonTable: React.FC<QuoteComparisonTableProps> = ({
 
             {fixedRows.map((row) => (
               <tr key={row.key} className="border-b border-gray-100">
-                <td className="p-2 text-xs font-semibold text-gray-600">
+                <td className="p-2 text-xs font-semibold text-muted-foreground">
                   {row.label}
                 </td>
                 {ordered.map((quote) => (
@@ -476,7 +476,7 @@ export const QuoteComparisonTable: React.FC<QuoteComparisonTableProps> = ({
               <tr>
                 <td
                   colSpan={ordered.length + 1}
-                  className="pt-4 pb-1 text-[11px] font-semibold uppercase text-gray-400"
+                  className="pt-4 pb-1 text-[11px] font-semibold uppercase text-muted-foreground"
                 >
                   {t("purchases.comparison.extraFields", "Campos extras")}
                 </td>
@@ -484,7 +484,7 @@ export const QuoteComparisonTable: React.FC<QuoteComparisonTableProps> = ({
             )}
             {labels.map((label) => (
               <tr key={label} className="border-b border-gray-100">
-                <td className="p-2 text-xs font-semibold text-gray-600">
+                <td className="p-2 text-xs font-semibold text-muted-foreground">
                   {label}
                 </td>
                 {ordered.map((quote) => (
@@ -501,7 +501,7 @@ export const QuoteComparisonTable: React.FC<QuoteComparisonTableProps> = ({
             ))}
 
             <tr>
-              <td className="p-2 text-xs font-semibold text-gray-600">
+              <td className="p-2 text-xs font-semibold text-muted-foreground">
                 {t("purchases.comparison.actions", "Ações")}
               </td>
               {ordered.map((quote) => (
@@ -528,14 +528,14 @@ export const QuoteComparisonTable: React.FC<QuoteComparisonTableProps> = ({
                 : "border-gray-200"
             }`}
           >
-            <div className="flex flex-wrap items-center gap-1 text-sm font-semibold text-gray-900">
+            <div className="flex flex-wrap items-center gap-1 text-sm font-semibold text-foreground">
               {quote.supplier_name}
               {badges(quote)}
             </div>
             {coverage(quote)}
             {gridRows.length > 0 && (
               <>
-                <h4 className="mt-2 text-[11px] font-semibold uppercase text-gray-400">
+                <h4 className="mt-2 text-[11px] font-semibold uppercase text-muted-foreground">
                   {t("purchases.items.gridTitleNarrow", {
                     count: gridRows.length,
                     defaultValue: "Itens ({{count}})",
@@ -551,7 +551,7 @@ export const QuoteComparisonTable: React.FC<QuoteComparisonTableProps> = ({
                         data-quoted={line ? "true" : "false"}
                         className="flex justify-between gap-3 text-xs"
                       >
-                        <dt className="text-gray-500">
+                        <dt className="text-muted-foreground">
                           {row.quantity} × {row.description}
                           {row.isExtra && (
                             <Badge variant="secondary" className="ml-1">
@@ -574,7 +574,7 @@ export const QuoteComparisonTable: React.FC<QuoteComparisonTableProps> = ({
                   key={row.key}
                   className="flex justify-between gap-3 text-xs"
                 >
-                  <dt className="text-gray-500">{row.label}</dt>
+                  <dt className="text-muted-foreground">{row.label}</dt>
                   <dd className="text-right text-gray-800">
                     {row.render(quote)}
                   </dd>
@@ -582,7 +582,7 @@ export const QuoteComparisonTable: React.FC<QuoteComparisonTableProps> = ({
               ))}
               {labels.map((label) => (
                 <div key={label} className="flex justify-between gap-3 text-xs">
-                  <dt className="text-gray-500">{label}</dt>
+                  <dt className="text-muted-foreground">{label}</dt>
                   <dd className="text-right text-gray-800">
                     {cell(valueOf(quote, label))}
                   </dd>

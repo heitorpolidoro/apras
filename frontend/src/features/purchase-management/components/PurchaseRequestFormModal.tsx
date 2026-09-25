@@ -163,9 +163,9 @@ export const PurchaseRequestFormModal: React.FC<PurchaseRequestFormModalProps> =
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-lg w-full overflow-hidden">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900">
+      <div className="bg-card rounded-xl shadow-xl max-w-lg w-full overflow-hidden">
+        <div className="flex items-center justify-between p-6 border-b border-border">
+          <h2 className="text-xl font-bold text-foreground">
             {request
               ? t("purchases.form.editTitle", "Editar Pedido de Compra")
               : t("purchases.form.createTitle", "Novo Pedido de Compra")}
@@ -242,9 +242,9 @@ export const PurchaseRequestFormModal: React.FC<PurchaseRequestFormModalProps> =
             />
           </div>
 
-          <div className="border-t border-gray-200 pt-4">
+          <div className="border-t border-border pt-4">
             <div className="flex items-center justify-between mb-1">
-              <h3 className="text-sm font-bold text-gray-900">
+              <h3 className="text-sm font-bold text-foreground">
                 {t("purchases.items.requestTitle", "Itens do pedido")}
               </h3>
               {canEditLines && (
@@ -266,7 +266,7 @@ export const PurchaseRequestFormModal: React.FC<PurchaseRequestFormModalProps> =
               )}
             </div>
             {canEditLines && (
-              <p className="text-xs text-gray-500 mb-3">
+              <p className="text-xs text-muted-foreground mb-3">
                 {t(
                   "purchases.items.requestHint",
                   "Enumere o que será comprado. Cada orçamento preenche o modelo e o preço de cada item.",
@@ -292,7 +292,7 @@ export const PurchaseRequestFormModal: React.FC<PurchaseRequestFormModalProps> =
               <>
                 <p
                   data-testid="request-items-locked"
-                  className="mb-3 rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600"
+                  className="mb-3 rounded-lg border border-border bg-muted p-3 text-xs text-muted-foreground"
                 >
                   {t(
                     "purchases.items.lockedHint",
@@ -350,7 +350,7 @@ export const PurchaseRequestFormModal: React.FC<PurchaseRequestFormModalProps> =
                       setLines((current) => current.filter((_, i) => i !== index))
                     }
                   >
-                    <Trash2 className="w-4 h-4 text-red-500" />
+                    <Trash2 className="w-4 h-4 text-destructive" />
                   </Button>
                 </div>
               ))}
@@ -358,7 +358,7 @@ export const PurchaseRequestFormModal: React.FC<PurchaseRequestFormModalProps> =
             )}
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
             <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
               {t("purchases.actions.cancel", "Cancelar")}
             </Button>

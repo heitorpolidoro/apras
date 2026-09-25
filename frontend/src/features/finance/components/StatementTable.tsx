@@ -15,7 +15,7 @@ export const StatementTable: React.FC<StatementTableProps> = ({ entries }) => {
   return (
     <table className="w-full text-sm">
       <thead>
-        <tr className="text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
+        <tr className="text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border">
           <th className="py-2">{t("finance.statement.month", "Mês")}</th>
           <th className="py-2 text-right">
             {t("finance.statement.income", "Entradas")}
@@ -47,7 +47,7 @@ export const StatementTable: React.FC<StatementTableProps> = ({ entries }) => {
             <td className="py-2 text-right font-semibold text-slate-800 dark:text-slate-200">
               {formatCurrency(entry.net)}
             </td>
-            <td className="py-2 text-right font-semibold text-slate-900 dark:text-slate-100">
+            <td className="py-2 text-right font-semibold text-foreground">
               {formatCurrency(entry.running_balance)}
             </td>
           </tr>

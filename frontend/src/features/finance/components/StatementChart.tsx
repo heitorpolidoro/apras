@@ -31,7 +31,7 @@ export const StatementChart: React.FC<StatementChartProps> = ({ entries }) => {
 
   if (entries.length === 0) {
     return (
-      <p className="text-sm text-slate-500 dark:text-slate-400">
+      <p className="text-sm text-muted-foreground">
         {t("finance.statement.empty", "Nenhum dado no período selecionado.")}
       </p>
     );
@@ -61,7 +61,7 @@ export const StatementChart: React.FC<StatementChartProps> = ({ entries }) => {
               title={t("finance.statement.expense", "Saídas")}
             />
           </div>
-          <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+          <span className="text-[10px] font-semibold text-muted-foreground">
             {MONTH_LABELS[entry.month - 1]}/{String(entry.year).slice(-2)}
           </span>
         </div>

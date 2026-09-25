@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -13,6 +14,12 @@ import type { AssociationDocument } from "../../types/document";
 import type { Occurrence } from "../../types/occurrence";
 import type { ProjectMilestone } from "../../types/project";
 import type { AssetSummary } from "../../types/asset";
+import { CashBalanceCard } from "../../features/finance/components/CashBalanceCard";
+import { SelectQuoteModal } from "../../features/purchase-management/components/SelectQuoteModal";
+import { DeviceTable } from "../../features/access-control/components/DeviceTable";
+import type { CashBalance } from "../../types/finance";
+import type { PurchaseQuote } from "../../types/purchase";
+import type { AccessDevice } from "../../types/accessControl";
 import { TENANT_BRAND_STYLE_ID } from "../../lib/brandStylesheet";
 
 /**
@@ -416,6 +423,207 @@ describe("the tenant's brand reaches APRAS-81's migrated components", () => {
       "hover:bg-primary/90",
       "text-primary-foreground",
       "text-primary-text",
+    ]) {
+      expect(tokens).not.toContain(absent);
+    }
+  });
+});
+
+/**
+ * APRAS-83's three migrated components, one from each directory it pins.
+ *
+ * All three are props-only — none reaches for a query client — so they mount
+ * beside `TenantBrandTheme` exactly as the pilot's `Button` does. Each is
+ * asserted over the whitespace-split class tokens of the **full** rendered
+ * markup, which includes the tokens contributed by any `components/ui/`
+ * primitive it renders, not only the tokens written in its own source.
+ */
+const BALANCE: CashBalance = {
+  as_of_date: "2026-09-30",
+  total_income: 128400.5,
+  total_expense: 91230.75,
+  balance: 37169.75,
+};
+
+const QUOTE: PurchaseQuote = {
+  id: "5c6d7e8f-9a0b-4c1d-8e2f-3a4b5c6d7e8f",
+  purchase_request_id: "1a2b3c4d-5e6f-4a1b-8c2d-3e4f5a6b7c8d",
+  supplier_name: "Elevadores Atlas Schindler",
+  supplier_contact: "contato@atlas.example",
+  items: [
+    {
+      id: "7e8f9a0b-1c2d-4e3f-8a4b-5c6d7e8f9a0b",
+      request_item_id: null,
+      model: "Modelo 3300",
+      unit_price: 45000,
+      description: "Modernização de cabine",
+      quantity: 1,
+      position: 1,
+      line_total: 45000,
+    },
+  ],
+  quoted_item_count: 1,
+  is_complete: true,
+  notes: null,
+  extra_fields: [],
+  attachment_url: null,
+  attachment_filename: null,
+  total_price: 45000,
+  created_by_id: "9a0b1c2d-3e4f-4a5b-8c6d-7e8f9a0b1c2d",
+  created_by_name: "Síndico",
+  is_selected: false,
+  is_lowest_price: true,
+  created_at: "2026-09-20T12:00:00Z",
+  updated_at: "2026-09-20T12:00:00Z",
+};
+
+const DEVICE: AccessDevice = {
+  id: "3e4f5a6b-7c8d-4e9f-8a0b-1c2d3e4f5a6b",
+  name: "Portão social",
+  location: "Torre A, térreo",
+  status: "ONLINE",
+  last_seen_at: "2026-09-25T11:00:00Z",
+  created_by_id: "9a0b1c2d-3e4f-4a5b-8c6d-7e8f9a0b1c2d",
+  created_at: "2026-09-01T12:00:00Z",
+  updated_at: "2026-09-25T11:00:00Z",
+};
+
+describe("the tenant's brand reaches APRAS-83's migrated components", () => {
+  it("paints the cash-balance tiles on the brand tint, with no brand fill", async () => {
+    profile.data = { ...PROFILE, theme: THEME };
+    const { container } = render(
+      <>
+        <TenantBrandTheme />
+        <CashBalanceCard balance={BALANCE} isLoading={false} />
+      </>,
+    );
+
+    await waitFor(() => expect(brandedPrimary()).toBe(THEME.light.primary));
+
+    const tokens = classTokens(container);
+
+    // `CashBalanceCard` renders no `components/ui/` primitive, so this set is
+    // entirely its own.
+    for (const expected of [
+      "bg-card",
+      "border-border",
+      "bg-accent",
+      "text-primary",
+      "text-muted-foreground",
+      "text-foreground",
+    ]) {
+      expect(tokens).toContain(expected);
+    }
+    // Its single brand call site is the `<Wallet/>` inside a *tile*, so there
+    // is no brand fill and no brand character here.
+    for (const absent of [
+      "text-primary-text",
+      "bg-primary",
+      "text-primary-foreground",
+      "text-destructive",
+      "bg-muted",
+    ]) {
+      expect(tokens).not.toContain(absent);
+    }
+  });
+
+  it("paints the select-quote modal's submit button with the brand fill", async () => {
+    profile.data = { ...PROFILE, theme: THEME };
+    const { container } = render(
+      <>
+        <TenantBrandTheme />
+        <SelectQuoteModal
+          isOpen
+          quote={QUOTE}
+          onClose={() => {}}
+          onSubmit={async () => {}}
+        />
+      </>,
+    );
+
+    await waitFor(() => expect(brandedPrimary()).toBe(THEME.light.primary));
+
+    const tokens = classTokens(container);
+
+    // From its own markup.
+    for (const expected of [
+      "bg-card",
+      "border-border",
+      "bg-muted",
+      "text-foreground",
+      "text-muted-foreground",
+    ]) {
+      expect(tokens).toContain(expected);
+    }
+    // Contributed by the already-migrated `ui/button` `default` variant, which
+    // the variantless submit button takes. The modal's own source writes
+    // neither token, which is exactly why the assertion is over the full
+    // rendered markup and not over the file.
+    for (const expected of ["bg-primary", "text-primary-foreground"]) {
+      expect(tokens).toContain(expected);
+    }
+    for (const absent of [
+      "text-primary",
+      "text-primary-text",
+      "bg-accent",
+      "text-destructive",
+    ]) {
+      expect(tokens).not.toContain(absent);
+    }
+  });
+
+  it("paints the revealed device key as brand characters", async () => {
+    profile.data = { ...PROFILE, theme: THEME };
+    const { container } = render(
+      <>
+        <TenantBrandTheme />
+        <DeviceTable
+          devices={[DEVICE]}
+          onRegenerateKey={async () => "3f9a-77c1-b204-e8d5"}
+        />
+      </>,
+    );
+
+    await waitFor(() => expect(brandedPrimary()).toBe(THEME.light.primary));
+    // The key chip only renders once a regeneration has resolved.
+    await userEvent.click(
+      screen.getByRole("button", { name: /Regenerar Chave/i }),
+    );
+    await waitFor(() =>
+      expect(classTokens(container)).toContain("text-primary-text"),
+    );
+
+    const tokens = classTokens(container);
+
+    for (const expected of [
+      "text-primary-text",
+      "bg-accent",
+      "border-border",
+      "text-foreground",
+      "text-muted-foreground",
+    ]) {
+      expect(tokens).toContain(expected);
+    }
+    // `ui/button` at the `outline` variant contributes `border-input`,
+    // `bg-background`, `hover:bg-accent` and `hover:text-accent-foreground`,
+    // and no token on either list here.
+    for (const expected of [
+      "border-input",
+      "bg-background",
+      "hover:bg-accent",
+      "hover:text-accent-foreground",
+    ]) {
+      expect(tokens).toContain(expected);
+    }
+    // §1k: the key chip paints glyphs, so it takes the character token and the
+    // graphical one appears nowhere in this component.
+    for (const absent of [
+      "text-primary",
+      "bg-primary",
+      "bg-card",
+      "bg-muted",
+      "text-primary-foreground",
+      "text-destructive",
     ]) {
       expect(tokens).not.toContain(absent);
     }

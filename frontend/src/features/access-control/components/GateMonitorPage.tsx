@@ -23,11 +23,11 @@ export const GateMonitorPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-          <Radio className="size-7 text-indigo-600 dark:text-indigo-400" />
+        <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+          <Radio className="size-7 text-primary" />
           {t("accessControl.gateMonitorTitle")}
         </h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400">
+        <p className="text-sm text-muted-foreground">
           {t("accessControl.gateMonitorSubtitle")}
         </p>
       </div>
@@ -39,11 +39,11 @@ export const GateMonitorPage: React.FC = () => {
           return (
             <div
               key={device.id}
-              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-900"
+              className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm"
             >
-              <Icon className="size-4 text-indigo-600 dark:text-indigo-400" />
-              <span className="font-semibold text-slate-900 dark:text-white">{device.name}</span>
-              <span className="text-xs text-slate-500 dark:text-slate-400">
+              <Icon className="size-4 text-primary" />
+              <span className="font-semibold text-foreground">{device.name}</span>
+              <span className="text-xs text-muted-foreground">
                 {t(`accessControl.status${device.status}`)}
               </span>
             </div>
@@ -51,8 +51,8 @@ export const GateMonitorPage: React.FC = () => {
         })}
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <h2 className="text-base font-bold text-slate-900 dark:text-white mb-4">
+      <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+        <h2 className="text-base font-bold text-foreground mb-4">
           {t("accessControl.liveFeed")}
         </h2>
         <AccessEventFeed events={events} />
