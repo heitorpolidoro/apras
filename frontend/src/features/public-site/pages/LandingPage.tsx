@@ -30,7 +30,7 @@ const LandingPage: React.FC = () => {
         <span className="text-xl font-bold tracking-tight">{t("landing.brand")}</span>
         <Link
           to="/login"
-          className="text-sm font-medium text-primary hover:underline"
+          className="text-sm font-medium text-primary-text hover:underline"
         >
           {t("landing.loginButton")}
         </Link>
@@ -38,7 +38,7 @@ const LandingPage: React.FC = () => {
 
       {/* Hero */}
       <section className="flex flex-col items-center text-center px-6 py-16 md:py-24 gap-6">
-        <span className="inline-block rounded-full bg-primary/10 text-primary text-xs font-semibold px-4 py-1">
+        <span className="inline-block rounded-full bg-primary/10 text-primary-text text-xs font-semibold px-4 py-1">
           {t("landing.hero.badge")}
         </span>
         <h1 className="text-3xl md:text-5xl font-bold max-w-3xl leading-tight">
@@ -71,7 +71,7 @@ const LandingPage: React.FC = () => {
       >
         <div className="max-w-5xl mx-auto flex flex-col gap-8">
           <div className="text-center flex flex-col gap-3">
-            <span className="inline-block rounded-full bg-primary/10 text-primary text-xs font-semibold px-4 py-1 self-center">
+            <span className="inline-block rounded-full bg-primary/10 text-primary-text text-xs font-semibold px-4 py-1 self-center">
               {t("landing.previews.badge")}
             </span>
             <h2 className="text-2xl md:text-3xl font-bold">

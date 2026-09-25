@@ -38,7 +38,7 @@ const variantConfig: Record<
   info: {
     icon: Info,
     iconClass: "text-primary",
-    titleClass: "text-primary",
+    titleClass: "text-primary-text",
     borderClass: "border-primary/20",
   },
 };

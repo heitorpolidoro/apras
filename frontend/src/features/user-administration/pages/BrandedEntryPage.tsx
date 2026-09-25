@@ -198,7 +198,7 @@ const BrandedEntryPage: React.FC = () => {
             />
           )}
           <div>
-            <h1 className="text-2xl font-bold text-primary tracking-tight">
+            <h1 className="text-2xl font-bold text-primary-text tracking-tight">
               {branding?.name ?? t("common.appName")}
             </h1>
             <p className="text-sm text-muted-foreground mt-1">

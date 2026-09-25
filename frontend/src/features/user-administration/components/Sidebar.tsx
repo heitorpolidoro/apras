@@ -108,7 +108,7 @@ const SidebarItemLink: React.FC<{
       className={cn(
         "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all group relative",
         isActive
-          ? "bg-primary/10 text-primary font-semibold"
+          ? "bg-primary/10 text-primary-text font-semibold"
           : "text-muted-foreground hover:bg-accent/60 hover:text-foreground font-medium",
         isCollapsed ? "justify-center px-2 py-2.5" : "",
       )}
@@ -122,7 +122,7 @@ const SidebarItemLink: React.FC<{
         )}
       />
       {!isCollapsed && (
-        <span className={cn("truncate", isActive && "text-primary")}>
+        <span className={cn("truncate", isActive && "text-primary-text")}>
           {label}
         </span>
       )}
@@ -157,7 +157,7 @@ const SidebarHomeLink: React.FC<{
       className={cn(
         "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all group relative",
         isActive
-          ? "bg-primary/10 text-primary font-semibold"
+          ? "bg-primary/10 text-primary-text font-semibold"
           : "text-muted-foreground hover:bg-accent/60 hover:text-foreground font-medium",
         isCollapsed ? "justify-center px-2 py-2.5" : "",
       )}
@@ -171,7 +171,7 @@ const SidebarHomeLink: React.FC<{
         )}
       />
       {!isCollapsed && (
-        <span className={cn("truncate", isActive && "text-primary")}>
+        <span className={cn("truncate", isActive && "text-primary-text")}>
           {label}
         </span>
       )}
@@ -292,7 +292,7 @@ export const Sidebar: React.FC = () => {
               <div className="size-4 rounded-full bg-primary" />
             </div>
             {!collapsed && (
-              <span className="text-lg font-black tracking-tight text-primary">
+              <span className="text-lg font-black tracking-tight text-primary-text">
                 {t("common.appName")}
               </span>
             )}

@@ -163,7 +163,7 @@ const AssigneePicker: React.FC<AssigneePickerProps> = ({
                 choose(index);
               }}
             >
-              <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-[11px] font-bold text-primary">
+              <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-[11px] font-bold text-primary-text">
                 {initialsOf(user)}
               </span>
               <span className="leading-tight">

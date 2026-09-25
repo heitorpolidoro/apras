@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>APRAS-87 — brand text reaches WCAG AA</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  :root{
+    --background:#fcfcfc; --card:#ffffff; --muted:#f2f7f5; --accent:#f2f7f5;
+    --border:#e5eae8; --foreground:#1c1f1e; --muted-foreground:#6b7775;
+    --primary:#009f68;        /* oklch(0.62 0.15 160) */
+    --primary-text:#177c52;   /* oklch(0.52 0.11 160) */
+  }
+  .tok-before{color:var(--primary)} .tok-after{color:var(--primary-text)}
+  body{background:var(--background);color:var(--foreground)}
+</style>
+</head>
+<body class="min-h-screen">
+<div class="mx-auto max-w-6xl px-6 py-10 space-y-8">
+
+  <header class="space-y-2">
+    <h1 class="text-2xl font-bold tracking-tight">APRAS-87 — brand text reaches WCAG AA</h1>
+    <p class="text-sm" style="color:var(--muted-foreground)">
+      <code>text-primary</code> <span class="tok-before font-semibold">#009f68</span> →
+      <code>text-primary-text</code> <span class="tok-after font-semibold">#177c52</span>.
+      Icons, borders and every non-<code>text-</code> utility keep <code>--primary</code>.
+      Toggle to see exactly what changes.
+    </p>
+    <div class="inline-flex rounded-lg border p-1" style="border-color:var(--border);background:var(--card)">
+      <button id="btn-before" class="px-3 py-1.5 text-sm font-semibold rounded-md">Before (--primary)</button>
+      <button id="btn-after"  class="px-3 py-1.5 text-sm font-semibold rounded-md">After (--primary-text)</button>
+    </div>
+  </header>
+
+  <!-- 1. The task's own site -->
+  <section class="rounded-xl border p-6 space-y-4" style="border-color:var(--border);background:var(--background)">
+    <div class="flex items-baseline justify-between">
+      <h2 class="font-bold">1. LotDetailsView active tab — the site this task is named for</h2>
+      <span class="text-xs font-mono" style="color:var(--muted-foreground)">on --background</span>
+    </div>
+    <div class="border-b" style="border-color:var(--border)">
+      <nav class="-mb-px flex space-x-6">
+        <button class="whitespace-nowrap pb-4 text-sm font-semibold border-b-2 brand-text" style="border-color:var(--primary)">Usuários Vinculados (3)</button>
+        <button class="whitespace-nowrap pb-4 text-sm font-semibold border-b-2 border-transparent" style="color:var(--muted-foreground)">Moradores</button>
+      </nav>
+    </div>
+    <p class="text-xs font-mono ratio" data-before="3.3091" data-after="5.0622"></p>
+  </section>
+
+  <div class="grid gap-6 md:grid-cols-2">
+
+    <!-- 2. Sidebar -->
+    <section class="rounded-xl border p-6 space-y-4" style="border-color:var(--border);background:var(--card)">
+      <h2 class="font-bold">2. Sidebar active item</h2>
+      <div class="rounded-lg border p-3 space-y-1" style="border-color:var(--border);background:var(--card)">
+        <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-semibold brand-text" style="background:rgba(0,159,104,.1)">
+          <i data-lucide="check-square" class="size-4" style="color:var(--primary)"></i><span>Tarefas</span>
+        </a>
+        <a class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium" style="color:var(--muted-foreground)">
+          <i data-lucide="folder" class="size-4"></i><span>Categorias</span>
+        </a>
+      </div>
+      <p class="text-xs" style="color:var(--muted-foreground)">The icon keeps <code>--primary</code> (3:1 floor, graphical object). Only the label moves.</p>
+      <p class="text-xs font-mono ratio" data-before="3.0298" data-after="4.6350"></p>
+    </section>
+
+    <!-- 3. Badge + link -->
+    <section class="rounded-xl border p-6 space-y-4" style="border-color:var(--border);background:var(--card)">
+      <h2 class="font-bold">3. Badge (default) and Button (link)</h2>
+      <div class="flex items-center gap-3">
+        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide brand-text" style="background:rgba(0,159,104,.1)">Síndico</span>
+        <button class="text-sm font-medium underline-offset-4 hover:underline brand-text">Esqueceu a senha?</button>
+      </div>
+      <p class="text-xs font-mono ratio" data-before="2.9691" data-after="4.5421"></p>
+      <p class="text-xs" style="color:var(--muted-foreground)">Worst surface in the sweep: <code>bg-primary/10</code> over <code>--background</code>.</p>
+    </section>
+
+    <!-- 4. Headings -->
+    <section class="rounded-xl border p-6 space-y-4" style="border-color:var(--border);background:var(--card)">
+      <h2 class="font-bold">4. Auth-page wordmark</h2>
+      <div class="rounded-lg p-6 text-center" style="background:#f7faf8">
+        <p class="text-2xl font-bold tracking-tight brand-text">APRAS</p>
+        <p class="text-sm mt-1" style="color:var(--muted-foreground)">Gestão de Condomínios</p>
+      </div>
+      <p class="text-xs font-mono ratio" data-before="3.2408" data-after="4.9576"></p>
+    </section>
+
+    <!-- 5. Unchanged -->
+    <section class="rounded-xl border p-6 space-y-4 md:col-span-2" style="border-color:var(--border);background:var(--card)">
+      <h2 class="font-bold">5. Unchanged by this task — graphical objects keep <code>--primary</code></h2>
+      <div class="flex flex-wrap items-center gap-6">
+        <span class="inline-flex items-center gap-2 text-sm font-bold"><i data-lucide="shield-check" class="size-5" style="color:var(--primary)"></i>Nova Autorização</span>
+        <span class="inline-flex items-center gap-2 text-sm font-bold"><i data-lucide="scan-line" class="size-5" style="color:var(--primary)"></i>Ler QR Code</span>
+        <input type="checkbox" checked class="size-4" style="accent-color:var(--primary)" />
+        <button class="rounded-md px-4 py-2 text-sm font-semibold" style="background:var(--primary);color:#0b2119">Vincular Usuário</button>
+      </div>
+      <p class="text-xs" style="color:var(--muted-foreground)">19 of the 47 sites. Icons, native inputs and every <code>bg-</code>/<code>border-</code>/<code>ring-</code> utility stay on the 3:1 graphical floor (mapping table §1k).</p>
+    </section>
+  </div>
+
+  <footer class="text-xs" style="color:var(--muted-foreground)">
+    Ratios measured by importing <code>frontend/src/lib/contrast.ts</code> on the emitted, rounded
+    <code>oklch()</code> strings in <code>frontend/src/index.css</code> at HEAD. AA floor for normal text is 4.5:1.
+  </footer>
+</div>
+
+<script>
+  lucide.createIcons();
+  var mode = "after";
+  function render() {
+    document.querySelectorAll(".brand-text").forEach(function (el) {
+      el.style.color = mode === "before" ? "var(--primary)" : "var(--primary-text)";
+    });
+    document.querySelectorAll(".ratio").forEach(function (el) {
+      var v = el.dataset[mode];
+      var ok = parseFloat(v) >= 4.5;
+      el.textContent = (mode === "before" ? "--primary" : "--primary-text") + " → " + v + ":1 " + (ok ? "✓ passes AA" : "✗ fails AA (min 4.5)");
+      el.style.color = ok ? "var(--primary-text)" : "#b42318";
+    });
+    var on = "background:var(--primary-text);color:#ffffff";
+    document.getElementById("btn-before").style.cssText = mode === "before" ? on : "";
+    document.getElementById("btn-after").style.cssText  = mode === "after"  ? on : "";
+  }
+  document.getElementById("btn-before").onclick = function () { mode = "before"; render(); };
+  document.getElementById("btn-after").onclick  = function () { mode = "after";  render(); };
+  render();
+</script>
+</body>
+</html>

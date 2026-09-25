@@ -121,7 +121,7 @@ export const GeneralDashboardPage: React.FC = () => {
                   user.roles.map((role) => (
                     <span
                       key={role.id}
-                      className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-primary/10 text-primary border border-primary/20"
+                      className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-primary/10 text-primary-text border border-primary/20"
                     >
                       {role.name.replace(/\s*\(papel\)$/i, "").trim()}
                     </span>
@@ -167,7 +167,7 @@ export const GeneralDashboardPage: React.FC = () => {
                   >
                     <Icon className="size-5.5" />
                   </div>
-                  <h3 className="text-base font-semibold text-foreground group-hover:text-primary transition-colors">
+                  <h3 className="text-base font-semibold text-foreground group-hover:text-primary-text transition-colors">
                     {title}
                   </h3>
                   <p className="mt-1.5 text-xs sm:text-sm text-muted-foreground line-clamp-2">
@@ -175,7 +175,7 @@ export const GeneralDashboardPage: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-border/40 flex items-center justify-end text-xs font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="mt-4 pt-3 border-t border-border/40 flex items-center justify-end text-xs font-medium text-primary-text opacity-0 group-hover:opacity-100 transition-opacity">
                   <span>{t("dashboard.general.access")} &rarr;</span>
                 </div>
               </Link>

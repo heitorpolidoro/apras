@@ -583,6 +583,21 @@ measurement: **does this element paint glyphs of text?**
   (`--primary-text` on `--border` is 4.1271:1; `--border` carries no text and
   is not one of the four.)
 
+**The same question governs a bare `text-primary` that predates this rule.**
+The nine classes above are the *migration* scope; they are not the only way the
+brand reaches a call site. A `text-primary` written before APRAS-88 existed
+carries no information about which role it was meant for, so it is answered
+the same way: if the element paints glyphs it takes **`text-primary-text`**, and
+if it is a graphical object it keeps `text-primary` at the 3:1 floor. APRAS-87
+applied that answer tree-wide and recorded the graphical side in
+`frontend/src/__tests__/brandTextRole.test.ts`, whose `GRAPHICAL_PRIMARY_SITES`
+names every surviving bare `text-primary` by file and element. The guard is a
+**set equivalence**, not a total: a sibling that migrates a palette-coloured
+icon to `text-primary` appends one entry — from the classification its own spec
+already published — and nothing here is re-measured. Editing a bare token class
+is **not** a migration: it adds no ledger row, no exceptions entry and no
+`MIGRATED_DIRECTORIES` member.
+
 **No new gap code, no ledger row, no exceptions entry.** A brand text class
 still *migrates* — it simply migrates to a different token — so the §3b guard
 grammar, `themeTokenMigration.exceptions.json` and the ledger counts are all

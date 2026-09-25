@@ -16,7 +16,7 @@ const buttonVariants = cva(
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
+        link: "text-primary-text underline-offset-4 hover:underline",
         // APRAS-78: retargeted to the primary token triple. `--primary`
         // *is* emerald, so the two already differed by 2.40 L points;
         // leaving it literal would make `success` the one button in the

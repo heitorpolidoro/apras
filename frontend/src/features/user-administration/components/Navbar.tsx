@@ -152,7 +152,7 @@ const Navbar: React.FC = () => {
                   isSimulating
                     ? "text-amber-600 dark:text-amber-400 font-semibold"
                     : user?.is_superuser
-                      ? "text-primary font-semibold"
+                      ? "text-primary-text font-semibold"
                       : "text-muted-foreground",
                 )}
               >

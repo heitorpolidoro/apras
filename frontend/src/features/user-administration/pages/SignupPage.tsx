@@ -103,7 +103,7 @@ const SignupPage: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center bg-muted/30 px-4 py-8">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-primary tracking-tight">
+          <h1 className="text-2xl font-bold text-primary-text tracking-tight">
             {t("common.appName")}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -206,7 +206,7 @@ const SignupPage: React.FC = () => {
             {t("signup.loginPrompt")}{" "}
             <Link
               to="/login"
-              className="text-primary font-medium hover:underline"
+              className="text-primary-text font-medium hover:underline"
             >
               {t("signup.loginLink")}
             </Link>

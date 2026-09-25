@@ -110,7 +110,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
         </p>
         {task.assigned_to_name && (
           <div
-            className="size-7 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold border border-primary/20 shrink-0"
+            className="size-7 rounded-full bg-primary/10 text-primary-text flex items-center justify-center text-[10px] font-bold border border-primary/20 shrink-0"
             title={task.assigned_to_name}
           >
             {task.assigned_to_name

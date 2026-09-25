@@ -35,7 +35,7 @@ const ForgotPasswordPage: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center bg-muted/30 px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-primary tracking-tight">APRAS</h1>
+          <h1 className="text-2xl font-bold text-primary-text tracking-tight">APRAS</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Recuperação de Acesso
           </p>
@@ -89,7 +89,7 @@ const ForgotPasswordPage: React.FC = () => {
 
           <p className="text-center text-sm text-muted-foreground mt-5">
             Lembrou da senha?{" "}
-            <Link to="/login" className="text-primary font-medium hover:underline">
+            <Link to="/login" className="text-primary-text font-medium hover:underline">
               Voltar ao Login
             </Link>
           </p>

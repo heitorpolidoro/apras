@@ -133,7 +133,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
         <div className="flex flex-col gap-1.5">
           <div className="flex justify-between items-center">
             <Label htmlFor="password">{t("login.password")}</Label>
-            <Link to="/forgot-password" className="text-xs text-primary hover:underline">
+            <Link to="/forgot-password" className="text-xs text-primary-text hover:underline">
               Esqueceu a senha?
             </Link>
           </div>

@@ -70,7 +70,7 @@ const LoginPage: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center bg-muted/30 px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-primary tracking-tight">
+          <h1 className="text-2xl font-bold text-primary-text tracking-tight">
             {t("common.appName")}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -116,7 +116,7 @@ const LoginPage: React.FC = () => {
                     key={u.id}
                     onClick={() => handleDevLogin(u.email)}
                     disabled={isDevLoading}
-                    className="text-xs px-2.5 py-1.5 rounded-md bg-primary/5 hover:bg-primary/10 text-primary border border-primary/20 transition-colors"
+                    className="text-xs px-2.5 py-1.5 rounded-md bg-primary/5 hover:bg-primary/10 text-primary-text border border-primary/20 transition-colors"
                   >
                     {u.full_name}
                   </button>
@@ -129,7 +129,7 @@ const LoginPage: React.FC = () => {
             {t("login.signupPrompt")}{" "}
             <Link
               to="/signup"
-              className="text-primary font-medium hover:underline"
+              className="text-primary-text font-medium hover:underline"
             >
               {t("login.signupLink")}
             </Link>

@@ -8,6 +8,7 @@ import apiClient from "../../../api/client";
 import * as AuthHook from "../context/AuthContext";
 import { type User } from "../../../types/auth";
 import { useSidebar } from "../context/useSidebar";
+import { classTokens } from "../../../test/classTokens";
 
 vi.mock("../../../api/client", () => ({
   default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() },
@@ -136,11 +137,12 @@ describe("Sidebar component", () => {
     expect(screen.getByRole("link", { name: "Tarefas" })).toBeInTheDocument();
   });
 
-  it("highlights the active link with text-primary", async () => {
+  it("highlights the active link with text-primary-text", async () => {
     renderSidebar(["tasks:read", "categories:read"], "/tasks");
 
     const tarefasLink = await screen.findByRole("link", { name: "Tarefas" });
-    expect(tarefasLink.className).toContain("text-primary");
+    expect(classTokens(tarefasLink)).toContain("text-primary-text");
+    expect(classTokens(tarefasLink)).not.toContain("text-primary");
 
     const categoriesLink = screen.getByRole("link", { name: "Categorias" });
     expect(categoriesLink.className).not.toContain("bg-primary/10");
@@ -151,7 +153,8 @@ describe("Sidebar component", () => {
 
     const homeLink = await screen.findByRole("link", { name: "Início" });
     expect(homeLink).toBeInTheDocument();
-    expect(homeLink.className).toContain("text-primary");
+    expect(classTokens(homeLink)).toContain("text-primary-text");
+    expect(classTokens(homeLink)).not.toContain("text-primary");
     expect(homeLink).toHaveAttribute("href", "/");
   });
 

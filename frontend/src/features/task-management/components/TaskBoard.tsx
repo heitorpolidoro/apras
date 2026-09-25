@@ -210,7 +210,7 @@ const TaskBoard: React.FC<TaskBoardProps> = ({
               {dropTarget === column.status && (
                 <p
                   data-testid="task-drop-hint"
-                  className="text-center text-[11px] font-medium text-primary"
+                  className="text-center text-[11px] font-medium text-primary-text"
                 >
                   {t("tasks.board.dropHint", { status: column.label })}
                 </p>

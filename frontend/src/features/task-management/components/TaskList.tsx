@@ -103,7 +103,7 @@ const TaskList: React.FC<TaskListProps> = ({
             >
               <td className="px-6 py-4">
                 <div className="flex flex-col">
-                  <span className="font-semibold text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
+                  <span className="font-semibold text-foreground group-hover:text-primary-text transition-colors flex items-center gap-1.5">
                     <HighlightedText text={task.title} search={filters.search} />
                     {isSimulating &&
                       !canEditSimulatedTask(task, has, roleIds) && (

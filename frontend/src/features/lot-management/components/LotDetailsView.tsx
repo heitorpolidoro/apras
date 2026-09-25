@@ -162,7 +162,7 @@ export const LotDetailsView: React.FC<LotDetailsViewProps> = ({
             onClick={() => setActiveTab("users")}
             className={`whitespace-nowrap pb-4 text-sm font-semibold border-b-2 transition-colors ${
               activeTab === "users"
-                ? "border-primary text-primary"
+                ? "border-primary text-primary-text"
                 : "border-transparent text-muted-foreground hover:border-input hover:text-slate-700 dark:hover:text-slate-300"
             }`}
           >
@@ -173,7 +173,7 @@ export const LotDetailsView: React.FC<LotDetailsViewProps> = ({
             onClick={() => setActiveTab("residents")}
             className={`whitespace-nowrap pb-4 text-sm font-semibold border-b-2 transition-colors ${
               activeTab === "residents"
-                ? "border-primary text-primary"
+                ? "border-primary text-primary-text"
                 : "border-transparent text-muted-foreground hover:border-input hover:text-slate-700 dark:hover:text-slate-300"
             }`}
           >

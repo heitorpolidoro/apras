@@ -207,7 +207,7 @@ const AcceptInvitationPage: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center bg-muted/30 px-4 py-10">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-primary tracking-tight">
+          <h1 className="text-2xl font-bold text-primary-text tracking-tight">
             {t("common.appName")}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">

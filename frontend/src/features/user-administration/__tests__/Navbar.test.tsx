@@ -12,6 +12,7 @@ import {
   PERMISSIONS_BY_ROLE,
   settledPermissions,
 } from "../../../test/permissionFixtures";
+import { classTokens } from "../../../test/classTokens";
 
 // Navbar reads the effective (possibly simulated) role via
 // useEffectiveIdentity, which combines useAuth (spied on per-test below) with
@@ -133,7 +134,12 @@ describe("Navbar", () => {
     expect(screen.getByText("Administração")).toBeDefined();
   });
 
-  it("applies active class to tasks link when on /tasks", () => {
+  // The three assertions below resolve, through `<Navbar />`, to the label
+  // `<span>` of the **Sidebar** nav item that `Navbar.tsx:64` renders — Navbar's
+  // own markup carries no nav links at all. They are named for what they
+  // actually assert (APRAS-87 code review); coverage of Navbar's own active
+  // markup is a separate, separately tracked gap.
+  it("renders the Sidebar Tarefas label with the brand text token on /tasks", () => {
     vi.spyOn(AuthHook, "useAuth").mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
@@ -156,10 +162,11 @@ describe("Navbar", () => {
     );
 
     const tarefasLink = screen.getByText("Tarefas");
-    expect(tarefasLink.className).toContain("text-primary");
+    expect(classTokens(tarefasLink)).toContain("text-primary-text");
+    expect(classTokens(tarefasLink)).not.toContain("text-primary");
   });
 
-  it("applies active class to admin link when on /admin/users", () => {
+  it("renders the Sidebar Administração label with the brand text token on /admin/users", () => {
     vi.spyOn(AuthHook, "useAuth").mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
@@ -183,7 +190,8 @@ describe("Navbar", () => {
     );
 
     const adminLink = screen.getByText("Administração");
-    expect(adminLink.className).toContain("text-primary");
+    expect(classTokens(adminLink)).toContain("text-primary-text");
+    expect(classTokens(adminLink)).not.toContain("text-primary");
   });
 
   it("calls logout when Sair button is clicked", () => {
@@ -214,7 +222,7 @@ describe("Navbar", () => {
     expect(mockLogout).toHaveBeenCalledOnce();
   });
 
-  it("applies active class to categories link when on /categories", () => {
+  it("renders the Sidebar Categorias label with the brand text token on /categories", () => {
     vi.spyOn(AuthHook, "useAuth").mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
@@ -238,7 +246,8 @@ describe("Navbar", () => {
     );
 
     const link = screen.getByText("Categorias");
-    expect(link.className).toContain("text-primary");
+    expect(classTokens(link)).toContain("text-primary-text");
+    expect(classTokens(link)).not.toContain("text-primary");
   });
 
   it("renders role name when user has a role label", () => {

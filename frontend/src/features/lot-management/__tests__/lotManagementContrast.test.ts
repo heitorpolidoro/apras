@@ -144,23 +144,38 @@ describe("the pairs APRAS-79 changes", () => {
  * and it is wrong *while passing*, because the assertion agrees with the wrong
  * reference.
  */
-const PRE_EXISTING_SUB_AA = [
-  {
-    pair: "LotDetailsView active tab label, text-emerald-600 -> text-primary",
-    // Traced: the label is in the tab nav at LotDetailsView.tsx:158
-    // (`border-b border-border`, no fill), inside the component root at
-    // LotDetailsView.tsx:81 (`space-y-6`, no fill), rendered at LotsPage.tsx:93
-    // inside LotsPage.tsx:92 (`container mx-auto max-w-7xl px-4 py-8`, no
-    // fill). The nearest ancestor that paints anything is App.tsx:86/112,
-    // which is `bg-background`. There is no `bg-card` anywhere in that chain.
-    foreground: () => palette("emerald-600"),
-    after: () => token("primary"),
-    background: () => BACKGROUND,
-    today: 3.6142,
-    then: 3.3091,
-    owner: "APRAS-87",
-  },
-] as const;
+const PRE_EXISTING_SUB_AA: readonly {
+  pair: string;
+  foreground: () => Oklch;
+  after: () => Oklch;
+  background: () => Oklch;
+  today: number;
+  then: number;
+  owner: string;
+}[] = [];
+
+/**
+ * The active-tab label this file used to declare sub-AA, now repaired.
+ *
+ * APRAS-79 migrated it `text-emerald-600` -> `text-primary` and declared both
+ * sides failing (3.6142 and 3.3091 on `--background`), naming APRAS-87 as the
+ * owner of the repair. APRAS-87 is that repair: the label paints characters,
+ * so §1k of the theme-token contract routes it to `--primary-text`, which
+ * measures 5.0622 on the same surface.
+ *
+ * **The background is traced, never assumed.** The label is in the tab nav at
+ * `LotDetailsView.tsx:158` (`border-b border-border`, no fill), inside the
+ * component root at `:82` (`space-y-6`, no fill), rendered by the details
+ * branch at `LotsPage.tsx:93` inside `LotsPage.tsx:92` (`container mx-auto
+ * max-w-7xl px-4 py-8`, no fill). The nearest ancestor that paints anything is
+ * `App.tsx:86`/`:112`, which is `bg-background`. There is no `bg-card`
+ * anywhere in that chain.
+ */
+const ACTIVE_TAB_ON_BACKGROUND = {
+  emerald: 3.6142,
+  primary: 3.3091,
+  primaryText: 5.0622,
+} as const;
 
 /**
  * The same pair measured against `--card`.
@@ -183,9 +198,8 @@ const PRE_EXISTING_SUB_AA = [
 const ACTIVE_TAB_ON_CARD = { today: 3.7194, then: 3.4054 } as const;
 
 describe("the pre-existing sub-AA pairs this task declares", () => {
-  it.each(PRE_EXISTING_SUB_AA)(
-    "declares $pair as owned by $owner",
-    ({ foreground, after, background, today, then, owner }) => {
+  it("has none left to declare — APRAS-87 repaired the last one", () => {
+    for (const { foreground, after, background, today, then, owner } of PRE_EXISTING_SUB_AA) {
       const surface = background();
 
       expect(ratio(foreground(), surface)).toBeCloseTo(today, 3);
@@ -195,8 +209,36 @@ describe("the pre-existing sub-AA pairs this task declares", () => {
       expect(ratio(foreground(), surface)).toBeLessThan(MINIMUM_CONTRAST_RATIO);
       expect(ratio(after(), surface)).toBeLessThan(MINIMUM_CONTRAST_RATIO);
       expect(owner).toMatch(/^APRAS-\d+$/);
-    },
-  );
+    }
+  });
+
+  it("repairs both active-tab labels, which APRAS-79 could only declare", () => {
+    // The two branches now read `border-primary text-primary-text`, so the
+    // measured foreground is `--primary-text` on the traced surface.
+    expect(ratio(palette("emerald-600"), BACKGROUND)).toBeCloseTo(
+      ACTIVE_TAB_ON_BACKGROUND.emerald,
+      3,
+    );
+    expect(ratio(token("primary"), BACKGROUND)).toBeCloseTo(
+      ACTIVE_TAB_ON_BACKGROUND.primary,
+      3,
+    );
+    expect(ratio(token("primary-text"), BACKGROUND)).toBeCloseTo(
+      ACTIVE_TAB_ON_BACKGROUND.primaryText,
+      3,
+    );
+    // The repair, stated as the criterion rather than as a number: what the
+    // two labels paint today clears AA, where both earlier values failed.
+    expect(ratio(token("primary-text"), BACKGROUND)).toBeGreaterThanOrEqual(
+      MINIMUM_CONTRAST_RATIO,
+    );
+    expect(ACTIVE_TAB_ON_BACKGROUND.emerald).toBeLessThan(
+      MINIMUM_CONTRAST_RATIO,
+    );
+    expect(ACTIVE_TAB_ON_BACKGROUND.primary).toBeLessThan(
+      MINIMUM_CONTRAST_RATIO,
+    );
+  });
 
   it("keeps the --card reference figures traceable, and distinct from the call site", () => {
     expect(ratio(palette("emerald-600"), CARD)).toBeCloseTo(
@@ -210,7 +252,7 @@ describe("the pre-existing sub-AA pairs this task declares", () => {
     // The two surfaces really are different, so the distinction the comment
     // above draws is a fact about the stylesheet, not a preference.
     expect(ACTIVE_TAB_ON_CARD.today).not.toBeCloseTo(
-      PRE_EXISTING_SUB_AA[0].today,
+      ACTIVE_TAB_ON_BACKGROUND.emerald,
       3,
     );
     expect(ratio(token("card"), BACKGROUND)).toBeLessThan(1.1);
@@ -218,7 +260,7 @@ describe("the pre-existing sub-AA pairs this task declares", () => {
   });
 
   it("is the only list of sub-AA pairs, and every other changed pair holds AA", () => {
-    expect(PRE_EXISTING_SUB_AA).toHaveLength(1);
+    expect(PRE_EXISTING_SUB_AA).toHaveLength(0);
     for (const { after, background } of PRE_EXISTING_SUB_AA) {
       expect(ratio(after(), background())).toBeLessThan(MINIMUM_CONTRAST_RATIO);
     }
