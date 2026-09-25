@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>APRAS-81 — Decision mock: page root background</title>
+<style>
+  /* Standalone: no CDN, no fonts, no network. All colours are real oklch(). */
+
+  :root {
+    /* Today's Tailwind value, verified in frontend/node_modules/tailwindcss/theme.css:214 */
+    --today-bg: oklch(98.4% 0.003 247.858);
+
+    /* frontend/src/index.css :root — fixed neutral constants */
+    --background: oklch(0.99 0 0);
+    --card: oklch(1 0 0);
+
+    /* Brand-hue-dependent; rewritten by JS from branding.py's constants */
+    --brand-hue: 160;
+    --foreground: oklch(0.14 0.01 160);
+    --muted: oklch(0.96 0.01 160);
+    --muted-foreground: oklch(0.55 0.02 160);
+    --border: oklch(0.92 0.01 160);
+    --primary: oklch(0.62 0.15 160);
+    --primary-foreground: oklch(0.15 0.02 160);
+    --primary-text: oklch(0.52 0.11 160);
+    --accent: oklch(0.96 0.015 160);
+    --accent-foreground: oklch(0.20 0.02 160);
+
+    --page-bg: var(--today-bg);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--foreground);
+    background: #ffffff;
+  }
+
+  /* ---------------- control bar ---------------- */
+  .controls {
+    position: sticky; top: 0; z-index: 20;
+    background: #0f172a; color: #e2e8f0;
+    padding: 14px 20px;
+    display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+  }
+  .controls h1 { font-size: 13px; margin: 0 0 8px; letter-spacing: .04em; text-transform: uppercase; color: #94a3b8; }
+  .ctl-group { min-width: 260px; }
+  .seg { display: flex; gap: 6px; flex-wrap: wrap; }
+  .seg button {
+    font: inherit; font-size: 13px; font-weight: 600;
+    padding: 7px 12px; border-radius: 8px; cursor: pointer;
+    border: 1px solid #334155; background: #1e293b; color: #cbd5e1;
+  }
+  .seg button[aria-pressed="true"] { background: #e2e8f0; color: #0f172a; border-color: #e2e8f0; }
+  .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; border: 1px solid rgb(255 255 255 / .35); }
+
+  .readout {
+    background: #111827; color: #cbd5e1; padding: 10px 20px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+    display: flex; flex-wrap: wrap; gap: 20px; border-top: 1px solid #1f2937;
+  }
+  .readout b { color: #f8fafc; font-weight: 600; }
+  .readout .chip { display: inline-block; width: 26px; height: 12px; border-radius: 3px; border: 1px solid #334155; vertical-align: -1px; margin-right: 6px; }
+
+  /* ---------------- explanation ---------------- */
+  .explain { padding: 22px 20px; max-width: 900px; }
+  .explain h2 { font-size: 15px; margin: 0 0 8px; }
+  .explain p { font-size: 14px; line-height: 1.6; margin: 0 0 10px; color: #334155; }
+  .explain .rec { font-size: 13px; color: #475569; border-left: 3px solid #94a3b8; padding-left: 10px; }
+  .explain code { background: #f1f5f9; padding: 1px 5px; border-radius: 4px; font-size: 12.5px; }
+
+  /* ---------------- the page under test ---------------- */
+  /* Reproduction of ConstructionTrackerPage.tsx (root at line 198), post-token-migration:
+     cards -> bg-card, borders -> border, brand chrome -> primary, gauge panel -> accent.
+     Only the PAGE ROOT differs between TODAY / A / B. */
+  .page {
+    background: var(--page-bg);
+    padding: 24px;
+    display: flex; flex-direction: column; gap: 24px;
+    min-height: 720px;
+    border-top: 1px solid #e2e8f0;
+  }
+
+  .header {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px;
+    background: var(--card); padding: 24px; border-radius: 16px;
+    border: 1px solid var(--border); box-shadow: 0 1px 2px rgb(0 0 0 / .04);
+  }
+  .title-row { display: flex; align-items: center; gap: 10px; }
+  .title-row svg { width: 26px; height: 26px; color: var(--primary-text); }
+  .header h2 { font-size: 22px; font-weight: 700; margin: 0; color: var(--foreground); }
+  .subtitle { font-size: 13.5px; color: var(--muted-foreground); margin: 6px 0 0; max-width: 46ch; }
+
+  .btn {
+    font: inherit; font-size: 13px; font-weight: 600; padding: 7px 12px;
+    border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; cursor: default;
+    border: 1px solid var(--border); background: var(--card); color: var(--foreground);
+  }
+  .btn svg { width: 15px; height: 15px; }
+  .btn-primary { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+  .tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tab {
+    font: inherit; font-size: 13px; font-weight: 600; padding: 8px 16px; border-radius: 12px;
+    background: var(--card); color: var(--foreground); border: 1px solid var(--border); cursor: default;
+  }
+  .tab.active { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    overflow: hidden; box-shadow: 0 1px 2px rgb(0 0 0 / .05);
+    display: flex; flex-direction: column;
+  }
+  .cover {
+    aspect-ratio: 16 / 9; background: var(--muted);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: var(--muted-foreground); position: relative;
+  }
+  .cover svg { width: 38px; height: 38px; opacity: .5; }
+  .cover span { font-size: 11.5px; margin-top: 4px; }
+  .badge {
+    position: absolute; top: 12px; left: 12px; font-size: 11px; font-weight: 700;
+    padding: 4px 9px; border-radius: 999px; border: 1px solid;
+  }
+  .b-prog { background: oklch(0.93 0.05 250); color: oklch(0.40 0.12 250); border-color: oklch(0.87 0.07 250); }
+  .b-plan { background: var(--muted); color: var(--muted-foreground); border-color: var(--border); }
+  .b-done { background: oklch(0.93 0.06 155); color: oklch(0.40 0.12 155); border-color: oklch(0.87 0.08 155); }
+  .card-body { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .card-body h3 { font-size: 15px; font-weight: 700; margin: 0; color: var(--foreground); }
+  .meta { font-size: 12.5px; color: var(--muted-foreground); display: flex; align-items: center; gap: 6px; }
+  .meta svg { width: 14px; height: 14px; }
+  .bar { height: 7px; border-radius: 999px; background: var(--muted); overflow: hidden; }
+  .bar > i { display: block; height: 100%; background: var(--primary); }
+  .card-foot {
+    border-top: 1px solid var(--border); padding: 10px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 12.5px; color: var(--muted-foreground);
+  }
+
+  .detail-panel {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px;
+    display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-between; align-items: flex-start;
+    box-shadow: 0 1px 2px rgb(0 0 0 / .05);
+  }
+  .detail-panel h3 { margin: 0 0 8px; font-size: 20px; font-weight: 700; }
+  .detail-panel p { margin: 0; font-size: 13.5px; color: var(--muted-foreground); max-width: 52ch; line-height: 1.55; }
+  .gauge {
+    background: var(--accent); border: 1px solid var(--border); border-radius: 12px; padding: 16px;
+    min-width: 170px; text-align: center; color: var(--accent-foreground);
+  }
+  .gauge .lbl { font-size: 11.5px; font-weight: 700; }
+  .gauge .val { font-size: 30px; font-weight: 800; margin: 2px 0 8px; }
+  .gauge .track { height: 6px; border-radius: 999px; background: var(--card); overflow: hidden; }
+  .gauge .track > i { display: block; height: 100%; background: var(--primary); }
+
+  .sectionlabel {
+    padding: 18px 20px 0; font-size: 12px; letter-spacing: .06em;
+    text-transform: uppercase; color: #64748b; font-weight: 700;
+  }
+  footer { padding: 24px 20px 48px; max-width: 900px; font-size: 12.5px; color: #64748b; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<div style="background:#064e3b;color:#ecfdf5;padding:14px 20px;font:600 14px/1.5 ui-sans-serif,system-ui;">
+  RESOLVIDO — o operador escolheu a <strong>Opção A (<code>bg-background</code>)</strong>.
+  A raiz da página em <code>ConstructionTrackerPage.tsx:198</code> passa a
+  <code>bg-background</code>, e o mesmo vale para <code>FinanceDashboardPage.tsx:48</code>
+  (APRAS-83). Os controles abaixo continuam ativos apenas como registro da comparação.
+</div>
+
+<div class="controls">
+  <div class="ctl-group">
+    <h1>Page shell background</h1>
+    <div class="seg" id="bgSeg">
+      <button data-opt="today" aria-pressed="true">TODAY — bg-slate-50</button>
+      <button data-opt="a" aria-pressed="false">OPTION A — bg-background (CHOSEN)</button>
+      <button data-opt="b" aria-pressed="false">OPTION B — bg-muted (not chosen)</button>
+    </div>
+  </div>
+  <div class="ctl-group">
+    <h1>Tenant brand (simple mode)</h1>
+    <div class="seg" id="hueSeg">
+      <button data-hue="160" aria-pressed="true"><span class="swatch" style="background:oklch(0.62 0.15 160)"></span>Green 160 (default)</button>
+      <button data-hue="25" aria-pressed="false"><span class="swatch" style="background:oklch(0.62 0.15 25)"></span>Red 25</button>
+      <button data-hue="260" aria-pressed="false"><span class="swatch" style="background:oklch(0.62 0.15 260)"></span>Blue 260</button>
+      <button data-hue="305" aria-pressed="false"><span class="swatch" style="background:oklch(0.62 0.15 305)"></span>Purple 305</button>
+    </div>
+  </div>
+</div>
+
+<div class="readout" id="readout"></div>
+
+<div class="explain">
+  <h2>O que você está escolhendo</h2>
+  <p>
+    A escolha é entre um fundo de página que permanece <strong>neutro e idêntico para todos os
+    condomínios</strong> (Opção A, <code>bg-background</code>: no modo simples o backend fixa
+    <code>background</code> na constante <code>oklch(0.99 0 0)</code>, sem nenhuma cor de marca) e um
+    fundo que <strong>carrega um leve tom da marca de cada condomínio</strong> (Opção B,
+    <code>bg-muted</code>: o backend gera <code>muted</code> com lightness 0.96 e chroma 0.01
+    <em>posicionado no matiz da marca do tenant</em>). Troque a marca no controle acima com a Opção B
+    ativa: a página inteira muda de temperatura — esverdeada, avermelhada, azulada ou arroxeada. Com a
+    Opção A, a página fica exatamente igual em todos os casos, e só os cartões, botões e o medidor
+    mudam. A Opção B também é um pouco mais escura que a página de hoje; a Opção A é praticamente
+    idêntica à de hoje em claridade. (No modo avançado o tenant escreve as 13 cores, inclusive
+    <code>background</code>, então nesse modo as duas opções passam a ser controladas pelo tenant — a
+    diferença descrita aqui vale para o modo simples, que é o padrão.)
+  </p>
+  <p class="rec">
+    <strong>Recommendation (mine, one sentence):</strong> Option A — the page shell is the one surface
+    every screen shares, and keeping it on the fixed neutral means a tenant's brand hue shows up only
+    where it was deliberately placed, while Option B repaints every page of the product in the brand.
+  </p>
+</div>
+
+<div class="sectionlabel">ConstructionTrackerPage — list view (reduced reproduction)</div>
+
+<div class="page" id="page">
+
+  <!-- Header (ConstructionTrackerPage.tsx:200) -->
+  <div class="header">
+    <div>
+      <div class="title-row">
+        <!-- hard-hat -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1z"/><path d="M10 5V3h4v2"/><path d="M4 15a8 8 0 0 1 16 0"/></svg>
+        <h2>Acompanhamento de Obras</h2>
+      </div>
+      <p class="subtitle">Acompanhe o andamento físico, metas e execução financeira das reformas e melhorias do condomínio.</p>
+    </div>
+    <div class="actions">
+      <span class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>Atualizar</span>
+      <span class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>Gerar relatório</span>
+      <span class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M7 3v6h8"/></svg>Salvar em Documentos</span>
+      <span class="btn btn-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Nova Obra</span>
+    </div>
+  </div>
+
+  <!-- Status filter tabs (line 411) -->
+  <div class="tabs">
+    <span class="tab active">Todos os Status</span>
+    <span class="tab">Em Andamento</span>
+    <span class="tab">Planejada</span>
+    <span class="tab">Pausada</span>
+    <span class="tab">Concluída</span>
+  </div>
+
+  <!-- Project grid (line 454) with ProjectSummaryCard reproductions -->
+  <div class="grid">
+    <div class="card">
+      <div class="cover">
+        <span class="badge b-prog">Em Andamento</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M10 6h4M10 10h4M10 14h4M10 18h4"/></svg>
+        <span>Sem foto de capa</span>
+      </div>
+      <div class="card-body">
+        <h3>Reforma da fachada — Torre A</h3>
+        <div class="meta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 18h16"/><path d="M6 14a6 6 0 0 1 12 0"/></svg>Empreiteira: Construtora Ipê</div>
+        <div class="bar"><i style="width:68%"></i></div>
+        <div class="meta">R$ 238.400 de R$ 350.000 executados</div>
+      </div>
+      <div class="card-foot"><span>Previsão: 12/2026</span><span>68%</span></div>
+    </div>
+
+    <div class="card">
+      <div class="cover">
+        <span class="badge b-plan">Planejada</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M10 6h4M10 10h4M10 14h4M10 18h4"/></svg>
+        <span>Sem foto de capa</span>
+      </div>
+      <div class="card-body">
+        <h3>Impermeabilização da laje da garagem</h3>
+        <div class="meta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 18h16"/><path d="M6 14a6 6 0 0 1 12 0"/></svg>Empreiteira: Vedatec</div>
+        <div class="bar"><i style="width:5%"></i></div>
+        <div class="meta">R$ 0 de R$ 92.000 executados</div>
+      </div>
+      <div class="card-foot"><span>Início: 03/2027</span><span>0%</span></div>
+    </div>
+
+    <div class="card">
+      <div class="cover">
+        <span class="badge b-done">Concluída</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M10 6h4M10 10h4M10 14h4M10 18h4"/></svg>
+        <span>Sem foto de capa</span>
+      </div>
+      <div class="card-body">
+        <h3>Troca das bombas de recalque</h3>
+        <div class="meta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 18h16"/><path d="M6 14a6 6 0 0 1 12 0"/></svg>Empreiteira: HidroSul</div>
+        <div class="bar"><i style="width:100%"></i></div>
+        <div class="meta">R$ 47.900 de R$ 48.000 executados</div>
+      </div>
+      <div class="card-foot"><span>Entregue: 08/2026</span><span>100%</span></div>
+    </div>
+  </div>
+
+  <!-- Detail overview card + physical-progress gauge (line 327 / 352) -->
+  <div class="detail-panel">
+    <div>
+      <h3>Reforma da fachada — Torre A</h3>
+      <p>Recuperação estrutural, tratamento de trincas e repintura completa da fachada norte, incluindo substituição de rejuntes e revisão das esquadrias.</p>
+    </div>
+    <div class="gauge">
+      <div class="lbl">Progresso Físico</div>
+      <div class="val">68%</div>
+      <div class="track"><i style="width:68%"></i></div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  Sources verified for this mock: <code>frontend/node_modules/tailwindcss/theme.css:214</code>
+  (<code>--color-slate-50: oklch(98.4% 0.003 247.858)</code>);
+  <code>frontend/src/index.css</code> (<code>--background: oklch(0.99 0 0)</code>,
+  <code>--card: oklch(1 0 0)</code>, <code>--muted: oklch(0.96 0.01 160)</code>);
+  <code>backend/app/core/branding.py</code> (<code>_LIGHT_BACKGROUND = (0.99, 0.0, 0.0)</code> used as a
+  fixed constant, <code>_LIGHT_MUTED = (0.96, 0.01)</code> placed at the tenant hue via <code>_at()</code>,
+  <code>_LIGHT_ACCENT_LIGHTNESS = 0.96</code>). Distances in the readout are ΔE in OKLab, computed live
+  from those oklch values. Everything on the page except the shell is drawn in its post-migration token
+  form and is identical across the three options.
+</footer>
+
+<script>
+  var HUE = 160;
+  var OPT = 'today';
+
+  // OKLCH -> OKLab (for an honest ΔE against today's bg-slate-50)
+  function lab(L, C, h) {
+    var r = h * Math.PI / 180;
+    return [L, C * Math.cos(r), C * Math.sin(r)];
+  }
+  var TODAY = lab(0.984, 0.003, 247.858);
+  function dE(a, b) {
+    return Math.sqrt(Math.pow(a[0]-b[0],2) + Math.pow(a[1]-b[1],2) + Math.pow(a[2]-b[2],2));
+  }
+  function f(n, d) { return n.toFixed(d === undefined ? 4 : d); }
+
+  function applyHue() {
+    var s = document.documentElement.style;
+    s.setProperty('--brand-hue', HUE);
+    s.setProperty('--foreground',       'oklch(0.14 0.01 ' + HUE + ')');
+    s.setProperty('--muted',            'oklch(0.96 0.01 ' + HUE + ')');
+    s.setProperty('--muted-foreground', 'oklch(0.55 0.02 ' + HUE + ')');
+    s.setProperty('--border',           'oklch(0.92 0.01 ' + HUE + ')');
+    s.setProperty('--primary',          'oklch(0.62 0.15 ' + HUE + ')');
+    s.setProperty('--primary-foreground','oklch(0.98 0 0)');
+    s.setProperty('--primary-text',     'oklch(0.52 0.11 ' + HUE + ')');
+    // accent: lightness 0.96, chroma max(0.01, primary chroma * 0.1) = 0.015
+    s.setProperty('--accent',           'oklch(0.96 0.015 ' + HUE + ')');
+    s.setProperty('--accent-foreground','oklch(0.20 0.02 ' + HUE + ')');
+  }
+
+  function applyOption() {
+    var v = OPT === 'today' ? 'var(--today-bg)' : (OPT === 'a' ? 'var(--background)' : 'var(--muted)');
+    document.documentElement.style.setProperty('--page-bg', v);
+  }
+
+  function render() {
+    applyHue();
+    applyOption();
+
+    var today = { css: 'oklch(98.4% 0.003 247.858)', L: 0.984, C: 0.003, h: 247.858 };
+    var a     = { css: 'oklch(0.99 0 0)',            L: 0.99,  C: 0,     h: 0 };
+    var b     = { css: 'oklch(0.96 0.01 ' + HUE + ')', L: 0.96, C: 0.01, h: HUE };
+
+    function block(tag, o, note) {
+      var d = dE(lab(o.L, o.C, o.h), TODAY);
+      return '<div><b>' + tag + '</b><br>' +
+             '<span class="chip" style="background:' + o.css + '"></span>' + o.css + '<br>' +
+             'L = ' + f(o.L, 3) + ' &nbsp; ΔL vs today = ' + (o.L - 0.984 >= 0 ? '+' : '') + f(o.L - 0.984, 3) + '<br>' +
+             'ΔE(OKLab) vs today = ' + f(d) + '<br>' + note + '</div>';
+    }
+
+    document.getElementById('readout').innerHTML =
+      block('TODAY bg-slate-50', today, 'the current shell') +
+      block('OPTION A bg-background', a, 'fixed neutral, same for every tenant') +
+      block('OPTION B bg-muted', b, 'chroma 0.01 at brand hue ' + HUE + ' — moves with the tenant');
+  }
+
+  document.getElementById('bgSeg').addEventListener('click', function (e) {
+    var btn = e.target.closest('button'); if (!btn) return;
+    OPT = btn.dataset.opt;
+    this.querySelectorAll('button').forEach(function (x) { x.setAttribute('aria-pressed', String(x === btn)); });
+    render();
+  });
+
+  document.getElementById('hueSeg').addEventListener('click', function (e) {
+    var btn = e.target.closest('button'); if (!btn) return;
+    HUE = parseFloat(btn.dataset.hue);
+    this.querySelectorAll('button').forEach(function (x) { x.setAttribute('aria-pressed', String(x === btn)); });
+    render();
+  });
+
+  render();
+</script>
+</body>
+</html>

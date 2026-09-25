@@ -60,10 +60,10 @@ export const ProjectSummaryCard: React.FC<ProjectSummaryCardProps> = ({
   return (
     <div
       data-testid={`project-card-${project.id}`}
-      className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between"
+      className="bg-card border border-border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between"
     >
       {/* Cover Image & Status Header */}
-      <div className="relative aspect-video w-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden">
+      <div className="relative aspect-video w-full bg-muted flex items-center justify-center overflow-hidden">
         {project.cover_photo_url ? (
           <img
             src={project.cover_photo_url}
@@ -71,7 +71,7 @@ export const ProjectSummaryCard: React.FC<ProjectSummaryCardProps> = ({
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className="flex flex-col items-center justify-center text-slate-400">
+          <div className="flex flex-col items-center justify-center text-muted-foreground">
             <Building2 className="w-10 h-10 mb-1 opacity-50" />
             <span className="text-xs">Sem foto de capa</span>
           </div>
@@ -91,7 +91,7 @@ export const ProjectSummaryCard: React.FC<ProjectSummaryCardProps> = ({
               <button
                 aria-label="edit-project"
                 onClick={() => onEdit(project)}
-                className="p-1 text-white hover:text-indigo-300 transition-colors"
+                className="p-1 text-white hover:text-primary transition-colors"
               >
                 <Edit2 className="w-4 h-4" />
               </button>
@@ -112,13 +112,13 @@ export const ProjectSummaryCard: React.FC<ProjectSummaryCardProps> = ({
       {/* Content */}
       <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
         <div className="space-y-2">
-          <h3 className="font-bold text-lg text-slate-900 dark:text-slate-100 line-clamp-1">
+          <h3 className="font-bold text-lg text-foreground line-clamp-1">
             {project.title}
           </h3>
 
           {project.contractor_name && (
-            <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
-              <HardHat className="w-3.5 h-3.5 text-slate-500" />
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <HardHat className="w-3.5 h-3.5 text-muted-foreground" />
               <span>
                 {t('projects.card.contractor', 'Empreiteira')}:{' '}
                 <strong className="font-medium text-slate-800 dark:text-slate-200">
@@ -129,7 +129,7 @@ export const ProjectSummaryCard: React.FC<ProjectSummaryCardProps> = ({
           )}
 
           {project.description && (
-            <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2">
+            <p className="text-xs text-muted-foreground line-clamp-2">
               {project.description}
             </p>
           )}
@@ -140,16 +140,16 @@ export const ProjectSummaryCard: React.FC<ProjectSummaryCardProps> = ({
           {/* Physical Progress */}
           <div>
             <div className="flex justify-between text-xs mb-1">
-              <span className="text-slate-500 dark:text-slate-400">
+              <span className="text-muted-foreground">
                 {t('projects.card.physicalProgress', 'Progresso Físico')}
               </span>
               <span className="font-semibold text-slate-800 dark:text-slate-200">
                 {project.physical_progress_pct}%
               </span>
             </div>
-            <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
+            <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
               <div
-                className="bg-indigo-600 h-full transition-all duration-300"
+                className="bg-primary h-full transition-all duration-300"
                 style={{ width: `${Math.min(project.physical_progress_pct, 100)}%` }}
               />
             </div>
@@ -158,14 +158,14 @@ export const ProjectSummaryCard: React.FC<ProjectSummaryCardProps> = ({
           {/* Financial Execution */}
           <div>
             <div className="flex justify-between text-xs mb-1">
-              <span className="text-slate-500 dark:text-slate-400">
+              <span className="text-muted-foreground">
                 {t('projects.card.budgetExecution', 'Orçamento Executado')}
               </span>
               <span className="font-semibold text-slate-800 dark:text-slate-200">
                 {formatCurrency(project.executed_budget)} / {formatCurrency(project.total_budget)}
               </span>
             </div>
-            <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
+            <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
               <div
                 className={`h-full transition-all duration-300 ${
                   project.executed_budget > project.total_budget
@@ -179,8 +179,8 @@ export const ProjectSummaryCard: React.FC<ProjectSummaryCardProps> = ({
 
           {/* Dates */}
           {(project.start_date || project.estimated_completion_date) && (
-            <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 pt-1">
-              <Calendar className="w-3.5 h-3.5 text-slate-400" />
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-1">
+              <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
               <span>
                 {project.start_date
                   ? new Date(project.start_date).toLocaleDateString()

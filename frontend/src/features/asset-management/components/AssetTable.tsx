@@ -65,7 +65,7 @@ export const AssetTable: React.FC<AssetTableProps> = ({
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-500">
+      <div className="bg-card rounded-xl border border-border p-8 text-center text-muted-foreground">
         {t("common.loading", "Carregando...")}
       </div>
     );
@@ -73,17 +73,17 @@ export const AssetTable: React.FC<AssetTableProps> = ({
 
   if (assets.length === 0) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-500">
+      <div className="bg-card rounded-xl border border-border p-8 text-center text-muted-foreground">
         {t("assets.noAssetsFound", "Nenhum ativo ou item encontrado.")}
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm text-gray-600">
-          <thead className="bg-gray-50 text-xs font-semibold text-gray-700 uppercase border-b border-gray-200">
+        <table className="w-full text-left text-sm text-muted-foreground">
+          <thead className="bg-muted text-xs font-semibold text-gray-700 uppercase border-b border-border">
             <tr>
               <th scope="col" className="px-6 py-3">
                 {t("assets.table.item", "Item / Identificação")}
@@ -105,17 +105,17 @@ export const AssetTable: React.FC<AssetTableProps> = ({
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-border">
             {assets.map((asset) => (
               <tr
                 key={asset.id}
-                className="hover:bg-gray-50/75 transition-colors"
+                className="hover:bg-accent/75 transition-colors"
               >
                 <td className="px-6 py-4">
-                  <div className="font-medium text-gray-900">{asset.name}</div>
-                  <div className="text-xs text-gray-400 flex items-center gap-2 mt-0.5">
+                  <div className="font-medium text-foreground">{asset.name}</div>
+                  <div className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
                     {asset.asset_tag && (
-                      <span className="font-mono bg-gray-100 px-1.5 py-0.5 rounded text-gray-600">
+                      <span className="font-mono bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
                         {asset.asset_tag}
                       </span>
                     )}
@@ -147,10 +147,10 @@ export const AssetTable: React.FC<AssetTableProps> = ({
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-gray-900">
+                    <span className="font-semibold text-foreground">
                       {asset.current_quantity}
                     </span>
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-muted-foreground">
                       {asset.unit_of_measure || "un"}
                     </span>
                     {asset.is_low_stock && (
@@ -167,7 +167,7 @@ export const AssetTable: React.FC<AssetTableProps> = ({
                     )}
                   </div>
                   {asset.min_quantity !== null && asset.min_quantity !== undefined && (
-                    <div className="text-xs text-gray-400 mt-0.5">
+                    <div className="text-xs text-muted-foreground mt-0.5">
                       Mín: {asset.min_quantity} {asset.unit_of_measure || "un"}
                     </div>
                   )}
@@ -179,7 +179,7 @@ export const AssetTable: React.FC<AssetTableProps> = ({
                       size="sm"
                       onClick={() => onOpenMovement(asset)}
                       title={t("assets.actions.recordMovement", "Movimentar")}
-                      className="text-gray-600 hover:text-blue-600"
+                      className="text-muted-foreground hover:text-blue-600"
                     >
                       <ArrowUpDown className="w-4 h-4" />
                     </Button>
@@ -188,7 +188,7 @@ export const AssetTable: React.FC<AssetTableProps> = ({
                       size="sm"
                       onClick={() => onOpenHistory(asset)}
                       title={t("assets.actions.history", "Histórico")}
-                      className="text-gray-600 hover:text-indigo-600"
+                      className="text-muted-foreground hover:text-primary"
                     >
                       <History className="w-4 h-4" />
                     </Button>
@@ -199,7 +199,7 @@ export const AssetTable: React.FC<AssetTableProps> = ({
                           size="sm"
                           onClick={() => onEdit(asset)}
                           title={t("assets.actions.edit", "Editar")}
-                          className="text-gray-600 hover:text-amber-600"
+                          className="text-muted-foreground hover:text-amber-600"
                         >
                           <Edit2 className="w-4 h-4" />
                         </Button>
@@ -208,7 +208,7 @@ export const AssetTable: React.FC<AssetTableProps> = ({
                           size="sm"
                           onClick={() => onDelete(asset)}
                           title={t("assets.actions.delete", "Excluir")}
-                          className="text-gray-600 hover:text-red-600"
+                          className="text-muted-foreground hover:text-destructive"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>

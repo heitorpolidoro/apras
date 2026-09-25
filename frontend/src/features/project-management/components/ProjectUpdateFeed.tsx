@@ -25,11 +25,11 @@ export const ProjectUpdateFeed: React.FC<ProjectUpdateFeedProps> = ({
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm space-y-4">
+    <div className="bg-card border border-border rounded-xl p-5 shadow-sm space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Camera className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-          <h3 className="font-semibold text-slate-900 dark:text-slate-100">
+          <Camera className="w-5 h-5 text-primary" />
+          <h3 className="font-semibold text-foreground">
             {t('projects.updates.title', 'Diário de Bordo e Fotos da Obra')}
           </h3>
         </div>
@@ -37,7 +37,7 @@ export const ProjectUpdateFeed: React.FC<ProjectUpdateFeedProps> = ({
           <Button
             size="sm"
             onClick={onAddUpdate}
-            className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white"
+            className="flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground"
           >
             <Plus className="w-4 h-4" />
             {t('projects.updates.add', 'Publicar Atualização')}
@@ -46,8 +46,8 @@ export const ProjectUpdateFeed: React.FC<ProjectUpdateFeedProps> = ({
       </div>
 
       {updates.length === 0 ? (
-        <div className="flex flex-col items-center justify-center p-8 text-center bg-slate-50 dark:bg-slate-800/40 rounded-lg border border-slate-200/80 dark:border-slate-800">
-          <MessageSquare className="w-8 h-8 text-slate-400 mb-2" />
+        <div className="flex flex-col items-center justify-center p-8 text-center bg-muted rounded-lg border border-border/80">
+          <MessageSquare className="w-8 h-8 text-muted-foreground mb-2" />
           <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
             {t('projects.updates.empty', 'Nenhuma atualização registrada ainda.')}
           </p>
@@ -58,14 +58,14 @@ export const ProjectUpdateFeed: React.FC<ProjectUpdateFeedProps> = ({
             <div
               key={update.id}
               data-testid={`update-card-${update.id}`}
-              className="bg-slate-50 dark:bg-slate-800/40 rounded-xl p-4 border border-slate-200 dark:border-slate-800 space-y-3"
+              className="bg-muted rounded-xl p-4 border border-border space-y-3"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h4 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                  <h4 className="text-base font-semibold text-foreground">
                     {update.title}
                   </h4>
-                  <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                     <span className="flex items-center gap-1">
                       <UserIcon className="w-3.5 h-3.5" />
                       {update.author?.full_name || update.author?.email || 'Autor desconhecido'}
@@ -89,7 +89,7 @@ export const ProjectUpdateFeed: React.FC<ProjectUpdateFeedProps> = ({
                     <button
                       aria-label="delete-update"
                       onClick={() => onDeleteUpdate(update)}
-                      className="p-1.5 text-slate-400 hover:text-red-600 transition-colors rounded-md"
+                      className="p-1.5 text-muted-foreground hover:text-destructive transition-colors rounded-md"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -108,7 +108,7 @@ export const ProjectUpdateFeed: React.FC<ProjectUpdateFeedProps> = ({
                     <div
                       key={idx}
                       onClick={() => setSelectedPhoto(photoUrl)}
-                      className="group relative aspect-video bg-slate-200 dark:bg-slate-800 rounded-lg overflow-hidden border border-slate-300 dark:border-slate-700 cursor-pointer"
+                      className="group relative aspect-video bg-muted rounded-lg overflow-hidden border border-input cursor-pointer"
                     >
                       <img
                         src={photoUrl}
@@ -127,7 +127,7 @@ export const ProjectUpdateFeed: React.FC<ProjectUpdateFeedProps> = ({
       {/* Photo Lightbox Modal */}
       {selectedPhoto && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-          <div className="relative max-w-4xl max-h-[90vh] bg-slate-900 rounded-xl overflow-hidden shadow-2xl">
+          <div className="relative max-w-4xl max-h-[90vh] bg-foreground rounded-xl overflow-hidden shadow-2xl">
             <button
               onClick={() => setSelectedPhoto(null)}
               className="absolute top-3 right-3 p-2 bg-black/60 hover:bg-black text-white rounded-full transition-colors z-10"

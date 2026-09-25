@@ -69,16 +69,16 @@ const MilestoneFormInner: React.FC<MilestoneFormInnerProps> = ({
   };
 
   return (
-    <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+    <div className="relative w-full max-w-lg bg-card rounded-2xl shadow-xl border border-border overflow-hidden">
       <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800">
-        <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+        <h3 className="text-lg font-bold text-foreground">
           {milestone
             ? t('projects.modals.milestoneEditTitle', 'Editar Marco')
             : t('projects.modals.milestoneCreateTitle', 'Novo Marco da Obra')}
         </h3>
         <button
           onClick={onClose}
-          className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg"
+          className="p-1.5 text-muted-foreground hover:text-muted-foreground rounded-lg"
         >
           <X className="w-5 h-5" />
         </button>

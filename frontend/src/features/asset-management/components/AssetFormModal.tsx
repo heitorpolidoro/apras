@@ -130,9 +130,9 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900">
+      <div className="bg-card rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b border-border">
+          <h2 className="text-xl font-bold text-foreground">
             {initialData
               ? t("assets.form.editTitle", "Editar Ativo / Item")
               : t("assets.form.createTitle", "Novo Ativo / Item de Estoque")}
@@ -141,7 +141,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-muted-foreground hover:text-muted-foreground"
           >
             <X className="w-5 h-5" />
           </Button>
@@ -167,7 +167,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                   setFormData((prev) => ({ ...prev, name: e.target.value }))
                 }
                 placeholder={t("assets.form.namePlaceholder", "Ex: Cortador de grama, Lâmpada LED")}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-md border border-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
@@ -183,7 +183,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                     category: e.target.value as AssetCategory,
                   }))
                 }
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-md border border-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {Object.values(AssetCategory).map((cat) => (
                   <option key={cat} value={cat}>
@@ -205,7 +205,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                   setFormData((prev) => ({ ...prev, location: e.target.value }))
                 }
                 placeholder={t("assets.form.locationPlaceholder", "Ex: Almoxarifado, Portaria 1, DML")}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-md border border-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
@@ -220,7 +220,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                     is_consumable: e.target.checked,
                   }))
                 }
-                className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                className="w-4 h-4 text-blue-600 rounded border-input focus:ring-blue-500"
               />
               <label
                 htmlFor="is_consumable"
@@ -244,7 +244,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                   setFormData((prev) => ({ ...prev, asset_tag: e.target.value }))
                 }
                 placeholder="Ex: PAT-00120"
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-md border border-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
@@ -262,7 +262,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                   }))
                 }
                 placeholder="Ex: SN-982348"
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-md border border-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
@@ -278,7 +278,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                     condition: e.target.value as AssetCondition,
                   }))
                 }
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-md border border-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {Object.values(AssetCondition).map((cond) => (
                   <option key={cond} value={cond}>
@@ -301,7 +301,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                     acquisition_date: e.target.value,
                   }))
                 }
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-md border border-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
@@ -329,7 +329,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                   }));
                 }}
                 placeholder="0.00"
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-md border border-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
@@ -347,7 +347,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                   }))
                 }
                 placeholder="un, kg, L, caixa, m"
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-md border border-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
@@ -366,7 +366,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                       current_quantity: Number(e.target.value),
                     }))
                   }
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-md border border-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             )}
@@ -392,7 +392,7 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                   }))
                 }
                 placeholder="Ex: 5"
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-md border border-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
@@ -407,12 +407,12 @@ export const AssetFormModal: React.FC<AssetFormModalProps> = ({
                   setFormData((prev) => ({ ...prev, notes: e.target.value }))
                 }
                 placeholder={t("assets.form.notesPlaceholder", "Detalhes adicionais, fornecedor, garantia...")}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-md border border-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
             <Button
               type="button"
               variant="outline"

@@ -7,8 +7,12 @@ import TenantBrandTheme from "../TenantBrandTheme";
 import { Button } from "../ui/button";
 import { PDFViewerModal } from "../../features/document-management/components/PDFViewerModal";
 import { OccurrenceTable } from "../../features/occurrence-management/components/OccurrenceTable";
+import { MilestoneTimeline } from "../../features/project-management/components/MilestoneTimeline";
+import { AssetSummaryCards } from "../../features/asset-management/components/AssetSummaryCards";
 import type { AssociationDocument } from "../../types/document";
 import type { Occurrence } from "../../types/occurrence";
+import type { ProjectMilestone } from "../../types/project";
+import type { AssetSummary } from "../../types/asset";
 import { TENANT_BRAND_STYLE_ID } from "../../lib/brandStylesheet";
 
 /**
@@ -306,6 +310,112 @@ describe("the tenant's brand reaches APRAS-82's migrated components", () => {
       "hover:bg-primary/90",
       "text-primary-foreground",
       "text-primary",
+    ]) {
+      expect(tokens).not.toContain(absent);
+    }
+  });
+});
+
+/**
+ * APRAS-81's two migrated components, one from each directory it pins.
+ *
+ * Both are props-only — neither reaches for a query client — so they mount
+ * beside `TenantBrandTheme` exactly as the pilot's `Button` does.
+ */
+const MILESTONE: ProjectMilestone = {
+  id: "2f3e4d5c-6b7a-4859-9081-a2b3c4d5e6f7",
+  project_id: "1a2b3c4d-5e6f-4a1b-8c2d-3e4f5a6b7c8d",
+  title: "Fundação concluída",
+  description: "Sapatas e baldrames executados",
+  status: "DONE",
+  due_date: "2026-03-01",
+  completion_date: "2026-02-27",
+  display_order: 1,
+  created_at: "2026-02-27T12:00:00Z",
+  updated_at: "2026-02-27T12:00:00Z",
+};
+
+const SUMMARY: AssetSummary = {
+  total_assets: 42,
+  total_consumables: 17,
+  low_stock_count: 3,
+  total_patrimonial_value: 125000,
+};
+
+describe("the tenant's brand reaches APRAS-81's migrated components", () => {
+  it("paints the milestone timeline's add control with the brand fill", async () => {
+    profile.data = { ...PROFILE, theme: THEME };
+    const { container } = render(
+      <>
+        <TenantBrandTheme />
+        <MilestoneTimeline
+          milestones={[MILESTONE]}
+          onAddMilestone={() => {}}
+          onEditMilestone={() => {}}
+          onDeleteMilestone={() => {}}
+          canManage
+        />
+      </>,
+    );
+
+    await waitFor(() => expect(brandedPrimary()).toBe(THEME.light.primary));
+
+    const tokens = classTokens(container);
+
+    for (const expected of [
+      "bg-primary",
+      "hover:bg-primary/90",
+      "text-primary-foreground",
+      "text-primary",
+      "hover:text-primary",
+      "bg-card",
+      "bg-muted",
+      "border-border",
+      "border-border/80",
+      "text-muted-foreground",
+      "text-foreground",
+      "hover:text-destructive",
+    ]) {
+      expect(tokens).toContain(expected);
+    }
+    // §1k: every brand class here is on an element that paints no glyphs, so
+    // the component carries the graphical token and no character token.
+    expect([...tokens].filter((token) => token.includes("primary-text"))).toEqual(
+      [],
+    );
+  });
+
+  it("paints the asset summary tile on the brand tint, with no brand fill", async () => {
+    profile.data = { ...PROFILE, theme: THEME };
+    const { container } = render(
+      <>
+        <TenantBrandTheme />
+        <AssetSummaryCards summary={SUMMARY} />
+      </>,
+    );
+
+    await waitFor(() => expect(brandedPrimary()).toBe(THEME.light.primary));
+
+    const tokens = classTokens(container);
+
+    for (const expected of [
+      "bg-accent",
+      "text-primary",
+      "bg-card",
+      "border-border",
+      "text-muted-foreground",
+      "text-foreground",
+    ]) {
+      expect(tokens).toContain(expected);
+    }
+    // Its single brand call site is a *tile*, so there is no brand fill and
+    // no brand character here — asserting `bg-primary` would be asserting a
+    // class this component does not produce.
+    for (const absent of [
+      "bg-primary",
+      "hover:bg-primary/90",
+      "text-primary-foreground",
+      "text-primary-text",
     ]) {
       expect(tokens).not.toContain(absent);
     }

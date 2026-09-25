@@ -28,11 +28,11 @@ export const BudgetVsActualProgressBar: React.FC<BudgetVsActualProgressBarProps>
   }
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm space-y-4">
+    <div className="bg-card border border-border rounded-xl p-5 shadow-sm space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <DollarSign className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-          <h3 className="font-semibold text-slate-900 dark:text-slate-100">
+          <h3 className="font-semibold text-foreground">
             {t('projects.budget.title', 'Acompanhamento Orçamentário')}
           </h3>
         </div>
@@ -50,7 +50,7 @@ export const BudgetVsActualProgressBar: React.FC<BudgetVsActualProgressBarProps>
       </div>
 
       {/* Progress Track */}
-      <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-3 overflow-hidden">
+      <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
         <div
           data-testid="budget-progress-fill"
           className={`h-full transition-all duration-500 ${progressColor}`}
@@ -60,8 +60,8 @@ export const BudgetVsActualProgressBar: React.FC<BudgetVsActualProgressBarProps>
 
       {/* Financial Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-        <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-lg border border-slate-100 dark:border-slate-800">
-          <div className="text-xs text-slate-500 dark:text-slate-400">
+        <div className="bg-muted p-3 rounded-lg border border-slate-100 dark:border-slate-800">
+          <div className="text-xs text-muted-foreground">
             {t('projects.budget.total', 'Orçamento Total')}
           </div>
           <div className="text-base font-bold text-slate-800 dark:text-slate-200 mt-0.5">
@@ -69,8 +69,8 @@ export const BudgetVsActualProgressBar: React.FC<BudgetVsActualProgressBarProps>
           </div>
         </div>
 
-        <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-lg border border-slate-100 dark:border-slate-800">
-          <div className="text-xs text-slate-500 dark:text-slate-400">
+        <div className="bg-muted p-3 rounded-lg border border-slate-100 dark:border-slate-800">
+          <div className="text-xs text-muted-foreground">
             {t('projects.budget.executed', 'Total Executado')}
           </div>
           <div
@@ -84,8 +84,8 @@ export const BudgetVsActualProgressBar: React.FC<BudgetVsActualProgressBarProps>
           </div>
         </div>
 
-        <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-lg border border-slate-100 dark:border-slate-800">
-          <div className="text-xs text-slate-500 dark:text-slate-400">
+        <div className="bg-muted p-3 rounded-lg border border-slate-100 dark:border-slate-800">
+          <div className="text-xs text-muted-foreground">
             {t('projects.budget.remaining', 'Saldo Restante')}
           </div>
           <div

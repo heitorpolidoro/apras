@@ -371,6 +371,59 @@ export const GRAPHICAL_PRIMARY_SITES: readonly GraphicalPrimarySite[] = [
     element: "the `<ShieldCheck />` page-header icon",
     why: ICON_ONLY,
   },
+  // APRAS-81 migrated `project-management` and `asset-management` to the
+  // tokens; its ten `text-indigo-*` icon sites become graphical sites here,
+  // which is the append this file's header anticipates from a sibling.
+  {
+    file: "features/project-management/components/ConstructionTrackerPage.tsx",
+    element: "the `<HardHat />` page-header icon",
+    why: ICON_ONLY,
+  },
+  {
+    file: "features/project-management/components/ConstructionTrackerPage.tsx",
+    element: "the `<RefreshCw />` spinner of the project-detail loader",
+    why: ICON_ONLY,
+  },
+  {
+    file: "features/project-management/components/ConstructionTrackerPage.tsx",
+    element: "the `<RefreshCw />` spinner of the project-grid loader",
+    why: ICON_ONLY,
+  },
+  {
+    file: "features/project-management/components/MilestoneTimeline.tsx",
+    element: "the `<ListOrdered />` card-header icon",
+    why: ICON_ONLY,
+  },
+  {
+    file: "features/project-management/components/MilestoneTimeline.tsx",
+    element: "the edit-milestone `<button>` (`hover:text-primary`)",
+    why: ICON_WRAPPER,
+  },
+  {
+    file: "features/project-management/components/ProjectUpdateFeed.tsx",
+    element: "the `<Camera />` card-header icon",
+    why: ICON_ONLY,
+  },
+  {
+    file: "features/project-management/components/ProjectSummaryCard.tsx",
+    element: "the edit-project `<button>` over the cover photo (`hover:text-primary`)",
+    why: ICON_WRAPPER,
+  },
+  {
+    file: "features/asset-management/components/AssetMovementHistoryModal.tsx",
+    element: "the `<Clock />` modal-title icon",
+    why: ICON_ONLY,
+  },
+  {
+    file: "features/asset-management/components/AssetSummaryCards.tsx",
+    element: "the consumables tile holding the `<Archive />`",
+    why: ICON_WRAPPER,
+  },
+  {
+    file: "features/asset-management/components/AssetTable.tsx",
+    element: "the movement-history `<Button>` (`hover:text-primary`)",
+    why: ICON_WRAPPER,
+  },
 ];
 
 /** The declared entries, counted per file, for the equivalence below. */

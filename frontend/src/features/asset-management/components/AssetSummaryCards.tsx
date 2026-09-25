@@ -25,12 +25,12 @@ export const AssetSummaryCards: React.FC<AssetSummaryCardsProps> = ({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {/* Total Fixed Assets */}
-      <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
+      <div className="bg-card p-5 rounded-xl border border-border shadow-sm flex items-center justify-between">
         <div>
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
             {t("assets.summary.totalAssets", "Ativos Patrimoniais")}
           </p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">
+          <p className="text-2xl font-bold text-foreground mt-1">
             {isLoading ? "..." : summary?.total_assets ?? 0}
           </p>
         </div>
@@ -40,26 +40,26 @@ export const AssetSummaryCards: React.FC<AssetSummaryCardsProps> = ({
       </div>
 
       {/* Total Consumables */}
-      <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
+      <div className="bg-card p-5 rounded-xl border border-border shadow-sm flex items-center justify-between">
         <div>
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
             {t("assets.summary.totalConsumables", "Itens de Consumo")}
           </p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">
+          <p className="text-2xl font-bold text-foreground mt-1">
             {isLoading ? "..." : summary?.total_consumables ?? 0}
           </p>
         </div>
-        <div className="p-3 bg-indigo-50 text-indigo-600 rounded-lg">
+        <div className="p-3 bg-accent text-primary rounded-lg">
           <Archive className="w-6 h-6" />
         </div>
       </div>
 
       {/* Low Stock Alerts */}
       <div
-        className={`bg-white p-5 rounded-xl border shadow-sm flex items-center justify-between ${
+        className={`bg-card p-5 rounded-xl border shadow-sm flex items-center justify-between ${
           (summary?.low_stock_count ?? 0) > 0
             ? "border-amber-300 bg-amber-50/20"
-            : "border-gray-200"
+            : "border-border"
         }`}
       >
         <div>
@@ -76,9 +76,9 @@ export const AssetSummaryCards: React.FC<AssetSummaryCardsProps> = ({
       </div>
 
       {/* Total Patrimonial Value */}
-      <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
+      <div className="bg-card p-5 rounded-xl border border-border shadow-sm flex items-center justify-between">
         <div>
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
             {t("assets.summary.totalValue", "Valor do Patrimônio")}
           </p>
           <p className="text-2xl font-bold text-emerald-700 mt-1">

@@ -195,17 +195,17 @@ export const ConstructionTrackerPage: React.FC = () => {
   const projects = projectsData?.items || [];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-4 sm:p-6 lg:p-8 space-y-6">
+    <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8 space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-card p-6 rounded-2xl border border-border shadow-xs">
         <div>
           <div className="flex items-center gap-2.5">
-            <HardHat className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+            <HardHat className="w-7 h-7 text-primary" />
+            <h1 className="text-2xl font-bold text-foreground">
               {t('projects.pageTitle', 'Acompanhamento de Obras')}
             </h1>
           </div>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             {t(
               'projects.pageSubtitle',
               'Acompanhe o andamento físico, metas e execução financeira das reformas e melhorias do condomínio.'
@@ -254,7 +254,7 @@ export const ConstructionTrackerPage: React.FC = () => {
                 setEditingProject(null);
                 setProjectModalOpen(true);
               }}
-              className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white"
+              className="flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               <Plus className="w-4 h-4" />
               <span>{t('projects.newProject', 'Nova Obra')}</span>
@@ -280,13 +280,13 @@ export const ConstructionTrackerPage: React.FC = () => {
       {selectedProjectId ? (
         isLoadingDetail || !selectedProjectDetail ? (
           <div className="flex items-center justify-center p-12">
-            <RefreshCw className="w-8 h-8 text-indigo-600 animate-spin" />
+            <RefreshCw className="w-8 h-8 text-primary animate-spin" />
           </div>
         ) : (
         /* Detailed Project View */
         <div className="space-y-6">
           {/* Detail Top Navigation Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-card p-4 rounded-xl border border-border">
             <Button
               variant="outline"
               size="sm"
@@ -324,18 +324,18 @@ export const ConstructionTrackerPage: React.FC = () => {
           </div>
 
           {/* Project Overview Card */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm space-y-4">
+          <div className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-4">
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
               <div className="space-y-2">
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                <h2 className="text-2xl font-bold text-foreground">
                   {selectedProjectDetail.title}
                 </h2>
                 {selectedProjectDetail.contractor_name && (
-                  <div className="flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-400">
-                    <HardHat className="w-4 h-4 text-slate-500" />
+                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <HardHat className="w-4 h-4 text-muted-foreground" />
                     <span>
                       {t('projects.card.contractor', 'Empreiteira')}:{' '}
-                      <strong className="font-semibold text-slate-900 dark:text-slate-100">
+                      <strong className="font-semibold text-foreground">
                         {selectedProjectDetail.contractor_name}
                       </strong>
                     </span>
@@ -349,16 +349,16 @@ export const ConstructionTrackerPage: React.FC = () => {
               </div>
 
               {/* Physical Gauge */}
-              <div className="bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-100 dark:border-indigo-900 rounded-xl p-4 flex flex-col items-center justify-center min-w-[160px] text-center">
-                <div className="text-xs text-indigo-700 dark:text-indigo-300 font-semibold mb-1">
+              <div className="bg-accent border border-border rounded-xl p-4 flex flex-col items-center justify-center min-w-[160px] text-center">
+                <div className="text-xs text-primary-text font-semibold mb-1">
                   {t('projects.card.physicalProgress', 'Progresso Físico')}
                 </div>
-                <div className="text-3xl font-extrabold text-indigo-900 dark:text-indigo-100">
+                <div className="text-3xl font-extrabold text-primary-text">
                   {selectedProjectDetail.physical_progress_pct}%
                 </div>
-                <div className="w-full bg-indigo-200 dark:bg-indigo-800 rounded-full h-1.5 mt-2 overflow-hidden">
+                <div className="w-full bg-accent rounded-full h-1.5 mt-2 overflow-hidden">
                   <div
-                    className="bg-indigo-600 h-full transition-all duration-300"
+                    className="bg-primary h-full transition-all duration-300"
                     style={{
                       width: `${Math.min(
                         selectedProjectDetail.physical_progress_pct,
@@ -423,8 +423,8 @@ export const ConstructionTrackerPage: React.FC = () => {
                 onClick={() => setStatusFilter(filter.key)}
                 className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
                   statusFilter === filter.key
-                    ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'bg-card text-slate-700 dark:text-slate-300 border border-border hover:bg-accent'
                 }`}
               >
                 {t(filter.labelKey, filter.defaultLabel)}
@@ -435,15 +435,15 @@ export const ConstructionTrackerPage: React.FC = () => {
           {/* Project Grid */}
           {isLoadingProjects ? (
             <div className="flex items-center justify-center p-12">
-              <RefreshCw className="w-8 h-8 text-indigo-600 animate-spin" />
+              <RefreshCw className="w-8 h-8 text-primary animate-spin" />
             </div>
           ) : projects.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-12 text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl">
+            <div className="flex flex-col items-center justify-center p-12 text-center bg-card border border-border rounded-2xl">
               <Building2 className="h-12 w-12 text-slate-300 dark:text-slate-600 mb-3" />
               <h4 className="text-base font-semibold text-slate-800 dark:text-slate-200">
                 {t('projects.noProjectsFound', 'Nenhuma obra cadastrada')}
               </h4>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-sm">
+              <p className="text-sm text-muted-foreground mt-1 max-w-sm">
                 {t(
                   'projects.noProjectsDescription',
                   'Não há obras correspondentes ao filtro selecionado.'

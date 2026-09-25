@@ -95,16 +95,16 @@ const ProjectFormInner: React.FC<ProjectFormInnerProps> = ({
   };
 
   return (
-    <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 my-8 overflow-hidden">
+    <div className="relative w-full max-w-2xl bg-card rounded-2xl shadow-xl border border-border my-8 overflow-hidden">
       <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800">
-        <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+        <h3 className="text-lg font-bold text-foreground">
           {project
             ? t('projects.modals.projectEditTitle', 'Editar Obra')
             : t('projects.modals.projectCreateTitle', 'Cadastrar Nova Obra')}
         </h3>
         <button
           onClick={onClose}
-          className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg"
+          className="p-1.5 text-muted-foreground hover:text-muted-foreground rounded-lg"
         >
           <X className="w-5 h-5" />
         </button>

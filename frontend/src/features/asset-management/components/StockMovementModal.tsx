@@ -85,15 +85,15 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-lg w-full overflow-hidden">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+      <div className="bg-card rounded-xl shadow-xl max-w-lg w-full overflow-hidden">
+        <div className="flex items-center justify-between p-6 border-b border-border">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">
+            <h2 className="text-xl font-bold text-foreground">
               {t("assets.movement.title", "Registrar Movimentação")}
             </h2>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="text-xs text-muted-foreground mt-0.5">
               {asset.name} • Saldo atual:{" "}
-              <span className="font-semibold text-gray-900">
+              <span className="font-semibold text-foreground">
                 {asset.current_quantity} {asset.unit_of_measure || "un"}
               </span>
             </p>
@@ -102,7 +102,7 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-muted-foreground hover:text-muted-foreground"
           >
             <X className="w-5 h-5" />
           </Button>
@@ -122,7 +122,7 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
             <select
               value={movementType}
               onChange={(e) => setMovementType(e.target.value as MovementType)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-md border border-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {allowedMovementTypes.map((type) => (
                 <option key={type} value={type}>
@@ -144,7 +144,7 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
               required
               value={quantity}
               onChange={(e) => setQuantity(Number(e.target.value))}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-md border border-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
@@ -157,7 +157,7 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
               value={documentNumber}
               onChange={(e) => setDocumentNumber(e.target.value)}
               placeholder="Ex: NF 9876, Req Manutenção 12"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-md border border-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
@@ -174,11 +174,11 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
                 "assets.movement.reasonPlaceholder",
                 "Descreva a finalidade da movimentação, setor ou destino..."
               )}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-md border border-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
             <Button
               type="button"
               variant="outline"

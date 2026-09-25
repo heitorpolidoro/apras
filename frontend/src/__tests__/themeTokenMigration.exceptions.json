@@ -1984,5 +1984,1205 @@
     "class": "text-gray-800",
     "code": "GAP-OUT-OF-BUDGET",
     "task": "APRAS-82"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetFormModal.tsx",
+    "class": "bg-black/50",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetFormModal.tsx",
+    "class": "bg-red-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetFormModal.tsx",
+    "class": "text-red-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetFormModal.tsx",
+    "class": "border-red-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetFormModal.tsx",
+    "class": "text-gray-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetFormModal.tsx",
+    "class": "focus:ring-blue-500",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetFormModal.tsx",
+    "class": "border-gray-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetFormModal.tsx",
+    "class": "text-blue-600",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetFormModal.tsx",
+    "class": "text-gray-800",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetFormModal.tsx",
+    "class": "bg-blue-600",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetFormModal.tsx",
+    "class": "hover:bg-blue-700",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetFormModal.tsx",
+    "class": "text-white",
+    "code": "GAP-NO-SURFACE",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetMovementHistoryModal.tsx",
+    "class": "bg-emerald-100",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetMovementHistoryModal.tsx",
+    "class": "text-emerald-800",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetMovementHistoryModal.tsx",
+    "class": "text-emerald-600",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetMovementHistoryModal.tsx",
+    "class": "bg-blue-100",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetMovementHistoryModal.tsx",
+    "class": "text-blue-800",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetMovementHistoryModal.tsx",
+    "class": "text-blue-600",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetMovementHistoryModal.tsx",
+    "class": "bg-amber-100",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetMovementHistoryModal.tsx",
+    "class": "text-amber-800",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetMovementHistoryModal.tsx",
+    "class": "text-amber-600",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetMovementHistoryModal.tsx",
+    "class": "bg-red-100",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetMovementHistoryModal.tsx",
+    "class": "text-red-800",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetMovementHistoryModal.tsx",
+    "class": "text-red-600",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetMovementHistoryModal.tsx",
+    "class": "bg-black/50",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetMovementHistoryModal.tsx",
+    "class": "text-gray-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetMovementHistoryModal.tsx",
+    "class": "text-gray-800",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetSummaryCards.tsx",
+    "class": "bg-blue-50",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetSummaryCards.tsx",
+    "class": "text-blue-600",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetSummaryCards.tsx",
+    "class": "border-amber-300",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetSummaryCards.tsx",
+    "class": "bg-amber-50/20",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetSummaryCards.tsx",
+    "class": "text-amber-700",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetSummaryCards.tsx",
+    "class": "text-amber-900",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetSummaryCards.tsx",
+    "class": "bg-amber-100",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetSummaryCards.tsx",
+    "class": "text-amber-600",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetSummaryCards.tsx",
+    "class": "text-emerald-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetSummaryCards.tsx",
+    "class": "bg-emerald-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetSummaryCards.tsx",
+    "class": "text-emerald-600",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "bg-emerald-100",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "text-emerald-800",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "border-emerald-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "bg-blue-100",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "text-blue-800",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "border-blue-200",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "bg-amber-100",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "text-amber-800",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "border-amber-200",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "bg-orange-100",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "text-orange-800",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "border-orange-200",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "bg-red-100",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "text-red-800",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "border-red-200",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "bg-gray-100",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "text-gray-800",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "border-gray-200",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "bg-cyan-50",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "text-cyan-700",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "border-cyan-200",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "bg-amber-50",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "text-amber-700",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "bg-purple-50",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "text-purple-700",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "border-purple-200",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "bg-red-50",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "text-red-700",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "bg-teal-50",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "text-teal-700",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "border-teal-200",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "bg-indigo-50",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "text-indigo-700",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "border-indigo-200",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "bg-gray-50",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "text-gray-700",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "text-amber-600",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "hover:text-blue-600",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetTable.tsx",
+    "class": "hover:text-amber-600",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetsInventoryPage.tsx",
+    "class": "bg-blue-50",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetsInventoryPage.tsx",
+    "class": "text-blue-600",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetsInventoryPage.tsx",
+    "class": "bg-blue-600",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetsInventoryPage.tsx",
+    "class": "hover:bg-blue-700",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetsInventoryPage.tsx",
+    "class": "text-white",
+    "code": "GAP-NO-SURFACE",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetsInventoryPage.tsx",
+    "class": "text-blue-700",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetsInventoryPage.tsx",
+    "class": "bg-amber-50",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetsInventoryPage.tsx",
+    "class": "text-amber-700",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetsInventoryPage.tsx",
+    "class": "text-amber-500",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetsInventoryPage.tsx",
+    "class": "bg-amber-200",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetsInventoryPage.tsx",
+    "class": "text-amber-900",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetsInventoryPage.tsx",
+    "class": "focus:ring-blue-500",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/AssetsInventoryPage.tsx",
+    "class": "bg-black/50",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/StockMovementModal.tsx",
+    "class": "bg-black/50",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/StockMovementModal.tsx",
+    "class": "bg-red-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/StockMovementModal.tsx",
+    "class": "text-red-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/StockMovementModal.tsx",
+    "class": "border-red-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/StockMovementModal.tsx",
+    "class": "text-gray-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/StockMovementModal.tsx",
+    "class": "focus:ring-blue-500",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/StockMovementModal.tsx",
+    "class": "bg-blue-600",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/StockMovementModal.tsx",
+    "class": "hover:bg-blue-700",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/asset-management/components/StockMovementModal.tsx",
+    "class": "text-white",
+    "code": "GAP-NO-SURFACE",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/BudgetVsActualProgressBar.tsx",
+    "class": "bg-emerald-500",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/BudgetVsActualProgressBar.tsx",
+    "class": "bg-red-500",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/BudgetVsActualProgressBar.tsx",
+    "class": "bg-amber-500",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/BudgetVsActualProgressBar.tsx",
+    "class": "text-emerald-600",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/BudgetVsActualProgressBar.tsx",
+    "class": "dark:text-emerald-400",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/BudgetVsActualProgressBar.tsx",
+    "class": "border-slate-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/BudgetVsActualProgressBar.tsx",
+    "class": "dark:border-slate-800",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/BudgetVsActualProgressBar.tsx",
+    "class": "text-slate-800",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/BudgetVsActualProgressBar.tsx",
+    "class": "dark:text-slate-200",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/BudgetVsActualProgressBar.tsx",
+    "class": "text-red-600",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/BudgetVsActualProgressBar.tsx",
+    "class": "dark:text-red-400",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ConstructionTrackerPage.tsx",
+    "class": "border-emerald-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ConstructionTrackerPage.tsx",
+    "class": "bg-emerald-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ConstructionTrackerPage.tsx",
+    "class": "text-emerald-800",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ConstructionTrackerPage.tsx",
+    "class": "dark:border-emerald-900",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ConstructionTrackerPage.tsx",
+    "class": "dark:bg-emerald-950",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ConstructionTrackerPage.tsx",
+    "class": "dark:text-emerald-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ConstructionTrackerPage.tsx",
+    "class": "border-red-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ConstructionTrackerPage.tsx",
+    "class": "bg-red-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ConstructionTrackerPage.tsx",
+    "class": "text-red-800",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ConstructionTrackerPage.tsx",
+    "class": "dark:border-red-900",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ConstructionTrackerPage.tsx",
+    "class": "dark:bg-red-950",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ConstructionTrackerPage.tsx",
+    "class": "dark:text-red-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ConstructionTrackerPage.tsx",
+    "class": "text-red-600",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ConstructionTrackerPage.tsx",
+    "class": "hover:bg-red-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ConstructionTrackerPage.tsx",
+    "class": "dark:hover:bg-red-950",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ConstructionTrackerPage.tsx",
+    "class": "text-slate-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ConstructionTrackerPage.tsx",
+    "class": "dark:text-slate-300",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ConstructionTrackerPage.tsx",
+    "class": "text-slate-300",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ConstructionTrackerPage.tsx",
+    "class": "dark:text-slate-600",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ConstructionTrackerPage.tsx",
+    "class": "text-slate-800",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ConstructionTrackerPage.tsx",
+    "class": "dark:text-slate-200",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/MilestoneFormModal.tsx",
+    "class": "border-slate-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/MilestoneFormModal.tsx",
+    "class": "dark:border-slate-800",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/MilestoneFormModal.tsx",
+    "class": "bg-black/60",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/MilestoneTimeline.tsx",
+    "class": "bg-emerald-100",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/MilestoneTimeline.tsx",
+    "class": "text-emerald-800",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/MilestoneTimeline.tsx",
+    "class": "dark:bg-emerald-950",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/MilestoneTimeline.tsx",
+    "class": "dark:text-emerald-300",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/MilestoneTimeline.tsx",
+    "class": "border-emerald-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/MilestoneTimeline.tsx",
+    "class": "dark:border-emerald-800",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/MilestoneTimeline.tsx",
+    "class": "bg-blue-100",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/MilestoneTimeline.tsx",
+    "class": "text-blue-800",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/MilestoneTimeline.tsx",
+    "class": "dark:bg-blue-950",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/MilestoneTimeline.tsx",
+    "class": "dark:text-blue-300",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/MilestoneTimeline.tsx",
+    "class": "border-blue-200",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/MilestoneTimeline.tsx",
+    "class": "dark:border-blue-800",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/MilestoneTimeline.tsx",
+    "class": "bg-slate-100",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/MilestoneTimeline.tsx",
+    "class": "text-slate-800",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/MilestoneTimeline.tsx",
+    "class": "dark:bg-slate-800",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/MilestoneTimeline.tsx",
+    "class": "dark:text-slate-300",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/MilestoneTimeline.tsx",
+    "class": "border-slate-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/MilestoneTimeline.tsx",
+    "class": "dark:border-slate-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/MilestoneTimeline.tsx",
+    "class": "text-slate-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/MilestoneTimeline.tsx",
+    "class": "dark:text-slate-200",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/MilestoneTimeline.tsx",
+    "class": "border-slate-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/MilestoneTimeline.tsx",
+    "class": "dark:border-slate-800",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectFormModal.tsx",
+    "class": "border-slate-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectFormModal.tsx",
+    "class": "dark:border-slate-800",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectFormModal.tsx",
+    "class": "bg-black/60",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectSummaryCard.tsx",
+    "class": "bg-slate-100",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectSummaryCard.tsx",
+    "class": "text-slate-800",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectSummaryCard.tsx",
+    "class": "dark:bg-slate-800",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectSummaryCard.tsx",
+    "class": "dark:text-slate-300",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectSummaryCard.tsx",
+    "class": "border-slate-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectSummaryCard.tsx",
+    "class": "dark:border-slate-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectSummaryCard.tsx",
+    "class": "bg-blue-100",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectSummaryCard.tsx",
+    "class": "text-blue-800",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectSummaryCard.tsx",
+    "class": "dark:bg-blue-950",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectSummaryCard.tsx",
+    "class": "dark:text-blue-300",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectSummaryCard.tsx",
+    "class": "border-blue-200",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectSummaryCard.tsx",
+    "class": "dark:border-blue-800",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectSummaryCard.tsx",
+    "class": "bg-amber-100",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectSummaryCard.tsx",
+    "class": "text-amber-800",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectSummaryCard.tsx",
+    "class": "dark:bg-amber-950",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectSummaryCard.tsx",
+    "class": "dark:text-amber-300",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectSummaryCard.tsx",
+    "class": "border-amber-200",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectSummaryCard.tsx",
+    "class": "dark:border-amber-800",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectSummaryCard.tsx",
+    "class": "bg-emerald-100",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectSummaryCard.tsx",
+    "class": "text-emerald-800",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectSummaryCard.tsx",
+    "class": "dark:bg-emerald-950",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectSummaryCard.tsx",
+    "class": "dark:text-emerald-300",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectSummaryCard.tsx",
+    "class": "border-emerald-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectSummaryCard.tsx",
+    "class": "dark:border-emerald-800",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectSummaryCard.tsx",
+    "class": "bg-black/50",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectSummaryCard.tsx",
+    "class": "text-white",
+    "code": "GAP-NO-SURFACE",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectSummaryCard.tsx",
+    "class": "hover:text-red-400",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectSummaryCard.tsx",
+    "class": "dark:text-slate-200",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectSummaryCard.tsx",
+    "class": "border-slate-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectSummaryCard.tsx",
+    "class": "dark:border-slate-800",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectSummaryCard.tsx",
+    "class": "bg-red-500",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectSummaryCard.tsx",
+    "class": "bg-emerald-500",
+    "code": "GAP-TINT",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectUpdateFeed.tsx",
+    "class": "text-slate-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectUpdateFeed.tsx",
+    "class": "dark:text-slate-300",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectUpdateFeed.tsx",
+    "class": "bg-black/80",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectUpdateFeed.tsx",
+    "class": "bg-black/60",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectUpdateFeed.tsx",
+    "class": "hover:bg-black",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectUpdateFeed.tsx",
+    "class": "text-white",
+    "code": "GAP-NO-SURFACE",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectUpdateModal.tsx",
+    "class": "bg-black/60",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectUpdateModal.tsx",
+    "class": "border-slate-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-81"
+  },
+  {
+    "file": "src/features/project-management/components/ProjectUpdateModal.tsx",
+    "class": "dark:border-slate-800",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-81"
   }
 ]

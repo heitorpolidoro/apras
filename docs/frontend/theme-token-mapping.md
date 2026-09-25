@@ -247,6 +247,7 @@ floating layer that already carries `popover` semantics.
 over `bg-destructive`. Over any background that carries **no** token — an
 image, a gradient, an arbitrary value, or a palette colour with no row such as
 `bg-amber-500` — it is a gap, not a row (§1h code 5).
+The second clause of the rule is **not** scoped to `bg-white`: an element that **is** the page takes `bg-background` whatever its source class, so a page root written `bg-slate-50` or `bg-gray-50` takes `bg-background` and **not** the `bg-muted` its §1b row would otherwise give it — case 1 is consulted before the row, and before case 2. (Operator ruling on APRAS-81 and APRAS-83; carried by APRAS-81.)
 
 **Case 2 — neutral fills at 50/100/200: `bg-muted` or `bg-accent`.**
 A fill that is the element's *resting* surface (a panel, a table header, a

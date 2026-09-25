@@ -57,16 +57,16 @@ export const AssetMovementHistoryModal: React.FC<
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[85vh] flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+      <div className="bg-card rounded-xl shadow-xl max-w-3xl w-full max-h-[85vh] flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between p-6 border-b border-border">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <Clock className="w-5 h-5 text-indigo-600" />
+            <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+              <Clock className="w-5 h-5 text-primary" />
               {t("assets.history.title", "Histórico de Movimentações")}
             </h2>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="text-xs text-muted-foreground mt-0.5">
               {asset.name} • Saldo atual:{" "}
-              <span className="font-semibold text-gray-900">
+              <span className="font-semibold text-foreground">
                 {asset.current_quantity} {asset.unit_of_measure || "un"}
               </span>
             </p>
@@ -75,7 +75,7 @@ export const AssetMovementHistoryModal: React.FC<
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-muted-foreground hover:text-muted-foreground"
           >
             <X className="w-5 h-5" />
           </Button>
@@ -83,11 +83,11 @@ export const AssetMovementHistoryModal: React.FC<
 
         <div className="flex-1 overflow-y-auto p-6">
           {isLoading ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-muted-foreground">
               {t("common.loading", "Carregando histórico...")}
             </div>
           ) : !assetDetail?.movements || assetDetail.movements.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-muted-foreground">
               {t("assets.history.noMovements", "Nenhuma movimentação registrada para este item.")}
             </div>
           ) : (
@@ -95,7 +95,7 @@ export const AssetMovementHistoryModal: React.FC<
               {assetDetail.movements.map((mov) => (
                 <div
                   key={mov.id}
-                  className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-2"
+                  className="bg-muted border border-border rounded-lg p-4 space-y-2"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -107,7 +107,7 @@ export const AssetMovementHistoryModal: React.FC<
                         {mov.new_quantity - mov.previous_quantity})
                       </span>
                     </div>
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-muted-foreground">
                       {new Date(mov.created_at).toLocaleString("pt-BR")}
                     </span>
                   </div>
@@ -116,7 +116,7 @@ export const AssetMovementHistoryModal: React.FC<
                     {mov.reason}
                   </div>
 
-                  <div className="flex items-center justify-between text-xs text-gray-500 pt-1 border-t border-gray-200/60">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-border/60">
                     <span>
                       {t("assets.history.by", "Registrado por:")}{" "}
                       <strong className="text-gray-700">
@@ -124,7 +124,7 @@ export const AssetMovementHistoryModal: React.FC<
                       </strong>
                     </span>
                     {mov.document_number && (
-                      <span className="bg-white px-2 py-0.5 rounded border border-gray-200 font-mono text-gray-600">
+                      <span className="bg-card px-2 py-0.5 rounded border border-border font-mono text-muted-foreground">
                         {mov.document_number}
                       </span>
                     )}
@@ -135,7 +135,7 @@ export const AssetMovementHistoryModal: React.FC<
           )}
         </div>
 
-        <div className="p-4 border-t border-gray-200 flex justify-end">
+        <div className="p-4 border-t border-border flex justify-end">
           <Button variant="outline" onClick={onClose}>
             {t("common.close", "Fechar")}
           </Button>
