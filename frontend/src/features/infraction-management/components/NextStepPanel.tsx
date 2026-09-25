@@ -34,25 +34,25 @@ export const NextStepPanel: React.FC<{
 
   return (
     <div
-      className="space-y-3 rounded-xl border border-gray-200 bg-white p-4"
+      className="space-y-3 rounded-xl border border-border bg-card p-4"
       data-testid="next-step-panel"
     >
-      <h3 className="text-base font-bold text-gray-900">
+      <h3 className="text-base font-bold text-foreground">
         {t("infractions.nextStep.title")}
       </h3>
 
       <dl className="grid grid-cols-2 gap-2 text-sm">
-        <dt className="text-gray-500">
+        <dt className="text-muted-foreground">
           {t("infractions.nextStep.recidivismCount")}
         </dt>
         <dd data-testid="recidivism-count">{nextStep.recidivism_count}</dd>
-        <dt className="text-gray-500">{t("infractions.nextStep.window")}</dt>
+        <dt className="text-muted-foreground">{t("infractions.nextStep.window")}</dt>
         <dd data-testid="window-start">{nextStep.window_start}</dd>
-        <dt className="text-gray-500">
+        <dt className="text-muted-foreground">
           {t("infractions.nextStep.stagesApplied")}
         </dt>
         <dd>{nextStep.stages_applied}</dd>
-        <dt className="text-gray-500">
+        <dt className="text-muted-foreground">
           {t("infractions.nextStep.ladderIndex")}
         </dt>
         <dd>{nextStep.ladder_index}</dd>
@@ -63,7 +63,7 @@ export const NextStepPanel: React.FC<{
           {t("infractions.nextStep.noPolicy")}
         </p>
       ) : (
-        <p className="text-sm text-gray-900" data-testid="suggested-action">
+        <p className="text-sm text-foreground" data-testid="suggested-action">
           {t("infractions.nextStep.suggestion", {
             action: t(`infractions.actions.${nextStep.suggested_action}`),
             step: nextStep.suggested_step_order,
@@ -72,28 +72,28 @@ export const NextStepPanel: React.FC<{
       )}
 
       {nextStep.fine_amount !== null && (
-        <p className="text-sm text-gray-900" data-testid="suggested-fine">
+        <p className="text-sm text-foreground" data-testid="suggested-fine">
           {t("infractions.nextStep.fineAmount")}:{" "}
           {nextStep.fine_amount.toFixed(2)}
         </p>
       )}
 
       {nextStep.fine_amount_unavailable_reason === "CONDO_FEE_NOT_SET" && (
-        <p className="text-sm text-red-700" data-testid="fee-not-set">
+        <p className="text-sm text-destructive" data-testid="fee-not-set">
           {t("infractions.nextStep.feeNotSet")}
         </p>
       )}
 
       {nextStep.reason === "CLAMPED" && (
-        <p className="text-xs text-gray-500" data-testid="clamped-message">
+        <p className="text-xs text-muted-foreground" data-testid="clamped-message">
           {t("infractions.nextStep.clamped")}
         </p>
       )}
 
       <label className="block text-sm">
-        <span className="text-gray-500">{t("infractions.nextStep.note")}</span>
+        <span className="text-muted-foreground">{t("infractions.nextStep.note")}</span>
         <textarea
-          className="mt-1 w-full rounded-lg border border-gray-200 p-2 text-sm"
+          className="mt-1 w-full rounded-lg border border-border p-2 text-sm"
           value={note}
           onChange={(event) => setNote(event.target.value)}
           aria-label={t("infractions.nextStep.note")}
@@ -101,11 +101,11 @@ export const NextStepPanel: React.FC<{
       </label>
 
       <label className="block text-sm">
-        <span className="text-gray-500">
+        <span className="text-muted-foreground">
           {t("infractions.nextStep.override")}
         </span>
         <select
-          className="mt-1 w-full rounded-lg border border-gray-200 p-2 text-sm"
+          className="mt-1 w-full rounded-lg border border-border p-2 text-sm"
           data-testid="override-select"
           aria-label={t("infractions.nextStep.override")}
           value={override}

@@ -16,7 +16,7 @@ export const InfractionStageTimeline: React.FC<{
 
   if (entries.length === 0) {
     return (
-      <p className="text-sm text-gray-500" data-testid="timeline-empty">
+      <p className="text-sm text-muted-foreground" data-testid="timeline-empty">
         {t("infractions.timeline.empty")}
       </p>
     );
@@ -31,18 +31,18 @@ export const InfractionStageTimeline: React.FC<{
           className="rounded-lg border border-gray-100 p-3"
         >
           <div className="flex items-center justify-between gap-2">
-            <span className="text-sm font-semibold text-gray-900">
+            <span className="text-sm font-semibold text-foreground">
               {entry.kind === "STAGE"
                 ? t(`infractions.actions.${entry.action}`)
                 : t("infractions.timeline.contestation")}
             </span>
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-muted-foreground">
               {new Date(entry.at).toLocaleString()}
             </span>
           </div>
 
           {entry.actor && (
-            <div className="text-xs text-gray-500">{entry.actor.full_name}</div>
+            <div className="text-xs text-muted-foreground">{entry.actor.full_name}</div>
           )}
 
           {entry.note && (
@@ -50,7 +50,7 @@ export const InfractionStageTimeline: React.FC<{
           )}
 
           {entry.fine_amount !== null && entry.fine_amount !== undefined && (
-            <div className="mt-1 text-sm text-gray-900">
+            <div className="mt-1 text-sm text-foreground">
               {t("infractions.timeline.fineAmount")}:{" "}
               {entry.fine_amount.toFixed(2)}
               {entry.fine_amount_overridden && (
@@ -62,7 +62,7 @@ export const InfractionStageTimeline: React.FC<{
           )}
 
           {entry.defense_due_on && (
-            <div className="mt-1 text-xs text-gray-500">
+            <div className="mt-1 text-xs text-muted-foreground">
               {t("infractions.timeline.defenseDueOn")}: {entry.defense_due_on}
             </div>
           )}
@@ -73,7 +73,7 @@ export const InfractionStageTimeline: React.FC<{
               `uploads:photo_create`. */}
           {entry.attachment_urls.length > 0 && (
             <div className="mt-2" data-testid="timeline-attachments">
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-muted-foreground">
                 {t("infractions.attachments.timelineTitle")}
               </span>
               <ul className="mt-1 space-y-1 text-sm">
@@ -86,7 +86,7 @@ export const InfractionStageTimeline: React.FC<{
                       })}
                       className="h-10 w-10 rounded object-cover"
                     />
-                    <a className="text-indigo-600 underline" href={url}>
+                    <a className="text-primary-text underline" href={url}>
                       {url}
                     </a>
                   </li>

@@ -4534,5 +4534,761 @@
     "class": "text-gray-700",
     "code": "GAP-OUT-OF-BUDGET",
     "task": "APRAS-84"
+  },
+  {
+    "file": "src/features/dashboard/components/GeneralDashboardPage.tsx",
+    "class": "bg-amber-500/10",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/dashboard/components/GeneralDashboardPage.tsx",
+    "class": "bg-blue-500/10",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/dashboard/components/GeneralDashboardPage.tsx",
+    "class": "bg-emerald-500/10",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/dashboard/components/GeneralDashboardPage.tsx",
+    "class": "bg-green-500/10",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/dashboard/components/GeneralDashboardPage.tsx",
+    "class": "bg-indigo-500/10",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/dashboard/components/GeneralDashboardPage.tsx",
+    "class": "bg-orange-500/10",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/dashboard/components/GeneralDashboardPage.tsx",
+    "class": "bg-purple-500/10",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/dashboard/components/GeneralDashboardPage.tsx",
+    "class": "bg-rose-500/10",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/dashboard/components/GeneralDashboardPage.tsx",
+    "class": "border-amber-500/20",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/dashboard/components/GeneralDashboardPage.tsx",
+    "class": "dark:text-amber-400",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/dashboard/components/GeneralDashboardPage.tsx",
+    "class": "dark:text-blue-400",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/dashboard/components/GeneralDashboardPage.tsx",
+    "class": "dark:text-emerald-400",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/dashboard/components/GeneralDashboardPage.tsx",
+    "class": "dark:text-green-400",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/dashboard/components/GeneralDashboardPage.tsx",
+    "class": "dark:text-indigo-400",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/dashboard/components/GeneralDashboardPage.tsx",
+    "class": "dark:text-orange-400",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/dashboard/components/GeneralDashboardPage.tsx",
+    "class": "dark:text-purple-400",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/dashboard/components/GeneralDashboardPage.tsx",
+    "class": "dark:text-rose-400",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/dashboard/components/GeneralDashboardPage.tsx",
+    "class": "text-amber-500",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/dashboard/components/GeneralDashboardPage.tsx",
+    "class": "text-amber-700",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/dashboard/components/GeneralDashboardPage.tsx",
+    "class": "text-blue-500",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/dashboard/components/GeneralDashboardPage.tsx",
+    "class": "text-emerald-500",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/dashboard/components/GeneralDashboardPage.tsx",
+    "class": "text-green-500",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/dashboard/components/GeneralDashboardPage.tsx",
+    "class": "text-indigo-500",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/dashboard/components/GeneralDashboardPage.tsx",
+    "class": "text-orange-500",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/dashboard/components/GeneralDashboardPage.tsx",
+    "class": "text-purple-500",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/dashboard/components/GeneralDashboardPage.tsx",
+    "class": "text-rose-500",
+    "code": "GAP-SWATCH",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/infraction-management/components/AttachmentUploader.tsx",
+    "class": "bg-red-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/infraction-management/components/AttachmentUploader.tsx",
+    "class": "text-red-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/infraction-management/components/CycleCloseModal.tsx",
+    "class": "bg-black/40",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/infraction-management/components/CycleCloseModal.tsx",
+    "class": "bg-red-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/infraction-management/components/CycleCloseModal.tsx",
+    "class": "text-red-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/infraction-management/components/InfractionDetailsView.tsx",
+    "class": "text-gray-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/infraction-management/components/InfractionStageTimeline.tsx",
+    "class": "bg-amber-100",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/infraction-management/components/InfractionStageTimeline.tsx",
+    "class": "border-gray-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/infraction-management/components/InfractionStageTimeline.tsx",
+    "class": "text-amber-700",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/infraction-management/components/InfractionStageTimeline.tsx",
+    "class": "text-amber-800",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/infraction-management/components/InfractionStageTimeline.tsx",
+    "class": "text-gray-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/infraction-management/components/NewInfractionModal.tsx",
+    "class": "bg-black/40",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/infraction-management/components/NewInfractionModal.tsx",
+    "class": "bg-red-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/infraction-management/components/NewInfractionModal.tsx",
+    "class": "text-amber-700",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/infraction-management/components/NewInfractionModal.tsx",
+    "class": "text-red-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/infraction-management/components/NextStepPanel.tsx",
+    "class": "text-amber-700",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/infraction-management/pages/InfractionRulesPage.tsx",
+    "class": "border-gray-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/infraction-management/pages/InfractionRulesPage.tsx",
+    "class": "text-gray-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/infraction-management/pages/InfractionsPage.tsx",
+    "class": "bg-red-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/infraction-management/pages/InfractionsPage.tsx",
+    "class": "border-gray-100",
+    "code": "GAP-BORDER-100",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/infraction-management/pages/InfractionsPage.tsx",
+    "class": "text-gray-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/infraction-management/pages/InfractionsPage.tsx",
+    "class": "text-red-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/infraction-management/pages/MyInfractionsPage.tsx",
+    "class": "bg-amber-50",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/infraction-management/pages/MyInfractionsPage.tsx",
+    "class": "text-amber-800",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/infraction-management/pages/MyInfractionsPage.tsx",
+    "class": "text-gray-700",
+    "code": "GAP-OUT-OF-BUDGET",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/space-reservation-management/components/ReservableSpacesPage.tsx",
+    "class": "text-amber-600",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/space-reservation-management/components/SpaceBookingPage.tsx",
+    "class": "bg-amber-100",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/space-reservation-management/components/SpaceBookingPage.tsx",
+    "class": "bg-emerald-100",
+    "code": "GAP-TINT",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/space-reservation-management/components/SpaceBookingPage.tsx",
+    "class": "bg-slate-100",
+    "code": "GAP-TINT",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/space-reservation-management/components/SpaceBookingPage.tsx",
+    "class": "text-amber-700",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/space-reservation-management/components/SpaceBookingPage.tsx",
+    "class": "text-emerald-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/space-reservation-management/components/SpaceBookingPage.tsx",
+    "class": "text-slate-500",
+    "code": "GAP-TINT",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/task-management/components/AuditTimeline.tsx",
+    "class": "text-emerald-600",
+    "code": "GAP-TINT",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/task-management/components/DueDateBadge.tsx",
+    "class": "dark:text-amber-400",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/task-management/components/DueDateBadge.tsx",
+    "class": "text-amber-700",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/task-management/components/HighlightedText.tsx",
+    "class": "bg-yellow-200",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/task-management/components/HighlightedText.tsx",
+    "class": "dark:bg-yellow-500/40",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/task-management/components/TaskBoard.tsx",
+    "class": "bg-amber-50/50",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/task-management/components/TaskBoard.tsx",
+    "class": "bg-blue-50/50",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/task-management/components/TaskBoard.tsx",
+    "class": "bg-green-50/50",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/task-management/components/TaskBoard.tsx",
+    "class": "bg-red-50/50",
+    "code": "GAP-TINT",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/task-management/components/TaskBoard.tsx",
+    "class": "bg-slate-50/50",
+    "code": "GAP-TINT",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/task-management/components/TaskBoard.tsx",
+    "class": "border-t-amber-500",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/task-management/components/TaskBoard.tsx",
+    "class": "border-t-blue-400",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/task-management/components/TaskBoard.tsx",
+    "class": "border-t-green-400",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/task-management/components/TaskBoard.tsx",
+    "class": "border-t-red-400",
+    "code": "GAP-TINT",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/task-management/components/TaskBoard.tsx",
+    "class": "border-t-slate-400",
+    "code": "GAP-TINT",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/task-management/components/TaskBoard.tsx",
+    "class": "dark:bg-amber-900/20",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/task-management/components/TaskBoard.tsx",
+    "class": "dark:bg-blue-900/20",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/task-management/components/TaskBoard.tsx",
+    "class": "dark:bg-green-900/20",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/task-management/components/TaskBoard.tsx",
+    "class": "dark:bg-red-900/20",
+    "code": "GAP-TINT",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/task-management/components/TaskBoard.tsx",
+    "class": "dark:bg-slate-900/20",
+    "code": "GAP-TINT",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/task-management/components/TaskDashboard.tsx",
+    "class": "bg-black/50",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/task-management/components/TaskDashboard.tsx",
+    "class": "dark:hover:bg-white/10",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/task-management/components/TaskDashboard.tsx",
+    "class": "hover:bg-black/10",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/task-management/components/TaskFilterBar.tsx",
+    "class": "bg-amber-100",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/task-management/components/TaskFilterBar.tsx",
+    "class": "bg-sky-100",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/task-management/components/TaskFilterBar.tsx",
+    "class": "dark:bg-amber-500/20",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/task-management/components/TaskFilterBar.tsx",
+    "class": "dark:bg-sky-500/20",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/task-management/components/TaskFilterBar.tsx",
+    "class": "dark:hover:bg-white/10",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/task-management/components/TaskFilterBar.tsx",
+    "class": "dark:text-amber-300",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/task-management/components/TaskFilterBar.tsx",
+    "class": "dark:text-sky-300",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/task-management/components/TaskFilterBar.tsx",
+    "class": "hover:bg-black/10",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/task-management/components/TaskFilterBar.tsx",
+    "class": "text-amber-800",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/task-management/components/TaskFilterBar.tsx",
+    "class": "text-sky-800",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/user-administration/components/InviteAdministratorDialog.tsx",
+    "class": "bg-emerald-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/user-administration/components/InviteAdministratorDialog.tsx",
+    "class": "border-emerald-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/user-administration/components/InviteAdministratorDialog.tsx",
+    "class": "text-emerald-900",
+    "code": "GAP-TINT",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/user-administration/components/Navbar.tsx",
+    "class": "dark:text-amber-400",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/user-administration/components/Navbar.tsx",
+    "class": "text-amber-600",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/user-administration/components/SimulationBanner.tsx",
+    "class": "bg-amber-400",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/user-administration/components/SimulationBanner.tsx",
+    "class": "bg-amber-400/40",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/user-administration/components/SimulationBanner.tsx",
+    "class": "border-amber-950/30",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/user-administration/components/SimulationBanner.tsx",
+    "class": "hover:bg-amber-400/70",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/user-administration/components/SimulationBanner.tsx",
+    "class": "text-amber-950",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/user-administration/components/TenantBrandColors.tsx",
+    "class": "bg-amber-50",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/user-administration/components/TenantBrandColors.tsx",
+    "class": "bg-emerald-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/user-administration/components/TenantBrandColors.tsx",
+    "class": "border-emerald-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/user-administration/components/TenantBrandColors.tsx",
+    "class": "text-amber-900",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/user-administration/components/TenantBrandColors.tsx",
+    "class": "text-emerald-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/user-administration/components/TenantBrandColors.tsx",
+    "class": "text-emerald-800",
+    "code": "GAP-TINT",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/user-administration/components/TenantInvitationsPanel.tsx",
+    "class": "bg-amber-50",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/user-administration/components/TenantInvitationsPanel.tsx",
+    "class": "bg-emerald-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/user-administration/components/TenantInvitationsPanel.tsx",
+    "class": "text-amber-700",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/user-administration/components/TenantInvitationsPanel.tsx",
+    "class": "text-emerald-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/user-administration/pages/AdminUserDashboard.tsx",
+    "class": "bg-black/50",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/user-administration/pages/ContactInfoDashboard.tsx",
+    "class": "bg-black/50",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/user-administration/pages/TenantProfilePage.tsx",
+    "class": "bg-amber-50",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/user-administration/pages/TenantProfilePage.tsx",
+    "class": "bg-black/40",
+    "code": "GAP-OVERLAY",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/user-administration/pages/TenantProfilePage.tsx",
+    "class": "bg-emerald-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/user-administration/pages/TenantProfilePage.tsx",
+    "class": "border-amber-200",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/user-administration/pages/TenantProfilePage.tsx",
+    "class": "text-amber-800",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/user-administration/pages/TenantProfilePage.tsx",
+    "class": "text-amber-900",
+    "code": "GAP-NO-TOKEN",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/user-administration/pages/TenantProfilePage.tsx",
+    "class": "text-emerald-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/user-administration/pages/TenantsAdminPage.tsx",
+    "class": "bg-emerald-50",
+    "code": "GAP-TINT",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/user-administration/pages/TenantsAdminPage.tsx",
+    "class": "border-emerald-200",
+    "code": "GAP-TINT",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/user-administration/pages/TenantsAdminPage.tsx",
+    "class": "border-emerald-300",
+    "code": "GAP-TINT",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/user-administration/pages/TenantsAdminPage.tsx",
+    "class": "text-emerald-700",
+    "code": "GAP-TINT",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/user-administration/pages/TenantsAdminPage.tsx",
+    "class": "text-emerald-800",
+    "code": "GAP-TINT",
+    "task": "APRAS-85"
+  },
+  {
+    "file": "src/features/user-administration/pages/TenantsAdminPage.tsx",
+    "class": "text-emerald-900",
+    "code": "GAP-TINT",
+    "task": "APRAS-85"
   }
 ]

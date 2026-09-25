@@ -657,7 +657,8 @@ Built from named parts, not one hand-written literal:
 
 ```
 variants = (?:[a-z0-9][a-z0-9.\-]*(?:\[[^\]]*\])?:)*
-prefix   = (?:bg|text|border|ring|outline|divide|placeholder|caret|accent|
+prefix   = (?:bg|text|border(?:-[trblxyse])?|ring|outline|
+              divide(?:-[trblxyse])?|placeholder|caret|accent|
               decoration|shadow|fill|stroke|from|via|to)
 family   = (?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|
               green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|
@@ -669,7 +670,7 @@ palette  = (?<![\w-]) variants prefix - (?: family - scale | white | black )
            (?![\w-]) opacity
 ```
 
-Two details are load-bearing:
+Three details are load-bearing:
 
 - **`scale` must list its alternatives longest-first.** With `50` before `500`
   the engine matches `text-gray-50` inside `text-gray-500` and silently
@@ -677,6 +678,20 @@ Two details are load-bearing:
   is the whole class, not a prefix of it.
 - **The boundaries `(?<![\w-])` and `(?![\w-])`** prevent matching inside a
   longer identifier or a compound class name.
+- **`prefix`'s side qualifier is optional, exactly one letter, and applies to
+  `border` and `divide` only.** `border-t-slate-400` and `divide-y-gray-100`
+  match; `bg-t-slate-400` and `ring-t-blue-500` are not Tailwind classes and
+  must not match, and neither must the two-letter `border-tr-slate-400`.
+  APRAS-85 made this amendment under an operator authorisation recorded on
+  that task — the sole authorisation any child of APRAS-77 has to amend this
+  document's published §3b, and it extends to the `prefix` production and to
+  this prose and to nothing else. The alternation set is unchanged by it: the
+  same sixteen keywords in the same order, none added and none dropped. §1j's
+  appendix was generated with the **pre-amendment** grammar and is therefore 5
+  occurrences short of the widened one — the five `border-t-*` header stripes
+  of `task-management/components/TaskBoard.tsx`, kept verbatim and ledgered by
+  APRAS-85. §1j is not edited, because it publishes APRAS-78's baseline and
+  rewriting a baseline is worse than annotating it.
 
 A third pattern covers `#[0-9a-fA-F]{6}` appearing inside a `className` string
 or a `cva` / `cn` argument.

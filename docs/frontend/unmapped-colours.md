@@ -1238,3 +1238,176 @@ is a kept tint inside status set 1 at line 19 and out of budget as a table
 cell at line 82. The exceptions file is keyed `(file, class)` and carries one
 code, so that pair takes `GAP-TINT`, the earlier of the two in §1h's
 precedence order.
+
+| APRAS-85 | frontend/src/features/dashboard/components/GeneralDashboardPage.tsx | 33 | dark:text-blue-400 | GAP-SWATCH | module identity colour; a data swatch must not follow the tenant brand, or two modules collapse into one colour |
+| APRAS-85 | frontend/src/features/dashboard/components/GeneralDashboardPage.tsx | 33 | text-blue-500 | GAP-SWATCH | module identity colour; a data swatch must not follow the tenant brand, or two modules collapse into one colour |
+| APRAS-85 | frontend/src/features/dashboard/components/GeneralDashboardPage.tsx | 34 | bg-blue-500/10 | GAP-SWATCH | module identity colour; a data swatch must not follow the tenant brand, or two modules collapse into one colour |
+| APRAS-85 | frontend/src/features/dashboard/components/GeneralDashboardPage.tsx | 40 | dark:text-emerald-400 | GAP-SWATCH | module identity colour; a data swatch must not follow the tenant brand, or two modules collapse into one colour |
+| APRAS-85 | frontend/src/features/dashboard/components/GeneralDashboardPage.tsx | 40 | text-emerald-500 | GAP-SWATCH | module identity colour; a data swatch must not follow the tenant brand, or two modules collapse into one colour |
+| APRAS-85 | frontend/src/features/dashboard/components/GeneralDashboardPage.tsx | 41 | bg-emerald-500/10 | GAP-SWATCH | module identity colour; a data swatch must not follow the tenant brand, or two modules collapse into one colour |
+| APRAS-85 | frontend/src/features/dashboard/components/GeneralDashboardPage.tsx | 47 | dark:text-amber-400 | GAP-SWATCH | module identity colour; a data swatch must not follow the tenant brand, or two modules collapse into one colour |
+| APRAS-85 | frontend/src/features/dashboard/components/GeneralDashboardPage.tsx | 47 | text-amber-500 | GAP-SWATCH | module identity colour; a data swatch must not follow the tenant brand, or two modules collapse into one colour |
+| APRAS-85 | frontend/src/features/dashboard/components/GeneralDashboardPage.tsx | 48 | bg-amber-500/10 | GAP-SWATCH | module identity colour; a data swatch must not follow the tenant brand, or two modules collapse into one colour |
+| APRAS-85 | frontend/src/features/dashboard/components/GeneralDashboardPage.tsx | 54 | dark:text-indigo-400 | GAP-SWATCH | module identity colour; a data swatch must not follow the tenant brand, or two modules collapse into one colour |
+| APRAS-85 | frontend/src/features/dashboard/components/GeneralDashboardPage.tsx | 54 | text-indigo-500 | GAP-SWATCH | module identity colour; a data swatch must not follow the tenant brand, or two modules collapse into one colour |
+| APRAS-85 | frontend/src/features/dashboard/components/GeneralDashboardPage.tsx | 55 | bg-indigo-500/10 | GAP-SWATCH | module identity colour; a data swatch must not follow the tenant brand, or two modules collapse into one colour |
+| APRAS-85 | frontend/src/features/dashboard/components/GeneralDashboardPage.tsx | 61 | dark:text-purple-400 | GAP-SWATCH | module identity colour; a data swatch must not follow the tenant brand, or two modules collapse into one colour |
+| APRAS-85 | frontend/src/features/dashboard/components/GeneralDashboardPage.tsx | 61 | text-purple-500 | GAP-SWATCH | module identity colour; a data swatch must not follow the tenant brand, or two modules collapse into one colour |
+| APRAS-85 | frontend/src/features/dashboard/components/GeneralDashboardPage.tsx | 62 | bg-purple-500/10 | GAP-SWATCH | module identity colour; a data swatch must not follow the tenant brand, or two modules collapse into one colour |
+| APRAS-85 | frontend/src/features/dashboard/components/GeneralDashboardPage.tsx | 68 | dark:text-orange-400 | GAP-SWATCH | module identity colour; a data swatch must not follow the tenant brand, or two modules collapse into one colour |
+| APRAS-85 | frontend/src/features/dashboard/components/GeneralDashboardPage.tsx | 68 | text-orange-500 | GAP-SWATCH | module identity colour; a data swatch must not follow the tenant brand, or two modules collapse into one colour |
+| APRAS-85 | frontend/src/features/dashboard/components/GeneralDashboardPage.tsx | 69 | bg-orange-500/10 | GAP-SWATCH | module identity colour; a data swatch must not follow the tenant brand, or two modules collapse into one colour |
+| APRAS-85 | frontend/src/features/dashboard/components/GeneralDashboardPage.tsx | 75 | dark:text-green-400 | GAP-SWATCH | module identity colour; a data swatch must not follow the tenant brand, or two modules collapse into one colour |
+| APRAS-85 | frontend/src/features/dashboard/components/GeneralDashboardPage.tsx | 75 | text-green-500 | GAP-SWATCH | module identity colour; a data swatch must not follow the tenant brand, or two modules collapse into one colour |
+| APRAS-85 | frontend/src/features/dashboard/components/GeneralDashboardPage.tsx | 76 | bg-green-500/10 | GAP-SWATCH | module identity colour; a data swatch must not follow the tenant brand, or two modules collapse into one colour |
+| APRAS-85 | frontend/src/features/dashboard/components/GeneralDashboardPage.tsx | 82 | dark:text-rose-400 | GAP-SWATCH | module identity colour; a data swatch must not follow the tenant brand, or two modules collapse into one colour |
+| APRAS-85 | frontend/src/features/dashboard/components/GeneralDashboardPage.tsx | 82 | text-rose-500 | GAP-SWATCH | module identity colour; a data swatch must not follow the tenant brand, or two modules collapse into one colour |
+| APRAS-85 | frontend/src/features/dashboard/components/GeneralDashboardPage.tsx | 83 | bg-rose-500/10 | GAP-SWATCH | module identity colour; a data swatch must not follow the tenant brand, or two modules collapse into one colour |
+| APRAS-85 | frontend/src/features/dashboard/components/GeneralDashboardPage.tsx | 116 | bg-amber-500/10 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/dashboard/components/GeneralDashboardPage.tsx | 116 | border-amber-500/20 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/dashboard/components/GeneralDashboardPage.tsx | 116 | dark:text-amber-400 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/dashboard/components/GeneralDashboardPage.tsx | 116 | text-amber-700 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/infraction-management/components/AttachmentUploader.tsx | 181 | bg-red-50 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/infraction-management/components/AttachmentUploader.tsx | 181 | text-red-700 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/infraction-management/components/CycleCloseModal.tsx | 52 | bg-black/40 | GAP-OVERLAY | scrim or hover veil; an opacity over whatever is behind it, not a surface with a token of its own |
+| APRAS-85 | frontend/src/features/infraction-management/components/CycleCloseModal.tsx | 104 | bg-red-50 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/infraction-management/components/CycleCloseModal.tsx | 104 | text-red-700 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/infraction-management/components/InfractionDetailsView.tsx | 61 | text-gray-700 | GAP-OUT-OF-BUDGET | body text at the 700 step; gray-700 has no row; the table budgets 900 for headings and 500/600 for body |
+| APRAS-85 | frontend/src/features/infraction-management/components/InfractionStageTimeline.tsx | 31 | border-gray-100 | GAP-BORDER-100 | hairline at the 100 step, below the weight the border token carries; migrating it would thicken the rule |
+| APRAS-85 | frontend/src/features/infraction-management/components/InfractionStageTimeline.tsx | 49 | text-gray-700 | GAP-OUT-OF-BUDGET | body text at the 700 step; gray-700 has no row; the table budgets 900 for headings and 500/600 for body |
+| APRAS-85 | frontend/src/features/infraction-management/components/InfractionStageTimeline.tsx | 57 | bg-amber-100 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/infraction-management/components/InfractionStageTimeline.tsx | 57 | text-amber-800 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/infraction-management/components/InfractionStageTimeline.tsx | 99 | text-amber-700 | GAP-NO-TOKEN | amber has no row at any scale; a warning or highlight token is out of scope for this task |
+| APRAS-85 | frontend/src/features/infraction-management/components/NewInfractionModal.tsx | 166 | bg-black/40 | GAP-OVERLAY | scrim or hover veil; an opacity over whatever is behind it, not a surface with a token of its own |
+| APRAS-85 | frontend/src/features/infraction-management/components/NewInfractionModal.tsx | 260 | text-amber-700 | GAP-NO-TOKEN | amber has no row at any scale; a warning or highlight token is out of scope for this task |
+| APRAS-85 | frontend/src/features/infraction-management/components/NewInfractionModal.tsx | 336 | bg-red-50 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/infraction-management/components/NewInfractionModal.tsx | 336 | text-red-700 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/infraction-management/components/NextStepPanel.tsx | 62 | text-amber-700 | GAP-NO-TOKEN | amber has no row at any scale; a warning or highlight token is out of scope for this task |
+| APRAS-85 | frontend/src/features/infraction-management/pages/InfractionRulesPage.tsx | 225 | border-gray-100 | GAP-BORDER-100 | hairline at the 100 step, below the weight the border token carries; migrating it would thicken the rule |
+| APRAS-85 | frontend/src/features/infraction-management/pages/InfractionRulesPage.tsx | 238 | text-gray-700 | GAP-OUT-OF-BUDGET | body text at the 700 step; gray-700 has no row; the table budgets 900 for headings and 500/600 for body |
+| APRAS-85 | frontend/src/features/infraction-management/pages/InfractionRulesPage.tsx | 276 | border-gray-100 | GAP-BORDER-100 | hairline at the 100 step, below the weight the border token carries; migrating it would thicken the rule |
+| APRAS-85 | frontend/src/features/infraction-management/pages/InfractionsPage.tsx | 262 | border-gray-100 | GAP-BORDER-100 | hairline at the 100 step, below the weight the border token carries; migrating it would thicken the rule |
+| APRAS-85 | frontend/src/features/infraction-management/pages/InfractionsPage.tsx | 269 | text-gray-700 | GAP-OUT-OF-BUDGET | body text at the 700 step; gray-700 has no row; the table budgets 900 for headings and 500/600 for body |
+| APRAS-85 | frontend/src/features/infraction-management/pages/InfractionsPage.tsx | 337 | border-gray-100 | GAP-BORDER-100 | hairline at the 100 step, below the weight the border token carries; migrating it would thicken the rule |
+| APRAS-85 | frontend/src/features/infraction-management/pages/InfractionsPage.tsx | 346 | text-gray-700 | GAP-OUT-OF-BUDGET | body text at the 700 step; gray-700 has no row; the table budgets 900 for headings and 500/600 for body |
+| APRAS-85 | frontend/src/features/infraction-management/pages/InfractionsPage.tsx | 355 | bg-red-50 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/infraction-management/pages/InfractionsPage.tsx | 355 | text-red-700 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/infraction-management/pages/MyInfractionsPage.tsx | 57 | text-gray-700 | GAP-OUT-OF-BUDGET | body text at the 700 step; gray-700 has no row; the table budgets 900 for headings and 500/600 for body |
+| APRAS-85 | frontend/src/features/infraction-management/pages/MyInfractionsPage.tsx | 63 | text-gray-700 | GAP-OUT-OF-BUDGET | body text at the 700 step; gray-700 has no row; the table budgets 900 for headings and 500/600 for body |
+| APRAS-85 | frontend/src/features/infraction-management/pages/MyInfractionsPage.tsx | 67 | bg-amber-50 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/infraction-management/pages/MyInfractionsPage.tsx | 67 | text-amber-800 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/space-reservation-management/components/ReservableSpacesPage.tsx | 243 | text-amber-600 | GAP-NO-TOKEN | amber has no row at any scale; a warning or highlight token is out of scope for this task |
+| APRAS-85 | frontend/src/features/space-reservation-management/components/SpaceBookingPage.tsx | 16 | bg-emerald-100 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/space-reservation-management/components/SpaceBookingPage.tsx | 16 | text-emerald-700 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/space-reservation-management/components/SpaceBookingPage.tsx | 18 | bg-amber-100 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/space-reservation-management/components/SpaceBookingPage.tsx | 18 | text-amber-700 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/space-reservation-management/components/SpaceBookingPage.tsx | 22 | bg-slate-100 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/space-reservation-management/components/SpaceBookingPage.tsx | 22 | text-slate-500 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/space-reservation-management/components/SpaceBookingPage.tsx | 24 | bg-slate-100 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/space-reservation-management/components/SpaceBookingPage.tsx | 24 | text-slate-500 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/task-management/components/AuditTimeline.tsx | 111 | text-emerald-600 | GAP-TINT | a status colour is semantic, not brand; emerald at this step has no row and must not follow the brand |
+| APRAS-85 | frontend/src/features/task-management/components/DueDateBadge.tsx | 18 | dark:text-amber-400 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/task-management/components/DueDateBadge.tsx | 18 | text-amber-700 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/task-management/components/DueDateBadge.tsx | 19 | dark:text-amber-400 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/task-management/components/DueDateBadge.tsx | 19 | text-amber-700 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/task-management/components/HighlightedText.tsx | 62 | bg-yellow-200 | GAP-NO-TOKEN | yellow has no row at any scale; a warning or highlight token is out of scope for this task |
+| APRAS-85 | frontend/src/features/task-management/components/HighlightedText.tsx | 62 | dark:bg-yellow-500/40 | GAP-NO-TOKEN | yellow has no row at any scale; a warning or highlight token is out of scope for this task |
+| APRAS-85 | frontend/src/features/task-management/components/TaskBoard.tsx | 75 | bg-slate-50/50 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/task-management/components/TaskBoard.tsx | 75 | dark:bg-slate-900/20 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/task-management/components/TaskBoard.tsx | 76 | border-t-slate-400 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/task-management/components/TaskBoard.tsx | 81 | bg-blue-50/50 | GAP-NO-TOKEN | blue has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/task-management/components/TaskBoard.tsx | 81 | dark:bg-blue-900/20 | GAP-NO-TOKEN | blue has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/task-management/components/TaskBoard.tsx | 82 | border-t-blue-400 | GAP-NO-TOKEN | blue has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/task-management/components/TaskBoard.tsx | 87 | bg-amber-50/50 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/task-management/components/TaskBoard.tsx | 87 | dark:bg-amber-900/20 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/task-management/components/TaskBoard.tsx | 88 | border-t-amber-500 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/task-management/components/TaskBoard.tsx | 93 | bg-green-50/50 | GAP-NO-TOKEN | green has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/task-management/components/TaskBoard.tsx | 93 | dark:bg-green-900/20 | GAP-NO-TOKEN | green has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/task-management/components/TaskBoard.tsx | 94 | border-t-green-400 | GAP-NO-TOKEN | green has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/task-management/components/TaskBoard.tsx | 99 | bg-red-50/50 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/task-management/components/TaskBoard.tsx | 99 | dark:bg-red-900/20 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/task-management/components/TaskBoard.tsx | 100 | border-t-red-400 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/task-management/components/TaskDashboard.tsx | 307 | dark:hover:bg-white/10 | GAP-OVERLAY | scrim or hover veil; an opacity over whatever is behind it, not a surface with a token of its own |
+| APRAS-85 | frontend/src/features/task-management/components/TaskDashboard.tsx | 307 | hover:bg-black/10 | GAP-OVERLAY | scrim or hover veil; an opacity over whatever is behind it, not a surface with a token of its own |
+| APRAS-85 | frontend/src/features/task-management/components/TaskDashboard.tsx | 342 | bg-black/50 | GAP-OVERLAY | scrim or hover veil; an opacity over whatever is behind it, not a surface with a token of its own |
+| APRAS-85 | frontend/src/features/task-management/components/TaskFilterBar.tsx | 146 | bg-amber-100 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/task-management/components/TaskFilterBar.tsx | 146 | dark:bg-amber-500/20 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/task-management/components/TaskFilterBar.tsx | 146 | dark:text-amber-300 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/task-management/components/TaskFilterBar.tsx | 146 | text-amber-800 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/task-management/components/TaskFilterBar.tsx | 166 | bg-sky-100 | GAP-NO-TOKEN | sky has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/task-management/components/TaskFilterBar.tsx | 166 | dark:bg-sky-500/20 | GAP-NO-TOKEN | sky has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/task-management/components/TaskFilterBar.tsx | 166 | dark:text-sky-300 | GAP-NO-TOKEN | sky has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/task-management/components/TaskFilterBar.tsx | 166 | text-sky-800 | GAP-NO-TOKEN | sky has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/task-management/components/TaskFilterBar.tsx | 216 | dark:hover:bg-white/10 | GAP-OVERLAY | scrim or hover veil; an opacity over whatever is behind it, not a surface with a token of its own |
+| APRAS-85 | frontend/src/features/task-management/components/TaskFilterBar.tsx | 216 | hover:bg-black/10 | GAP-OVERLAY | scrim or hover veil; an opacity over whatever is behind it, not a surface with a token of its own |
+| APRAS-85 | frontend/src/features/user-administration/components/InviteAdministratorDialog.tsx | 99 | bg-emerald-50 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/user-administration/components/InviteAdministratorDialog.tsx | 99 | border-emerald-200 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/user-administration/components/InviteAdministratorDialog.tsx | 101 | text-emerald-900 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/user-administration/components/InviteAdministratorDialog.tsx | 104 | text-emerald-900 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/user-administration/components/Navbar.tsx | 153 | dark:text-amber-400 | GAP-NO-TOKEN | amber has no row at any scale; a warning or highlight token is out of scope for this task |
+| APRAS-85 | frontend/src/features/user-administration/components/Navbar.tsx | 153 | text-amber-600 | GAP-NO-TOKEN | amber has no row at any scale; a warning or highlight token is out of scope for this task |
+| APRAS-85 | frontend/src/features/user-administration/components/SimulationBanner.tsx | 32 | bg-amber-400 | GAP-NO-TOKEN | amber has no row at any scale; a warning or highlight token is out of scope for this task |
+| APRAS-85 | frontend/src/features/user-administration/components/SimulationBanner.tsx | 32 | text-amber-950 | GAP-NO-TOKEN | amber has no row at any scale; a warning or highlight token is out of scope for this task |
+| APRAS-85 | frontend/src/features/user-administration/components/SimulationBanner.tsx | 46 | bg-amber-400/40 | GAP-NO-TOKEN | amber has no row at any scale; a warning or highlight token is out of scope for this task |
+| APRAS-85 | frontend/src/features/user-administration/components/SimulationBanner.tsx | 46 | border-amber-950/30 | GAP-NO-TOKEN | amber has no row at any scale; a warning or highlight token is out of scope for this task |
+| APRAS-85 | frontend/src/features/user-administration/components/SimulationBanner.tsx | 46 | hover:bg-amber-400/70 | GAP-NO-TOKEN | amber has no row at any scale; a warning or highlight token is out of scope for this task |
+| APRAS-85 | frontend/src/features/user-administration/components/TenantBrandColors.tsx | 469 | bg-amber-50 | GAP-NO-TOKEN | amber has no row at any scale; a warning or highlight token is out of scope for this task |
+| APRAS-85 | frontend/src/features/user-administration/components/TenantBrandColors.tsx | 469 | text-amber-900 | GAP-NO-TOKEN | amber has no row at any scale; a warning or highlight token is out of scope for this task |
+| APRAS-85 | frontend/src/features/user-administration/components/TenantBrandColors.tsx | 552 | text-emerald-700 | GAP-TINT | a status colour is semantic, not brand; emerald at this step has no row and must not follow the brand |
+| APRAS-85 | frontend/src/features/user-administration/components/TenantBrandColors.tsx | 599 | bg-emerald-50 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/user-administration/components/TenantBrandColors.tsx | 599 | border-emerald-200 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/user-administration/components/TenantBrandColors.tsx | 599 | text-emerald-800 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/user-administration/components/TenantInvitationsPanel.tsx | 24 | bg-amber-50 | GAP-NO-TOKEN | amber has no row at any scale; a warning or highlight token is out of scope for this task |
+| APRAS-85 | frontend/src/features/user-administration/components/TenantInvitationsPanel.tsx | 24 | text-amber-700 | GAP-NO-TOKEN | amber has no row at any scale; a warning or highlight token is out of scope for this task |
+| APRAS-85 | frontend/src/features/user-administration/components/TenantInvitationsPanel.tsx | 26 | bg-emerald-50 | GAP-TINT | a status colour is semantic, not brand; emerald at this step has no row and must not follow the brand |
+| APRAS-85 | frontend/src/features/user-administration/components/TenantInvitationsPanel.tsx | 26 | text-emerald-700 | GAP-TINT | a status colour is semantic, not brand; emerald at this step has no row and must not follow the brand |
+| APRAS-85 | frontend/src/features/user-administration/pages/AdminUserDashboard.tsx | 292 | bg-black/50 | GAP-OVERLAY | scrim or hover veil; an opacity over whatever is behind it, not a surface with a token of its own |
+| APRAS-85 | frontend/src/features/user-administration/pages/ContactInfoDashboard.tsx | 175 | bg-black/50 | GAP-OVERLAY | scrim or hover veil; an opacity over whatever is behind it, not a surface with a token of its own |
+| APRAS-85 | frontend/src/features/user-administration/pages/TenantProfilePage.tsx | 225 | bg-emerald-50 | GAP-TINT | a status colour is semantic, not brand; emerald at this step has no row and must not follow the brand |
+| APRAS-85 | frontend/src/features/user-administration/pages/TenantProfilePage.tsx | 225 | text-emerald-700 | GAP-TINT | a status colour is semantic, not brand; emerald at this step has no row and must not follow the brand |
+| APRAS-85 | frontend/src/features/user-administration/pages/TenantProfilePage.tsx | 364 | bg-amber-50 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/user-administration/pages/TenantProfilePage.tsx | 364 | border-amber-200 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/user-administration/pages/TenantProfilePage.tsx | 364 | text-amber-900 | GAP-NO-TOKEN | amber has no row at any scale, and the status set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/user-administration/pages/TenantProfilePage.tsx | 397 | bg-amber-50 | GAP-NO-TOKEN | amber has no row at any scale; a warning or highlight token is out of scope for this task |
+| APRAS-85 | frontend/src/features/user-administration/pages/TenantProfilePage.tsx | 397 | text-amber-800 | GAP-NO-TOKEN | amber has no row at any scale; a warning or highlight token is out of scope for this task |
+| APRAS-85 | frontend/src/features/user-administration/pages/TenantProfilePage.tsx | 417 | bg-black/40 | GAP-OVERLAY | scrim or hover veil; an opacity over whatever is behind it, not a surface with a token of its own |
+| APRAS-85 | frontend/src/features/user-administration/pages/TenantsAdminPage.tsx | 53 | bg-emerald-50 | GAP-TINT | a status colour is semantic, not brand; emerald at this step has no row and must not follow the brand |
+| APRAS-85 | frontend/src/features/user-administration/pages/TenantsAdminPage.tsx | 53 | text-emerald-700 | GAP-TINT | a status colour is semantic, not brand; emerald at this step has no row and must not follow the brand |
+| APRAS-85 | frontend/src/features/user-administration/pages/TenantsAdminPage.tsx | 257 | bg-emerald-50 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/user-administration/pages/TenantsAdminPage.tsx | 257 | border-emerald-200 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/user-administration/pages/TenantsAdminPage.tsx | 258 | text-emerald-900 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/user-administration/pages/TenantsAdminPage.tsx | 261 | text-emerald-900 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/user-administration/pages/TenantsAdminPage.tsx | 263 | text-emerald-800 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/user-administration/pages/TenantsAdminPage.tsx | 272 | border-emerald-300 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/user-administration/pages/TenantsAdminPage.tsx | 272 | text-emerald-800 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/user-administration/pages/TenantsAdminPage.tsx | 278 | text-emerald-800 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/user-administration/pages/TenantsAdminPage.tsx | 283 | text-emerald-800 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/user-administration/pages/TenantsAdminPage.tsx | 299 | border-emerald-300 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+| APRAS-85 | frontend/src/features/user-administration/pages/TenantsAdminPage.tsx | 299 | text-emerald-800 | GAP-TINT | a status colour is semantic, not brand, and the set it belongs to migrates as a unit or not at all |
+
+**APRAS-85 total — 145 occurrences:** 53 `GAP-NO-TOKEN`, 46 `GAP-TINT`, 24
+`GAP-SWATCH`, 10 `GAP-OVERLAY`, 7 `GAP-OUT-OF-BUDGET` and 5 `GAP-BORDER-100`.
+No `GAP-NO-SURFACE` and no `GAP-UNLISTED`: both `text-white` occurrences sat on
+a migrating `bg-emerald-700`, so the no-surface code never fires.
+With the 167 occurrences migrated to a token and **no** `dark:` sibling deleted
+— every one of the 24 `dark:` classes here pairs with a base this child keeps,
+so §1g's first half never fires — that accounts for all 312 palette
+occurrences in the six directories. The two halves close independently: 288
+non-`dark:` = 167 + 121, and 24 `dark:` = 0 + 24. Per directory, 29 of the 145
+stay in `infraction-management`, 44 in `user-administration`, 35 in
+`task-management`, 28 in `dashboard`, 9 in `space-reservation-management` and 0
+in `assembly-voting`, which migrates completely. The 145 occupy **126**
+distinct `(file, class)` pairs — 25 in `infraction-management`, 35 in
+`user-administration`, 33 in `task-management`, 26 in `dashboard`, 7 in
+`space-reservation-management` and 0 in `assembly-voting` — which is the number
+of entries appended to `themeTokenMigration.exceptions.json`. Two classes are
+logged twice in one file under two codes: `GeneralDashboardPage.tsx`'s
+`bg-amber-500/10` and `dark:text-amber-400` are module swatches in the colour
+map and warning tints in the preview badge at line 116. The exceptions file is
+keyed `(file, class)` and carries one code, so both pairs take `GAP-SWATCH`,
+the earlier of the two in §1h's precedence order.
+Five of the 145 are occurrences no earlier child could see: the
+`border-t-{slate,blue,amber,green,red}-*` header stripes of `TaskBoard.tsx`'s
+column map, which job (c)'s widening of §3b's `prefix` production brought
+inside the grammar. They are kept verbatim — a status set migrates as a unit or
+not at all — and ledgered here for the first time.

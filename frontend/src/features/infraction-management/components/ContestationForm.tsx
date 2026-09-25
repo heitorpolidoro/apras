@@ -35,7 +35,7 @@ export const ContestationForm: React.FC<{
   if (!open) {
     return (
       <p
-        className="text-sm text-gray-500"
+        className="text-sm text-muted-foreground"
         data-testid="contestation-unavailable"
       >
         {defenseDueOn === null
@@ -47,11 +47,11 @@ export const ContestationForm: React.FC<{
 
   return (
     <div className="space-y-2" data-testid="contestation-form">
-      <p className="text-sm text-gray-500">
+      <p className="text-sm text-muted-foreground">
         {t("infractions.contestation.deadlineOpen", { date: defenseDueOn })}
       </p>
       <textarea
-        className="w-full rounded-lg border border-gray-200 p-2 text-sm"
+        className="w-full rounded-lg border border-border p-2 text-sm"
         aria-label={t("infractions.contestation.body")}
         value={body}
         onChange={(event) => setBody(event.target.value)}

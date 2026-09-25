@@ -52,8 +52,8 @@ export const CycleCloseModal: React.FC<{
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       data-testid="cycle-close-modal"
     >
-      <div className="w-full max-w-lg space-y-4 rounded-xl bg-white p-6">
-        <h2 className="text-lg font-bold text-gray-900">
+      <div className="w-full max-w-lg space-y-4 rounded-xl bg-card p-6">
+        <h2 className="text-lg font-bold text-foreground">
           {t("infractions.cycleClose.title")}
         </h2>
 
@@ -61,15 +61,15 @@ export const CycleCloseModal: React.FC<{
           className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm"
           data-testid="cycle-close-pair"
         >
-          <dt className="text-gray-500">{t("infractions.fields.rule")}</dt>
-          <dd className="text-gray-900">{rule.article}</dd>
-          <dt className="text-gray-500">
+          <dt className="text-muted-foreground">{t("infractions.fields.rule")}</dt>
+          <dd className="text-foreground">{rule.article}</dd>
+          <dt className="text-muted-foreground">
             {t("infractions.fields.responsible")}
           </dt>
-          <dd className="text-gray-900">{responsible.full_name}</dd>
+          <dd className="text-foreground">{responsible.full_name}</dd>
         </dl>
 
-        <p className="text-sm text-gray-600" data-testid="cycle-close-warning">
+        <p className="text-sm text-muted-foreground" data-testid="cycle-close-warning">
           {t("infractions.cycleClose.nothingIsDeleted")}
         </p>
 
@@ -81,18 +81,18 @@ export const CycleCloseModal: React.FC<{
               onChange={(event) => setIncludeLot(event.target.checked)}
               aria-label={t("infractions.cycleClose.includeLot")}
             />
-            <span className="text-gray-500">
+            <span className="text-muted-foreground">
               {t("infractions.cycleClose.includeLot")}
             </span>
           </label>
         )}
 
         <label className="block text-sm">
-          <span className="text-gray-500">
+          <span className="text-muted-foreground">
             {t("infractions.cycleClose.justification")}
           </span>
           <textarea
-            className="mt-1 w-full rounded-lg border border-gray-200 p-2 text-sm"
+            className="mt-1 w-full rounded-lg border border-border p-2 text-sm"
             aria-label={t("infractions.cycleClose.justification")}
             value={justification}
             onChange={(event) => setJustification(event.target.value)}

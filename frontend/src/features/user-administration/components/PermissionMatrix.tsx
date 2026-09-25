@@ -142,7 +142,7 @@ const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
                       onChange={(event) =>
                         toggle(descriptor.permission, event.target.checked)
                       }
-                      className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4"
+                      className="rounded border-input text-primary focus:ring-primary h-4 w-4"
                     />
                     <span className={locked ? "text-muted-foreground" : ""}>
                       {permissionLabel(descriptor.permission, t)}

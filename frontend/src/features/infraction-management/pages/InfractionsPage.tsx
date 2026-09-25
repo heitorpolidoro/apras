@@ -130,12 +130,12 @@ export const InfractionsPage: React.FC = () => {
 
   return (
     <div className="container mx-auto space-y-6 px-4 py-8">
-      <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-6">
+      <div className="flex items-center justify-between rounded-xl border border-border bg-card p-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-foreground">
             {t("infractions.pageTitle")}
           </h1>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             {t("infractions.pageSubtitle")}
           </p>
         </div>
@@ -148,13 +148,13 @@ export const InfractionsPage: React.FC = () => {
       </div>
 
       <div
-        className="grid gap-3 rounded-xl border border-gray-200 bg-white p-4 md:grid-cols-3"
+        className="grid gap-3 rounded-xl border border-border bg-card p-4 md:grid-cols-3"
         data-testid="infraction-filters"
       >
         <label className="block text-sm">
-          <span className="text-gray-500">{t("infractions.fields.rule")}</span>
+          <span className="text-muted-foreground">{t("infractions.fields.rule")}</span>
           <select
-            className="mt-1 w-full rounded-lg border border-gray-200 p-2 text-sm"
+            className="mt-1 w-full rounded-lg border border-border p-2 text-sm"
             aria-label={t("infractions.filters.rule")}
             value={filters.rule_id ?? ""}
             onChange={(event) => setFilter("rule_id", event.target.value)}
@@ -169,9 +169,9 @@ export const InfractionsPage: React.FC = () => {
         </label>
 
         <label className="block text-sm">
-          <span className="text-gray-500">{t("infractions.fields.lot")}</span>
+          <span className="text-muted-foreground">{t("infractions.fields.lot")}</span>
           <select
-            className="mt-1 w-full rounded-lg border border-gray-200 p-2 text-sm"
+            className="mt-1 w-full rounded-lg border border-border p-2 text-sm"
             aria-label={t("infractions.filters.lot")}
             value={filters.lot_id ?? ""}
             onChange={(event) => setFilter("lot_id", event.target.value)}
@@ -186,11 +186,11 @@ export const InfractionsPage: React.FC = () => {
         </label>
 
         <label className="block text-sm">
-          <span className="text-gray-500">
+          <span className="text-muted-foreground">
             {t("infractions.fields.responsible")}
           </span>
           <select
-            className="mt-1 w-full rounded-lg border border-gray-200 p-2 text-sm"
+            className="mt-1 w-full rounded-lg border border-border p-2 text-sm"
             aria-label={t("infractions.filters.responsible")}
             value={filters.responsible_id ?? ""}
             onChange={(event) => setFilter("responsible_id", event.target.value)}
@@ -205,11 +205,11 @@ export const InfractionsPage: React.FC = () => {
         </label>
 
         <label className="block text-sm">
-          <span className="text-gray-500">
+          <span className="text-muted-foreground">
             {t("infractions.fields.currentStage")}
           </span>
           <select
-            className="mt-1 w-full rounded-lg border border-gray-200 p-2 text-sm"
+            className="mt-1 w-full rounded-lg border border-border p-2 text-sm"
             aria-label={t("infractions.filters.stage")}
             value={filters.stage ?? ""}
             onChange={(event) => setFilter("stage", event.target.value)}
@@ -224,10 +224,10 @@ export const InfractionsPage: React.FC = () => {
         </label>
 
         <label className="block text-sm">
-          <span className="text-gray-500">{t("infractions.filters.from")}</span>
+          <span className="text-muted-foreground">{t("infractions.filters.from")}</span>
           <input
             type="date"
-            className="mt-1 w-full rounded-lg border border-gray-200 p-2 text-sm"
+            className="mt-1 w-full rounded-lg border border-border p-2 text-sm"
             aria-label={t("infractions.filters.from")}
             value={filters.date_from ?? ""}
             onChange={(event) => setFilter("date_from", event.target.value)}
@@ -235,10 +235,10 @@ export const InfractionsPage: React.FC = () => {
         </label>
 
         <label className="block text-sm">
-          <span className="text-gray-500">{t("infractions.filters.to")}</span>
+          <span className="text-muted-foreground">{t("infractions.filters.to")}</span>
           <input
             type="date"
-            className="mt-1 w-full rounded-lg border border-gray-200 p-2 text-sm"
+            className="mt-1 w-full rounded-lg border border-border p-2 text-sm"
             aria-label={t("infractions.filters.to")}
             value={filters.date_to ?? ""}
             onChange={(event) => setFilter("date_to", event.target.value)}
@@ -246,10 +246,10 @@ export const InfractionsPage: React.FC = () => {
         </label>
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white p-4">
-        {isLoading && <p className="text-sm text-gray-500">{t("infractions.ui.loading")}</p>}
+      <div className="rounded-xl border border-border bg-card p-4">
+        {isLoading && <p className="text-sm text-muted-foreground">{t("infractions.ui.loading")}</p>}
         {!isLoading && (page?.items.length ?? 0) === 0 && (
-          <p className="text-sm text-gray-500" data-testid="infractions-empty">
+          <p className="text-sm text-muted-foreground" data-testid="infractions-empty">
             {t("infractions.empty")}
           </p>
         )}
@@ -259,20 +259,20 @@ export const InfractionsPage: React.FC = () => {
               <button
                 type="button"
                 data-testid={`infraction-row-${infraction.id}`}
-                className="w-full rounded-lg border border-gray-100 p-3 text-left hover:bg-gray-50"
+                className="w-full rounded-lg border border-gray-100 p-3 text-left hover:bg-accent"
                 onClick={() => select(infraction.id)}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-gray-900">
+                  <span className="text-sm font-semibold text-foreground">
                     {infraction.rule.article}
                   </span>
-                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-gray-700">
                     {infraction.current_stage
                       ? t(`infractions.actions.${infraction.current_stage}`)
                       : t("infractions.stageFilter.NONE")}
                   </span>
                 </div>
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-muted-foreground">
                   {infraction.lot.block} / {infraction.lot.lot_number} ·{" "}
                   {infraction.responsible.full_name} · {infraction.occurred_on}
                 </div>
@@ -320,12 +320,12 @@ export const InfractionsPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white p-4">
-        <h2 className="text-base font-bold text-gray-900">
+      <div className="rounded-xl border border-border bg-card p-4">
+        <h2 className="text-base font-bold text-foreground">
           {t("infractions.cycleClose.listTitle")}
         </h2>
         {(cycles?.length ?? 0) === 0 ? (
-          <p className="mt-2 text-sm text-gray-500" data-testid="cycles-empty">
+          <p className="mt-2 text-sm text-muted-foreground" data-testid="cycles-empty">
             {t("infractions.cycleClose.listEmpty")}
           </p>
         ) : (
@@ -336,10 +336,10 @@ export const InfractionsPage: React.FC = () => {
                 data-testid={`cycle-close-${cycle.id}`}
                 className="rounded-lg border border-gray-100 p-3 text-sm"
               >
-                <div className="font-semibold text-gray-900">
+                <div className="font-semibold text-foreground">
                   {cycle.rule.article} · {cycle.responsible.full_name}
                 </div>
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-muted-foreground">
                   {cycle.closed_by.full_name} ·{" "}
                   {new Date(cycle.closed_at).toLocaleString()}
                 </div>

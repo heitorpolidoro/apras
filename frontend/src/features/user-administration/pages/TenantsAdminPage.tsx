@@ -287,7 +287,7 @@ const TenantsAdminPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setCreated(null)}
-              className="rounded-md bg-emerald-700 px-3 py-2 text-xs font-semibold text-white"
+              className="rounded-md bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground"
             >
               {t("tenantsAdmin.backToList")}
             </button>

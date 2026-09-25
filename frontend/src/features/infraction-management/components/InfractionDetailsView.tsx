@@ -25,30 +25,30 @@ export const InfractionDetailsView: React.FC<{
 
   return (
     <div className="space-y-4" data-testid="infraction-details">
-      <div className="rounded-xl border border-gray-200 bg-white p-4">
-        <h2 className="text-lg font-bold text-gray-900">
+      <div className="rounded-xl border border-border bg-card p-4">
+        <h2 className="text-lg font-bold text-foreground">
           {infraction.rule.article}
         </h2>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted-foreground">
           {t(`infractions.origins.${infraction.rule.origin}`)}
         </p>
 
         <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
-          <dt className="text-gray-500">{t("infractions.fields.lot")}</dt>
+          <dt className="text-muted-foreground">{t("infractions.fields.lot")}</dt>
           <dd>
             {infraction.lot.block} / {infraction.lot.lot_number}
           </dd>
-          <dt className="text-gray-500">
+          <dt className="text-muted-foreground">
             {t("infractions.fields.responsible")}
           </dt>
           <dd data-testid="responsible-name">
             {infraction.responsible.full_name}
           </dd>
-          <dt className="text-gray-500">
+          <dt className="text-muted-foreground">
             {t("infractions.fields.occurredOn")}
           </dt>
           <dd>{infraction.occurred_on}</dd>
-          <dt className="text-gray-500">
+          <dt className="text-muted-foreground">
             {t("infractions.fields.currentStage")}
           </dt>
           <dd data-testid="current-stage">
@@ -63,7 +63,7 @@ export const InfractionDetailsView: React.FC<{
         {infraction.source_occurrence_id && (
           <p className="mt-3 text-sm">
             <Link
-              className="text-indigo-600 underline"
+              className="text-primary-text underline"
               data-testid="source-occurrence-link"
               to={`/occurrences?occurrence=${infraction.source_occurrence_id}`}
             >
@@ -87,7 +87,7 @@ export const InfractionDetailsView: React.FC<{
                   })}
                   className="h-10 w-10 rounded object-cover"
                 />
-                <a className="text-indigo-600 underline" href={url}>
+                <a className="text-primary-text underline" href={url}>
                   {url}
                 </a>
               </li>
@@ -96,8 +96,8 @@ export const InfractionDetailsView: React.FC<{
         )}
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white p-4">
-        <h3 className="mb-3 text-base font-bold text-gray-900">
+      <div className="rounded-xl border border-border bg-card p-4">
+        <h3 className="mb-3 text-base font-bold text-foreground">
           {t("infractions.timeline.title")}
         </h3>
         <InfractionStageTimeline entries={infraction.timeline} />
@@ -117,11 +117,11 @@ export const InfractionDetailsView: React.FC<{
           (§6.2); this covers the one case the legal addendum names -- a
           resident change not reflected in the cadastre in time. */}
       {onCloseCycle && (
-        <div className="rounded-xl border border-gray-200 bg-white p-4">
-          <h3 className="text-base font-bold text-gray-900">
+        <div className="rounded-xl border border-border bg-card p-4">
+          <h3 className="text-base font-bold text-foreground">
             {t("infractions.cycleClose.title")}
           </h3>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-muted-foreground">
             {t("infractions.cycleClose.explanation", {
               article: infraction.rule.article,
               name: infraction.responsible.full_name,

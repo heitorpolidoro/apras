@@ -29,6 +29,12 @@ import { PackageStatusPage } from "../../features/package-management/components/
 import type { Feedback } from "../../types/feedback";
 import type { AnnouncementMedia } from "../../types/announcement";
 import type { Package } from "../../types/package";
+import { InfractionStageTimeline } from "../../features/infraction-management/components/InfractionStageTimeline";
+import { NextStepPanel } from "../../features/infraction-management/components/NextStepPanel";
+import type {
+  InfractionTimelineEntry,
+  NextStep,
+} from "../../types/infraction";
 
 /**
  * The brand-reach proof (APRAS-78 §4c).
@@ -958,6 +964,146 @@ describe("the tenant's brand reaches APRAS-84's migrated components", () => {
       "text-destructive",
       "bg-background",
       "hover:bg-accent",
+    ]) {
+      expect(tokens).not.toContain(absent);
+    }
+  });
+});
+
+describe("the tenant's brand reaches APRAS-85's migrated components", () => {
+  // The closer's two props-only components. Both sets are asserted over the
+  // whitespace-split class tokens of the **full** rendered markup, including
+  // whatever a `components/ui/` primitive contributes at its actual variant.
+  // Splitting is strict: `bg-accent`, `hover:bg-accent` and
+  // `hover:bg-accent/80` are three distinct tokens and none matches another.
+  const ENTRY: InfractionTimelineEntry = {
+    kind: "STAGE",
+    id: "d4e5f607-8192-4a34-b567-890abcdef123",
+    at: "2026-03-04T10:15:00Z",
+    actor: {
+      id: "e5f60718-92a3-4b45-c678-90abcdef1234",
+      full_name: "Síndico",
+    } as InfractionTimelineEntry["actor"],
+    action: "NOTIFICACAO",
+    note: "Reincidência registrada na portaria.",
+    fine_amount: null,
+    fine_amount_overridden: null,
+    defense_due_on: null,
+    policy_step_order: 2,
+    suggestion_followed: true,
+    attachment_urls: ["https://example.invalid/evidencia.jpg"],
+  };
+
+  const NEXT_STEP: NextStep = {
+    recidivism_count: 2,
+    window_start: "2026-01-01",
+    cycle_closed_at: null,
+    stages_applied: 1,
+    ladder_index: 1,
+    suggested_step_order: 2,
+    suggested_action: "NOTIFICACAO",
+    reason: "SUGGESTED",
+    defense_deadline_days: 10,
+    fine_amount: 350.5,
+    fine_amount_unavailable_reason: null,
+    is_saturated: false,
+  };
+
+  it("paints the stage timeline's attachment anchor as brand characters", async () => {
+    profile.data = { ...PROFILE, theme: THEME };
+    const { container } = render(
+      <>
+        <TenantBrandTheme />
+        <InfractionStageTimeline entries={[ENTRY]} />
+      </>,
+    );
+
+    await waitFor(() => expect(brandedPrimary()).toBe(THEME.light.primary));
+
+    const tokens = classTokens(container);
+
+    // Renders no `components/ui/` primitive, so this set is entirely its own.
+    // The anchor is the §1k *character* branch — `text-primary-text`, floor
+    // 4.5:1 — and the hairline border and the note keep their palette classes,
+    // which is what `GAP-BORDER-100` and `GAP-OUT-OF-BUDGET` record.
+    for (const expected of [
+      "text-primary-text",
+      "text-foreground",
+      "text-muted-foreground",
+      "border-gray-100",
+      "text-gray-700",
+    ]) {
+      expect(tokens).toContain(expected);
+    }
+    // APRAS-88's amendment, pinned: a character never takes the graphical
+    // token. The amber badge and the deviation note need a rendered branch
+    // this entry does not take, so their classes are absent rather than
+    // migrated.
+    for (const absent of [
+      "text-primary",
+      "bg-primary",
+      "bg-card",
+      "bg-muted",
+      "bg-accent",
+      "border-border",
+      "border-input",
+      "text-primary-foreground",
+      "text-destructive",
+      "bg-amber-100",
+      "text-amber-800",
+      "text-amber-700",
+    ]) {
+      expect(tokens).not.toContain(absent);
+    }
+  });
+
+  it("paints the next-step panel's two buttons at their own variants", async () => {
+    profile.data = { ...PROFILE, theme: THEME };
+    const { container } = render(
+      <>
+        <TenantBrandTheme />
+        <NextStepPanel nextStep={NEXT_STEP} onApply={() => {}} />
+      </>,
+    );
+
+    await waitFor(() => expect(brandedPrimary()).toBe(THEME.light.primary));
+
+    const tokens = classTokens(container);
+
+    // Renders `ui/button` twice: once variantless, which therefore takes
+    // `buttonVariants`' `default` variant, and once at `outline`. The four
+    // tokens the `outline` variant contributes are the reason `bg-background`
+    // and `hover:bg-accent` appear in a child that migrated neither.
+    for (const expected of [
+      // its own markup
+      "bg-card",
+      "border-border",
+      "text-foreground",
+      "text-muted-foreground",
+      // the `default` variant
+      "bg-primary",
+      "text-primary-foreground",
+      "hover:bg-primary/90",
+      // the `outline` variant
+      "border-input",
+      "bg-background",
+      "hover:bg-accent",
+      "hover:text-accent-foreground",
+    ]) {
+      expect(tokens).toContain(expected);
+    }
+    // `reason` is neither `NO_POLICY` nor `CLAMPED` and
+    // `fine_amount_unavailable_reason` is null, so the warning and the
+    // destructive branches do not render; `text-red-700` is the class this
+    // child migrated here, at line 82.
+    for (const absent of [
+      "text-primary",
+      "text-primary-text",
+      "bg-accent",
+      "bg-muted",
+      "text-destructive",
+      "text-amber-700",
+      "text-red-700",
     ]) {
       expect(tokens).not.toContain(absent);
     }

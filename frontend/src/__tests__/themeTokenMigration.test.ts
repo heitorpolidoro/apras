@@ -3,12 +3,14 @@
 //
 // The migration guard (APRAS-78, deliverable 3).
 //
-// A directory named in `MIGRATED_DIRECTORIES` has been through the class ->
-// token migration described in `docs/frontend/theme-token-mapping.md`. From
-// that moment on, no Tailwind palette class may reappear in it: the guard
-// re-reads every file with `node:fs` and fails on any match of the §3b
-// grammar that is not listed, as an exact `(file, class)` pair, in
-// `themeTokenMigration.exceptions.json`.
+// APRAS-85 closed the guard. `SCANNED_ROOTS` is the single recursive `src`
+// entry that replaced APRAS-78's allow-list of `MIGRATED_DIRECTORIES`, so the
+// guard is now a repo-wide deny: every non-test `.ts`/`.tsx` file under
+// `frontend/src` has been through the class -> token migration described in
+// `docs/frontend/theme-token-mapping.md`, and no Tailwind palette class may
+// appear anywhere in the tree. The guard re-reads every file with `node:fs`
+// and fails on any match of the §3b grammar that is not listed, as an exact
+// `(file, class)` pair, in `themeTokenMigration.exceptions.json`.
 //
 // The node environment is what makes `import.meta.url` a `file:` URL — under
 // the project-wide jsdom default it is the dev server's `http:` URL and the
@@ -20,39 +22,20 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 /**
- * The directories whose palette classes have been migrated (§3a).
+ * The roots the guard scans (§3a, §3d).
  *
- * Seeded with exactly one entry by APRAS-78; **each sibling appends exactly
- * one**. Paths are `src/`-relative and match non-recursively unless suffixed
- * with a `/**` recursion marker. APRAS-85 inverts the list into a repo-wide
- * deny by replacing it with the single recursive `src` entry and changes
- * nothing else here (§3d), which is why nothing below assumes an allow-list
- * shape.
+ * APRAS-78 seeded an allow-list of migrated directories and each sibling
+ * appended its own; APRAS-85, the closer, inverted it into the repo-wide deny
+ * this single recursive entry expresses. Everything the inversion needed was
+ * already in place: `pinnedFiles()` honours the `/**` recursion marker,
+ * `collect()` skips `__tests__` directories, `isSource()` skips
+ * `*.test.ts(x)`, and every exceptions entry is `src/`-relative — which is
+ * what §3d was designed for.
+ *
+ * From here on a palette class in a file **no child ever migrated** fails CI
+ * too, so the guard's promise needs no directory qualifier.
  */
-export const MIGRATED_DIRECTORIES: readonly string[] = [
-  "src/components/ui",
-  "src/features/lot-management/components",
-  "src/features/visitor-management/components",
-  // APRAS-82's operator-given scope is two directories, not one, so this
-  // child appends two entries where its siblings appended one.
-  "src/features/document-management/components",
-  "src/features/occurrence-management/components",
-  // APRAS-81's operator-given scope is two directories as well, so this child
-  // also appends two entries where most siblings appended one.
-  "src/features/project-management/components",
-  "src/features/asset-management/components",
-  // APRAS-83's operator-given scope is three directories, so this child
-  // appends three entries where its siblings appended one or two.
-  "src/features/finance/components",
-  "src/features/purchase-management/components",
-  "src/features/access-control/components",
-  // APRAS-84's operator-given scope is four directories, so this child appends
-  // four entries where its siblings appended one, two or three.
-  "src/features/media-management/components",
-  "src/features/feedback-management/components",
-  "src/features/announcement-feed/components",
-  "src/features/package-management/components",
-];
+export const SCANNED_ROOTS: readonly string[] = ["src/**"];
 
 /** The eight gap codes of §1h, in precedence order. Closed set: an entry
  *  carrying anything else fails, so hiding a migratable class requires
@@ -71,7 +54,12 @@ export const GAP_CODES: readonly string[] = [
 // --- §3b, the grammar, built from named parts rather than one literal ------
 
 const VARIANTS = String.raw`(?:[a-z0-9][a-z0-9.\-]*(?:\[[^\]]*\])?:)*`;
-const PREFIX = String.raw`(?:bg|text|border|ring|outline|divide|placeholder|caret|accent|decoration|shadow|fill|stroke|from|via|to)`;
+// The side qualifier `(?:-[trblxyse])?` on `border` and on `divide` is
+// APRAS-85 job (c)'s amendment to APRAS-78's published §3b, made under the
+// operator authorisation recorded on that task. The sixteen alternatives are
+// the pre-amendment sixteen, in the pre-amendment order, none added and none
+// dropped: `describe("the widened prefix")` pins each one by name.
+const PREFIX = String.raw`(?:bg|text|border(?:-[trblxyse])?|ring|outline|divide(?:-[trblxyse])?|placeholder|caret|accent|decoration|shadow|fill|stroke|from|via|to)`;
 const FAMILY = String.raw`(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)`;
 // Longest-first, and this ordering is load-bearing: with `50` before `500`
 // the engine matches `text-gray-50` inside `text-gray-500` and silently
@@ -227,9 +215,9 @@ const collect = (directory: string, recursive: boolean): string[] => {
   return found;
 };
 
-/** Every source file a `MIGRATED_DIRECTORIES` entry pins, `src/`-relative. */
+/** Every source file a `SCANNED_ROOTS` entry pins, `src/`-relative. */
 export const pinnedFiles = (
-  entries: readonly string[] = MIGRATED_DIRECTORIES,
+  entries: readonly string[] = SCANNED_ROOTS,
 ): string[] => {
   const files = new Set<string>();
   for (const entry of entries) {
@@ -321,7 +309,28 @@ const key = (file: string, className: string): string =>
   `${file}${SEPARATOR}${className}`;
 
 /**
- * `matchesIn`, memoised at module scope on the file path *and* its source.
+ * Everything `violations` needs to know about one file, derived once.
+ *
+ * `matches` is `matchesIn`'s output verbatim. The other two are the same
+ * information in the shapes the two hot loops actually ask for, so neither
+ * loop has to build a string or a set of its own:
+ *
+ * - `keys` is `key(file, match.text)` for each match, at the same index, for
+ *   the guard loop's excused-or-not test;
+ * - `classes` is the distinct match texts, for the exception loop's "does this
+ *   class still appear in this file?" test, which was a linear `.some()` over
+ *   every match in the file on every one of the calls
+ *   `it("fails when any single exception is removed")` makes.
+ */
+interface FileScan {
+  matches: Match[];
+  keys: string[];
+  classes: Set<string>;
+}
+
+/**
+ * The per-file derivation, memoised at module scope on the file path *and* its
+ * source.
  *
  * One scan per file, not one per exception: `matchesIn` is linear in the file
  * and `lineOf` is linear in the match offset, so re-scanning inside the
@@ -335,14 +344,17 @@ const key = (file: string, className: string): string =>
  * Keyed on the file *and* the source it was scanned from, so the memo stays a
  * pure function of its arguments: the mutated-argument tests below hand
  * `violations` a file whose source carries a reintroduced class, get a key
- * that has never been seen, and still bite.
+ * that has never been seen, and still bite. The key covers everything all
+ * three fields are derived from — `matchesIn(file, source)` and nothing else —
+ * which is what keeps a memo hit from returning a stale scan and letting the
+ * removal test pass when it should fail.
  */
-const SCAN_MEMO = new Map<string, Map<string, Match[]>>();
+const SCAN_MEMO = new Map<string, Map<string, FileScan>>();
 
-const scan = (file: string, source: string): Match[] => {
+const scanOf = (file: string, source: string): FileScan => {
   let bySource = SCAN_MEMO.get(file);
   if (bySource === undefined) {
-    bySource = new Map<string, Match[]>();
+    bySource = new Map<string, FileScan>();
     SCAN_MEMO.set(file, bySource);
   }
   const cached = bySource.get(source);
@@ -350,8 +362,158 @@ const scan = (file: string, source: string): Match[] => {
     return cached;
   }
   const matches = matchesIn(file, source);
-  bySource.set(source, matches);
-  return matches;
+  const derived: FileScan = {
+    matches,
+    keys: matches.map((match) => key(file, match.text)),
+    classes: new Set(matches.map((match) => match.text)),
+  };
+  bySource.set(source, derived);
+  return derived;
+};
+
+/**
+ * Rules 1–3 for one exception entry, memoised on the entry object.
+ *
+ * The three checks — key shape, closed code set, exact pair — read nothing but
+ * the entry, so they are a pure function of it and a `WeakMap` on the object
+ * is a sound memo: an entry with different keys, a different code or a glob is
+ * a different object and misses the memo, so all three assertions still bite.
+ *
+ * APRAS-85's reason for adding it to the two optimisations its spec names:
+ * `it("fails when any single exception is removed")` calls `violations()` once
+ * per exception, so with 882 exceptions these three checks — one of them an
+ * `Object.keys().sort().join()` — ran 778,000 times and put that one test over
+ * its 2 s budget on their own.
+ */
+const ENTRY_PROBLEMS = new WeakMap<Exception, readonly string[]>();
+
+/**
+ * `key(entry.file, entry.class)` for one entry, memoised on the entry object.
+ *
+ * A pure function of the two fields the key is built from, and an entry with a
+ * different `file` or `class` is a different object that misses the memo. It
+ * exists so the `excused` set — rebuilt on every call, because a call whose
+ * exceptions differ must get a different set — is 882 insertions of strings
+ * that already exist rather than 882 string concatenations.
+ */
+const ENTRY_KEYS = new WeakMap<Exception, string>();
+
+const entryKey = (entry: Exception): string => {
+  const cached = ENTRY_KEYS.get(entry);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const built = key(entry.file, entry.class);
+  ENTRY_KEYS.set(entry, built);
+  return built;
+};
+
+const entryProblems = (entry: Exception): readonly string[] => {
+  const cached = ENTRY_PROBLEMS.get(entry);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const found: string[] = [];
+  const keys = Object.keys(entry).sort().join(",");
+  if (keys !== "class,code,file,task") {
+    found.push(
+      `exception for ${entry.class} in ${entry.file} must have exactly the keys file, class, code, task (has ${keys})`,
+    );
+  }
+  if (!GAP_CODES.includes(entry.code)) {
+    found.push(
+      `unknown code "${entry.code}" on ${entry.class} in ${entry.file}; use one of ${GAP_CODES.join(", ")} — see docs/frontend/theme-token-mapping.md §1h`,
+    );
+  }
+  if (/[*?]/.test(entry.file) || /[*?]/.test(entry.class)) {
+    found.push(
+      `exception ${entry.file} / ${entry.class} is not an exact pair; globs and directory-wide entries are refused (§3c rule 3)`,
+    );
+  }
+  ENTRY_PROBLEMS.set(entry, found);
+  return found;
+};
+
+/** One file's entry in the file index, plus its derived scan. */
+interface IndexedFile {
+  file: string;
+  source: string;
+  scan: FileScan;
+}
+
+/** `files` as a path index and as the set of pinned paths. */
+interface FileIndex {
+  byPath: Map<string, IndexedFile>;
+  pinned: Set<string>;
+}
+
+/**
+ * `files` indexed by path and as a set of paths, and `ledger` prepared as its
+ * `(file, class)` keys, memoised on the argument array itself.
+ *
+ * The same reason as `keyShape` above, and the reason the removal test's cost
+ * stopped scaling with the corpus: these derivations depend on `files` and on
+ * `ledger`, **not** on `exceptions`, so they are invariant across all 882 calls
+ * `it("fails when any single exception is removed")` makes and rebuilding them
+ * per call — a 262-entry map, a 262-entry set and a 1,197-key set, plus 2,394
+ * string concatenations — was most of what that test spent. Both arguments are
+ * typed `readonly`, and every test that hands `violations` a mutated input
+ * builds a **new** array — so identity is a sound memo key here, and a fresh
+ * array always misses the memo and is rebuilt.
+ */
+const FILE_INDEX = new WeakMap<object, FileIndex>();
+
+const indexFiles = (
+  files: ReadonlyArray<{ file: string; source: string }>,
+): FileIndex => {
+  const cached = FILE_INDEX.get(files);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const index: FileIndex = {
+    byPath: new Map(
+      files.map((file) => [
+        file.file,
+        { ...file, scan: scanOf(file.file, file.source) },
+      ]),
+    ),
+    pinned: new Set(files.map((file) => file.file)),
+  };
+  FILE_INDEX.set(files, index);
+  return index;
+};
+
+/** One ledger row reduced to what rule 4's ledger-to-exception pass reads. */
+interface IndexedRow {
+  row: LedgerRow;
+  file: string;
+  key: string;
+}
+
+/** `ledger` as the set of its keys and as those keys row by row. */
+interface LedgerIndex {
+  keys: Set<string>;
+  rows: IndexedRow[];
+}
+
+const LEDGER_INDEX = new WeakMap<object, LedgerIndex>();
+
+const indexLedger = (ledger: readonly LedgerRow[]): LedgerIndex => {
+  const cached = LEDGER_INDEX.get(ledger);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const rows = ledger.map((row) => {
+    const file = toSrcRelative(row.file);
+
+    return { row, file, key: key(file, row.class) };
+  });
+  const index: LedgerIndex = {
+    keys: new Set(rows.map((indexed) => indexed.key)),
+    rows,
+  };
+  LEDGER_INDEX.set(ledger, index);
+  return index;
 };
 
 /**
@@ -368,53 +530,42 @@ export const violations = (
   ledger: readonly LedgerRow[],
 ): string[] => {
   const problems: string[] = [];
-  // The scan memo is at module scope — see `scan` above. The path index is
-  // per call because `files` is an argument: a linear `find` inside the
-  // exception loop is quadratic, and this function is called once per
-  // exception by `it("fails when any single exception is removed")`.
-  const byPath = new Map(files.map((file) => [file.file, file]));
-  const excused = new Set(
-    exceptions.map((entry) => key(entry.file, entry.class)),
-  );
-  const ledgered = new Set(
-    ledger.map((row) => key(toSrcRelative(row.file), row.class)),
-  );
+  // Everything derived from `files` and from `ledger` is hoisted into the two
+  // module-scope memos above, and every `(file, class)` key this function
+  // compares is built there too. What is left inside the three loops is a set
+  // insertion or a set lookup per item and no allocation at all, which is what
+  // makes the cost of one call to this function independent of how many other
+  // calls `it("fails when any single exception is removed")` is making around
+  // it — 882 calls over 262 files, with 1,197 matches and 1,197 ledger rows.
+  const { byPath, pinned } = indexFiles(files);
+  const ledgered = indexLedger(ledger);
+  const excused = new Set<string>();
+  for (const entry of exceptions) {
+    excused.add(entryKey(entry));
+  }
 
   // Rules 1–3, plus rule 4 in the exception-to-ledger direction.
   for (const entry of exceptions) {
-    const keys = Object.keys(entry).sort().join(",");
-    if (keys !== "class,code,file,task") {
-      problems.push(
-        `exception for ${entry.class} in ${entry.file} must have exactly the keys file, class, code, task (has ${keys})`,
-      );
+    // Guarded rather than an unconditional spread: `entryProblems` returns the
+    // same empty array 882 times out of 882 on a clean tree, and spreading it
+    // anyway was 882 × 882 spread calls for no result.
+    const shape = entryProblems(entry);
+    if (shape.length > 0) {
+      problems.push(...shape);
     }
-    if (!GAP_CODES.includes(entry.code)) {
-      problems.push(
-        `unknown code "${entry.code}" on ${entry.class} in ${entry.file}; use one of ${GAP_CODES.join(", ")} — see docs/frontend/theme-token-mapping.md §1h`,
-      );
-    }
-    if (/[*?]/.test(entry.file) || /[*?]/.test(entry.class)) {
-      problems.push(
-        `exception ${entry.file} / ${entry.class} is not an exact pair; globs and directory-wide entries are refused (§3c rule 3)`,
-      );
-    }
-    const source = byPath.get(entry.file);
-    if (source === undefined) {
+    const indexed = byPath.get(entry.file);
+    if (indexed === undefined) {
       problems.push(
         `exception names ${entry.file}, which is not a source file under a pinned directory (§3c rule 2)`,
       );
       continue;
     }
-    if (
-      !scan(entry.file, source.source).some(
-        (match) => match.text === entry.class,
-      )
-    ) {
+    if (!indexed.scan.classes.has(entry.class)) {
       problems.push(
         `stale exception: ${entry.class} no longer appears in ${entry.file} (§3c rule 2)`,
       );
     }
-    if (!ledgered.has(key(entry.file, entry.class))) {
+    if (!ledgered.keys.has(entryKey(entry))) {
       problems.push(
         `exception ${entry.class} in ${entry.file} has no matching row in docs/frontend/unmapped-colours.md (§3c rule 4)`,
       );
@@ -422,25 +573,25 @@ export const violations = (
   }
 
   // Rule 4, the ledger-to-exception direction.
-  const pinned = new Set(files.map((file) => file.file));
-  for (const row of ledger) {
-    const file = toSrcRelative(row.file);
-    if (!pinned.has(file)) {
+  for (const indexed of ledgered.rows) {
+    if (!pinned.has(indexed.file)) {
       continue;
     }
-    if (!excused.has(key(file, row.class))) {
+    if (!excused.has(indexed.key)) {
       problems.push(
-        `ledger row ${row.class} in ${row.file} has no entry in themeTokenMigration.exceptions.json (§3c rule 4)`,
+        `ledger row ${indexed.row.class} in ${indexed.row.file} has no entry in themeTokenMigration.exceptions.json (§3c rule 4)`,
       );
     }
   }
 
   // The guard proper.
   for (const { file, source } of files) {
-    for (const match of scan(file, source)) {
-      if (excused.has(key(file, match.text))) {
+    const { matches, keys } = scanOf(file, source);
+    for (let index = 0; index < matches.length; index += 1) {
+      if (excused.has(keys[index])) {
         continue;
       }
+      const match = matches[index];
       problems.push(
         `${file}:${match.line} still carries "${match.text}"; migrate it to the token its row names in docs/frontend/theme-token-mapping.md, or log it under one of the §1h codes`,
       );
@@ -507,127 +658,6 @@ describe("the §3b grammar", () => {
   });
 });
 
-describe("MIGRATED_DIRECTORIES", () => {
-  // Written as containment plus uniqueness rather than `toEqual`, so that
-  // every child after APRAS-79 appends exactly one `toContain` and edits
-  // nothing else. A `toEqual` here would have to be rewritten seven times.
-  it("holds every directory a child has pinned, each exactly once", () => {
-    expect(MIGRATED_DIRECTORIES).toContain("src/components/ui");
-    expect(MIGRATED_DIRECTORIES).toContain(
-      "src/features/lot-management/components",
-    );
-    expect(MIGRATED_DIRECTORIES).toContain(
-      "src/features/visitor-management/components",
-    );
-    expect(MIGRATED_DIRECTORIES).toContain(
-      "src/features/document-management/components",
-    );
-    expect(MIGRATED_DIRECTORIES).toContain(
-      "src/features/occurrence-management/components",
-    );
-    expect(MIGRATED_DIRECTORIES).toContain(
-      "src/features/project-management/components",
-    );
-    expect(MIGRATED_DIRECTORIES).toContain(
-      "src/features/asset-management/components",
-    );
-    expect(MIGRATED_DIRECTORIES).toContain("src/features/finance/components");
-    expect(MIGRATED_DIRECTORIES).toContain(
-      "src/features/purchase-management/components",
-    );
-    expect(MIGRATED_DIRECTORIES).toContain(
-      "src/features/access-control/components",
-    );
-    expect(MIGRATED_DIRECTORIES).toContain(
-      "src/features/media-management/components",
-    );
-    expect(MIGRATED_DIRECTORIES).toContain(
-      "src/features/feedback-management/components",
-    );
-    expect(MIGRATED_DIRECTORIES).toContain(
-      "src/features/announcement-feed/components",
-    );
-    expect(MIGRATED_DIRECTORIES).toContain(
-      "src/features/package-management/components",
-    );
-    expect(new Set(MIGRATED_DIRECTORIES).size).toBe(
-      MIGRATED_DIRECTORIES.length,
-    );
-  });
-
-  it("pins every non-test source file in those directories", () => {
-    const roots = MIGRATED_DIRECTORIES.map((entry) =>
-      entry.endsWith(RECURSION_MARKER)
-        ? entry.slice(0, -RECURSION_MARKER.length)
-        : entry,
-    );
-
-    expect(PINNED.map((file) => file.file)).toContain(
-      "src/components/ui/button.tsx",
-    );
-    expect(PINNED.map((file) => file.file)).toContain(
-      "src/features/lot-management/components/LotTable.tsx",
-    );
-    expect(PINNED.map((file) => file.file)).toContain(
-      "src/features/visitor-management/components/GatekeeperDashboard.tsx",
-    );
-    expect(PINNED.map((file) => file.file)).toContain(
-      "src/features/document-management/components/DocumentGridTable.tsx",
-    );
-    expect(PINNED.map((file) => file.file)).toContain(
-      "src/features/occurrence-management/components/OccurrenceTable.tsx",
-    );
-    expect(PINNED.map((file) => file.file)).toContain(
-      "src/features/project-management/components/ConstructionTrackerPage.tsx",
-    );
-    expect(PINNED.map((file) => file.file)).toContain(
-      "src/features/asset-management/components/AssetTable.tsx",
-    );
-    expect(PINNED.map((file) => file.file)).toContain(
-      "src/features/finance/components/CashBalanceCard.tsx",
-    );
-    expect(PINNED.map((file) => file.file)).toContain(
-      "src/features/purchase-management/components/QuoteComparisonTable.tsx",
-    );
-    expect(PINNED.map((file) => file.file)).toContain(
-      "src/features/access-control/components/DeviceTable.tsx",
-    );
-    expect(PINNED.map((file) => file.file)).toContain(
-      "src/features/media-management/components/PhotoApprovalQueuePage.tsx",
-    );
-    expect(PINNED.map((file) => file.file)).toContain(
-      "src/features/feedback-management/components/FeedbackInboxTable.tsx",
-    );
-    expect(PINNED.map((file) => file.file)).toContain(
-      "src/features/announcement-feed/components/MediaCarousel.tsx",
-    );
-    expect(PINNED.map((file) => file.file)).toContain(
-      "src/features/package-management/components/PackageStatusPage.tsx",
-    );
-    expect(
-      PINNED.every((file) =>
-        roots.some((root) => file.file.startsWith(`${root}/`)),
-      ),
-    ).toBe(true);
-    expect(PINNED.some((file) => /\.test\.tsx?$/.test(file.file))).toBe(false);
-  });
-
-  it("pins the files of every entry and nothing else", () => {
-    // Derived, never a literal: a hard total would have to be edited by each
-    // of the six children still to come, which is the edit items 1 and 2 of
-    // this rewrite exist to remove. Each child asserts its own directory's
-    // count in its own scoped block instead.
-    const perDirectory = MIGRATED_DIRECTORIES.map(
-      (entry) => pinnedFiles([entry]).length,
-    );
-
-    expect(perDirectory.every((count) => count > 0)).toBe(true);
-    expect(PINNED).toHaveLength(
-      perDirectory.reduce((total, count) => total + count, 0),
-    );
-  });
-});
-
 describe("the guard", () => {
   it("reports no violation in any migrated directory", () => {
     expect(violations(PINNED, EXCEPTIONS, LEDGER)).toEqual([]);
@@ -660,13 +690,28 @@ describe("the guard", () => {
     );
   });
 
-  it("fails when any single exception is removed", () => {
-    for (let index = 0; index < EXCEPTIONS.length; index += 1) {
-      const without = EXCEPTIONS.filter((_, at) => at !== index);
+  // The one test in the suite with an explicit timeout, and the reason is
+  // recorded here rather than inherited from Vitest's 5 s default: this test
+  // calls `violations()` once per exception — 882 calls today and one more for
+  // every exception any future work adds — so it is the only test whose cost
+  // grows with the corpus. Measured at HEAD it runs in ~390 ms in isolation,
+  // but it is the guard that closes tree coverage for the whole APRAS-77
+  // umbrella and CI runs it on a two-core runner under contention from 178
+  // other test files. 20 s is ~50× the measured cost: wide enough that a
+  // loaded runner cannot make it flake, narrow enough that a regression which
+  // put the shape back to quadratic would still fail here rather than hang.
+  // Whoever trips this limit should fix the shape, not raise the number.
+  it(
+    "fails when any single exception is removed",
+    () => {
+      for (let index = 0; index < EXCEPTIONS.length; index += 1) {
+        const without = EXCEPTIONS.filter((_, at) => at !== index);
 
-      expect(violations(PINNED, without, LEDGER)).not.toEqual([]);
-    }
-  });
+        expect(violations(PINNED, without, LEDGER)).not.toEqual([]);
+      }
+    },
+    20_000,
+  );
 
   it("fails on an unknown code", () => {
     const corrupted = EXCEPTIONS.map((entry, index) =>
@@ -3092,5 +3137,780 @@ describe("APRAS-84's ledger arithmetic", () => {
       expect(row.why.length).toBeLessThanOrEqual(120);
       expect(row.why).not.toContain("GAP-");
     }
+  });
+});
+
+describe("the widened prefix", () => {
+  // Job (c) of APRAS-85, under the operator authorisation recorded on that
+  // task: §3b's `prefix` production gains an optional single-letter side
+  // qualifier on `border` and on `divide`, so side-qualified utilities
+  // (`border-t-slate-400`, `divide-y-gray-100`) stop sitting outside the
+  // grammar. Appended, never written into APRAS-78's own
+  // `describe("the §3b grammar")` block, whose fourteen cases were re-run
+  // against the widened production and all still hold.
+  const SIDE_QUALIFIER = "(?:-[trblxyse])?";
+
+  /** The published production as it read before job (c), derived from the
+   *  widened one by removing the two side qualifiers — so the test proves the
+   *  two productions differ in exactly those two places and nowhere else. */
+  const preAmendmentGrammar = (): RegExp =>
+    new RegExp(paletteGrammar().source.split(SIDE_QUALIFIER).join(""), "g");
+
+  /** Whether the grammar matches `input` as a whole, not as a prefix of it. */
+  const matchesWhole = (input: string): boolean => {
+    const found = input.match(paletteGrammar());
+
+    return found !== null && found.length === 1 && found[0] === input;
+  };
+
+  it("differs from the pre-amendment production in exactly two places", () => {
+    expect(paletteGrammar().source.split(SIDE_QUALIFIER)).toHaveLength(3);
+    expect(preAmendmentGrammar().source).not.toContain(SIDE_QUALIFIER);
+  });
+
+  it.each([
+    "border-t-slate-400",
+    "divide-y-gray-100",
+    "border-x-slate-200",
+    "border-s-red-500",
+    "border-e-white",
+    "dark:hover:border-b-amber-500/40",
+  ])("matches the side-qualified %s whole", (candidate) => {
+    expect(matchesWhole(candidate)).toBe(true);
+  });
+
+  it.each([
+    // A side qualifier on a prefix that never takes one.
+    "bg-t-slate-400",
+    "text-x-gray-500",
+    "ring-t-blue-500",
+    // Two letters is not a Tailwind side qualifier.
+    "border-tr-slate-400",
+    // Widths, keywords and near-misses the widening must still refuse.
+    "border-t-2",
+    "divide-y-reverse",
+    "border-collapse",
+    "border-t-slate-4000",
+    "border-t-mauve-400",
+    // The boundary lookarounds, the specific thing a widened alternation can
+    // break.
+    "xborder-t-red-500",
+    "order-t-red-500",
+  ])("refuses %s entirely", (candidate) => {
+    expect(candidate.match(paletteGrammar())).toBeNull();
+  });
+
+  it.each([
+    "bg-slate-800",
+    "text-gray-500",
+    "border-slate-100",
+    "ring-blue-500",
+    "outline-gray-300",
+    "divide-gray-200",
+    "placeholder-gray-400",
+    "caret-slate-500",
+    // `accent` earns its place in the list: the tree's one `accent` palette
+    // occurrence was migrated away by APRAS-84, so an alternative dropped
+    // while rewriting the production would move no count anywhere and only
+    // this assertion would notice.
+    "accent-indigo-600",
+    "decoration-sky-500",
+    "shadow-slate-900",
+    "fill-emerald-600",
+    "stroke-rose-500",
+    "from-blue-500",
+    "via-purple-500",
+    "to-pink-500",
+  ])("keeps the alternative that matches %s", (candidate) => {
+    expect(matchesWhole(candidate)).toBe(true);
+  });
+
+  it("describes the same grammar as the published production in §3b", () => {
+    // The document and the code are one grammar. The production is quoted out
+    // of the file rather than retyped, so a drift in either direction fails
+    // here instead of being noticed by nobody.
+    const document = readFileSync(
+      path.join(REPO_ROOT, "docs", "frontend", "theme-token-mapping.md"),
+      "utf8",
+    );
+    const quoted = /prefix\s+= (\(\?:bg[\s\S]*?to\))/.exec(document);
+    expect(quoted).not.toBeNull();
+    const production = (quoted?.[1] ?? "").replace(/\s+/g, "");
+
+    expect(production).toContain("border(?:-[trblxyse])?");
+    expect(production).toContain("divide(?:-[trblxyse])?");
+    expect(paletteGrammar().source).toContain(production);
+    // Sixteen alternatives, in the published order, none added and none
+    // dropped — `accent` included.
+    expect(
+      production
+        .slice("(?:".length, -")".length)
+        .split("|")
+        .map((alternative) => alternative.replace("(?:-[trblxyse])?", "")),
+    ).toEqual([
+      "bg",
+      "text",
+      "border",
+      "ring",
+      "outline",
+      "divide",
+      "placeholder",
+      "caret",
+      "accent",
+      "decoration",
+      "shadow",
+      "fill",
+      "stroke",
+      "from",
+      "via",
+      "to",
+    ]);
+  });
+
+  it("newly catches exactly TaskBoard's five header stripes, tree-wide", () => {
+    const sites = (grammar: RegExp) => {
+      const found = new Set<string>();
+      for (const { file, source } of PINNED) {
+        for (const match of source.matchAll(grammar)) {
+          found.add(`${file}:${lineOf(source, match.index)}:${match[0]}`);
+        }
+      }
+      return found;
+    };
+    const widened = sites(paletteGrammar());
+    const before = sites(preAmendmentGrammar());
+    const STRIPES = "src/features/task-management/components/TaskBoard.tsx";
+
+    // The old-only difference is empty: the amendment narrowed nothing and
+    // lost no alternative.
+    expect([...before].filter((site) => !widened.has(site))).toEqual([]);
+    expect([...widened].filter((site) => !before.has(site)).sort()).toEqual([
+      `${STRIPES}:100:border-t-red-400`,
+      `${STRIPES}:76:border-t-slate-400`,
+      `${STRIPES}:82:border-t-blue-400`,
+      `${STRIPES}:88:border-t-amber-500`,
+      `${STRIPES}:94:border-t-green-400`,
+    ]);
+  });
+
+  it("finds no other side-qualified palette class anywhere under src", () => {
+    // Every *palette* match whose utility carries a side qualifier. Width and
+    // keyword utilities (`border-b-2`, `divide-y-reverse`) are outside the
+    // grammar and so outside this set, which is the point of the widening:
+    // it admits palette classes only.
+    const qualified = /^(?:[^:]*:)*(?:border|divide)-[trblxyse]-/;
+    const found = PINNED.flatMap(({ source }) =>
+      [...source.matchAll(paletteGrammar())]
+        .map((match) => match[0])
+        .filter((text) => qualified.test(text)),
+    );
+
+    expect(found.filter((text) => !text.startsWith("border-t-"))).toEqual([]);
+    expect(found).toHaveLength(5);
+  });
+});
+
+describe("SCANNED_ROOTS — the repo-wide deny", () => {
+  // Replaces the retired allow-list block, which asserted membership of
+  // `MIGRATED_DIRECTORIES` and that `PINNED` held nothing outside the pinned
+  // roots — the two properties the inversion abolishes. These assertions are
+  // the opposite and stronger ones. The retired name is spelled nowhere in
+  // this file as a declaration or as a block title, which is what the second
+  // test below checks.
+  const SELF = readFileSync(
+    path.join(HERE, "themeTokenMigration.test.ts"),
+    "utf8",
+  );
+
+  /** A recursive walk of `frontend/src`, written independently of `collect`,
+   *  so `pinnedFiles()` is compared against something and not against
+   *  itself. */
+  const walk = (directory: string): string[] => {
+    const found: string[] = [];
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const full = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name !== "__tests__") {
+          found.push(...walk(full));
+        }
+      } else if (/\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name)) {
+        found.push(path.relative(FRONTEND_ROOT, full).split(path.sep).join("/"));
+      }
+    }
+    return found;
+  };
+
+  it("is exactly the single recursive src entry", () => {
+    expect(SCANNED_ROOTS).toEqual(["src/**"]);
+  });
+
+  it("leaves no MIGRATED_DIRECTORIES binding or block behind", () => {
+    // The retired name is spelled in two pieces, so this assertion's own
+    // source does not satisfy the substring it refuses.
+    const retired = `${"MIGRATED"}_DIRECTORIES`;
+
+    expect(SELF).not.toContain(`export const ${retired}`);
+    expect(SELF).not.toContain(`describe("${retired}"`);
+  });
+
+  it("pins every non-test source file under frontend/src", () => {
+    // An equality against an independently computed walk, never a literal:
+    // 262 files at this HEAD, and the number moves whenever any task adds a
+    // component. The property that matters is that the two walks agree.
+    const independent = walk(path.join(FRONTEND_ROOT, "src")).sort();
+
+    expect(pinnedFiles()).toEqual(independent);
+    expect(PINNED.map((file) => file.file)).toEqual(independent);
+  });
+
+  it("reaches files no child ever migrated and nested directories", () => {
+    const files = PINNED.map((file) => file.file);
+
+    // Two files no `MIGRATED_DIRECTORIES` entry ever named, carrying no
+    // palette class — the guard now defends them anyway.
+    expect(files).toContain("src/App.tsx");
+    expect(files).toContain("src/lib/contrast.ts");
+    // A `pages/` file: every allow-list entry was a `components/` directory
+    // matched non-recursively, so no earlier walk could reach this one.
+    expect(files).toContain(
+      "src/features/infraction-management/pages/InfractionsPage.tsx",
+    );
+    expect(matchesIn("src/App.tsx", read("src/App.tsx").source)).toEqual([]);
+    expect(
+      matchesIn("src/lib/contrast.ts", read("src/lib/contrast.ts").source),
+    ).toEqual([]);
+  });
+
+  it("excludes every test file and every __tests__ directory", () => {
+    for (const pinned of PINNED) {
+      expect(pinned.file.split("/")).not.toContain("__tests__");
+      expect(pinned.file).not.toMatch(/\.test\.tsx?$/);
+    }
+  });
+
+  it("makes rule 4 total: no src ledger row is skipped any more", () => {
+    // Before the inversion the ledger-to-exception direction began
+    // `if (!pinned.has(file)) continue;`, which silently skipped every row in
+    // a not-yet-migrated directory. With every file under `src` pinned, that
+    // `continue` never fires for a `src/` row.
+    const pinned = new Set(PINNED.map((file) => file.file));
+    const srcRows = LEDGER.filter((row) =>
+      toSrcRelative(row.file).startsWith("src/"),
+    );
+    const skipped = srcRows.filter(
+      (row) => !pinned.has(toSrcRelative(row.file)),
+    );
+    const excused = new Set(
+      EXCEPTIONS.map((entry) => `${entry.file} :: ${entry.class}`),
+    );
+
+    expect(skipped).toEqual([]);
+    expect(
+      srcRows.filter(
+        (row) => !excused.has(`${toSrcRelative(row.file)} :: ${row.class}`),
+      ),
+    ).toHaveLength(0);
+    expect(
+      EXCEPTIONS.filter(
+        (entry) =>
+          !srcRows.some(
+            (row) =>
+              toSrcRelative(row.file) === entry.file &&
+              row.class === entry.class,
+          ),
+      ),
+    ).toHaveLength(0);
+  });
+
+  it("balances matches against ledger rows against excused occurrences", () => {
+    // Three equalities between things the test computes, never against a
+    // literal: the projection published on APRAS-85 was 1,197 matches over 882
+    // exceptions entries, and a drift from it is a thing to report, not a
+    // thing to assert.
+    const matches = PINNED.flatMap(({ file, source }) =>
+      matchesIn(file, source),
+    );
+    const srcRows = LEDGER.filter((row) =>
+      toSrcRelative(row.file).startsWith("src/"),
+    );
+    const excused = new Set(
+      EXCEPTIONS.map((entry) => `${entry.file} :: ${entry.class}`),
+    );
+    const covered = PINNED.flatMap(({ file, source }) =>
+      matchesIn(file, source).filter((match) =>
+        excused.has(`${file} :: ${match.text}`),
+      ),
+    );
+
+    expect(matches).toHaveLength(srcRows.length);
+    expect(covered).toHaveLength(matches.length);
+  });
+});
+
+describe("the closed guard", () => {
+  // The property no earlier child could assert: a palette class reintroduced
+  // into a file **no child ever migrated** fails CI. `src/App.tsx` is that
+  // file — it carries zero grammar matches and no allow-list entry ever
+  // reached it.
+  const UNMIGRATED = "src/App.tsx";
+  const withSuffix = (suffix: string) =>
+    PINNED.map((file) =>
+      file.file === UNMIGRATED
+        ? { ...file, source: `${file.source}\n// ${suffix}\n` }
+        : file,
+    );
+
+  it.each([
+    "bg-slate-800",
+    "hover:dark:bg-slate-800/40",
+    "text-gray-500",
+    "bg-white",
+    "text-black",
+  ])("fails on %s reintroduced into a file no child migrated", (reintroduced) => {
+    const found = violations(withSuffix(reintroduced), EXCEPTIONS, LEDGER);
+
+    expect(found.join("\n")).toContain(reintroduced);
+    expect(found.some((problem) => problem.startsWith(UNMIGRATED))).toBe(true);
+    const whole = reintroduced.match(paletteGrammar());
+    expect(whole).not.toBeNull();
+    expect(whole).toHaveLength(1);
+    expect(whole?.[0]).toBe(reintroduced);
+  });
+
+  it("fails on a hex literal in a class context in that same file", () => {
+    const injected = PINNED.map((file) =>
+      file.file === UNMIGRATED
+        ? {
+            ...file,
+            source: `${file.source}\nconst a = <i className="text-[#1e293b]" />;\n`,
+          }
+        : file,
+    );
+    const found = violations(injected, EXCEPTIONS, LEDGER);
+
+    expect(found.join("\n")).toContain("#1e293b");
+    const hex = matchesIn(
+      UNMIGRATED,
+      'const a = <i className="text-[#1e293b]" />;',
+    );
+    expect(hex.map((match) => match.text)).toEqual(["#1e293b"]);
+  });
+});
+
+describe("APRAS-85's ledger arithmetic", () => {
+  // Appended, directory-scoped, in the shape APRAS-79 through APRAS-84
+  // established. What is different here is only that two of the six trees span
+  // two subdirectories — `infraction-management` and `user-administration` each
+  // hold `components/` and `pages/` — which the repo-wide recursive walk
+  // reaches and no per-directory allow-list entry ever did.
+  const INFRACTIONS = "src/features/infraction-management/";
+  const USERS = "src/features/user-administration/";
+  const TASKS = "src/features/task-management/";
+  const DASHBOARD = "src/features/dashboard/";
+  const SPACES = "src/features/space-reservation-management/";
+  const ASSEMBLIES = "src/features/assembly-voting/";
+  const DIRECTORIES = [INFRACTIONS, USERS, TASKS, DASHBOARD, SPACES, ASSEMBLIES];
+  const inDirectories = (file: string) =>
+    DIRECTORIES.some((directory) => file.startsWith(directory));
+  const rows = LEDGER.filter((row) => inDirectories(toSrcRelative(row.file)));
+  const count = (code: string) =>
+    rows.filter((row) => row.code === code).length;
+  const files = PINNED.filter((file) => inDirectories(file.file));
+  const remainingIn = (directory: string) =>
+    files
+      .filter((file) => file.file.startsWith(directory))
+      .flatMap((file) => matchesIn(file.file, file.source));
+  const sourceOf = (name: string) =>
+    files.find((file) => file.file.endsWith(`/${name}`))?.source ?? "";
+  /** One file's source as whole whitespace-delimited tokens, never as
+   *  substrings: `text-primary` and `text-primary-text` are two tokens and
+   *  neither matches the other, which is what §1k's amendment turns on. */
+  const tokensOf = (name: string): string[] =>
+    sourceOf(name)
+      .split(/[\s"'`{}()<>,;]+/)
+      .filter((token) => token.length > 0);
+  const tokensEverywhere = (): string[] =>
+    files.flatMap((file) =>
+      file.source.split(/[\s"'`{}()<>,;]+/).filter((token) => token.length > 0),
+    );
+
+  /**
+   * The thirteen substitutions §"Behaviour" publishes, as
+   * `class -> token, occurrences`, plus the one free-standing `text-red-700`.
+   *
+   * Declared rather than derived: the pre-change sources are not in the tree
+   * at test time. What the tests below *do* derive is that every one of these
+   * classes is now absent from the six trees, and that the counts close
+   * against the 145 the ledger holds.
+   */
+  const MIGRATED: ReadonlyArray<readonly [string, string, number]> = [
+    ["text-gray-500", "text-muted-foreground", 64],
+    ["border-gray-200", "border-border", 41],
+    ["text-gray-900", "text-foreground", 23],
+    ["bg-white", "bg-card", 18],
+    ["text-indigo-600", "text-primary-text", 5],
+    ["bg-gray-100", "bg-muted", 3],
+    ["text-gray-400", "text-muted-foreground", 2],
+    ["text-gray-600", "text-muted-foreground", 2],
+    ["border-gray-300", "border-input", 2],
+    ["bg-emerald-700", "bg-primary", 2],
+    ["text-white", "text-primary-foreground", 2],
+    ["bg-gray-50", "bg-muted", 1],
+    ["hover:bg-gray-50", "hover:bg-accent", 1],
+    ["text-red-700", "text-destructive", 1],
+  ];
+
+  it("pins all 86 non-test source files of the six trees", () => {
+    // Recursive, so `pages/` counts: 30 of the 86 carried a palette class.
+    expect(files.length).toBeGreaterThanOrEqual(86);
+    expect(
+      files.filter((file) => file.file.startsWith(`${INFRACTIONS}pages/`))
+        .length,
+    ).toBeGreaterThan(0);
+    expect(
+      files.filter((file) => file.file.startsWith(`${USERS}pages/`)).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("logs 145 occurrences under six codes", () => {
+    expect(rows).toHaveLength(145);
+    expect(count("GAP-NO-TOKEN")).toBe(53);
+    expect(count("GAP-TINT")).toBe(46);
+    expect(count("GAP-SWATCH")).toBe(24);
+    expect(count("GAP-OVERLAY")).toBe(10);
+    expect(count("GAP-OUT-OF-BUDGET")).toBe(7);
+    expect(count("GAP-BORDER-100")).toBe(5);
+  });
+
+  it("uses no code it does not account for", () => {
+    // No `GAP-NO-SURFACE`, because both `text-white` occurrences sat on a
+    // migrating `bg-emerald-700`.
+    expect(count("GAP-NO-SURFACE")).toBe(0);
+    expect(count("GAP-UNLISTED")).toBe(0);
+    expect(rows.every((row) => row.task === "APRAS-85")).toBe(true);
+  });
+
+  it("splits the twelve code halves as non-dark:/dark: exactly", () => {
+    const half = (code: string, dark: boolean) =>
+      rows.filter(
+        (row) => row.code === code && row.class.startsWith("dark:") === dark,
+      ).length;
+
+    expect([
+      half("GAP-NO-TOKEN", false),
+      half("GAP-NO-TOKEN", true),
+      half("GAP-TINT", false),
+      half("GAP-TINT", true),
+      half("GAP-SWATCH", false),
+      half("GAP-SWATCH", true),
+      half("GAP-OVERLAY", false),
+      half("GAP-OVERLAY", true),
+      half("GAP-OUT-OF-BUDGET", false),
+      half("GAP-OUT-OF-BUDGET", true),
+      half("GAP-BORDER-100", false),
+      half("GAP-BORDER-100", true),
+    ]).toEqual([41, 12, 44, 2, 16, 8, 8, 2, 7, 0, 5, 0]);
+  });
+
+  it("accounts for all 312 as 167 migrated + 0 deleted + 145 logged", () => {
+    const migrated = MIGRATED.reduce((total, [, , n]) => total + n, 0);
+    const keptDark = rows.filter((row) => row.class.startsWith("dark:")).length;
+
+    expect(migrated).toBe(167);
+    expect(migrated + rows.length).toBe(312);
+    // Both halves close independently: 288 non-`dark:` = 167 + 121, and 24
+    // `dark:` = 0 + 24. §1g's first half never fires in this child.
+    expect(migrated + (rows.length - keptDark)).toBe(288);
+    expect(keptDark).toBe(24);
+  });
+
+  it("leaves 145 of the six trees' 312 palette occurrences in place", () => {
+    expect(remainingIn("")).toHaveLength(145);
+    expect(remainingIn(INFRACTIONS)).toHaveLength(29);
+    expect(remainingIn(USERS)).toHaveLength(44);
+    expect(remainingIn(TASKS)).toHaveLength(35);
+    expect(remainingIn(DASHBOARD)).toHaveLength(28);
+    expect(remainingIn(SPACES)).toHaveLength(9);
+    // `assembly-voting` migrates completely and keeps no row.
+    expect(remainingIn(ASSEMBLIES)).toHaveLength(0);
+    // Zero six-digit hex literals in a class context anywhere in the six.
+    expect(
+      remainingIn("").filter((match) => match.text.startsWith("#")),
+    ).toEqual([]);
+  });
+
+  it("removes every migrated class from the six trees", () => {
+    const surviving = remainingIn("").map((match) => match.text);
+
+    for (const [migrated] of MIGRATED) {
+      // `text-red-700` is the one class both migrated and kept — once at
+      // `NextStepPanel.tsx:82`, and four times inside error tints in four
+      // *other* files, so no file excuses a class it also migrates.
+      const expected = migrated === "text-red-700" ? 4 : 0;
+      expect(surviving.filter((text) => text === migrated)).toHaveLength(
+        expected,
+      );
+    }
+    expect(sourceOf("NextStepPanel.tsx")).toContain("text-destructive");
+    expect(sourceOf("NextStepPanel.tsx")).not.toContain("text-red-700");
+    // No `dark:` sibling was deleted because no migrated class had one.
+    for (const [migrated] of MIGRATED) {
+      expect(tokensEverywhere()).not.toContain(`dark:${migrated}`);
+    }
+  });
+
+  it("excepts the 126 distinct (file, class) pairs those 145 occupy", () => {
+    const entries = EXCEPTIONS.filter((entry) => inDirectories(entry.file));
+    const pairs = new Set(
+      rows.map((row) => `${toSrcRelative(row.file)} :: ${row.class}`),
+    );
+
+    expect(entries).toHaveLength(126);
+    expect(pairs.size).toBe(126);
+    expect(entries.every((entry) => entry.task === "APRAS-85")).toBe(true);
+    const inDirectory = (directory: string) =>
+      entries.filter((entry) => entry.file.startsWith(directory)).length;
+    expect([
+      inDirectory(INFRACTIONS),
+      inDirectory(USERS),
+      inDirectory(TASKS),
+      inDirectory(DASHBOARD),
+      inDirectory(SPACES),
+      inDirectory(ASSEMBLIES),
+    ]).toEqual([25, 35, 33, 26, 7, 0]);
+  });
+
+  it("resolves the two classes logged twice in one file by §1h precedence", () => {
+    // `GeneralDashboardPage.tsx`'s `bg-amber-500/10` and `dark:text-amber-400`
+    // are module swatches in the colour map and warning tints in the preview
+    // badge at line 116. The ledger is per occurrence, so both codes appear;
+    // the exceptions file is keyed `(file, class)` and carries one, so the
+    // pair takes the earlier of the two in `GAP_CODES`.
+    const dashboardFile = `${DASHBOARD}components/GeneralDashboardPage.tsx`;
+    for (const className of ["bg-amber-500/10", "dark:text-amber-400"]) {
+      const both = rows.filter(
+        (row) =>
+          toSrcRelative(row.file) === dashboardFile && row.class === className,
+      );
+      expect(new Set(both.map((row) => row.code))).toEqual(
+        new Set(["GAP-SWATCH", "GAP-NO-TOKEN"]),
+      );
+      expect(
+        EXCEPTIONS.find(
+          (entry) => entry.file === dashboardFile && entry.class === className,
+        )?.code,
+      ).toBe("GAP-SWATCH");
+    }
+  });
+
+  it("keeps TaskBoard's five header stripes verbatim, ledgered and excepted", () => {
+    const board = `${TASKS}components/TaskBoard.tsx`;
+    const source = sourceOf("TaskBoard.tsx");
+    const STRIPES: ReadonlyArray<readonly [string, string]> = [
+      ["border-t-slate-400", "GAP-TINT"],
+      ["border-t-blue-400", "GAP-NO-TOKEN"],
+      ["border-t-amber-500", "GAP-NO-TOKEN"],
+      ["border-t-green-400", "GAP-NO-TOKEN"],
+      ["border-t-red-400", "GAP-TINT"],
+    ];
+
+    for (const [stripe, code] of STRIPES) {
+      expect(source.split(stripe)).toHaveLength(2);
+      expect(
+        rows.filter(
+          (row) => toSrcRelative(row.file) === board && row.class === stripe,
+        ).map((row) => row.code),
+      ).toEqual([code]);
+      expect(
+        EXCEPTIONS.filter(
+          (entry) => entry.file === board && entry.class === stripe,
+        ).map((entry) => entry.code),
+      ).toEqual([code]);
+    }
+  });
+
+  it("puts the five stripes in no class-context span yet still reports them", () => {
+    // They are values of a `headerColorClass` object property, not arguments
+    // of `className`, `cn` or `cva`, so `classContexts()` returns no span
+    // containing them — and the palette grammar finds them anyway, because it
+    // runs over the whole source and only the hex pattern is span-restricted.
+    const source = sourceOf("TaskBoard.tsx");
+    const spans = classContexts(source);
+    const stripes = [...source.matchAll(/border-t-[a-z]+-\d+/g)];
+
+    expect(stripes).toHaveLength(5);
+    for (const stripe of stripes) {
+      const at = stripe.index ?? 0;
+      expect(spans.some(([start, end]) => at >= start && at < end)).toBe(false);
+    }
+    expect(
+      matchesIn("", source)
+        .map((match) => match.text)
+        .filter((text) => text.startsWith("border-t-")),
+    ).toHaveLength(5);
+  });
+
+  it("puts exactly five brand-text occurrences on text-primary-text", () => {
+    const CHARACTERS: ReadonlyArray<readonly [string, number]> = [
+      ["AttachmentUploader.tsx", 1],
+      ["InfractionDetailsView.tsx", 2],
+      ["InfractionStageTimeline.tsx", 1],
+      ["NewInfractionModal.tsx", 1],
+    ];
+    let total = 0;
+    for (const [name, expected] of CHARACTERS) {
+      expect(
+        tokensOf(name).filter((token) => token === "text-primary-text"),
+      ).toHaveLength(expected);
+      total += expected;
+    }
+
+    expect(total).toBe(5);
+    // §1k's graphical branch is empty here: this child produces no bare
+    // `text-primary`, and `-primary-text` lands on no non-`text-` utility.
+    const tokens = tokensEverywhere();
+    for (const prefix of [
+      "bg",
+      "border",
+      "ring",
+      "divide",
+      "outline",
+      "fill",
+      "stroke",
+      "accent",
+    ]) {
+      expect(tokens).not.toContain(`${prefix}-primary-text`);
+    }
+  });
+
+  it("leaves no indigo in infraction-management and three in dashboard", () => {
+    expect(
+      remainingIn(INFRACTIONS).filter((match) =>
+        match.text.includes("indigo"),
+      ),
+    ).toEqual([]);
+    expect(
+      remainingIn(DASHBOARD)
+        .filter((match) => match.text.includes("indigo"))
+        .map((match) => `${match.line}:${match.text}`),
+    ).toEqual(["54:text-indigo-500", "54:dark:text-indigo-400", "55:bg-indigo-500/10"]);
+    // All three are module-identity swatches, not brand.
+    expect(
+      rows
+        .filter((row) => row.class.includes("indigo"))
+        .map((row) => row.code),
+    ).toEqual(["GAP-SWATCH", "GAP-SWATCH", "GAP-SWATCH"]);
+  });
+
+  it("migrates exactly the two success-panel buttons and nothing around them", () => {
+    // §1f case 3's single test — is the element interactive? The panels the
+    // two buttons sit inside are kept whole, and `TenantsAdminPage`'s other
+    // two buttons stay palette because `border-emerald-300` has no row at any
+    // scale and a triple migrates as a unit or not at all.
+    expect(tokensEverywhere()).not.toContain("bg-emerald-700");
+    expect(tokensEverywhere()).not.toContain("text-white");
+    for (const name of ["InviteAdministratorDialog.tsx", "TenantsAdminPage.tsx"]) {
+      expect(tokensOf(name)).toContain("bg-primary");
+      expect(tokensOf(name)).toContain("text-primary-foreground");
+    }
+    const admin = remainingIn(USERS)
+      .filter((match) => match.file.endsWith("/TenantsAdminPage.tsx"))
+      .map((match) => match.text);
+    expect(admin.filter((text) => text === "border-emerald-300")).toHaveLength(
+      2,
+    );
+    expect(admin.filter((text) => text === "text-emerald-800")).toHaveLength(5);
+  });
+
+  it("mixes no migrated occurrence with a kept tint in one class span", () => {
+    // Grouped by `(file, span)` with the guard's own `classContexts()`, not by
+    // line. `INTRODUCED` names, per changed file, the tokens *this task* put
+    // there — declared because the pre-change sources are not in the tree at
+    // test time, and cross-checked while implementing against
+    // `git show HEAD:<file>`, which returns the same three spans.
+    const I_ = INFRACTIONS;
+    const INTRODUCED: ReadonlyArray<readonly [string, readonly string[]]> = [
+      [`${I_}components/AttachmentUploader.tsx`, ["text-muted-foreground", "text-primary-text"]],
+      [`${I_}components/ContestationForm.tsx`, ["border-border", "text-muted-foreground"]],
+      [`${I_}components/CycleCloseModal.tsx`, ["bg-card", "border-border", "text-foreground", "text-muted-foreground"]],
+      [`${I_}components/InfractionDetailsView.tsx`, ["bg-card", "border-border", "text-foreground", "text-muted-foreground", "text-primary-text"]],
+      [`${I_}components/InfractionStageTimeline.tsx`, ["text-foreground", "text-muted-foreground", "text-primary-text"]],
+      [`${I_}components/NewInfractionModal.tsx`, ["bg-card", "bg-muted", "border-border", "text-foreground", "text-muted-foreground", "text-primary-text"]],
+      [`${I_}components/NextStepPanel.tsx`, ["bg-card", "border-border", "text-destructive", "text-foreground", "text-muted-foreground"]],
+      [`${I_}pages/InfractionRulesPage.tsx`, ["bg-card", "bg-muted", "border-border", "text-foreground", "text-muted-foreground"]],
+      [`${I_}pages/InfractionsPage.tsx`, ["bg-card", "bg-muted", "border-border", "hover:bg-accent", "text-foreground", "text-muted-foreground"]],
+      [`${I_}pages/MyInfractionsPage.tsx`, ["bg-card", "bg-muted", "border-border", "text-foreground", "text-muted-foreground"]],
+      [`${USERS}components/InviteAdministratorDialog.tsx`, ["bg-primary", "text-primary-foreground"]],
+      [`${USERS}components/PermissionMatrix.tsx`, ["border-input"]],
+      [`${USERS}pages/AdminUserDashboard.tsx`, ["border-input"]],
+      [`${USERS}pages/TenantsAdminPage.tsx`, ["bg-primary", "text-primary-foreground"]],
+      [`${ASSEMBLIES}components/AssemblyMinutesView.tsx`, ["bg-card"]],
+    ];
+    const codeOf = new Map(
+      rows.map((row) => [
+        `${toSrcRelative(row.file)} :: ${row.class}`,
+        row.code,
+      ]),
+    );
+    const mixed: string[] = [];
+    for (const [file, tokens] of INTRODUCED) {
+      const source = files.find((pinned) => pinned.file === file)?.source ?? "";
+      expect(source).not.toBe("");
+      for (const [start, end] of classContexts(source)) {
+        const span = source.slice(start, end);
+        const introduced = span
+          .split(/[\s"'`{}()<>,;]+/)
+          .filter((token) => tokens.includes(token));
+        const kept = matchesIn(file, span).map((match) => match.text);
+        if (introduced.length > 0 && kept.length > 0) {
+          mixed.push(
+            `${file} ${kept.map((text) => codeOf.get(`${file} :: ${text}`)).join(",")}`,
+          );
+        }
+      }
+    }
+
+    // Zero spans mix a migrated occurrence with a kept `GAP-TINT` one — the
+    // first child in the split to return zero rather than one.
+    expect(mixed.filter((entry) => entry.includes("GAP-TINT"))).toEqual([]);
+    expect(mixed).toEqual([
+      `${I_}pages/InfractionsPage.tsx GAP-BORDER-100`,
+      `${I_}pages/InfractionsPage.tsx GAP-OUT-OF-BUDGET`,
+      `${I_}pages/MyInfractionsPage.tsx GAP-OUT-OF-BUDGET`,
+    ]);
+  });
+
+  it("leaves the two known no-token gaps untouched and fully recorded", () => {
+    // Repo-wide, not only in the six trees: every child leaves these four
+    // classes alone, so the figure survives APRAS-81 through APRAS-84.
+    const KNOWN: ReadonlyArray<readonly [string, number]> = [
+      ["text-gray-700", 73],
+      ["text-slate-700", 69],
+      ["border-slate-100", 41],
+      ["border-gray-100", 12],
+    ];
+    const everywhere = PINNED.flatMap(({ file, source }) =>
+      matchesIn(file, source).map((match) => ({ file, text: match.text })),
+    );
+    const excused = new Set(
+      EXCEPTIONS.map((entry) => `${entry.file} :: ${entry.class}`),
+    );
+    const ledgered = new Set(
+      LEDGER.map((row) => `${toSrcRelative(row.file)} :: ${row.class}`),
+    );
+    let total = 0;
+    for (const [known, expected] of KNOWN) {
+      const found = everywhere.filter((match) => match.text === known);
+      expect(found).toHaveLength(expected);
+      total += expected;
+      // The row and the entry must exist; no code is asserted, because §1h's
+      // precedence legitimately codes some of them `GAP-SWATCH` or `GAP-TINT`.
+      for (const match of found) {
+        expect(excused.has(`${match.file} :: ${match.text}`)).toBe(true);
+        expect(ledgered.has(`${match.file} :: ${match.text}`)).toBe(true);
+      }
+    }
+
+    expect(total).toBe(195);
   });
 });

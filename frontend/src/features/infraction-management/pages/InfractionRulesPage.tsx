@@ -82,28 +82,28 @@ export const InfractionRulesPage: React.FC = () => {
 
   return (
     <div className="container mx-auto space-y-6 px-4 py-8">
-      <div className="rounded-xl border border-gray-200 bg-white p-6">
-        <h1 className="text-2xl font-bold text-gray-900">
+      <div className="rounded-xl border border-border bg-card p-6">
+        <h1 className="text-2xl font-bold text-foreground">
           {t("infractions.rules.pageTitle")}
         </h1>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted-foreground">
           {t("infractions.rules.pageSubtitle")}
         </p>
       </div>
 
       <div
-        className="space-y-2 rounded-xl border border-gray-200 bg-white p-4"
+        className="space-y-2 rounded-xl border border-border bg-card p-4"
         data-testid="settings-panel"
       >
-        <h2 className="text-base font-bold text-gray-900">
+        <h2 className="text-base font-bold text-foreground">
           {t("infractions.settings.title")}
         </h2>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted-foreground">
           {t("infractions.settings.explanation")}
         </p>
         <div className="flex items-end gap-2">
           <label className="block text-sm">
-            <span className="text-gray-500">
+            <span className="text-muted-foreground">
               {t("infractions.settings.condoFee")}
             </span>
             <input
@@ -111,7 +111,7 @@ export const InfractionRulesPage: React.FC = () => {
               min="0"
               step="0.01"
               inputMode="decimal"
-              className="mt-1 w-40 rounded-lg border border-gray-200 p-2 text-sm"
+              className="mt-1 w-40 rounded-lg border border-border p-2 text-sm"
               aria-label={t("infractions.settings.condoFee")}
               value={fee !== "" ? fee : (settings?.condo_fee_amount ?? "")}
               onChange={(event) =>
@@ -129,30 +129,30 @@ export const InfractionRulesPage: React.FC = () => {
       </div>
 
       <div
-        className="space-y-3 rounded-xl border border-gray-200 bg-white p-4"
+        className="space-y-3 rounded-xl border border-border bg-card p-4"
         data-testid="new-rule-form"
       >
-        <h2 className="text-base font-bold text-gray-900">
+        <h2 className="text-base font-bold text-foreground">
           {t("infractions.rules.newTitle")}
         </h2>
         <div className="grid gap-2 md:grid-cols-2">
           <label className="block text-sm">
-            <span className="text-gray-500">
+            <span className="text-muted-foreground">
               {t("infractions.fields.article")}
             </span>
             <input
-              className="mt-1 w-full rounded-lg border border-gray-200 p-2 text-sm"
+              className="mt-1 w-full rounded-lg border border-border p-2 text-sm"
               aria-label={t("infractions.fields.article")}
               value={article}
               onChange={(event) => setArticle(event.target.value)}
             />
           </label>
           <label className="block text-sm">
-            <span className="text-gray-500">
+            <span className="text-muted-foreground">
               {t("infractions.fields.origin")}
             </span>
             <select
-              className="mt-1 w-full rounded-lg border border-gray-200 p-2 text-sm"
+              className="mt-1 w-full rounded-lg border border-border p-2 text-sm"
               aria-label={t("infractions.fields.origin")}
               value={origin}
               onChange={(event) =>
@@ -167,23 +167,23 @@ export const InfractionRulesPage: React.FC = () => {
             </select>
           </label>
           <label className="block text-sm md:col-span-2">
-            <span className="text-gray-500">
+            <span className="text-muted-foreground">
               {t("infractions.fields.description")}
             </span>
             <textarea
-              className="mt-1 w-full rounded-lg border border-gray-200 p-2 text-sm"
+              className="mt-1 w-full rounded-lg border border-border p-2 text-sm"
               aria-label={t("infractions.fields.description")}
               value={description}
               onChange={(event) => setDescription(event.target.value)}
             />
           </label>
           <label className="block text-sm">
-            <span className="text-gray-500">
+            <span className="text-muted-foreground">
               {t("infractions.fields.recidivismWindow")}
             </span>
             <input
               type="number"
-              className="mt-1 w-full rounded-lg border border-gray-200 p-2 text-sm"
+              className="mt-1 w-full rounded-lg border border-border p-2 text-sm"
               aria-label={t("infractions.fields.recidivismWindow")}
               value={windowDays}
               onChange={(event) => setWindowDays(event.target.value)}
@@ -208,12 +208,12 @@ export const InfractionRulesPage: React.FC = () => {
         </Button>
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white p-4">
+      <div className="rounded-xl border border-border bg-card p-4">
         {isLoading && (
-          <p className="text-sm text-gray-500">{t("infractions.ui.loading")}</p>
+          <p className="text-sm text-muted-foreground">{t("infractions.ui.loading")}</p>
         )}
         {!isLoading && (rules?.length ?? 0) === 0 && (
-          <p className="text-sm text-gray-500" data-testid="rules-empty">
+          <p className="text-sm text-muted-foreground" data-testid="rules-empty">
             {t("infractions.rules.empty")}
           </p>
         )}
@@ -227,10 +227,10 @@ export const InfractionRulesPage: React.FC = () => {
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-sm font-semibold text-gray-900">
+                  <div className="text-sm font-semibold text-foreground">
                     {rule.article}
                   </div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-muted-foreground">
                     {t(`infractions.origins.${rule.origin}`)} ·{" "}
                     {t("infractions.fields.recidivismWindow")}:{" "}
                     {rule.recidivism_window_days}
@@ -242,7 +242,7 @@ export const InfractionRulesPage: React.FC = () => {
                 <div className="flex items-center gap-2">
                   {!rule.is_active && (
                     <span
-                      className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600"
+                      className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground"
                       data-testid={`rule-inactive-${rule.id}`}
                     >
                       {t("infractions.rules.inactive")}
@@ -280,7 +280,7 @@ export const InfractionRulesPage: React.FC = () => {
                         {step.step_order}
                       </span>
                       <select
-                        className="rounded-lg border border-gray-200 p-1 text-sm"
+                        className="rounded-lg border border-border p-1 text-sm"
                         aria-label={t("infractions.fields.action")}
                         value={step.action}
                         onChange={(event) =>
@@ -303,7 +303,7 @@ export const InfractionRulesPage: React.FC = () => {
                       {step.action === "NOTIFICACAO" && (
                         <input
                           type="number"
-                          className="w-28 rounded-lg border border-gray-200 p-1 text-sm"
+                          className="w-28 rounded-lg border border-border p-1 text-sm"
                           aria-label={t("infractions.fields.deadlineDays")}
                           value={step.defense_deadline_days ?? ""}
                           onChange={(event) =>
@@ -317,7 +317,7 @@ export const InfractionRulesPage: React.FC = () => {
                       {step.action === "MULTA" && (
                         <>
                           <select
-                            className="rounded-lg border border-gray-200 p-1 text-sm"
+                            className="rounded-lg border border-border p-1 text-sm"
                             aria-label={t("infractions.fields.fineMode")}
                             value={step.fine_mode ?? ""}
                             onChange={(event) =>
@@ -342,7 +342,7 @@ export const InfractionRulesPage: React.FC = () => {
                               min="0"
                               step="0.01"
                               inputMode="decimal"
-                              className="w-28 rounded-lg border border-gray-200 p-1 text-sm"
+                              className="w-28 rounded-lg border border-border p-1 text-sm"
                               aria-label={t("infractions.fields.fineAmount")}
                               value={step.fine_fixed_amount ?? ""}
                               onChange={(event) =>
@@ -363,7 +363,7 @@ export const InfractionRulesPage: React.FC = () => {
                               min="0"
                               step="0.0001"
                               inputMode="decimal"
-                              className="w-28 rounded-lg border border-gray-200 p-1 text-sm"
+                              className="w-28 rounded-lg border border-border p-1 text-sm"
                               aria-label={t("infractions.fields.fineMultiplier")}
                               value={step.fine_fee_multiplier ?? ""}
                               onChange={(event) =>

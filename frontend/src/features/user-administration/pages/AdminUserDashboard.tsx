@@ -350,7 +350,7 @@ const AdminUserDashboard: React.FC = () => {
                               setEditTypeIds((prev) => prev.filter((id) => id !== ut.id));
                             }
                           }}
-                          className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4"
+                          className="rounded border-input text-primary focus:ring-primary h-4 w-4"
                         />
                         <span>{ut.name}</span>
                       </label>

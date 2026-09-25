@@ -75,7 +75,7 @@ const AssemblyMinutesView: React.FC<AssemblyMinutesViewProps> = ({
           data-testid="minutes-frame"
           sandbox=""
           srcDoc={minutes ?? ""}
-          className="w-full h-[60vh] rounded-md border border-border/60 bg-white"
+          className="w-full h-[60vh] rounded-md border border-border/60 bg-card"
         />
       )}
     </section>

@@ -111,7 +111,7 @@ const InviteAdministratorDialog: React.FC<Props> = ({ tenant, onClose }) => {
             <button
               type="button"
               onClick={onClose}
-              className="rounded-md bg-emerald-700 px-3 py-2 text-xs font-semibold text-white"
+              className="rounded-md bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground"
             >
               {t("invitations.dialog.done")}
             </button>

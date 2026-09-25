@@ -77,7 +77,7 @@ export const AttachmentUploader: React.FC<{
     // Fail closed while `/permissions/me` is in flight: never a control that
     // appears and then disappears.
     return (
-      <p className="text-sm text-gray-500" data-testid="attachment-gate-loading">
+      <p className="text-sm text-muted-foreground" data-testid="attachment-gate-loading">
         {t("infractions.attachments.loading")}
       </p>
     );
@@ -85,7 +85,7 @@ export const AttachmentUploader: React.FC<{
 
   if (!has(UPLOAD_PHOTO_PERMISSION)) {
     return (
-      <p className="text-sm text-gray-500" data-testid="attachment-unavailable">
+      <p className="text-sm text-muted-foreground" data-testid="attachment-unavailable">
         {t("infractions.attachments.permissionRequired")}
       </p>
     );
@@ -144,7 +144,7 @@ export const AttachmentUploader: React.FC<{
   return (
     <div className="space-y-2" data-testid="attachment-uploader">
       <label className="block text-sm">
-        <span className="text-gray-500">{label}</span>
+        <span className="text-muted-foreground">{label}</span>
         <input
           type="file"
           multiple
@@ -163,7 +163,7 @@ export const AttachmentUploader: React.FC<{
         />
       </label>
 
-      <p className="text-xs text-gray-500" data-testid="attachment-hint">
+      <p className="text-xs text-muted-foreground" data-testid="attachment-hint">
         {t("infractions.attachments.hint", {
           types: typeLabels,
           limit: megabytes(UPLOAD_MAX_FILE_SIZE_BYTES),
@@ -171,7 +171,7 @@ export const AttachmentUploader: React.FC<{
       </p>
 
       {busy && (
-        <p className="text-xs text-gray-500" data-testid="attachment-uploading">
+        <p className="text-xs text-muted-foreground" data-testid="attachment-uploading">
           {t("infractions.attachments.uploading", { name: uploadingName })}
         </p>
       )}
@@ -187,7 +187,7 @@ export const AttachmentUploader: React.FC<{
       )}
 
       {value.length === 0 && !busy ? (
-        <p className="text-xs text-gray-400" data-testid="attachment-none">
+        <p className="text-xs text-muted-foreground" data-testid="attachment-none">
           {t("infractions.attachments.none")}
         </p>
       ) : (
@@ -205,14 +205,14 @@ export const AttachmentUploader: React.FC<{
                 })}
                 className="h-10 w-10 rounded object-cover"
               />
-              <a className="flex-1 truncate text-indigo-600 underline" href={url}>
+              <a className="flex-1 truncate text-primary-text underline" href={url}>
                 {url}
               </a>
               <button
                 type="button"
                 data-testid="attachment-remove"
                 aria-label={t("infractions.attachments.remove")}
-                className="text-xs text-gray-500 underline"
+                className="text-xs text-muted-foreground underline"
                 disabled={disabled}
                 onClick={() =>
                   // Only the list is edited. Deleting the stored asset needs

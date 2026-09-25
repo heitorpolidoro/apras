@@ -22,22 +22,22 @@ export const MyInfractionsPage: React.FC = () => {
 
   return (
     <div className="container mx-auto max-w-4xl space-y-6 px-4 py-8">
-      <div className="rounded-xl border border-gray-200 bg-white p-6">
-        <h1 className="text-2xl font-bold text-gray-900">
+      <div className="rounded-xl border border-border bg-card p-6">
+        <h1 className="text-2xl font-bold text-foreground">
           {t("infractions.mine.pageTitle")}
         </h1>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted-foreground">
           {t("infractions.mine.pageSubtitle")}
         </p>
       </div>
 
       {isLoading && (
-        <p className="text-sm text-gray-500">{t("infractions.ui.loading")}</p>
+        <p className="text-sm text-muted-foreground">{t("infractions.ui.loading")}</p>
       )}
 
       {!isLoading && (infractions?.length ?? 0) === 0 && (
         <p
-          className="rounded-xl border border-gray-200 bg-white p-6 text-sm text-gray-500"
+          className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground"
           data-testid="my-infractions-empty"
         >
           {t("infractions.mine.empty")}
@@ -48,13 +48,13 @@ export const MyInfractionsPage: React.FC = () => {
         <div
           key={infraction.id}
           data-testid={`my-infraction-${infraction.id}`}
-          className="space-y-3 rounded-xl border border-gray-200 bg-white p-6"
+          className="space-y-3 rounded-xl border border-border bg-card p-6"
         >
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold text-gray-900">
+            <h2 className="text-base font-bold text-foreground">
               {infraction.rule.article}
             </h2>
-            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
+            <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-gray-700">
               {infraction.current_stage
                 ? t(`infractions.actions.${infraction.current_stage}`)
                 : t("infractions.stageFilter.NONE")}

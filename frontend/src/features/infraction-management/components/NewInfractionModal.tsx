@@ -166,17 +166,17 @@ export const NewInfractionModal: React.FC<{
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       data-testid="new-infraction-modal"
     >
-      <div className="w-full max-w-lg space-y-3 rounded-xl bg-white p-6">
-        <h2 className="text-lg font-bold text-gray-900">
+      <div className="w-full max-w-lg space-y-3 rounded-xl bg-card p-6">
+        <h2 className="text-lg font-bold text-foreground">
           {isPromotion
             ? t("infractions.promote.title")
             : t("infractions.new.title")}
         </h2>
 
         {isPromotion && occurrence && (
-          <p className="text-sm text-gray-500" data-testid="promotion-source">
+          <p className="text-sm text-muted-foreground" data-testid="promotion-source">
             <Link
-              className="text-indigo-600 underline"
+              className="text-primary-text underline"
               to={`/occurrences?occurrence=${occurrence.id}`}
             >
               {t("infractions.fields.sourceOccurrence")}:{" "}
@@ -186,9 +186,9 @@ export const NewInfractionModal: React.FC<{
         )}
 
         <label className="block text-sm">
-          <span className="text-gray-500">{t("infractions.fields.rule")}</span>
+          <span className="text-muted-foreground">{t("infractions.fields.rule")}</span>
           <select
-            className="mt-1 w-full rounded-lg border border-gray-200 p-2 text-sm"
+            className="mt-1 w-full rounded-lg border border-border p-2 text-sm"
             aria-label={t("infractions.fields.rule")}
             value={ruleId}
             onChange={(event) => setRuleChoice(event.target.value)}
@@ -203,8 +203,8 @@ export const NewInfractionModal: React.FC<{
 
         {lotIsFixed ? (
           <div className="block text-sm" data-testid="locked-lot">
-            <span className="text-gray-500">{t("infractions.fields.lot")}</span>
-            <p className="mt-1 rounded-lg bg-gray-50 p-2 text-sm text-gray-900">
+            <span className="text-muted-foreground">{t("infractions.fields.lot")}</span>
+            <p className="mt-1 rounded-lg bg-muted p-2 text-sm text-foreground">
               {(() => {
                 const lot = lots.find((item) => item.id === occurrence?.lot_id);
                 return lot
@@ -212,7 +212,7 @@ export const NewInfractionModal: React.FC<{
                   : t("infractions.promote.lotFromOccurrence");
               })()}
             </p>
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-muted-foreground">
               {t("infractions.promote.lotIsTheOccurrences")}
             </p>
           </div>
@@ -222,11 +222,11 @@ export const NewInfractionModal: React.FC<{
               thing it filters are two controls, and sharing one label makes
               both unaddressable by name. */}
           <label className="block text-sm">
-            <span className="text-gray-500">
+            <span className="text-muted-foreground">
               {t("infractions.new.blockFilter")}
             </span>
             <input
-              className="mt-1 w-full rounded-lg border border-gray-200 p-2 text-sm"
+              className="mt-1 w-full rounded-lg border border-border p-2 text-sm"
               aria-label={t("infractions.new.blockFilter")}
               placeholder={t("infractions.new.blockFilterPlaceholder")}
               value={blockFilter}
@@ -239,9 +239,9 @@ export const NewInfractionModal: React.FC<{
           </label>
 
           <label className="block text-sm">
-            <span className="text-gray-500">{t("infractions.fields.lot")}</span>
+            <span className="text-muted-foreground">{t("infractions.fields.lot")}</span>
             <select
-              className="mt-1 w-full rounded-lg border border-gray-200 p-2 text-sm"
+              className="mt-1 w-full rounded-lg border border-border p-2 text-sm"
               aria-label={t("infractions.fields.lot")}
               value={lotId}
               onChange={(event) => {
@@ -262,7 +262,7 @@ export const NewInfractionModal: React.FC<{
               </p>
             )}
             {truncated && (
-              <p className="mt-1 text-xs text-gray-500" data-testid="lots-truncated">
+              <p className="mt-1 text-xs text-muted-foreground" data-testid="lots-truncated">
                 {t("infractions.new.lotsTruncated", {
                   shown: lots.length,
                   total: lotPage?.total ?? 0,
@@ -274,11 +274,11 @@ export const NewInfractionModal: React.FC<{
         )}
 
         <label className="block text-sm">
-          <span className="text-gray-500">
+          <span className="text-muted-foreground">
             {t("infractions.fields.responsible")}
           </span>
           <select
-            className="mt-1 w-full rounded-lg border border-gray-200 p-2 text-sm"
+            className="mt-1 w-full rounded-lg border border-border p-2 text-sm"
             aria-label={t("infractions.fields.responsible")}
             value={residentId}
             onChange={(event) => setResidentId(event.target.value)}
@@ -293,12 +293,12 @@ export const NewInfractionModal: React.FC<{
         </label>
 
         <label className="block text-sm">
-          <span className="text-gray-500">
+          <span className="text-muted-foreground">
             {t("infractions.fields.occurredOn")}
           </span>
           <input
             type="date"
-            className="mt-1 w-full rounded-lg border border-gray-200 p-2 text-sm"
+            className="mt-1 w-full rounded-lg border border-border p-2 text-sm"
             aria-label={t("infractions.fields.occurredOn")}
             value={occurredOn}
             onChange={(event) => setOccurredOn(event.target.value)}
@@ -306,11 +306,11 @@ export const NewInfractionModal: React.FC<{
         </label>
 
         <label className="block text-sm">
-          <span className="text-gray-500">
+          <span className="text-muted-foreground">
             {t("infractions.fields.description")}
           </span>
           <textarea
-            className="mt-1 w-full rounded-lg border border-gray-200 p-2 text-sm"
+            className="mt-1 w-full rounded-lg border border-border p-2 text-sm"
             aria-label={t("infractions.fields.description")}
             value={description}
             onChange={(event) => setDescription(event.target.value)}
