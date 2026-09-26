@@ -1313,3 +1313,39 @@ class InvitationIncompleteError(DomainError):
             "Os seguintes campos são obrigatórios para criar a conta: "
             + ", ".join(sorted(fields))
         )
+
+
+class StorageUnavailableError(DomainError):
+    """Raised when the configured storage backend cannot store or remove bytes (503).
+
+    Every storage failure funnels here (APRAS-94 §6) — a read-only serverless
+    filesystem, an absent or malformed ``BLOB_READ_WRITE_TOKEN``, a non-2xx
+    from the Blob API, a transport failure, a 2xx whose body is not the JSON
+    the contract promises, and the two unimplemented provider stubs. The point
+    is not the status code: Starlette mounts ``ServerErrorMiddleware``
+    *outside* ``CORSMiddleware``, so an exception that escapes a route answers
+    with a bodiless 500 carrying no ``access-control-allow-origin`` — which is
+    exactly the failure a browser mislabels as CORS. Leaving the route as a
+    mapped ``DomainError`` is what keeps the answer diagnosable.
+    """
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(f"Não foi possível armazenar o arquivo: {reason}")
+
+
+class UnsupportedStorageContentTypeError(DomainError):
+    """Raised when a content type may not be stored by this provider (422).
+
+    A validation refusal and deliberately not a
+    :class:`StorageUnavailableError`: the backend is healthy and the request
+    is the problem. Objects served from Vercel's Blob CDN never pass through
+    ``HardenedStaticFiles``, so what may be stored is closed to
+    ``CONTENT_TYPE_EXTENSIONS`` — and ``text/html`` only in the generated
+    namespace, reproducing on Blob the split the two static mounts express
+    (APRAS-94 §3).
+    """
+
+    def __init__(self, content_type: str) -> None:
+        super().__init__(
+            f"Tipo de arquivo não permitido para armazenamento: {content_type}"
+        )

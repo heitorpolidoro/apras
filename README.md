@@ -111,6 +111,12 @@ cd frontend && npm run test:coverage
 
 O deploy é feito na **Vercel** (projetos `apras-front` e `apras-back`). Todo merge na branch `master` dispara automaticamente o deploy de produção dos dois projetos via integração Git. As migrações de banco rodam no GitHub Actions (`migrate.yml`) a cada push na `master`.
 
+### Armazenamento de arquivos (`BLOB_READ_WRITE_TOKEN`)
+
+O filesystem da função serverless é somente leitura fora de `/tmp`, então uploads (logo do condomínio, notas fiscais, mídias, anexos de cotação) e os HTML gerados (relatório de obras, minuta de ata) **precisam** de um Vercel Blob store em produção. Vincular o store ao projeto `apras-back` injeta a variável `BLOB_READ_WRITE_TOKEN`, que é tudo o que o backend lê: com ela, tudo é gravado no Blob e a URL pública absoluta é persistida; sem ela, o comportamento é o de desenvolvimento local — disco, em `static/uploads` e `static/generated`. Sem o token, uma gravação em produção responde `503` com corpo JSON explicando que o armazenamento não está configurado.
+
+Limite conhecido: a Vercel recusa corpos de requisição acima de ~4,5 MB na borda, abaixo dos 10 MiB que o backend aceita — arquivos maiores continuam falhando antes de a função rodar.
+
 ## Contribuição e Fluxo de Trabalho
 
 Branches de feature (`feat/`), commits descritivos e Pull Requests para a branch principal (`master`). O CI (GitHub Actions) roda testes de backend e frontend com gates de cobertura, além de análise no SonarCloud e DeepSource — um PR só pode ser mergeado com todos os checks verdes.

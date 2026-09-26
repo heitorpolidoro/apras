@@ -6,7 +6,6 @@ Deliberately isolated: this module knows nothing about Financeiro, Patrimônio
 
 import io
 from decimal import Decimal
-from pathlib import Path
 from uuid import UUID
 
 from PIL import Image
@@ -26,6 +25,7 @@ from app.core.exceptions import (
     QuoteAttachmentTooLargeError,
 )
 from app.core.money import ZERO, quantize_money
+from app.core.tenant_context import acting_tenant_id
 from app.core.uploads import sanitise_upload_filename
 from app.models.enums import PurchaseRequestStatus
 from app.models.purchase import (
@@ -54,12 +54,7 @@ from app.schemas.purchase import (
     PurchaseSummaryRead,
 )
 from app.services.media_service import MAX_FILE_SIZE
-from app.services.storage_service import BaseStorageProvider, LocalStorageProvider
-
-#: The public URL prefix :class:`LocalStorageProvider` mints, and the only
-#: prefix a stored ``attachment_url`` is ever mapped back to a file we own.
-#: Any other value is somebody else's file and is left alone (APRAS-63 D6).
-LOCAL_UPLOAD_URL_PREFIX = "/static/uploads/"
+from app.services.storage_service import BaseStorageProvider, upload_storage_provider
 
 #: The first bytes of every PDF. The declared MIME type is a claim the client
 #: makes; this is the check (APRAS-63 D2).
@@ -67,8 +62,9 @@ _PDF_MAGIC = b"%PDF-"
 
 #: Module level and bound once, exactly like ``tenant_service``: a test (or a
 #: future non-local backend) substitutes this one name rather than threading a
-#: provider through the router.
-_storage_provider: BaseStorageProvider = LocalStorageProvider()
+#: provider through the router. Which provider it is is decided by
+#: ``upload_storage_provider`` and by nothing here (APRAS-94 §1).
+_storage_provider: BaseStorageProvider = upload_storage_provider()
 
 
 def _effective_quantity(item: PurchaseQuoteItem) -> int:
@@ -922,19 +918,18 @@ class PurchaseService:
     def _delete_stored_attachment(url: str | None) -> None:
         """Best-effort removal of the file a stored ``attachment_url`` names.
 
-        Only a ``/static/uploads/`` value is mapped back to a path, and it is
-        mapped **relative to the provider's own** ``base_dir`` rather than by
-        stripping the leading slash: identical for the production provider
-        and honest for any other one. ``delete_file`` already swallows, so a
-        failure here never fails the request that replaced the document.
+        The provider decides what the value maps to: only a URL it minted
+        itself resolves, and anything else is somebody else's file and is left
+        alone (APRAS-63 D6). Asking the provider rather than testing a
+        ``/static/uploads/`` prefix here is what keeps a Blob object from being
+        silently skipped and orphaned (APRAS-94 §4). ``delete_file`` already
+        swallows, so a failure here never fails the request that replaced the
+        document.
         """
-        if url is None or not url.startswith(LOCAL_UPLOAD_URL_PREFIX):
+        stored = _storage_provider.resolve_stored_path(url)
+        if stored is None:
             return
-        base = getattr(_storage_provider, "base_dir", None)
-        if base is None:
-            return
-        relative = url[len(LOCAL_UPLOAD_URL_PREFIX) :]
-        _storage_provider.delete_file(str(Path(base) / relative))
+        _storage_provider.delete_file(stored)
 
     @classmethod
     def set_quote_attachment(
@@ -974,7 +969,9 @@ class PurchaseService:
         )
 
         previous = quote.attachment_url
-        _, url = _storage_provider.save_file(file_bytes, safe_name, content_type)
+        _, url = _storage_provider.save_file(
+            file_bytes, safe_name, content_type, tenant_id=acting_tenant_id(session)
+        )
         quote.attachment_url = url
         quote.attachment_filename = safe_name
         quote.updated_at = clock.db_now()

@@ -18,6 +18,7 @@ from app.core.exceptions import (
     InvoiceFileTooLargeError,
 )
 from app.core.money import ZERO, quantize_money
+from app.core.tenant_context import acting_tenant_id
 from app.models.enums import TransactionType
 from app.models.finance import BudgetLine, FinanceCategory, FinancialTransaction
 from app.models.user import User
@@ -36,7 +37,7 @@ from app.schemas.finance import (
     FinancialTransactionUpdate,
     MonthlyStatementEntry,
 )
-from app.services.storage_service import BaseStorageProvider, LocalStorageProvider
+from app.services.storage_service import BaseStorageProvider, upload_storage_provider
 
 if TYPE_CHECKING:  # pragma: no cover
     from decimal import Decimal
@@ -47,7 +48,9 @@ DECEMBER = 12
 MAX_INVOICE_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 ALLOWED_INVOICE_MIME_TYPE = "application/pdf"
 
-_storage_provider: BaseStorageProvider = LocalStorageProvider()
+#: Which provider this is is decided by ``upload_storage_provider`` and by
+#: nothing here (APRAS-94 §1); a test substitutes this one name.
+_storage_provider: BaseStorageProvider = upload_storage_provider()
 
 
 class FinanceService:
@@ -380,7 +383,9 @@ class FinanceService:
         if transaction.invoice_file_path:
             _storage_provider.delete_file(transaction.invoice_file_path)
 
-        file_path, url = _storage_provider.save_file(file_bytes, filename, mime_type)
+        file_path, url = _storage_provider.save_file(
+            file_bytes, filename, mime_type, tenant_id=acting_tenant_id(session)
+        )
 
         transaction.invoice_file_path = file_path
         transaction.invoice_file_url = url

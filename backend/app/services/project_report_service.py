@@ -720,7 +720,9 @@ def save_report(
     # serving it renders inline. Never `static/uploads`, which forces a
     # download for `.html` precisely because a client can write there.
     provider = storage_provider or generated_storage_provider()
-    _file_path, url = provider.save_file(payload, REPORT_FILENAME, "text/html")
+    _file_path, url = provider.save_file(
+        payload, REPORT_FILENAME, "text/html", tenant_id=acting_tenant_id(session)
+    )
 
     generated_at = clock.db_now()
     folder_id = _find_or_create_obras_folder(session)

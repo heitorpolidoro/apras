@@ -15,6 +15,7 @@ from app.core.exceptions import (
     AnnouncementPermissionError,
     InvalidAnnouncementMediaFormatError,
 )
+from app.core.tenant_context import acting_tenant_id
 from app.models.announcement import (
     Announcement,
     AnnouncementComment,
@@ -34,7 +35,7 @@ from app.schemas.announcement import (
     AnnouncementUpdate,
     PaginatedAnnouncementRead,
 )
-from app.services.storage_service import BaseStorageProvider, LocalStorageProvider
+from app.services.storage_service import BaseStorageProvider, upload_storage_provider
 
 MAX_MEDIA_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 ALLOWED_MEDIA_MIME_TYPES: dict[str, AnnouncementMediaType] = {
@@ -44,7 +45,9 @@ ALLOWED_MEDIA_MIME_TYPES: dict[str, AnnouncementMediaType] = {
     "application/pdf": AnnouncementMediaType.PDF,
 }
 
-_storage_provider: BaseStorageProvider = LocalStorageProvider()
+#: Which provider this is is decided by ``upload_storage_provider`` and by
+#: nothing here (APRAS-94 §1); a test substitutes this one name.
+_storage_provider: BaseStorageProvider = upload_storage_provider()
 
 
 def _check_publisher(user: User, session: Session, permission: str) -> None:
@@ -227,7 +230,9 @@ def upload_media(
     if media_type is None:
         raise InvalidAnnouncementMediaFormatError
 
-    file_path, url = _storage_provider.save_file(file_bytes, filename, mime_type)
+    file_path, url = _storage_provider.save_file(
+        file_bytes, filename, mime_type, tenant_id=acting_tenant_id(session)
+    )
 
     max_order = session.exec(
         select(func.max(AnnouncementMedia.order_index)).where(

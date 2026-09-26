@@ -56,6 +56,24 @@ def canonical_extension(content_type: str) -> str:
     return CONTENT_TYPE_EXTENSIONS.get(_normalise(content_type), FALLBACK_EXTENSION)
 
 
+def canonical_content_type(content_type: str) -> str | None:
+    """The type a file of ``content_type`` may be **stored and served** as.
+
+    The gate on the Vercel Blob path (APRAS-94 §3). A Blob object is served by
+    Vercel's CDN, which never passes through ``HardenedStaticFiles``, so the
+    mount's "force ``application/octet-stream`` + ``attachment`` for anything
+    outside :data:`INLINE_SAFE_EXTENSIONS`" protection is simply not available
+    there. What replaces it is this: the declared type is normalised and then
+    accepted **only** if this module already names an extension for it, and the
+    raw string the client sent never reaches the store. ``None`` means the type
+    is not storable at all -- refused, rather than written as an inert
+    :data:`FALLBACK_EXTENSION` the CDN would happily serve with whatever type
+    we had sent.
+    """
+    normalised = _normalise(content_type)
+    return normalised if normalised in CONTENT_TYPE_EXTENSIONS else None
+
+
 def sanitise_upload_filename(
     filename: str,
     content_type: str,

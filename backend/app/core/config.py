@@ -75,6 +75,12 @@ class Settings(BaseSettings):
         "http://127.0.0.1:5175",
     ]
 
+    # Storage (APRAS-94). Vercel's own variable name: linking a Blob store to
+    # the project injects `BLOB_READ_WRITE_TOKEN`, so production needs no extra
+    # configuration step. Absent -- local development, CI, the test suite --
+    # every upload keeps going to local disk exactly as before.
+    BLOB_READ_WRITE_TOKEN: str | None = None
+
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
 
 

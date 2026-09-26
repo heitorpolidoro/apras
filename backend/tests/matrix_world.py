@@ -219,7 +219,7 @@ class _NullStorage(BaseStorageProvider):
     disposable" is spelled in this codebase.
     """
 
-    def save_file(self, file_bytes, filename, content_type):
+    def save_file(self, file_bytes, filename, content_type, *, tenant_id=None):
         return f"/dev/null/{filename}", f"http://null/{filename}"
 
     def delete_file(self, file_path):

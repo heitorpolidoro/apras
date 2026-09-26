@@ -33,7 +33,7 @@ from app.models.role import Role
 from app.models.tenant import DEFAULT_TENANT_ID, Tenant, UserTenantLink
 from app.models.user import User
 from app.services import tenant_service as tenant_service_module
-from app.services.storage_service import LocalStorageProvider
+from app.services.storage_service import BaseStorageProvider, LocalStorageProvider
 from app.services.tenant_service import TenantService
 from tests.conftest import make_user
 
@@ -974,33 +974,37 @@ def test_a_refused_upload_leaves_an_existing_logo_untouched(
     assert _stored_path(storage, good).exists()
 
 
-def test_a_provider_without_a_base_dir_skips_the_delete_instead_of_raising(
+def test_a_provider_that_does_not_own_the_value_skips_the_delete(
     tenant_client: TestClient, session: Session, monkeypatch: pytest.MonkeyPatch
 ):
-    """The non-local branch of ``_delete_stored_logo``, exercised rather than
+    """The unresolved branch of ``_delete_stored_logo``, exercised rather than
     assumed.
 
     A `/static/uploads/` value can only have come from a
     ``LocalStorageProvider``, but the provider bound *now* may be a different
-    one (the parity harness swaps in a stub; a future task may swap in S3).
-    With no ``base_dir`` there is no path to map back to, and the replacement
-    must still succeed: the previous file is the old provider's problem, not a
-    reason to refuse the upload.
+    one (the parity harness swaps in a stub; APRAS-94 swaps in Vercel Blob when
+    a token is configured). Since APRAS-94 the question is asked of the
+    provider -- ``resolve_stored_path`` -- rather than of a hard-coded prefix,
+    and a provider that cannot map the value back to something it owns returns
+    ``None``. The replacement must still succeed: the previous file is the old
+    provider's problem, not a reason to refuse the upload.
     """
 
-    class _NoBaseDirStorage:
-        def save_file(self, file_bytes, filename, content_type):
+    class _OwnsNothingStorage(BaseStorageProvider):
+        def save_file(self, file_bytes, filename, content_type, *, tenant_id=None):
             return f"/dev/null/{filename}", f"http://null/{filename}"
 
         def delete_file(self, file_path):  # pragma: no cover - never reached
-            raise AssertionError("a provider with no base_dir must not be asked")
+            raise AssertionError("a provider that owns nothing must not be asked")
 
     tenant = session.get(Tenant, DEFAULT_TENANT_ID)
     tenant.logo_url = "/static/uploads/2026/09/antigo.png"
     session.add(tenant)
     session.commit()
     caller = _member(session, permissions=[PERMISSION])
-    monkeypatch.setattr(tenant_service_module, "_storage_provider", _NoBaseDirStorage())
+    monkeypatch.setattr(
+        tenant_service_module, "_storage_provider", _OwnsNothingStorage()
+    )
 
     response = _upload(tenant_client, caller, content=_png())
 

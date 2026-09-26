@@ -2,7 +2,6 @@
 
 import io
 import itertools
-from pathlib import Path
 from uuid import UUID
 
 from PIL import Image
@@ -26,7 +25,7 @@ from app.core.exceptions import (
 )
 from app.core.permissions import CORE_MODULES, MODULES
 from app.core.slug import SLUG_MAX_LENGTH, is_valid_slug, slugify
-from app.core.tenant_context import acting_tenant_scope
+from app.core.tenant_context import acting_tenant_id, acting_tenant_scope
 from app.models.enums import SubscriptionChangeKind
 from app.models.role import Role
 from app.models.tenant import Tenant, UserTenantLink
@@ -42,7 +41,7 @@ from app.schemas.tenant import (
     TenantUpdate,
 )
 from app.services.role_service import role_names_in
-from app.services.storage_service import BaseStorageProvider, LocalStorageProvider
+from app.services.storage_service import BaseStorageProvider, upload_storage_provider
 
 # APRAS-40 §4.5: the raw module lever is historied as an OVERRIDE. The import
 # goes this way and never the other -- `subscription_service.py` must not
@@ -68,12 +67,6 @@ LEGACY_ROLE_NAMES: tuple[str, ...] = (
 )
 
 
-#: The public URL prefix :class:`LocalStorageProvider` mints, and the only
-#: prefix a stored ``logo_url`` is ever mapped back to a file we own. Any
-#: other value -- an externally hosted or hand-written URL -- is left alone on
-#: replacement and on removal (APRAS-61).
-LOCAL_UPLOAD_URL_PREFIX = "/static/uploads/"
-
 #: How many times ``create_tenant`` recomputes a generated slug after the
 #: unique index refuses its candidate (APRAS-66 D-B). The index is the real
 #: arbiter, so a concurrent insert that took the value between the read and
@@ -85,8 +78,9 @@ SLUG_INSERT_ATTEMPTS = 5
 #: Module level, and bound once, exactly like ``announcement_service`` and
 #: ``finance_service``: the logo is written through the *existing* provider,
 #: and a test (or a future non-local backend) substitutes this one name rather
-#: than threading a provider through the router.
-_storage_provider: BaseStorageProvider = LocalStorageProvider()
+#: than threading a provider through the router. Which provider it is is
+#: decided by ``upload_storage_provider`` and by nothing here (APRAS-94 §1).
+_storage_provider: BaseStorageProvider = upload_storage_provider()
 
 
 class TenantService:
@@ -715,7 +709,9 @@ class TenantService:
             raise TenantLogoInvalidFormatError from exc
 
         previous = tenant.logo_url
-        _, url = _storage_provider.save_file(file_bytes, filename, content_type)
+        _, url = _storage_provider.save_file(
+            file_bytes, filename, content_type, tenant_id=acting_tenant_id(session)
+        )
         tenant.logo_url = url
         tenant.updated_at = clock.db_now()
         session.add(tenant)
@@ -745,21 +741,19 @@ class TenantService:
     def _delete_stored_logo(url: str | None) -> None:
         """Best-effort removal of the file a previous ``logo_url`` named.
 
-        Only a ``/static/uploads/`` value is mapped back to a path, and it is
-        mapped **relative to the provider's own ``base_dir``** rather than by
-        stripping the leading slash: identical for the production provider
-        (``base_dir == "static/uploads"``) and honest for any other one. A
-        value pointing somewhere else is somebody else's file and is left
-        alone. ``delete_file`` already swallows, so a failure here never fails
-        the request that replaced the logo.
+        The provider decides what the value maps to: only a URL it minted
+        itself resolves, and anything else -- an externally hosted or
+        hand-written URL -- is somebody else's file and is left alone
+        (APRAS-61). Asking the provider rather than testing a
+        ``/static/uploads/`` prefix here is what keeps a Blob object from being
+        silently skipped and orphaned (APRAS-94 §4). ``delete_file`` already
+        swallows, so a failure here never fails the request that replaced the
+        logo.
         """
-        if url is None or not url.startswith(LOCAL_UPLOAD_URL_PREFIX):
+        stored = _storage_provider.resolve_stored_path(url)
+        if stored is None:
             return
-        base = getattr(_storage_provider, "base_dir", None)
-        if base is None:
-            return
-        relative = url[len(LOCAL_UPLOAD_URL_PREFIX) :]
-        _storage_provider.delete_file(str(Path(base) / relative))
+        _storage_provider.delete_file(stored)
 
     @staticmethod
     def _to_member_read(link: UserTenantLink, user: User) -> TenantMemberRead:

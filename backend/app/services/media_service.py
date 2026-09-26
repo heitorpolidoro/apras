@@ -14,11 +14,12 @@ from app.core.exceptions import (
     PhotoFileTooLargeError,
     PhotoRejectionReasonRequiredError,
 )
-from app.models.enums import EntityType, PhotoApprovalStatus, StorageProvider
+from app.core.tenant_context import acting_tenant_id
+from app.models.enums import EntityType, PhotoApprovalStatus
 from app.models.media_asset import MediaAsset
 from app.models.user import User
 from app.schemas.media_asset import MediaAssetListResponse, MediaAssetRead
-from app.services.storage_service import BaseStorageProvider, LocalStorageProvider
+from app.services.storage_service import BaseStorageProvider, upload_storage_provider
 
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
 ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
@@ -29,7 +30,7 @@ class MediaService:
     storage."""
 
     def __init__(self, storage_provider: BaseStorageProvider | None = None) -> None:
-        self.storage_provider = storage_provider or LocalStorageProvider()
+        self.storage_provider = storage_provider or upload_storage_provider()
 
     def _to_read_schema(self, session: Session, asset: MediaAsset) -> MediaAssetRead:
         uploader = session.get(User, asset.uploaded_by_id)
@@ -105,15 +106,16 @@ class MediaService:
             thumb_bytes = file_bytes
 
         # 5. Save files via StorageProvider
+        tenant_id = acting_tenant_id(session)
         file_path, url = self.storage_provider.save_file(
-            file_bytes, filename, mime_type
+            file_bytes, filename, mime_type, tenant_id=tenant_id
         )
         # The thumbnail used to be saved as `thumb_{filename}` -- the client's
         # raw name, prefixed. `save_file` now derives the suffix from
         # `mime_type` and names the file after a UUID, so the prefix bought
         # nothing and only carried an attacker-chosen string one call further.
         _, thumbnail_url = self.storage_provider.save_file(
-            thumb_bytes, filename, mime_type
+            thumb_bytes, filename, mime_type, tenant_id=tenant_id
         )
 
         # 6. Auto-approval policy
@@ -130,7 +132,9 @@ class MediaService:
         asset = MediaAsset(
             entity_type=entity_type,
             entity_id=entity_id,
-            storage_provider=StorageProvider.LOCAL_DISK,
+            # The provider that actually stored the bytes, not a hard-coded
+            # guess (APRAS-94 §1).
+            storage_provider=self.storage_provider.provider_kind,
             file_path=file_path,
             url=url,
             thumbnail_url=thumbnail_url,

@@ -124,7 +124,14 @@ HARNESS_PATH = BACKEND_ROOT / "tests" / "matrix_world.py"
 #: `items` instead of `unit_price`/`quantity`. Nothing else about the world
 #: changed, and that is proven rather than asserted -- all seven
 #: `tests/data/*.json` baselines stay byte-identical.
-HARNESS_SHA256 = "83b6b84d3823fad79d70b496f3a820c0e4b6be22cab915f374298f910089ca5d"
+#:
+#: APRAS-94 moves it by one signature: `save_file` gained a keyword-only
+#: `tenant_id` (the acting tenant, for namespacing a Vercel Blob object path),
+#: so the harness's `_NullStorage` double accepts it. The world it builds is
+#: unchanged -- same five neutralised providers, same bodies, same statuses --
+#: and that is proven rather than asserted: all seven `tests/data/*.json`
+#: baselines stay byte-identical.
+HARNESS_SHA256 = "f3c5b4d4fdde4395134254b8860400e24fbcf13551e942649d432b90256adeaf"
 
 
 # ---------------------------------------------------------------------------

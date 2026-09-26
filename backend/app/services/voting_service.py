@@ -41,6 +41,7 @@ from app.core.exceptions import (
     VoteNotFoundError,
     VoteNotOpenError,
 )
+from app.core.tenant_context import acting_tenant_id
 from app.models.document import DocumentFolder
 from app.models.enums import (
     AssemblyStatus,
@@ -1172,7 +1173,10 @@ def save_minutes(
     # download for `.html` precisely because a client can write there.
     provider = storage_provider or generated_storage_provider()
     _file_path, url = provider.save_file(
-        payload, f"minuta-{assembly.id}.html", "text/html"
+        payload,
+        f"minuta-{assembly.id}.html",
+        "text/html",
+        tenant_id=acting_tenant_id(session),
     )
 
     folder_id = _find_or_create_minutes_folder(session, user)

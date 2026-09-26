@@ -91,6 +91,7 @@ from app.core.exceptions import (
     SlugAlreadyTakenError,
     SpaceReservationConflictError,
     SpaceReservationNotFoundError,
+    StorageUnavailableError,
     SubscriptionNotFoundError,
     TallyNotAvailableError,
     TaskNotFoundError,
@@ -101,6 +102,7 @@ from app.core.exceptions import (
     TenantMembershipNotFoundError,
     TenantNotFoundError,
     UnknownRoleIdsError,
+    UnsupportedStorageContentTypeError,
     UserLotLinkNotFoundError,
     VisitorNotFoundError,
     VoteAlreadyClosedError,
@@ -231,6 +233,11 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
         # APRAS-71 D7: distinguishable from both 404 and 409, so the invitee
         # learns whether to ask for a new link or simply sign in.
         status_code = status.HTTP_410_GONE
+    elif isinstance(exc, StorageUnavailableError):
+        # APRAS-94 §6: every storage failure, answered as JSON through the
+        # normal route exit -- which is what makes the response carry the CORS
+        # header a bodiless 500 from `ServerErrorMiddleware` does not.
+        status_code = status.HTTP_503_SERVICE_UNAVAILABLE
     elif isinstance(exc, InvalidDeviceKeyError):
         status_code = status.HTTP_401_UNAUTHORIZED
     elif isinstance(exc, InvoiceFileTooLargeError):
@@ -267,6 +274,9 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             # is refused all the same.
             InvalidBrandThemeError,
             InsufficientContrastError,
+            # APRAS-94 §3: a content type the configured provider may not
+            # store. The backend is healthy; the request is the problem.
+            UnsupportedStorageContentTypeError,
         ),
     ):
         status_code = status.HTTP_422_UNPROCESSABLE_ENTITY

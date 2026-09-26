@@ -36,7 +36,7 @@ class FakeStorageProvider(BaseStorageProvider):
     def __init__(self) -> None:
         self.saved: list[tuple[bytes, str, str]] = []
 
-    def save_file(self, file_bytes, filename, content_type):
+    def save_file(self, file_bytes, filename, content_type, *, tenant_id=None):
         self.saved.append((file_bytes, filename, content_type))
         return f"memory://{filename}", f"/static/uploads/{filename}"
 
