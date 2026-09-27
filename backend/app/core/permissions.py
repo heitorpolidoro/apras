@@ -780,6 +780,15 @@ UNGUARDED_ROUTES: frozenset[tuple[str, str]] = frozenset(
         # decision: existence is not a secret, and slug enumeration is
         # accepted with the rate limit as the single mitigation.
         ("GET", "/api/v1/public/tenants/{slug}/branding"),
+        # APRAS-92 D1/D3: the public obras report behind `/c/<slug>/obras`.
+        # Unauthenticated, and unlike the line above it carries **no** rate
+        # limit and sets no `Cache-Control` -- both were considered and both
+        # were declined, so the document is rendered fresh on every request
+        # (APRAS-93 owns any revisit). It authenticates nobody, so there is
+        # nobody to hold a permission and nothing a catalogue string could
+        # gate. The condominium is named in the path and slug enumeration is
+        # accepted, exactly as it is for the branding read.
+        ("GET", "/api/v1/public/tenants/{slug}/projects/report"),
     }
 )
 

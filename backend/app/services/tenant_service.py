@@ -1,7 +1,9 @@
 """Tenant service layer for business logic (APRAS-41)."""
 
+import base64
 import io
 import itertools
+from pathlib import PurePosixPath
 from uuid import UUID
 
 from PIL import Image
@@ -26,6 +28,7 @@ from app.core.exceptions import (
 from app.core.permissions import CORE_MODULES, MODULES
 from app.core.slug import SLUG_MAX_LENGTH, is_valid_slug, slugify
 from app.core.tenant_context import acting_tenant_id, acting_tenant_scope
+from app.core.uploads import image_content_type_for_suffix
 from app.models.enums import SubscriptionChangeKind
 from app.models.role import Role
 from app.models.tenant import Tenant, UserTenantLink
@@ -575,6 +578,41 @@ class TenantService:
     #: served same-origin from ``/static/uploads/`` and embedded in a
     #: printable report a browser renders.
     LOGO_ALLOWED_MIME_TYPES = frozenset({"image/jpeg", "image/png", "image/webp"})
+
+    @classmethod
+    def logo_data_uri(cls, tenant: Tenant | None) -> str | None:
+        """The condominium's logo as a ``data:`` URI, or ``None`` (APRAS-92 §B).
+
+        It lives here, beside :data:`LOGO_MAX_FILE_SIZE` and
+        :data:`LOGO_ALLOWED_MIME_TYPES`, because those two already own every
+        logo rule and this reads both.
+
+        Four refusals, each ``None`` and none of them an error: no stored value;
+        a suffix ``app.core.uploads`` does not name as one of the three
+        embeddable image types (``.svg`` and the inert ``.bin`` included); a
+        provider that cannot read its own objects back, which is the Blob store
+        until APRAS-96; and a file **above the upload ceiling**, so no logo the
+        product ever accepted is refused and the bound exists only against a
+        file swapped on disk. base64 inflates by 4/3, so the worst accepted case
+        adds ~2.7 MiB to a render -- recorded, and APRAS-93's to revisit.
+
+        No network access: the bytes come from the provider's own store through
+        ``read_file``, whose base default is ``None``.
+        """
+        url = getattr(tenant, "logo_url", None)
+        if not url:
+            return None
+
+        content_type = image_content_type_for_suffix(PurePosixPath(url).suffix)
+        if content_type is None or content_type not in cls.LOGO_ALLOWED_MIME_TYPES:
+            return None
+
+        payload = _storage_provider.read_file(url)
+        if payload is None or len(payload) > cls.LOGO_MAX_FILE_SIZE:
+            return None
+
+        encoded = base64.b64encode(payload).decode("ascii")
+        return f"data:{content_type};base64,{encoded}"
 
     @classmethod
     def update_profile(

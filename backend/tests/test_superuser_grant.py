@@ -294,7 +294,7 @@ def test_the_route_is_unguarded_by_permission_and_superuser_guarded():
     # 28 since APRAS-71's four administrator-invitation routes, none of
     # which maps to a catalogue permission; 29 since APRAS-74's public
     # condominium-branding read, which maps to none for the same reason.
-    assert len(UNGUARDED_ROUTES) == 29
+    assert len(UNGUARDED_ROUTES) == 30
     assert len(ROUTE_PERMISSIONS) == 208
 
     route = next(
@@ -329,7 +329,7 @@ def test_the_superuser_route_is_tenant_scoped_like_the_rest_of_the_users_router(
     # APRAS-40's seven and APRAS-52's history read.
     # 32 since APRAS-71: the invitation router is mounted GLOBAL_SCOPED.
     # 33 since APRAS-74: so is the public branding router.
-    assert len(GLOBAL_ROUTES) == 33
+    assert len(GLOBAL_ROUTES) == 34
 
     route = next(
         r

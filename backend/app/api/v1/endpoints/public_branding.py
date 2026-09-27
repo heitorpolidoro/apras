@@ -1,9 +1,15 @@
 """The public condominium branding read (APRAS-74 D2, D3).
 
-One route, and it is the only unauthenticated tenant-shaped read in the
-product: ``GET /api/v1/public/tenants/{slug}/branding`` is what makes
+One route: ``GET /api/v1/public/tenants/{slug}/branding`` is what makes
 ``/c/<slug>`` show the condominium's own name, logo and colours to somebody
 who has not signed in yet.
+
+It was the *only* unauthenticated tenant-shaped read in the product until
+APRAS-92 added ``endpoints/public_projects.py``, the obras report behind
+``/c/<slug>/obras``, on this same ``/public`` mount. The two differ in one way
+worth knowing before reading either: that one carries **no** rate limit and
+sets no ``Cache-Control``, by an operator decision taken twice (APRAS-92 D3).
+The limiter below is this route's and is not shared.
 
 **Mounted ``GLOBAL_SCOPED``, never ``TENANT_SCOPED``.** The caller resolves no
 acting tenant -- there is no ``Authorization`` header to resolve one *for*,

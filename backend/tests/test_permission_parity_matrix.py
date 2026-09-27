@@ -660,7 +660,7 @@ def test_the_twenty_nine_unguarded_routes_are_the_only_ones_excluded():
     reason: the route authenticates nobody, so there is no profile whose
     answer a cell could record.
     """
-    assert len(UNGUARDED_ROUTES) == 29
+    assert len(UNGUARDED_ROUTES) == 30
     assert not (set(ROUTE_PERMISSIONS) & UNGUARDED_ROUTES)
 
 

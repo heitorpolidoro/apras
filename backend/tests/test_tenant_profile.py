@@ -14,6 +14,7 @@ special case in any handler**: APRAS-47's whole-catalogue short-circuit plus
 `tenants` being a core module, so APRAS-39's strip can never remove it.
 """
 
+import base64
 import io
 import itertools
 import uuid
@@ -1122,8 +1123,16 @@ def test_the_write_lands_only_on_the_acting_tenant(
 def test_the_report_masthead_renders_the_uploaded_logo(
     tenant_client: TestClient, session: Session, storage: LocalStorageProvider
 ):
-    """ER-8. `project_report_service` already reads `tenant.logo_url`; this
-    task only gives an operator a way to write it."""
+    """ER-8, as APRAS-92 §B leaves it.
+
+    `project_report_service` already read `tenant.logo_url`; APRAS-61 gave an
+    operator a way to write it, and APRAS-92 changed *how* the document carries
+    it: the bytes are read back off this very provider and **embedded**, so the
+    stored URL no longer appears in the document at all. The claim this case
+    makes is unchanged -- an uploaded logo reaches the masthead -- and it is now
+    the stronger one, because a report filed in the Document Center carries its
+    own logo instead of depending on that URL staying reachable.
+    """
     session.add(ConstructionProject(title="Obra com logo"))
     session.commit()
     caller = _member(session, permissions=[PERMISSION, "projects:read"])
@@ -1131,7 +1140,9 @@ def test_the_report_masthead_renders_the_uploaded_logo(
     url = _upload(tenant_client, caller, content=_png()).json()["logo_url"]
     body = tenant_client.get(REPORT_URL, headers=_auth(caller, DEFAULT_TENANT_ID)).text
 
-    assert f'<img src="{url}"' in body
+    assert '<img src="data:image/png;base64,' in body
+    assert base64.b64encode(_stored_path(storage, url).read_bytes()).decode() in body
+    assert f'<img src="{url}"' not in body
 
 
 # ---------------------------------------------------------------------------

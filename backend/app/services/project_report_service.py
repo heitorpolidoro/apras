@@ -43,6 +43,7 @@ from __future__ import annotations
 
 import html
 import json
+import logging
 import re
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
@@ -51,6 +52,7 @@ from sqlmodel import Session, select
 
 from app.api.deps import has_permission
 from app.core import clock
+from app.core.branding import build_theme
 from app.core.exceptions import ForbiddenError
 from app.core.money import ZERO
 from app.core.tenant_context import acting_tenant_id
@@ -65,6 +67,7 @@ from app.services.storage_service import (
     BaseStorageProvider,
     generated_storage_provider,
 )
+from app.services.tenant_service import TenantService
 
 if TYPE_CHECKING:  # pragma: no cover
     from datetime import date, datetime
@@ -72,6 +75,8 @@ if TYPE_CHECKING:  # pragma: no cover
 
     from app.models.project import ProjectMilestone, ProjectUpdate
     from app.models.user import User
+
+logger = logging.getLogger(__name__)
 
 #: The fixed, system-managed root folder the saved report is filed into.
 OBRAS_FOLDER_NAME = "Obras"
@@ -125,6 +130,113 @@ _KIND_SUFFIX = re.compile(r"^(?P<title>.+?)\s*\((?P<kind>[^()]+)\)\s*$")
 #: generator does.
 CLOSE_LABEL_GAP = 8.0
 
+#: The report's palette, role by role: **variable name -> the key of
+#: ``build_theme(tenant.brand_theme)["light"]`` it reads** (APRAS-92 §A, D4).
+#:
+#: Today every condominium's report was the same green-and-gold whatever brand
+#: it had stored. From APRAS-92 the ``:root`` block below is *generated* from
+#: this table, so the document is painted in the tenant's own identity -- and
+#: ``app.core.branding`` stays the only colour derivation in the repository:
+#: this module looks values up, it never derives, clamps or repairs one.
+#:
+#: Only the ``["light"]`` scheme is read. The report is a printed A4 document
+#: with one page surface and nothing in the product applies ``.dark``.
+#:
+#: Two names may share one theme key. They still exist separately because the
+#: fallback distinguishes them and because the stylesheet body is written
+#: against the names, not against the keys:
+#:
+#: * ``--ink`` and ``--text`` are both ``foreground``; the fallback keeps
+#:   today's two different darks.
+#: * ``--brand`` / ``--brand-sheen`` and ``--soft`` / ``--soft-sheen`` are the
+#:   gauge's gradient stops. Under a theme each gradient therefore resolves to
+#:   three identical stops and renders as a **flat fill**; under the fallback
+#:   the two hand-picked tints (``#2d6b5c``, ``#fbf8f1``) are emitted unchanged
+#:   and the designed sheen survives. Re-deriving a lighter tint here would be
+#:   a second derivation, which D4 forbids, and keeping the literals would
+#:   paint a green into a red-branded condominium's tank.
+#: * ``--brand`` (a fill) and ``--brand-text`` (characters) are **not** the
+#:   same key: ``primary`` fails AA as normal text on every light surface, so
+#:   brand-as-text goes through APRAS-88's ``primary-text``.
+#: * ``--navy`` is gone, split into ``--ink`` (dark text) and ``--foot`` (the
+#:   footer's *background*, whose paired foreground ``primary-foreground`` is
+#:   one ``build_theme`` measures).
+#:
+#: Two classes of literal deliberately stay literal in the body below:
+#: translucent shadows (``rgba(8,47,42,.08-.18)``), which no reader compares
+#: and which vanish under ``@media print``; and ``#c0392b``, the
+#: behind-schedule segment, which is a **status** colour in substance and is
+#: therefore never overridden by a tenant palette -- exactly the rule
+#: ``branding.py`` states for ``--destructive`` and the status tokens. So the
+#: one bar state that matters most never depends on the brand.
+REPORT_ROLE_SOURCES: dict[str, str] = {
+    "surface": "background",
+    "card": "card",
+    "desk": "border",
+    "hero": "accent",
+    "ink": "foreground",
+    "text": "foreground",
+    "muted": "muted-foreground",
+    "soft": "muted",
+    "soft-sheen": "muted",
+    "line": "border",
+    "brand": "primary",
+    "brand-sheen": "primary",
+    "brand-ink": "primary-foreground",
+    "brand-text": "primary-text",
+    "kicker": "primary-text",
+    "brand-alt": "secondary",
+    "foot": "primary",
+    "foot-ink": "primary-foreground",
+    "foot-ink-strong": "primary-foreground",
+}
+
+#: The same 19 variables, valued as APRAS-60 shipped them: what a condominium
+#: with **no** brand theme keeps, byte for byte.
+#:
+#: ``build_theme(None) is None``, which is every tenant until somebody saves a
+#: brand, so this is still the common path -- and it is what keeps
+#: ``tests/test_project_report.py`` green unmodified. Repainting the designed
+#: palette is a decision nobody asked for.
+#:
+#: ``--hero`` holds a whole ``background`` **value** rather than a colour,
+#: which is precisely what lets the designed three-layer gradient survive here
+#: while a themed tenant gets one measurable surface (``accent``) under the
+#: hero's ``h1`` and ``p``. ``--gold-light`` is not carried: it was referenced
+#: nowhere in the stylesheet, and a dead variable is what this table's
+#: equality with :data:`REPORT_ROLE_SOURCES` now prevents.
+FALLBACK_PALETTE: dict[str, str] = {
+    "surface": "#f7f1e5",
+    "card": "#fff",
+    "desk": "#d9d3c4",
+    "hero": (
+        "radial-gradient(circle at 82% 20%, #d8e7df 0, transparent 36%), "
+        "radial-gradient(circle at 14% 88%, rgba(198,160,74,.25), transparent 34%), "
+        "linear-gradient(120deg, #edf1e9, #f4e8cb)"
+    ),
+    "ink": "#082f2a",
+    "text": "#1d2925",
+    "muted": "#6f746e",
+    "soft": "#eee6d7",
+    "soft-sheen": "#fbf8f1",
+    "line": "#ddd1b6",
+    "brand": "#174b40",
+    "brand-sheen": "#2d6b5c",
+    "brand-ink": "#fff",
+    "brand-text": "#174b40",
+    "kicker": "#9b7327",
+    "brand-alt": "#c6a04a",
+    "foot": "#082f2a",
+    "foot-ink": "#aebcb7",
+    "foot-ink-strong": "#fff",
+}
+
+#: The font import, which must precede every other rule in the sheet: a CSS
+#: ``@import`` after any rule other than ``@charset``/``@layer`` is dropped.
+#: That is the whole reason the generated ``:root`` is spliced *between* this
+#: and :data:`CSS_BODY` rather than prepended to one string.
+CSS_IMPORT = "@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap');"
+
 #: The approved visual language, ported from the mock's generator
 #: (`docs/tasks/APRAS-60-mock-generator.py`). Emitted inline, in one
 #: ``<style>``: the document has to survive being saved to disk and reopened
@@ -141,95 +253,122 @@ CLOSE_LABEL_GAP = 8.0
 #: is what lets the report assert "exactly ``project_count - 1`` breaks"
 #: against the document instead of against a single stylesheet rule that says
 #: nothing about how many pages follow.
-CSS = """
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap');
-:root { --navy:#082f2a; --green:#174b40; --gold:#c6a04a; --gold-light:#ead6a4; --cream:#f7f1e5; --text:#1d2925; --muted:#6f746e; --line:#ddd1b6; --soft:#eee6d7; --kicker:#9b7327; }
+#:
+#: **Every colour here is a ``var(--name)`` from the table above**, and the
+#: three exceptions are named in its comment. APRAS-92 changed the values, not
+#: the rules: no selector, no dimension and no breakpoint moved.
+#:
+#: **The accepted risk, recorded at the code (APRAS-92 §A).** Under a tenant
+#: theme five graphical pairs sit below WCAG 1.4.11's 3:1, measured with
+#: ``branding.contrast_ratio`` on the emitted strings:
+#:
+#: * ``--brand``/``--line`` -- the bar fill on its own track -- 2.9478 for
+#:   ``#059669`` and 1.2111 for ``#facc15``;
+#: * ``--brand``/``--card`` 1.5338 and ``--brand-alt``/``--card`` 1.5338 for
+#:   ``#facc15``; ``--brand-alt``/``--line`` 1.2111 for ``#facc15``;
+#: * for a tenant whose two typed colours differ, ``--brand-alt``/``--card``
+#:   2.4952 and ``--brand``/``--brand-alt`` 1.4911 with
+#:   ``primary=#059669, accent=#c6a04a``, and ``--brand-alt``/``--card``
+#:   1.5338 with ``primary=#2563eb, accent=#facc15``;
+#: * ``--brand``/``--brand-alt`` is exactly 1.0 when one hex is typed for both
+#:   brand colours, so **the two bar segments can be indistinguishable**.
+#:
+#: Nothing chromatic is done about them, and that is the decision: repairing a
+#: colour here would be a second derivation, and widening ``MEASURED_PAIRS``
+#: would start refusing palettes that are stored and working. What the document
+#: does instead is not *depend* on those distinctions -- every quantity a bar or
+#: the gauge encodes is printed as text beside it, the segment boundary keeps
+#: its ``--card`` tick, and the behind-schedule state keeps ``#c0392b`` -- so
+#: WCAG 1.4.1 holds where 1.4.11 misses. Hairlines and the page edge are
+#: decoration, which 1.4.11 exempts. APRAS-84 recorded the same risk for
+#: ``--primary`` as a graphical token; the tree-wide repair is not this task's.
+CSS_BODY = """
 * { box-sizing:border-box; }
 html, body { margin:0; padding:0; }
-body { font-family:"DM Sans", Arial, sans-serif; color:var(--text); background:#d9d3c4; font-size:10.5pt; line-height:1.5; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-.page { width:210mm; min-height:297mm; margin:10mm auto; background:var(--cream); box-shadow:0 18px 45px rgba(8,47,42,.13); position:relative; overflow:hidden; }
+body { font-family:"DM Sans", Arial, sans-serif; color:var(--text); background:var(--desk); font-size:10.5pt; line-height:1.5; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+.page { width:210mm; min-height:297mm; margin:10mm auto; background:var(--surface); box-shadow:0 18px 45px rgba(8,47,42,.13); position:relative; overflow:hidden; }
 h1,h2,h3,h4 { margin:0; }
-.serif { font-family:"Playfair Display", Georgia, serif; color:var(--navy); }
+.serif { font-family:"Playfair Display", Georgia, serif; color:var(--ink); }
 .mast { display:flex; align-items:center; justify-content:space-between; padding:9mm 14mm 6mm; }
 .mast img { height:19mm; width:auto; border-radius:8px; box-shadow:0 6px 16px rgba(8,47,42,.18); }
 .mast .rep { text-align:right; }
 .kicker { display:block; font-size:8pt; letter-spacing:2.4px; color:var(--kicker); font-weight:700; text-transform:uppercase; }
-.mast .name { font-family:"Playfair Display", Georgia, serif; color:var(--navy); font-size:15pt; font-weight:700; line-height:1.1; }
+.mast .name { font-family:"Playfair Display", Georgia, serif; color:var(--ink); font-size:15pt; font-weight:700; line-height:1.1; }
 .mast .when { font-size:8pt; color:var(--muted); margin-top:2px; }
-.hero { padding:6mm 14mm 8mm; background:radial-gradient(circle at 82% 20%, #d8e7df 0, transparent 36%), radial-gradient(circle at 14% 88%, rgba(198,160,74,.25), transparent 34%), linear-gradient(120deg, #edf1e9, #f4e8cb); }
+.hero { padding:6mm 14mm 8mm; background:var(--hero); }
 .hero-grid { display:grid; grid-template-columns:1.2fr .8fr; gap:8mm; align-items:center; margin-top:3mm; }
 .hero h1 { font-size:27pt; line-height:1.02; margin:2mm 0 3mm; }
 .hero p { font-size:10.5pt; line-height:1.6; color:var(--muted); margin:0; }
 .pills { display:flex; flex-wrap:wrap; gap:6px; margin-top:4mm; }
-.pill { display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:30px; background:#fff; border:1px solid rgba(198,160,74,.4); font-size:8pt; font-weight:700; color:var(--green); }
-.pill i { width:7px; height:7px; border-radius:50%; background:var(--gold); }
-.hero-card { background:#fff; border:1px solid rgba(198,160,74,.3); border-radius:14px; padding:5mm; box-shadow:0 10px 26px rgba(8,47,42,.10); }
+.pill { display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:30px; background:var(--card); border:1px solid var(--line); font-size:8pt; font-weight:700; color:var(--brand-text); }
+.pill i { width:7px; height:7px; border-radius:50%; background:var(--brand-alt); }
+.hero-card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:5mm; box-shadow:0 10px 26px rgba(8,47,42,.10); }
 .hero-card img { width:100%; height:26mm; object-fit:cover; border-radius:9px; border:1px solid var(--line); display:block; margin-bottom:3.5mm; }
 .hero-card .noimg { width:100%; height:26mm; border-radius:9px; border:1px solid var(--line); background:var(--soft); display:block; margin-bottom:3.5mm; }
 .hero-card small { display:block; color:var(--muted); font-size:7.5pt; letter-spacing:1.2px; font-weight:700; text-transform:uppercase; }
-.hero-card strong { display:block; color:var(--navy); font-size:19pt; margin:1mm 0 3mm; font-weight:700; }
-.progress { height:8px; background:#ded8c8; border-radius:20px; overflow:hidden; }
-.progress span { display:block; height:100%; background:linear-gradient(90deg, var(--green), var(--gold)); border-radius:20px; }
+.hero-card strong { display:block; color:var(--ink); font-size:19pt; margin:1mm 0 3mm; font-weight:700; }
+.progress { height:8px; background:var(--line); border-radius:20px; overflow:hidden; }
+.progress span { display:block; height:100%; background:linear-gradient(90deg, var(--brand), var(--brand-alt)); border-radius:20px; }
 .progress-labels { display:flex; justify-content:space-between; color:var(--muted); font-size:7.5pt; margin-top:5px; }
-.progress-labels b { color:var(--navy); }
+.progress-labels b { color:var(--ink); }
 .section { padding:6mm 14mm 0; }
 .section-head { margin-bottom:3.5mm; }
 .section-head h2 { font-size:17pt; margin-top:1mm; }
 .section-head p { color:var(--muted); font-size:9pt; margin:1mm 0 0; }
 .groups { display:grid; grid-template-columns:1fr 1fr 1fr; gap:3mm; }
-.grp { background:#fff; border:1px solid var(--line); border-radius:12px; padding:3mm 3.5mm; }
-.grp.doing { border-color:var(--gold); box-shadow:0 8px 20px rgba(8,47,42,.08); }
+.grp { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:3mm 3.5mm; }
+.grp.doing { border-color:var(--brand-alt); box-shadow:0 8px 20px rgba(8,47,42,.08); }
 .grp h4 { font-size:7pt; letter-spacing:1.4px; font-weight:700; text-transform:uppercase; display:flex; align-items:center; gap:6px; margin-bottom:2mm; }
 .grp h4 i { width:8px; height:8px; border-radius:50%; }
-.grp.done h4 { color:var(--green); } .grp.done h4 i { background:var(--green); }
-.grp.doing h4 { color:var(--kicker); } .grp.doing h4 i { background:var(--gold); box-shadow:0 0 0 3px rgba(198,160,74,.3); }
+.grp.done h4 { color:var(--brand-text); } .grp.done h4 i { background:var(--brand); }
+.grp.doing h4 { color:var(--kicker); } .grp.doing h4 i { background:var(--brand-alt); box-shadow:0 0 0 3px rgba(198,160,74,.3); }
 .grp.next h4 { color:var(--muted); } .grp.next h4 i { border:2px solid var(--muted); width:5px; height:5px; }
-.grp ul { margin:0; padding-left:4mm; font-size:9pt; color:var(--navy); }
+.grp ul { margin:0; padding-left:4mm; font-size:9pt; color:var(--ink); }
 .grp li { margin:1.2mm 0; line-height:1.35; }
-.grp li::marker { color:var(--gold); }
+.grp li::marker { color:var(--brand-alt); }
 .grp .none { color:var(--muted); font-style:italic; font-size:8.5pt; margin:0; }
-.pv { background:#fff; border:1px solid var(--line); border-radius:12px; padding:3.5mm 4.5mm; margin-top:4mm; }
+.pv { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:3.5mm 4.5mm; margin-top:4mm; }
 .pv small { display:block; color:var(--muted); font-size:7.5pt; letter-spacing:1px; font-weight:700; text-transform:uppercase; margin-bottom:2.5mm; }
 .one { position:relative; padding-top:9mm; margin-top:1mm; }
-.one .track { height:11px; background:#ded8c8; border-radius:20px; overflow:hidden; position:relative; }
+.one .track { height:11px; background:var(--line); border-radius:20px; overflow:hidden; position:relative; }
 .one .seg { position:absolute; top:0; height:100%; }
-.one .seg.a { left:0; background:var(--green); }
-.one .seg.b { background:var(--gold); }
+.one .seg.a { left:0; background:var(--brand); }
+.one .seg.b { background:var(--brand-alt); }
 .one .seg.b.behind { background:#c0392b; opacity:.7; }
-.one .mark { position:absolute; top:0; width:1.5px; height:100%; background:#fff; }
+.one .mark { position:absolute; top:0; width:1.5px; height:100%; background:var(--card); }
 .one .tag { position:absolute; top:0; transform:translateX(-1px); border-left:1.5px solid var(--line); padding-left:2mm; height:9mm; font-size:7.5pt; color:var(--muted); line-height:1.2; white-space:nowrap; }
-.one .tag b { display:block; font-size:10pt; color:var(--navy); }
-.one .tag.real b { color:var(--green); }
-.one .tag.real { border-left-color:var(--gold); }
+.one .tag b { display:block; font-size:10pt; color:var(--ink); }
+.one .tag.real b { color:var(--brand-text); }
+.one .tag.real { border-left-color:var(--brand-alt); }
 .one.close { padding-bottom:9mm; }
 .one .tag.below { top:auto; bottom:0; height:9mm; display:flex; flex-direction:column-reverse; justify-content:flex-start; }
 .one.close .ends { position:absolute; left:0; right:0; bottom:6.5mm; }
 .one .ends { display:flex; justify-content:space-between; font-size:7pt; color:var(--muted); margin-top:1.5mm; }
 .pv .note { font-size:7.5pt; color:var(--muted); margin-top:2mm; }
 .two { display:grid; grid-template-columns:1.1fr .9fr; gap:4mm; align-items:stretch; }
-.budget-col { background:#fff; border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+.budget-col { background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
 .budget-row { display:flex; justify-content:space-between; align-items:baseline; padding:3.2mm 4.5mm; border-bottom:1px solid var(--line); }
 .budget-row:last-child { border-bottom:0; }
 .budget-row small { color:var(--muted); font-size:7.5pt; letter-spacing:1px; font-weight:700; text-transform:uppercase; }
-.budget-row strong { color:var(--navy); font-size:12pt; font-variant-numeric:tabular-nums; }
+.budget-row strong { color:var(--ink); font-size:12pt; font-variant-numeric:tabular-nums; }
 .budget-row.total { background:var(--soft); }
-.cyl { background:#fff; border:1px solid var(--line); border-radius:12px; padding:3mm 4mm; display:flex; gap:4mm; align-items:center; }
+.cyl { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:3mm 4mm; display:flex; gap:4mm; align-items:center; }
 .cyl svg { width:30mm; height:auto; flex:0 0 auto; }
 .cyl .txt small { display:block; color:var(--muted); font-size:7.5pt; letter-spacing:1px; font-weight:700; text-transform:uppercase; }
-.cyl .txt strong { display:block; color:var(--navy); font-size:20pt; font-weight:700; line-height:1.05; margin:1mm 0; }
+.cyl .txt strong { display:block; color:var(--ink); font-size:20pt; font-weight:700; line-height:1.05; margin:1mm 0; }
 .cyl .txt p { margin:0; font-size:8.5pt; color:var(--muted); }
 .weeks { display:grid; gap:3mm; }
-.week { background:#fff; border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+.week { background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
 .week-head { display:flex; justify-content:space-between; align-items:baseline; padding:3mm 4mm; }
-.week-head b { color:var(--navy); font-size:10.5pt; }
+.week-head b { color:var(--ink); font-size:10.5pt; }
 .week-head small { color:var(--muted); font-size:8pt; }
 .week-body { display:flex; gap:4mm; padding:0 4mm 3.5mm; align-items:flex-start; }
 .week-body p { margin:0; flex:1; font-size:9pt; color:var(--muted); line-height:1.55; }
 .photo-grid { display:flex; gap:2.5mm; flex:0 0 auto; }
 .photo-grid img { width:34mm; height:25mm; object-fit:cover; border-radius:9px; border:1px solid var(--line); display:block; }
 .empty { color:var(--muted); font-style:italic; font-size:9pt; }
-.foot { margin-top:8mm; background:var(--navy); color:#aebcb7; padding:4mm 14mm; display:flex; justify-content:space-between; font-size:8pt; border-top:3px solid var(--gold); }
-.foot b { color:#fff; }
+.foot { margin-top:8mm; background:var(--foot); color:var(--foot-ink); padding:4mm 14mm; display:flex; justify-content:space-between; font-size:8pt; border-top:3px solid var(--brand-alt); }
+.foot b { color:var(--foot-ink-strong); }
 @page { size:A4; margin:0; }
 @media print {
 body { background:#fff; }
@@ -238,6 +377,28 @@ body { background:#fff; }
 .groups, .two, .week, .cyl { page-break-inside:avoid; }
 }
 """
+
+
+def report_palette(brand_theme: object) -> dict[str, str]:
+    """The 19 report variables, valued for one tenant's stored brand theme.
+
+    ``app.core.branding.build_theme`` is the only theme derivation in the
+    repository and this reads its ``["light"]`` scheme through
+    :data:`REPORT_ROLE_SOURCES`. ``build_theme(None) is None`` -- a tenant with
+    no branding gets :data:`FALLBACK_PALETTE`, unchanged from APRAS-60.
+    """
+    theme = build_theme(brand_theme)
+    if theme is None:
+        return dict(FALLBACK_PALETTE)
+    light = theme["light"]
+    return {name: light[key] for name, key in REPORT_ROLE_SOURCES.items()}
+
+
+def _stylesheet(brand_theme: object) -> str:
+    """The whole inline sheet: the import, the generated ``:root``, the body."""
+    palette = report_palette(brand_theme)
+    declarations = " ".join(f"--{name}:{palette[name]};" for name in palette)
+    return f"\n{CSS_IMPORT}\n:root {{ {declarations} }}{CSS_BODY}"
 
 
 # ---------------------------------------------------------------------------
@@ -368,7 +529,22 @@ def _one_bar(planned: float | None, realized: float) -> str:
 
 
 def _cylinder_svg(pct_remaining: float) -> str:
-    """The budget gauge: a tank filled from the bottom to the remaining balance."""
+    """The budget gauge: a tank filled from the bottom to the remaining balance.
+
+    Every colour rides a variable of :data:`REPORT_ROLE_SOURCES`, so the two
+    gradients keep their three stops while their *values* follow the tenant:
+    under a theme ``--brand``/``--brand-sheen`` and ``--soft``/``--soft-sheen``
+    resolve to one identical ``oklch()`` string each and both tanks render as
+    **flat fills**; under the fallback the designed sheen survives byte for
+    byte. The meniscus ellipse is then distinguished from the flat tank by the
+    ``--brand-alt`` outline it already had.
+
+    One pre-existing defect is recorded rather than repaired here (out of
+    scope): the ``%`` label's ``y`` is ``max(fy + 22, top + 30)``, so below
+    roughly 8% remaining balance it is pushed off the tank onto the card, where
+    a near-white ``--brand-ink`` measures ~1.05. WCAG 1.4.1 still holds --
+    ``_budget_html`` prints the remaining balance in full beside the gauge.
+    """
     top, bottom, width, rx, ry = 20, 140, 100, 50, 12
     filled = max(0.0, min(100.0, pct_remaining))
     fill_height = (bottom - top) * filled / 100
@@ -376,24 +552,24 @@ def _cylinder_svg(pct_remaining: float) -> str:
     return (
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 165">'
         '<defs><linearGradient id="g" x1="0" x2="1">'
-        '<stop offset="0" stop-color="#174b40"/>'
-        '<stop offset=".5" stop-color="#2d6b5c"/>'
-        '<stop offset="1" stop-color="#174b40"/></linearGradient>'
+        '<stop offset="0" stop-color="var(--brand)"/>'
+        '<stop offset=".5" stop-color="var(--brand-sheen)"/>'
+        '<stop offset="1" stop-color="var(--brand)"/></linearGradient>'
         '<linearGradient id="e" x1="0" x2="1">'
-        '<stop offset="0" stop-color="#eee6d7"/>'
-        '<stop offset=".5" stop-color="#fbf8f1"/>'
-        '<stop offset="1" stop-color="#eee6d7"/></linearGradient></defs>'
+        '<stop offset="0" stop-color="var(--soft)"/>'
+        '<stop offset=".5" stop-color="var(--soft-sheen)"/>'
+        '<stop offset="1" stop-color="var(--soft)"/></linearGradient></defs>'
         f'<path d="M10 {top} v{bottom - top} a{rx} {ry} 0 0 0 {width} 0 '
-        f'v-{bottom - top}" fill="url(#e)" stroke="#ddd1b6"/>'
+        f'v-{bottom - top}" fill="url(#e)" stroke="var(--line)"/>'
         f'<path d="M10 {fy:.1f} v{bottom - fy:.1f} a{rx} {ry} 0 0 0 {width} 0 '
         f'v-{bottom - fy:.1f}" fill="url(#g)"/>'
-        f'<ellipse cx="60" cy="{fy:.1f}" rx="{rx}" ry="{ry}" fill="#2d6b5c" '
-        'stroke="#c6a04a" stroke-width="1.2"/>'
+        f'<ellipse cx="60" cy="{fy:.1f}" rx="{rx}" ry="{ry}" fill="var(--brand-sheen)" '
+        'stroke="var(--brand-alt)" stroke-width="1.2"/>'
         f'<ellipse cx="60" cy="{top}" rx="{rx}" ry="{ry}" fill="none" '
-        'stroke="#ddd1b6"/>'
+        'stroke="var(--line)"/>'
         f'<text x="60" y="{max(fy + 22, top + 30):.1f}" '
         'font-family="DM Sans, Arial" font-size="16" font-weight="700" '
-        f'fill="#fff" text-anchor="middle">{filled:.0f}%</text>'
+        f'fill="var(--brand-ink)" text-anchor="middle">{filled:.0f}%</text>'
         "</svg>"
     )
 
@@ -466,10 +642,52 @@ def _updates_html(updates: list[ProjectUpdate]) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _masthead_html(tenant: Tenant | None, today: date) -> str:
+def _logo_html(tenant: Tenant | None) -> str:
+    """The masthead's logo: bytes, then a link, then nothing (APRAS-92 §B, D5).
+
+    One rule, three outcomes, in order:
+
+    1. the storage provider could read its own object back, the suffix maps to
+       one of the three image types the logo allowlist permits and the file is
+       inside ``TenantService.LOGO_MAX_FILE_SIZE`` -> a ``data:`` URI, so a
+       report printed or filed in the Document Center carries its own logo
+       instead of depending on a URL staying reachable;
+    2. the bytes are not obtainable **and** the stored value is an absolute
+       ``http(s)`` URL -> today's ``<img src="...">``, unchanged. This is the
+       one remaining external reference and it is kept deliberately: after
+       APRAS-94 a Blob-stored logo takes this rung until APRAS-96 gives that
+       provider a ``read_file``, and refusing it would *remove* a logo that
+       works today;
+    3. anything else, an absent ``logo_url`` included -> **no ``<img>`` at
+       all**, which is exactly today's no-logo masthead: the ``.mast`` flexbox
+       puts the report block alone on the row.
+
+    **No outbound request is made.** The bytes come from the provider's own
+    store or not at all: on a public, unlimited, uncached route (D3) a
+    per-request fetch to an arbitrary host would be both an amplification
+    vector and an SSRF surface. A read failure is logged at warning level and
+    degrades to rung 2 or 3; no exception escapes the renderer.
+    """
     logo_url = getattr(tenant, "logo_url", None)
+    if not logo_url:
+        return ""
+
     tenant_name = _e(getattr(tenant, "name", None))
-    logo = f'<img src="{_e(logo_url)}" alt="{tenant_name}">' if logo_url else ""
+    try:
+        data_uri = TenantService.logo_data_uri(tenant)
+    except Exception:  # a report must render without its logo, whatever the store did
+        logger.warning("could not read the tenant logo for the report", exc_info=True)
+        data_uri = None
+
+    if data_uri is not None:
+        return f'<img src="{data_uri}" alt="{tenant_name}">'
+    if logo_url.lower().startswith(("http://", "https://")):
+        return f'<img src="{_e(logo_url)}" alt="{tenant_name}">'
+    return ""
+
+
+def _masthead_html(tenant: Tenant | None, today: date) -> str:
+    logo = _logo_html(tenant)
     when = f"{MONTHS_PT[today.month]} de {today.year} · gerado em {_fmt_date(today)}"
     return (
         f'<header class="mast">{logo}'
@@ -557,12 +775,20 @@ def _stages_html(project: ConstructionProject) -> str:
     )
 
 
-def _footer_html(tenant: Tenant | None, user: User, generated_at: datetime) -> str:
+def _footer_html(
+    tenant: Tenant | None, user: User | None, generated_at: datetime
+) -> str:
+    """The footer, and the renderer's only use of ``user``.
+
+    ``user is None`` is the anonymous public route (APRAS-92): the timestamp
+    renders without the ``por ...`` clause, because there is no caller to name
+    and ``por`` followed by nothing would read as a missing value.
+    """
     tenant_name = _e(getattr(tenant, "name", None))
+    author = f" por {_e(user.full_name)}" if user is not None else ""
     return (
         f'<footer class="foot"><span><b>{tenant_name}</b> · Relatório de Obras</span>'
-        f"<span>Gerado em {_fmt_datetime(generated_at)} por "
-        f"{_e(user.full_name)}</span></footer>"
+        f"<span>Gerado em {_fmt_datetime(generated_at)}{author}</span></footer>"
     )
 
 
@@ -570,7 +796,7 @@ def _page_html(
     project: ConstructionProject,
     number: int,
     tenant: Tenant | None,
-    user: User,
+    user: User | None,
     generated_at: datetime,
 ) -> str:
     page_class = "page" if number == 1 else "page brk"
@@ -625,8 +851,20 @@ def _acting_projects(session: Session) -> list[ConstructionProject]:
     )
 
 
-def render_report_html(session: Session, user: User) -> str:
-    """The whole report: one ``div.page`` per project, no totals header."""
+def render_report_html(session: Session, user: User | None) -> str:
+    """The whole report: one ``div.page`` per project, no totals header.
+
+    ``user`` is optional since APRAS-92 and is read in exactly one place, the
+    footer's author clause. The tenant still comes from the session's acting
+    scope and never from an argument, so the anonymous public route
+    establishes that scope around this call
+    (``tenant_context.acting_tenant_scope``) rather than passing a tenant in.
+
+    The stylesheet is generated per render, from the resolved tenant's own
+    ``brand_theme`` (§A): a branded condominium's report -- internal and public
+    alike -- is painted in its own identity, and a tenant with no brand keeps
+    APRAS-60's palette exactly.
+    """
     generated_at = clock.db_now()
     tenant = _acting_tenant(session)
     projects = _acting_projects(session)
@@ -640,14 +878,15 @@ def render_report_html(session: Session, user: User) -> str:
         '<html lang="pt-BR"><head><meta charset="UTF-8">'
         '<meta name="viewport" content="width=device-width, initial-scale=1.0">'
         f"<title>Relatório de Obras — {tenant_name}</title>"
-        f"<style>{CSS}</style></head><body>"
+        f"<style>{_stylesheet(getattr(tenant, 'brand_theme', None))}</style>"
+        "</head><body>"
         f"{pages}"
         "</body></html>"
     )
 
 
-def get_report_html(session: Session, user: User) -> str:
-    """Entry point of ``GET /api/v1/projects/report``."""
+def get_report_html(session: Session, user: User | None) -> str:
+    """Entry point of ``GET /api/v1/projects/report`` and of its public twin."""
     return render_report_html(session, user)
 
 

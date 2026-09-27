@@ -1573,12 +1573,18 @@ describe("APRAS-81's ledger arithmetic", () => {
       .split(/[\s"'`{}()<>,;]+/)
       .filter((token) => token.length > 0);
 
-  it("pins the two directories' eight and six source files", () => {
+  it("pins the two directories' nine and six source files", () => {
+    // Nine, not APRAS-81's eight: APRAS-92 added
+    // `PublicObrasReportPage.tsx` to `project-management/components/`. The
+    // file is scanned like every other and carries **no** palette class and no
+    // brand token, so every count below it is unchanged -- this literal is the
+    // file census, not a migration figure, and it moves when a directory
+    // gains a file.
     expect(PINNED.filter((file) => file.file.startsWith(PROJECTS))).toHaveLength(
-      8,
+      9,
     );
     expect(PINNED.filter((file) => file.file.startsWith(ASSETS))).toHaveLength(6);
-    expect(files).toHaveLength(14);
+    expect(files).toHaveLength(15);
   });
 
   it("logs 276 occurrences under seven codes", () => {

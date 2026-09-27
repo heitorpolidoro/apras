@@ -101,6 +101,36 @@ class BaseStorageProvider(abc.ABC):
         del url
         return None
 
+    def resolve_own_url(self, url: str | None) -> Path | None:
+        """The path under this provider's **own** root that ``url`` names.
+
+        The read-side companion of :meth:`resolve_stored_path`, and the one
+        place the "``/static/uploads/`` maps back to ``base_dir``" rule is
+        stated. ``None`` means *this provider does not own that value*, which
+        includes every stub, every test double and every remote store.
+        """
+        del url
+        return None
+
+    def read_file(self, url: str | None) -> bytes | None:
+        """The bytes behind one of this provider's **own** URLs, or ``None``.
+
+        A **concrete** default, deliberately: "this backend cannot read its own
+        objects back". The three unimplemented provider stubs therefore stay
+        untouched and no unimplemented-method exception can reach a client --
+        the property ``tests/test_storage_blob.py`` holds by text scan over this
+        module. Vercel Blob inherits the default too, so a Blob-stored logo
+        takes APRAS-92 §B's rung 2 (a linked ``<img src>``) until **APRAS-96**
+        gives that provider a real ``read_file``.
+
+        Never a network call on any provider that implements it against a
+        remote store without saying so: the one caller
+        (``TenantService.logo_data_uri``) runs inside an unauthenticated,
+        uncached render.
+        """
+        del url
+        return None
+
 
 #: Where user-supplied uploads live, and the prefix the mount serving them
 #: answers on. That mount forces a download for anything outside
@@ -216,6 +246,45 @@ class LocalStorageProvider(BaseStorageProvider):
         if url is None or not url.startswith(prefix):
             return None
         return str(self.base_dir / url[len(prefix) :])
+
+    def resolve_own_url(self, url: str | None) -> Path | None:
+        """:meth:`resolve_stored_path`, plus a containment check (APRAS-92 §B).
+
+        The prefix rule is not restated: it is asked of
+        :meth:`resolve_stored_path`, so "what this provider owns" has one
+        definition for reads and for deletes alike.
+
+        What is added is the check the delete path never had. A stored
+        ``logo_url`` is **data**, and a read primitive invoked from a public,
+        unauthenticated route must not depend on who wrote it: the joined path
+        is resolved and refused unless it is still inside ``base_dir``, so
+        ``/static/uploads/../../../etc/passwd`` maps to nothing. Not reachable
+        today -- the only writer is the validated upload path -- which is
+        exactly why it is cheap defence in depth rather than a fix.
+        """
+        stored = self.resolve_stored_path(url)
+        if stored is None:
+            return None
+        root = self.base_dir.resolve()
+        candidate = Path(stored).resolve()
+        if not candidate.is_relative_to(root):
+            return None
+        return candidate
+
+    def read_file(self, url: str | None) -> bytes | None:
+        """The bytes of one of this provider's own files, or ``None``.
+
+        ``None`` for a value this provider does not own, for one that escapes
+        its root, and for a file that is missing or unreadable: a caller
+        embedding a logo degrades, it does not fail.
+        """
+        path = self.resolve_own_url(url)
+        if path is None:
+            return None
+        try:
+            return path.read_bytes()
+        except OSError:
+            return None
 
 
 #: Vercel's Blob REST API, as read out of ``@vercel/blob`` 2.6.1's own compiled

@@ -10,6 +10,7 @@ import ForgotPasswordPage from "./features/user-administration/pages/ForgotPassw
 import ResetPasswordPage from "./features/user-administration/pages/ResetPasswordPage";
 import AcceptInvitationPage from "./features/user-administration/pages/AcceptInvitationPage";
 import BrandedEntryPage from "./features/user-administration/pages/BrandedEntryPage";
+import PublicObrasReportPage from "./features/project-management/components/PublicObrasReportPage";
 import AdminUserDashboard from "./features/user-administration/pages/AdminUserDashboard";
 import ContactInfoDashboard from "./features/user-administration/pages/ContactInfoDashboard";
 import GuestWelcomePage from "./features/user-administration/pages/GuestWelcomePage";
@@ -143,6 +144,16 @@ function App() {
                     deliberate: a bare `/<slug>` would collide with every
                     route in this table. */}
                 <Route path="/c/:slug" element={<BrandedEntryPage />} />
+                {/* APRAS-92 D1: the condominium's obras report, open on the
+                    internet under the same `/c/<slug>` prefix. Public for the
+                    same reasons and on the same terms as the route above --
+                    no ProtectedRoute, no requiredAccess, and no ROUTE_ACCESS,
+                    NAV_ITEMS or NAV_GROUPS entry. The backend owns the
+                    document; this route owns the URL a visitor is given. */}
+                <Route
+                  path="/c/:slug/obras"
+                  element={<PublicObrasReportPage />}
+                />
 
                 <Route
                   path="/tasks"

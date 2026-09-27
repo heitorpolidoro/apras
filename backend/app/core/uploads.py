@@ -46,6 +46,37 @@ FALLBACK_EXTENSION = ".bin"
 INLINE_SAFE_EXTENSIONS = frozenset({".jpg", ".jpeg", ".png", ".webp", ".pdf"})
 
 
+#: Suffix -> the image type a file carrying it may be **embedded** as
+#: (APRAS-92 §B). The inverse direction of :data:`CONTENT_TYPE_EXTENSIONS`, and
+#: written out rather than derived from it by inversion, for three reasons:
+#:
+#: * an inversion is not injective -- ``image/jpeg`` maps to ``.jpg``, so
+#:   ``.jpeg``, which exists on disk for files uploaded before APRAS-65 forced
+#:   the suffix, would be lost;
+#: * it is deliberately restricted to the three image types the tenant-logo
+#:   allowlist permits (``TenantService.LOGO_ALLOWED_MIME_TYPES``). An inversion
+#:   would also hand back ``application/pdf`` and ``text/html`` for ``.pdf`` and
+#:   ``.html``, and this map's only caller base64-embeds the result into a
+#:   document a browser renders;
+#: * ``.svg`` is **absent on purpose** and must stay absent: an SVG is active
+#:   content (script, ``foreignObject``, external references), which is exactly
+#:   why the logo allowlist excludes it. So is the inert
+#:   :data:`FALLBACK_EXTENSION` ``.bin``.
+#:
+#: An unnamed suffix yields ``None`` and is never embedded.
+IMAGE_EXTENSION_CONTENT_TYPES: dict[str, str] = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".webp": "image/webp",
+}
+
+
+def image_content_type_for_suffix(suffix: str) -> str | None:
+    """The image type ``suffix`` may be embedded as, or ``None``."""
+    return IMAGE_EXTENSION_CONTENT_TYPES.get(suffix.lower())
+
+
 def _normalise(content_type: str) -> str:
     """Lower-case, parameters dropped: ``text/html; charset=utf-8`` is HTML."""
     return content_type.split(";", 1)[0].strip().lower()

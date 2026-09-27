@@ -879,7 +879,13 @@
       "saveUpdate": "Publish Update"
     },
     "noProjectsFound": "No construction projects found",
-    "noProjectsDescription": "There are no projects matching the selected filter."
+    "noProjectsDescription": "There are no projects matching the selected filter.",
+    "publicReport": {
+      "title": "Construction report",
+      "openForPrinting": "Open for printing",
+      "unavailable": "Report unavailable",
+      "unavailableMessage": "This condominium has no published construction report, or the link is not valid."
+    }
   },
   "announcements": {
     "page_title": "Announcements & News",

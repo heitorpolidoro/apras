@@ -138,10 +138,18 @@ def acting_tenant_id(session: Session) -> UUID | None:
 def acting_tenant_scope(session: Session, tenant_id: UUID) -> Iterator[None]:
     """Temporarily act in ``tenant_id``, restoring the previous scope after.
 
-    There is exactly one production caller: seeding a *new* tenant's
-    role-linked ``Role`` rows from inside a request that acts in a
-    different tenant (``TenantService.create_tenant``). Any second caller
-    needs a review comment justifying it.
+    Two production callers, and each one needs a review comment justifying it
+    at the call site:
+
+    * seeding a *new* tenant's role-linked ``Role`` rows from inside a request
+      that acts in a different tenant (``TenantService.create_tenant``);
+    * rendering the public obras report for the condominium a slug names
+      (``app.api.v1.endpoints.public_projects``, APRAS-92). That request
+      resolves **no** acting tenant at all -- it is unauthenticated and sends
+      no ``X-Tenant-Id`` -- and the renderer reads its tenant off the session,
+      so the scope is established around the render and restored after it.
+
+    Any third caller needs the same.
     """
     had_key = ACTING_TENANT_KEY in session.info
     previous = session.info.get(ACTING_TENANT_KEY)

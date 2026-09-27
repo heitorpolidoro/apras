@@ -24,6 +24,7 @@ from app.api.v1.endpoints import (
     plans,
     projects,
     public_branding,
+    public_projects,
     purchases,
     reservations,
     residents,
@@ -231,6 +232,17 @@ api_router.include_router(
 # the route table itself, where a reviewer sees it without opening a file.
 api_router.include_router(
     public_branding.router,
+    prefix="/public",
+    tags=["public"],
+    dependencies=GLOBAL_SCOPED,
+)
+# APRAS-92: the unauthenticated obras report behind `/c/<slug>/obras`. Same
+# mount, same prefix and the same reason as the branding read above: the caller
+# sends no `X-Tenant-Id` and carries no identity, so the tenant comes from the
+# path and the scope is established around the render itself. It carries no
+# rate limit and sets no `Cache-Control` -- the operator's D3, twice decided.
+api_router.include_router(
+    public_projects.router,
     prefix="/public",
     tags=["public"],
     dependencies=GLOBAL_SCOPED,

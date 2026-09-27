@@ -93,6 +93,13 @@ GLOBAL_ROUTES: frozenset[tuple[str, str]] = frozenset(
         # condominium is named in the path and is the *subject* of the read,
         # exactly as `{tenant_id}` is on `/tenants/{tenant_id}/modules`.
         ("GET", "/api/v1/public/tenants/{slug}/branding"),
+        # APRAS-92: the public obras report, mounted beside the branding read
+        # above and global for the same reason -- there is neither a header nor
+        # a caller to resolve an acting tenant from. It differs in one way that
+        # matters here: it *renders tenant-scoped rows*, so the handler
+        # establishes the scope itself with `tenant_context.acting_tenant_scope`
+        # around the render and restores it afterwards.
+        ("GET", "/api/v1/public/tenants/{slug}/projects/report"),
         # Authenticated by X-Device-Key, not a JWT: resolves its tenant from
         # the device it authenticates.
         ("POST", "/api/v1/access-control/webhook/verification"),
@@ -159,9 +166,13 @@ def test_allowlist_is_thirty_three_routes():
     the query string, and two unauthenticated ones with no caller at all.
     APRAS-74 adds the thirty-third, the public condominium-branding read: an
     unauthenticated request carries neither a header nor a caller to resolve
-    an acting tenant from, and names its subject in the path instead.
+    an acting tenant from, and names its subject in the path instead. APRAS-92
+    adds the thirty-fourth on the same mount and for the same reason, the
+    public obras report -- the first global route that renders tenant-scoped
+    rows, which it does by establishing the acting scope around the render
+    rather than by resolving one from the request.
     """
-    assert len(GLOBAL_ROUTES) == 33
+    assert len(GLOBAL_ROUTES) == 34
 
 
 def test_route_count_is_fully_accounted_for():

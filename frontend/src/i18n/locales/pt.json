@@ -879,7 +879,13 @@
       "saveUpdate": "Publicar Atualização"
     },
     "noProjectsFound": "Nenhuma obra cadastrada",
-    "noProjectsDescription": "Não há obras correspondentes ao filtro selecionado."
+    "noProjectsDescription": "Não há obras correspondentes ao filtro selecionado.",
+    "publicReport": {
+      "title": "Relatório de Obras",
+      "openForPrinting": "Abrir para impressão",
+      "unavailable": "Relatório indisponível",
+      "unavailableMessage": "Este condomínio não tem relatório de obras publicado, ou o link não é válido."
+    }
   },
   "announcements": {
     "page_title": "Comunicados e Notícias",
