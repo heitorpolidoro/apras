@@ -17,6 +17,7 @@ patches `httpx.AsyncClient.post`. Nothing in this file reaches the network,
 and the token-absent case asserts that no request is attempted at all.
 """
 
+import inspect
 import io
 import itertools
 import re
@@ -53,6 +54,7 @@ from app.services.media_service import MediaService
 from app.services.storage_service import (
     BLOB_API_BASE_URL,
     BLOB_API_VERSION,
+    BLOB_HOST_SUFFIX,
     CloudinaryStorageProvider,
     LocalStorageProvider,
     S3StorageProvider,
@@ -60,6 +62,7 @@ from app.services.storage_service import (
     generated_storage_provider,
     upload_storage_provider,
 )
+from app.services.tenant_service import TenantService
 from tests.voting_helpers import make_assembly, make_user, make_vote
 
 #: A token of the shape Vercel injects: the store id is the fourth
@@ -702,3 +705,400 @@ def test_a_non_ascii_token_is_refused_before_the_header_is_encoded(
     with pytest.raises(StorageUnavailableError) as raised:
         provider.save_file(b"bytes", "logo.png", "image/png")
     assert "BLOB_READ_WRITE_TOKEN" in str(raised.value)
+
+
+# ---------------------------------------------------------------------------
+# Reading an object back (APRAS-96)
+# ---------------------------------------------------------------------------
+#
+# The store was write-only, so APRAS-92's logo ladder took its linked-`<img>`
+# rung for every Blob-stored logo. These cases pin the read side: a single
+# reachable host, a bound enforced twice, and `None` -- never an exception --
+# for every failure shape, because the one caller is an unauthenticated,
+# uncached render.
+#
+# `httpx.Client.stream` is patched, not `.request`, and the gate is **not** the
+# one the write fixtures use. A read is a `GET` on the CDN object URL, which
+# never starts with `BLOB_API_BASE_URL`, so a fixture copied from `http` above
+# would hand every read straight to the live CDN. This one keys off
+# `BLOB_HOST_SUFFIX` and fails the test outright for any other URL instead of
+# passing it through.
+
+READ_URL = f"https://{STORE_ID.lower()}.public.blob.vercel-storage.com/uploads/x.png"
+
+#: Every value that is not one of *this* store's public objects. The four host
+#: clauses of `resolve_own_url` are each represented: a foreign store, a
+#: non-Blob host, a store id that only *prefixes* ours, a wrong access label
+#: and an extra label -- plus the non-TLS scheme and the relative paths.
+NOT_OURS = [
+    pytest.param(None, id="none"),
+    pytest.param("", id="empty"),
+    pytest.param("static/uploads/2026/09/x.png", id="relative-path"),
+    pytest.param("/static/uploads/2026/09/x.png", id="absolute-path"),
+    pytest.param(
+        f"http://{STORE_ID.lower()}.public.blob.vercel-storage.com/x.png",
+        id="not-tls",
+    ),
+    pytest.param("https://cdn.example.com/x.png", id="foreign-host"),
+    pytest.param(
+        "https://other.public.blob.vercel-storage.com/x.png", id="other-store"
+    ),
+    pytest.param(
+        f"https://{STORE_ID.lower()}x.public.blob.vercel-storage.com/x.png",
+        id="store-id-merely-a-prefix",
+    ),
+    pytest.param(
+        f"https://{STORE_ID.lower()}.evil.blob.vercel-storage.com/x.png",
+        id="wrong-access-label",
+    ),
+    pytest.param(
+        f"https://{STORE_ID.lower()}.public.a.blob.vercel-storage.com/x.png",
+        id="an-extra-label",
+    ),
+    # `urlparse` itself raises `ValueError` on this one, before any field is
+    # read: `resolve_own_url` still answers `None` and `read_file` still logs a
+    # line, with `-` where the host would be.
+    pytest.param("https://[::1/x.png", id="malformed-ipv6"),
+]
+
+#: The tokens that yield no store id at all, the non-ASCII one included: it is
+#: the shape that would otherwise surface as a `UnicodeEncodeError` from inside
+#: the transport rather than as `None`.
+UNUSABLE_TOKENS = [
+    pytest.param(None, id="absent"),
+    pytest.param("", id="empty"),
+    pytest.param("vercel_blob_rw", id="malformed"),
+    pytest.param("vercel_blob_rw_Str01dAbCdÉf_s3cr3t", id="non-ascii"),
+]
+
+
+class _Streamed:
+    """A stand-in for `httpx`'s streaming response context manager.
+
+    It counts both `iter_bytes()` invocations and chunks actually consumed, so
+    a case can assert the body was never read at all *and* that a read which
+    overran was abandoned rather than buffered whole.
+    """
+
+    def __init__(self, status_code=200, *, chunks=(), headers=None):
+        self.status_code = status_code
+        self._chunks = list(chunks)
+        self.headers = httpx.Headers(headers or {})
+        self.iter_calls = 0
+        self.chunks_consumed = 0
+        self.closed = False
+
+    @property
+    def is_success(self) -> bool:
+        return 200 <= self.status_code < 300
+
+    def iter_bytes(self):
+        self.iter_calls += 1
+
+        def _chunks():
+            for chunk in self._chunks:
+                self.chunks_consumed += 1
+                yield chunk
+
+        return _chunks()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_exc):
+        self.closed = True
+        return False
+
+
+def _served(
+    body: bytes = b"PNGBYTES",
+    *,
+    status: int = 200,
+    chunks: list[bytes] | None = None,
+    headers: dict[str, str] | None = None,
+    declare_length: bool = True,
+) -> _Streamed:
+    """A response serving `body` (or `chunks`), with a truthful
+    `content-length` unless the case is about its absence."""
+    served = list(chunks) if chunks is not None else [body]
+    head = dict(headers or {})
+    if declare_length and "content-length" not in {key.lower() for key in head}:
+        head["content-length"] = str(sum(len(chunk) for chunk in served))
+    return _Streamed(status, chunks=served, headers=head)
+
+
+@pytest.fixture(name="blob_read")
+def blob_read_fixture(monkeypatch: pytest.MonkeyPatch):
+    """Capture every `httpx.Client.stream`, answering with a canned response.
+
+    The gate is `BLOB_HOST_SUFFIX` and there is **no pass-through**: a read URL
+    is a CDN object URL, so the write fixtures' `startswith(BLOB_API_BASE_URL)`
+    test would let it reach the real network. Any other URL fails the test.
+    """
+
+    def _install(
+        response: _Streamed | None = None, *, error: Exception | None = None
+    ) -> list[SimpleNamespace]:
+        calls: list[SimpleNamespace] = []
+
+        def _stream(_self, method, url, **kwargs):
+            host = urlparse(str(url)).hostname or ""
+            if not host.endswith(BLOB_HOST_SUFFIX):
+                raise AssertionError(
+                    f"a read escaped the fake and would have hit the network: {url}"
+                )
+            calls.append(
+                SimpleNamespace(
+                    method=method,
+                    url=str(url),
+                    headers={
+                        key.lower(): value
+                        for key, value in (kwargs.get("headers") or {}).items()
+                    },
+                )
+            )
+            if error is not None:
+                raise error
+            return response if response is not None else _served()
+
+        monkeypatch.setattr(httpx.Client, "stream", _stream)
+        return calls
+
+    return _install
+
+
+def test_read_file_gets_the_object_url_itself_with_no_credential(blob_read):
+    """ER 2: a `GET` on the CDN object URL, not on `vercel.com/api/blob`, and
+    no `authorization` header -- a public object needs none, and not sending
+    one means a bug in the host check could not leak the write token."""
+    calls = blob_read(_served(b"PNGBYTES"))
+
+    assert _uploads().read_file(READ_URL) == b"PNGBYTES"
+
+    assert len(calls) == 1
+    assert calls[0].method == "GET"
+    assert calls[0].url == READ_URL
+    assert BLOB_API_BASE_URL not in calls[0].url
+    assert "authorization" not in calls[0].headers
+
+
+def test_read_file_takes_one_positional_argument(blob_read):
+    """APRAS-92 §B's ladder calls `read_file(url)` and nothing else."""
+    blob_read(_served(b"PNGBYTES"))
+
+    assert _uploads().read_file(READ_URL) == b"PNGBYTES"
+    assert storage_service.BaseStorageProvider.read_file(_uploads(), READ_URL) is None
+
+
+@pytest.mark.parametrize("url", NOT_OURS)
+def test_read_file_attempts_no_request_for_a_url_this_store_does_not_own(
+    blob_read, url
+):
+    calls = blob_read(_served(b"SECRET"))
+
+    assert _uploads().read_file(url) is None
+    assert calls == []
+
+
+@pytest.mark.parametrize("url", NOT_OURS)
+def test_resolve_own_url_claims_only_this_stores_public_objects(url):
+    provider = _uploads()
+
+    assert provider.resolve_own_url(READ_URL) == READ_URL
+    assert provider.resolve_own_url(url) is None
+
+
+def test_resolve_own_url_refuses_userinfo_and_a_port():
+    provider = _uploads()
+    host = f"{STORE_ID.lower()}.public.blob.vercel-storage.com"
+
+    assert provider.resolve_own_url(f"https://evil@{host}/x.png") is None
+    assert provider.resolve_own_url(f"https://u:p@{host}/x.png") is None
+    assert provider.resolve_own_url(f"https://{host}:8443/x.png") is None
+    assert provider.resolve_own_url(f"https://{host}:notaport/x.png") is None
+
+
+@pytest.mark.parametrize("token", UNUSABLE_TOKENS)
+def test_read_file_with_no_usable_token_owns_nothing_and_asks_nothing(blob_read, token):
+    calls = blob_read(_served(b"SECRET"))
+    provider = _uploads(token=token)
+
+    assert provider.resolve_own_url(READ_URL) is None
+    assert provider.read_file(READ_URL) is None
+    assert calls == []
+
+
+@pytest.mark.parametrize("status", [301, 302, 400, 403, 404, 429, 500, 503])
+def test_read_file_returns_none_for_any_non_2xx(blob_read, status):
+    blob_read(_served(b"body", status=status))
+
+    assert _uploads().read_file(READ_URL) is None
+
+
+def test_a_redirect_is_not_followed(blob_read):
+    """A `3xx` is a non-success status, so the second request never happens --
+    including the one an SSRF would want, at the metadata address."""
+    calls = blob_read(
+        _served(
+            b"",
+            status=302,
+            headers={"location": "http://169.254.169.254/latest/meta-data/"},
+        )
+    )
+
+    assert _uploads().read_file(READ_URL) is None
+    assert len(calls) == 1
+    assert calls[0].url == READ_URL
+    assert all("169.254.169.254" not in call.url for call in calls)
+
+
+def test_read_file_returns_none_for_an_empty_body(blob_read):
+    blob_read(_served(b""))
+
+    assert _uploads().read_file(READ_URL) is None
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        pytest.param(httpx.ConnectError("no route"), id="connect-error"),
+        pytest.param(httpx.ReadTimeout("timed out"), id="read-timeout"),
+        pytest.param(httpx.HTTPError("generic"), id="httpx-error"),
+        pytest.param(StorageUnavailableError("unavailable"), id="storage-unavailable"),
+        pytest.param(ValueError("surprise"), id="value-error"),
+        pytest.param(KeyError("surprise"), id="key-error"),
+        pytest.param(UnicodeEncodeError("utf-8", "x", 0, 1, "bad"), id="unicode"),
+    ],
+)
+def test_no_exception_of_any_type_escapes_read_file(blob_read, error):
+    """`read_file` is reached from a public, unauthenticated render: an escaping
+    exception would answer the bodiless 500 APRAS-94 §6 exists to prevent."""
+    blob_read(error=error)
+
+    assert _uploads().read_file(READ_URL) is None
+
+
+def test_the_default_ceiling_is_the_logo_ceiling():
+    """No logo the product ever accepted is refused by the default."""
+    assert storage_service.BLOB_MAX_READ_BYTES == 2 * 1024 * 1024
+    assert storage_service.BLOB_MAX_READ_BYTES == TenantService.LOGO_MAX_FILE_SIZE
+
+
+def test_a_content_length_over_the_ceiling_is_refused_before_a_byte_is_read(
+    blob_read,
+):
+    oversize = storage_service.BLOB_MAX_READ_BYTES + 1
+    response = _Streamed(
+        200,
+        chunks=[b"\x00" * oversize],
+        headers={"content-length": str(oversize)},
+    )
+    blob_read(response)
+
+    assert _uploads().read_file(READ_URL) is None
+    assert response.iter_calls == 0
+    assert response.chunks_consumed == 0
+
+
+def test_a_body_overrunning_the_ceiling_without_a_content_length_is_abandoned(
+    blob_read,
+):
+    """`content-length` is absent on a chunked response and is a remote claim
+    either way, so the streamed check is the one that actually holds."""
+    chunk = b"\x00" * (64 * 1024)
+    total = storage_service.BLOB_MAX_READ_BYTES // len(chunk) + 4
+    response = _served(chunks=[chunk] * total, declare_length=False)
+    blob_read(response)
+
+    assert _uploads().read_file(READ_URL) is None
+    assert response.iter_calls == 1
+    assert response.chunks_consumed < total
+
+
+def test_a_body_at_the_ceiling_is_returned_whole_and_one_byte_over_is_not(
+    blob_read,
+):
+    body = b"\x5a" * storage_service.BLOB_MAX_READ_BYTES
+
+    blob_read(_served(body))
+    assert _uploads().read_file(READ_URL) == body
+
+    blob_read(_served(body + b"\x5a"))
+    assert _uploads().read_file(READ_URL) is None
+
+
+def test_a_caller_may_supply_a_tighter_ceiling_than_the_default(blob_read):
+    body = b"\x5a" * 2048
+
+    blob_read(_served(body))
+    assert _uploads().read_file(READ_URL) == body
+
+    blob_read(_served(body))
+    assert _uploads().read_file(READ_URL, max_bytes=1024) is None
+
+
+def test_every_failure_is_logged_once_and_a_success_is_silent(blob_read, caplog):
+    blob_read(_served(b"PNGBYTES"))
+    with caplog.at_level("WARNING", logger=storage_service.__name__):
+        assert _uploads().read_file(READ_URL) == b"PNGBYTES"
+    assert caplog.records == []
+
+    blob_read(_served(b"", status=404))
+    with caplog.at_level("WARNING", logger=storage_service.__name__):
+        assert _uploads().read_file(READ_URL) is None
+    assert len(caplog.records) == 1
+    message = caplog.records[0].getMessage()
+    assert "404" in message
+    assert TOKEN not in message
+
+
+def test_the_base_provider_reads_nothing_and_owns_nothing():
+    """Both defaults are concrete and return `None`, so no stub and no test
+    double can raise an unimplemented-method exception at a client."""
+
+    class _Minimal(storage_service.BaseStorageProvider):
+        def save_file(self, file_bytes, filename, content_type, *, tenant_id=None):
+            return "", ""
+
+        def delete_file(self, file_path):
+            return True
+
+    provider = _Minimal()
+
+    assert provider.read_file(READ_URL) is None
+    assert provider.read_file(READ_URL, max_bytes=10) is None
+    assert provider.resolve_own_url(READ_URL) is None
+
+    signature = inspect.signature(storage_service.BaseStorageProvider.read_file)
+    max_bytes = signature.parameters["max_bytes"]
+    assert max_bytes.kind is inspect.Parameter.KEYWORD_ONLY
+    assert max_bytes.default is None
+
+
+# ---------------------------------------------------------------------------
+# The local provider's `max_bytes`, which exists so the override is not
+# narrower than the base it implements (APRAS-96).
+# ---------------------------------------------------------------------------
+
+
+def test_the_local_provider_accepts_and_honours_a_read_ceiling(tmp_path) -> None:
+    """`max_bytes` must work on local disk, not only on Blob.
+
+    The base declares `read_file(url, *, max_bytes=None)`. An override that
+    took only `url` would raise `TypeError` the first time a caller stated a
+    limit -- on whichever deployment happens to be configured for local disk,
+    and with nothing in CI to catch it, since this project runs no type
+    checker. So the keyword is exercised here rather than assumed.
+    """
+    target = tmp_path / "2026" / "09"
+    target.mkdir(parents=True)
+    (target / "logo.png").write_bytes(b"x" * 1024)
+    provider = LocalStorageProvider(base_dir=tmp_path, url_prefix="/static/uploads")
+    url = "/static/uploads/2026/09/logo.png"
+
+    # No ceiling asked for: the whole file, exactly as before the keyword.
+    assert provider.read_file(url) == b"x" * 1024
+    # A ceiling that fits: still the whole file, and no TypeError.
+    assert provider.read_file(url, max_bytes=1024) == b"x" * 1024
+    # A ceiling below the file: refused, and nothing partial is handed back.
+    assert provider.read_file(url, max_bytes=1023) is None

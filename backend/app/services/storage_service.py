@@ -24,9 +24,21 @@ Two rules follow, and the module is arranged around them:
    :class:`~app.core.exceptions.UnsupportedStorageContentTypeError` (422).
    ``delete_file`` keeps a best-effort contract on every provider: it returns
    ``bool`` and never raises, so a failed cleanup cannot fail a request.
+
+A third rule arrived with the read side (APRAS-96). The Blob store used to be
+**write-only**, so a Blob-stored logo could only ever be *linked* from the
+obras report instead of embedded, on every render and for every tenant. Reading
+an object back is a ``GET`` on the object URL itself, and it is bounded and
+silent because its one caller is a public, uncached render:
+:meth:`VercelBlobStorageProvider.read_file` reaches exactly one host -- the one
+this deployment's own token names -- carries no credential, follows no
+redirect, refuses a body past :data:`BLOB_MAX_READ_BYTES`, and **never raises**
+for any input. Every failure is one ``logger.warning`` and a ``None``; a
+success logs nothing.
 """
 
 import abc
+import logging
 import os
 import uuid
 from pathlib import Path
@@ -43,6 +55,8 @@ from app.core.exceptions import (
 )
 from app.core.uploads import canonical_content_type, canonical_extension
 from app.models.enums import StorageProvider
+
+logger = logging.getLogger(__name__)
 
 
 class BaseStorageProvider(abc.ABC):
@@ -101,34 +115,40 @@ class BaseStorageProvider(abc.ABC):
         del url
         return None
 
-    def resolve_own_url(self, url: str | None) -> Path | None:
-        """The path under this provider's **own** root that ``url`` names.
+    def resolve_own_url(self, url: str | None) -> str | Path | None:
+        """What this provider's **own** root holds behind ``url``.
 
         The read-side companion of :meth:`resolve_stored_path`, and the one
         place the "``/static/uploads/`` maps back to ``base_dir``" rule is
         stated. ``None`` means *this provider does not own that value*, which
-        includes every stub, every test double and every remote store.
+        includes every stub and every test double. A local provider answers a
+        ``Path``; a remote store answers the URL itself, because that *is*
+        where its bytes are (APRAS-96).
         """
         del url
         return None
 
-    def read_file(self, url: str | None) -> bytes | None:
+    def read_file(
+        self, url: str | None, *, max_bytes: int | None = None
+    ) -> bytes | None:
         """The bytes behind one of this provider's **own** URLs, or ``None``.
 
         A **concrete** default, deliberately: "this backend cannot read its own
         objects back". The three unimplemented provider stubs therefore stay
         untouched and no unimplemented-method exception can reach a client --
-        the property ``tests/test_storage_blob.py`` holds by text scan over this
-        module. Vercel Blob inherits the default too, so a Blob-stored logo
-        takes APRAS-92 §B's rung 2 (a linked ``<img src>``) until **APRAS-96**
-        gives that provider a real ``read_file``.
+        the property ``tests/test_storage_blob.py`` holds by text scan over
+        this module.
+
+        ``max_bytes`` is keyword-only and defaulted, so APRAS-92 §B's ladder
+        keeps calling ``read_file(url)`` with a single argument while a caller
+        that owns a stricter limit can state it (APRAS-96).
 
         Never a network call on any provider that implements it against a
         remote store without saying so: the one caller
         (``TenantService.logo_data_uri``) runs inside an unauthenticated,
         uncached render.
         """
-        del url
+        del url, max_bytes
         return None
 
 
@@ -271,20 +291,55 @@ class LocalStorageProvider(BaseStorageProvider):
             return None
         return candidate
 
-    def read_file(self, url: str | None) -> bytes | None:
+    def read_file(
+        self, url: str | None, *, max_bytes: int | None = None
+    ) -> bytes | None:
         """The bytes of one of this provider's own files, or ``None``.
 
         ``None`` for a value this provider does not own, for one that escapes
         its root, and for a file that is missing or unreadable: a caller
         embedding a logo degrades, it does not fail.
+
+        ``max_bytes`` carries the same meaning it does on the base and on the
+        Blob provider, and it is honoured rather than merely accepted: a caller
+        that states a limit is told the truth about it. Accepting the keyword
+        and ignoring it would be worse than not accepting it.
+
+        **No implicit ceiling.** When ``max_bytes`` is ``None`` the whole file
+        is read, exactly as before this keyword existed. Imposing the Blob
+        provider's 2 MiB default here would give local disk a bound it never
+        had, and the size of an uploaded logo is already enforced one frame up
+        by ``TenantService.set_logo``.
+
+        The keyword exists here because the base declares it (APRAS-96). An
+        override narrower than the base is a trap nothing in this project would
+        catch -- there is no mypy and no pyright in CI -- so it would surface as
+        a ``TypeError`` at the one call site that ever passes a limit, on
+        whichever deployment happens to be configured for local disk.
         """
         path = self.resolve_own_url(url)
         if path is None:
             return None
         try:
-            return path.read_bytes()
+            if max_bytes is None:
+                return path.read_bytes()
+            # One read of ceiling + 1 rather than `stat()` then `read_bytes()`:
+            # it is a syscall fewer, it has no window between the check and the
+            # read, and the bound then applies to what was actually read rather
+            # than to what the directory entry claimed.
+            with path.open("rb") as handle:
+                payload = handle.read(max_bytes + 1)
         except OSError:
             return None
+        if len(payload) > max_bytes:
+            logger.warning(
+                "Disco local: leitura recusada, o arquivo excede o limite "
+                "pedido (arquivo=%s, limite=%d)",
+                path.name,
+                max_bytes,
+            )
+            return None
+        return payload
 
 
 #: Vercel's Blob REST API, as read out of ``@vercel/blob`` 2.6.1's own compiled
@@ -309,6 +364,21 @@ BLOB_TOKEN_STORE_ID_FIELD = 3
 #: hold a serverless invocation (and, locally, the event loop) for as long as
 #: the API takes to answer.
 BLOB_TIMEOUT = httpx.Timeout(connect=5.0, read=30.0, write=30.0, pool=5.0)
+
+#: The most bytes :meth:`VercelBlobStorageProvider.read_file` will buffer when
+#: the caller states no limit of its own. Exactly
+#: ``TenantService.LOGO_MAX_FILE_SIZE``, so **no logo the product ever accepted
+#: is refused by the default**. The consequence is the one APRAS-92 §B records:
+#: base64 inflates by 4/3, so a worst-case embed adds roughly 2.7 MiB to a
+#: render of an uncached public route. This provider does not own that policy --
+#: it owns a safe default and the honouring of a caller's tighter one.
+BLOB_MAX_READ_BYTES = 2 * 1024 * 1024
+
+#: ``{storeId}.{access}.blob.vercel-storage.com`` is five labels, and the count
+#: is part of the read predicate: without it,
+#: ``{store}.public.a.blob.vercel-storage.com`` would pass. Named because a
+#: bare ``5`` is a magic value.
+BLOB_HOST_LABEL_COUNT = 5
 
 
 class VercelBlobStorageProvider(BaseStorageProvider):
@@ -424,6 +494,198 @@ class VercelBlobStorageProvider(BaseStorageProvider):
             return None
         host = urlparse(url).hostname or ""
         return url if host.endswith(BLOB_HOST_SUFFIX) else None
+
+    # -- the read side (APRAS-96) ------------------------------------------
+
+    def resolve_own_url(self, url: str | None) -> str | None:
+        """The URL itself when **this** store minted it, else ``None``.
+
+        A separate and strictly tighter predicate than
+        :meth:`resolve_stored_path`, which tests the host *suffix* alone.
+        Suffix-only is sufficient for a delete: that request goes to
+        :data:`BLOB_API_BASE_URL` with our own token, so a foreign URL yields
+        at worst a failed delete against our own store and never an outbound
+        request to a host somebody else named. It is **not** sufficient for a
+        read reachable from a public, unauthenticated route, because every
+        Vercel Blob customer's store shares ``.blob.vercel-storage.com``.
+
+        So the host is taken apart label by label and all four clauses must
+        hold: five labels; the first is this deployment's own store id; the
+        second is the access label; the last three are exactly the suffix.
+        Each looser phrasing admits something it should not -- "store id plus
+        the suffix" is literally false for the real host, and dropping the
+        count or the access label admits
+        ``{store}.evil.blob.vercel-storage.com`` and
+        ``{store}.a.b.blob.vercel-storage.com``. Together they make the set of
+        reachable hosts a *single name per access value*, fixed by our own
+        token: not a suffix and not an allowlist.
+
+        Performs no I/O of any kind and never raises. A token that yields no
+        store id becomes ``None`` rather than an error: with nothing to
+        identify the store, there is nothing for it to own.
+        """
+        if not url:
+            return None
+        try:
+            parsed = urlparse(url)
+            port = parsed.port
+        except ValueError:
+            # An unparseable authority -- a malformed IPv6 literal, a port that
+            # is not a number. `urlparse` raises on the first and only on the
+            # field read for the second, and either read *is* the validation.
+            return None
+        if (
+            parsed.scheme != "https"
+            or port is not None
+            or parsed.username
+            or parsed.password
+        ):
+            return None
+        try:
+            store_id = self._store_id()
+        except StorageUnavailableError:
+            return None
+        labels = (parsed.hostname or "").split(".")
+        owned = (
+            len(labels) == BLOB_HOST_LABEL_COUNT
+            and labels[0] == store_id.casefold()
+            and labels[1] in {"public", "private"}
+            and "." + ".".join(labels[2:]) == BLOB_HOST_SUFFIX
+        )
+        return url if owned else None
+
+    def read_file(
+        self, url: str | None, *, max_bytes: int | None = None
+    ) -> bytes | None:
+        """The object's bytes, or ``None``. **Never raises, for any input.**
+
+        The promise matters because the only caller is APRAS-92's obras report,
+        rendered on a public route: an escaping exception would reach
+        ``ServerErrorMiddleware``, which sits outside ``CORSMiddleware``, and
+        reproduce the bodiless, header-less 500 APRAS-94 §6 exists to prevent.
+        A report that cannot read a logo renders without one.
+
+        Every failure shape therefore collapses to the same ``None``, preceded
+        by exactly one ``logger.warning`` naming the reason -- a ``None`` no one
+        can diagnose is worse than a linked logo -- and the success path logs
+        nothing, because one line per render of an uncached route is noise. The
+        catch names the two shapes that are expected and is then closed by a
+        best-effort ``except Exception``: "never raises" is promised to an
+        anonymous route and must not depend on having enumerated everything
+        ``httpx`` can produce.
+        """
+        ceiling = BLOB_MAX_READ_BYTES if max_bytes is None else max_bytes
+        try:
+            own_url = self.resolve_own_url(url)
+            if own_url is None:
+                logger.warning(
+                    "Vercel Blob: leitura recusada, a URL não é um objeto "
+                    "deste store (host=%s)",
+                    self._host_of(url),
+                )
+                return None
+            return self._read_object(own_url, ceiling)
+        except (StorageUnavailableError, httpx.HTTPError) as exc:
+            logger.warning(
+                "Vercel Blob: falha ao ler o objeto (host=%s): %s",
+                self._host_of(url),
+                exc,
+            )
+            return None
+        except Exception:  # noqa: BLE001  # a public, uncached render must never see an exception from here, and the promise cannot depend on enumerating every error httpx can raise
+            logger.warning(
+                "Vercel Blob: erro inesperado ao ler o objeto (host=%s)",
+                self._host_of(url),
+            )
+            return None
+
+    def _read_object(self, url: str, ceiling: int) -> bytes | None:
+        """The one outbound request, streamed and credential-free."""
+        # `follow_redirects=False` is also httpx's default, stated here so it
+        # reads as a decision: a `3xx` is not a success status, so it takes the
+        # ordinary non-2xx path and the server never issues the second request.
+        #
+        # No `authorization` header either. Everything this provider writes is
+        # `public`-access and needs no credential to be read, and a request that
+        # carries none cannot leak the write token even if the host check were
+        # ever wrong.
+        with (
+            httpx.Client(timeout=BLOB_TIMEOUT, follow_redirects=False) as client,
+            client.stream("GET", url) as response,
+        ):
+            return self._collect(response, url, ceiling)
+
+    def _collect(
+        self, response: httpx.Response, url: str, ceiling: int
+    ) -> bytes | None:
+        """The bound, enforced twice, because either alone is insufficient.
+
+        ``Content-Length`` is checked before a single body byte is read, and
+        the stream is then abandoned the moment the accumulated length passes
+        the ceiling. The second check is the one that actually holds: the
+        header is absent on a chunked response, it is a claim by the remote
+        either way, and it counts *encoded* bytes while ``iter_bytes()`` yields
+        decoded ones -- so on a ``content-encoding: gzip`` response only the
+        streamed check bounds what is buffered.
+        """
+        host = self._host_of(url)
+        if not response.is_success:
+            logger.warning(
+                "Vercel Blob: a leitura respondeu %s (host=%s)",
+                response.status_code,
+                host,
+            )
+            return None
+        declared = response.headers.get("content-length")
+        if declared is not None and declared.isdigit() and int(declared) > ceiling:
+            logger.warning(
+                "Vercel Blob: o objeto declara %s bytes, acima do limite de "
+                "%s (host=%s)",
+                declared,
+                ceiling,
+                host,
+            )
+            return None
+        buffer = bytearray()
+        for chunk in response.iter_bytes():
+            buffer.extend(chunk)
+            if len(buffer) > ceiling:
+                logger.warning(
+                    "Vercel Blob: leitura abandonada ao passar de %s bytes (host=%s)",
+                    ceiling,
+                    host,
+                )
+                return None
+        if not buffer:
+            logger.warning("Vercel Blob: o objeto lido está vazio (host=%s)", host)
+            return None
+        return bytes(buffer)
+
+    @staticmethod
+    def _host_of(url: str | None) -> str:
+        """The host alone, for a log line.
+
+        Never the token and never the URL's query string, which a Blob URL may
+        legitimately carry.
+
+        The guard covers three types, not one. This runs **inside**
+        ``read_file``'s exception handlers, building the message for a failure
+        that has already happened, so anything it raises escapes the very
+        promise those handlers exist to keep -- ``read_file`` never raises, for
+        any input. ``urlparse`` answers ``ValueError`` on a malformed authority,
+        and ``AttributeError`` or ``TypeError`` on a value that is not a string
+        at all; the column this reads is a database string today only by
+        convention, and a ``Path`` or an ``int`` reaching here would otherwise
+        turn a logged failure into an unlogged one.
+
+        Named rather than blanket on purpose: a bare ``except Exception`` would
+        spend one of the module's counted ``noqa`` allowances to catch nothing
+        these three do not already cover.
+        """
+        try:
+            return urlparse(url or "").hostname or "-"
+        except (ValueError, AttributeError, TypeError):
+            return "-"
 
     # -- the request -------------------------------------------------------
 
