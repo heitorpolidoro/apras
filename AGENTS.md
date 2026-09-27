@@ -56,12 +56,15 @@ Building administrators and HOA boards juggle dozens of operational tasks — ma
 ## Frontend (React SPA)
 
 - Single-page application served by Vite; deployed as a static site on **Vercel** (`apras-front`).
-- Client-side routing with `react-router-dom`. Root `/` renders the general
-  dashboard for **every** authenticated caller: `RootRedirect` holds a spinner
-  while the permission set settles and then renders `GeneralDashboardPage`,
-  issuing no navigation. APRAS-57 removed the per-role landing preference that
-  used to choose a destination here, so there is no fallback chain left to
-  reason about — the dashboard gates its own contents.
+- Client-side routing with `react-router-dom`. Root `/` is **public** and
+  serves two callers from one component: `RootRedirect` renders `LandingPage`
+  to an anonymous visitor (APRAS-75), and for an authenticated one holds a
+  spinner while the permission set settles and then renders
+  `GeneralDashboardPage`, issuing no navigation in either branch. APRAS-57
+  removed the per-role landing preference that used to choose a destination
+  here, so there is no fallback chain left to reason about — the dashboard
+  gates its own contents. `/c/:slug` (APRAS-74) is the other public surface:
+  a condominium's branded front door.
 - Authentication state managed via React Context (`AuthContext`), JWT stored in `sessionStorage` or `localStorage` (depending on "remember me").
 - All API calls go through a centralised Axios client (`src/api/client.ts`) that auto-attaches the `Bearer` token and an optional Vercel protection bypass header.
 - Server-state caching and mutations handled by **TanStack Query** (`useQuery` / `useMutation`).
@@ -70,6 +73,8 @@ Building administrators and HOA boards juggle dozens of operational tasks — ma
 
 | Route              | Component              | Access                  |
 |--------------------|------------------------|-------------------------|
+| `/`                | `RootRedirect`         | Public — `LandingPage` for an anonymous visitor, `GeneralDashboardPage` for an authenticated one |
+| `/c/:slug`         | `BrandedEntryPage`     | Public — the condominium's branded login; a signed-in member is switched into it, a non-member and an unknown slug get the same no-access panel |
 | `/login`           | `LoginPage`            | Public                  |
 | `/signup`          | `SignupPage`           | Public                  |
 | `/dashboard`       | `TaskDashboard`        | `{module:"tasks"}`      |
@@ -132,6 +137,7 @@ what makes "denial is in place" true without exception.
 | `/api/v1/tenants/{id}/subscription/courtesy` | Courtesy grants outside the plan (`PUT`, superuser only) | `backend/app/api/v1/endpoints/tenants.py` |
 | `/api/v1/infraction-rules` | Infraction rule catalogue and its escalation policy (`GET`/`POST`/`GET {id}`/`PUT {id}`/`DELETE {id}` soft-deactivates/`PUT {id}/policy`), plus `/api/v1/infraction-settings` (`GET`/`PUT`) | `backend/app/api/v1/endpoints/infractions.py` |
 | `/api/v1/infractions` | The infraction process: list, detail, next-step suggestion, promotion from an occurrence, stage append, contestation and recidivism-cycle closes | `backend/app/api/v1/endpoints/infractions.py` |
+| `/api/v1/public` | Unauthenticated reads. Today exactly one: `GET /public/tenants/{slug}/branding`, the four-field public identity (`slug`, `name`, `logo_url`, `theme`) behind `/c/:slug`, mounted `GLOBAL_SCOPED`, unguarded and rate-limited per IP | `backend/app/api/v1/endpoints/public_branding.py` |
 | `/api/v1/health` | Health check    | `backend/app/api/v1/api.py`              |
 
 ## Data Layer
