@@ -344,16 +344,32 @@ export const auditScheme = (
   return failures;
 };
 
+/**
+ * A palette of `#rrggbb` values as the `oklch()` strings the backend emits.
+ *
+ * Exported because a hex palette cannot be handed to anything that reads
+ * emitted values: `parseOklch` returns `null` for `#f7f1e5`, so a caller that
+ * skips what it cannot parse — `auditScheme` here, `readingsOf` on the profile
+ * screen — measures **nothing** and says so silently. APRAS-95's paste dialog
+ * has to list all eight pairs with their ratios, the passing ones included, so
+ * the conversion `auditHexPalette` performed internally is lifted here and both
+ * callers go through it.
+ *
+ * It converts and formats; it derives nothing. A value it cannot read becomes
+ * the empty string, which every reader skips, rather than a guessed colour.
+ */
+export const hexPaletteToScheme = (
+  palette: Readonly<Record<string, string>>,
+): Record<string, string> =>
+  Object.fromEntries(
+    Object.entries(palette).map(([key, value]) => {
+      const colour = hexToOklch(value);
+      return [key, colour === null ? "" : formatOklch(colour)];
+    }),
+  );
+
 /** Measure a palette of `#rrggbb` values — the live feedback in advanced
  *  mode, where the eight pairs are whatever the person has typed so far. */
 export const auditHexPalette = (
   palette: Readonly<Record<string, string>>,
-): ContrastFailure[] =>
-  auditScheme(
-    Object.fromEntries(
-      Object.entries(palette).map(([key, value]) => {
-        const colour = hexToOklch(value);
-        return [key, colour === null ? "" : formatOklch(colour)];
-      }),
-    ),
-  );
+): ContrastFailure[] => auditScheme(hexPaletteToScheme(palette));

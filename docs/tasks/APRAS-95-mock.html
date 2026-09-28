@@ -1,0 +1,667 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>APRAS-95 — Colar paleta (JSON ou CSS)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+      body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+      .swatch { width: 2.5rem; height: 2.25rem; border-radius: 0.375rem; border: 1px solid #d4d4d8; }
+      .mini { width: 1rem; height: 1rem; border-radius: 0.25rem; border: 1px solid #d4d4d8; display: inline-block; }
+    </style>
+  </head>
+  <body class="bg-slate-100 p-6 text-slate-900">
+    <div class="mx-auto max-w-6xl space-y-8">
+      <header>
+        <h1 class="text-xl font-semibold">APRAS-95 — colar uma paleta avançada</h1>
+        <p class="mt-1 text-sm text-slate-600">
+          Decisão do operador (27/09/2026): o campo de colar fica atrás de um
+          <strong>botão no cabeçalho da seção</strong> e abre uma
+          <strong>janela sobre os treze campos</strong>. Como a janela cobre os
+          campos, tudo o que o operador precisa julgar — o que foi aplicado e
+          qualquer recusa — acontece <strong>dentro dela</strong>.
+          Números de contraste medidos de verdade por
+          <code>build_theme</code> → <code>audit_contrast</code>:
+          <code>#6f746e</code> → <strong>3,93</strong> em <code>muted</code> e
+          <strong>4,30</strong> em <code>background</code>.
+        </p>
+      </header>
+
+      <div class="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs shadow-sm">
+        <span class="font-medium text-slate-600">Estado do mock:</span>
+        <button data-state-button="input" class="rounded-md border px-3 py-1.5 font-medium">
+          1. janela aberta, texto colado
+        </button>
+        <button data-state-button="grammar" class="rounded-md border px-3 py-1.5 font-medium">
+          2. recusa de gramática (chave faltando, chave desconhecida, oklch)
+        </button>
+        <button data-state-button="ok" class="rounded-md border px-3 py-1.5 font-medium">
+          3. aplicado, paleta aceita (#5d625c)
+        </button>
+        <button data-state-button="fail" class="rounded-md border px-3 py-1.5 font-medium">
+          4. aplicado, contraste recusado (#6f746e → 3,93 / 4,30)
+        </button>
+        <button data-state-button="closed" class="rounded-md border px-3 py-1.5 font-medium">
+          5. janela fechada depois do Aplicar
+        </button>
+      </div>
+
+      <!-- ================= THE SECTION, WITH THE DIALOG OVER IT ============== -->
+      <section class="relative rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-6 py-4">
+          <div class="flex items-center gap-3">
+            <i data-lucide="palette" class="h-5 w-5 text-slate-500"></i>
+            <div>
+              <h2 class="text-lg font-semibold">Cores da marca</h2>
+              <p class="text-xs text-slate-500">
+                A derivação e a medição de contraste vivem no servidor: o que a
+                tela mostra é o que a API aceita.
+              </p>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <!-- The decision: the paste affordance is this button. -->
+            <button
+              data-open
+              aria-haspopup="dialog"
+              class="inline-flex items-center gap-2 rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
+            >
+              <i data-lucide="clipboard-paste" class="h-3.5 w-3.5"></i>
+              Colar paleta
+            </button>
+            <div class="inline-flex rounded-lg border border-slate-300 bg-slate-100 p-1">
+              <button class="rounded-md px-4 py-1.5 text-sm font-medium text-slate-500">Simples</button>
+              <button class="rounded-md bg-white px-4 py-1.5 text-sm font-medium shadow-sm">Avançado</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid gap-8 px-6 py-6 lg:grid-cols-[minmax(0,420px)_1fr]">
+          <!-- LEFT: the thirteen fields (no paste block here any more) -->
+          <div class="space-y-4">
+            <p class="flex items-start gap-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              <i data-lucide="triangle-alert" class="mt-0.5 h-3.5 w-3.5 shrink-0"></i>
+              <span>
+                Você escolhe os dois lados de cada par, então a garantia automática
+                deixa de existir. Combinações abaixo de 4,5:1 são recusadas e a API
+                responde 422.
+              </span>
+            </p>
+
+            <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Paleta clara
+            </h3>
+            <div data-fields class="grid grid-cols-1 gap-2 sm:grid-cols-2"></div>
+
+            <div class="space-y-2 border-t border-slate-200 pt-4">
+              <button
+                data-save
+                class="inline-flex w-full items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium"
+              >
+                <i data-lucide="save" class="h-4 w-4"></i>
+                Salvar cores
+              </button>
+              <p data-save-note class="text-center text-[11px]"></p>
+            </div>
+          </div>
+
+          <!-- RIGHT: the section's refusal panel / all-pass, draft preview, pairs -->
+          <div class="space-y-4">
+            <div data-refusal class="hidden rounded-lg border-2 border-red-300 bg-red-50 p-4">
+              <div class="flex items-start gap-3">
+                <i data-lucide="octagon-x" class="mt-0.5 h-5 w-5 shrink-0 text-red-600"></i>
+                <div class="space-y-1">
+                  <p class="text-sm font-semibold text-red-700">
+                    Estas cores não podem ser salvas
+                  </p>
+                  <p class="text-xs text-red-700" data-refusal-body></p>
+                  <ul class="space-y-1 pt-1" data-refusal-list></ul>
+                  <p class="pt-1 text-[11px] text-red-700">
+                    Medido no navegador, antes de qualquer requisição — a API
+                    recusaria a mesma paleta com os mesmos números (422).
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <p
+              data-allpass
+              class="hidden items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800"
+            >
+              <i data-lucide="check-check" class="mt-0.5 h-4 w-4 shrink-0"></i>
+              <span>
+                Todos os pares medidos passam de 4,5:1, medidos sobre a cor que o
+                navegador pinta.
+              </span>
+            </p>
+
+            <div data-draft class="hidden">
+              <h3 class="mb-2 text-sm font-semibold">
+                Prévia do rascunho — paleta colada, ainda não salva
+              </h3>
+              <div data-preview class="rounded-lg border p-4">
+                <p class="text-xs font-semibold">Claro (rascunho)</p>
+                <p class="mt-1 text-xs" data-preview-muted>
+                  Texto discreto sobre o fundo — o par que decide esta paleta.
+                </p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                  <span data-preview-primary class="rounded px-2 py-1 text-[11px]"></span>
+                  <span data-preview-secondary class="rounded px-2 py-1 text-[11px]"></span>
+                  <span data-preview-accent class="rounded px-2 py-1 text-[11px]"></span>
+                </div>
+                <div data-preview-card class="mt-3 rounded-md p-3">
+                  <p class="text-[11px] font-semibold">Cartão</p>
+                  <p class="text-[11px]" data-preview-cardmuted>
+                    Texto discreto sobre o cartão.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div data-pairs-wrap>
+              <h3 class="mb-1.5 text-xs font-semibold">Pares medidos (rascunho, claro)</h3>
+              <ul class="space-y-1" data-pairs></ul>
+              <p data-pairs-empty class="hidden text-[11px] text-slate-500">
+                Nada foi colado ainda: os pares são medidos quando você aplica.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= THE DIALOG ====================================== -->
+        <div
+          data-dialog
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="paste-dialog-title"
+          class="absolute inset-0 z-50 flex items-start justify-center bg-black/40 p-6"
+        >
+          <div class="mt-8 w-full max-w-2xl space-y-4 rounded-xl border border-slate-200 bg-white p-6 shadow-xl">
+            <div class="flex items-start gap-3">
+              <i data-lucide="clipboard-paste" class="mt-0.5 h-5 w-5 shrink-0 text-slate-500"></i>
+              <div class="mr-auto">
+                <h2 id="paste-dialog-title" class="text-base font-semibold">
+                  Colar paleta (JSON ou CSS)
+                </h2>
+                <p class="text-[11px] text-slate-500" data-dialog-sub></p>
+              </div>
+              <button
+                data-close-x
+                aria-label="Fechar"
+                class="text-slate-400 hover:text-slate-700"
+              >
+                <i data-lucide="x" class="h-4 w-4"></i>
+              </button>
+            </div>
+
+            <!-- ---------- input state ---------- -->
+            <div data-dialog-input class="space-y-2">
+              <p class="text-[11px] text-slate-600">
+                Cole o objeto JSON da API (com ou sem <code>"mode"</code>) ou um
+                bloco de declarações <code>--chave: #rrggbb;</code>. As treze
+                chaves são obrigatórias — paleta parcial não é mesclada.
+              </p>
+              <textarea
+                data-paste
+                rows="10"
+                spellcheck="false"
+                class="w-full rounded-md border border-slate-300 bg-white p-2 font-mono text-[11px] leading-relaxed"
+              ></textarea>
+
+              <!-- grammar problems: the dialog stays open, the text is kept -->
+              <div data-problems role="alert" class="hidden space-y-2 rounded-md border border-red-300 bg-red-50 p-3">
+                <p class="text-xs font-semibold text-red-700">
+                  Nada foi aplicado — o texto colado continua aí em cima para você corrigir.
+                </p>
+                <ul class="space-y-1" data-problem-list></ul>
+              </div>
+
+              <div class="flex justify-end gap-2 pt-1">
+                <button class="rounded-md border border-slate-300 px-4 py-1.5 text-xs font-medium">
+                  Cancelar
+                </button>
+                <button class="rounded-md bg-slate-900 px-4 py-1.5 text-xs font-medium text-white">
+                  Aplicar
+                </button>
+              </div>
+            </div>
+
+            <!-- ---------- result state ---------- -->
+            <div data-dialog-result class="hidden space-y-3">
+              <p data-result-line class="rounded-md px-3 py-2 text-xs font-medium"></p>
+
+              <div>
+                <p class="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  Treze valores aplicados
+                </p>
+                <div class="max-h-56 overflow-auto rounded-md border border-slate-200">
+                  <table class="w-full text-left font-mono text-[11px]">
+                    <thead class="bg-slate-50 text-slate-500">
+                      <tr>
+                        <th class="px-2 py-1 font-sans font-medium">chave</th>
+                        <th class="px-2 py-1 font-sans font-medium">antes</th>
+                        <th class="px-2 py-1 font-sans font-medium">aplicado</th>
+                      </tr>
+                    </thead>
+                    <tbody data-applied></tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="grid gap-3 md:grid-cols-2">
+                <div>
+                  <p class="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    Prévia do rascunho
+                  </p>
+                  <div data-dpreview class="rounded-lg border p-3">
+                    <p class="text-[11px] font-semibold">Claro (rascunho)</p>
+                    <p class="mt-1 text-[11px]" data-dpreview-muted>
+                      Texto discreto sobre o fundo.
+                    </p>
+                    <div class="mt-2 flex flex-wrap gap-1.5">
+                      <span data-dpreview-primary class="rounded px-2 py-0.5 text-[10px]"></span>
+                      <span data-dpreview-accent class="rounded px-2 py-0.5 text-[10px]"></span>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <p class="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    Pares medidos
+                  </p>
+                  <ul class="space-y-1" data-dpairs></ul>
+                </div>
+              </div>
+
+              <div data-dialog-refusal class="hidden rounded-md border-2 border-red-300 bg-red-50 p-3">
+                <p class="text-xs font-semibold text-red-700">
+                  Estas cores não podem ser salvas
+                </p>
+                <p class="mt-1 text-[11px] text-red-700" data-dialog-refusal-body></p>
+                <ul class="mt-1 space-y-1" data-dialog-refusal-list></ul>
+                <p class="mt-1 text-[11px] text-red-700">
+                  Nenhuma requisição foi enviada. Desfaça, corrija o texto e aplique
+                  de novo, ou feche e ajuste o campo à mão.
+                </p>
+              </div>
+
+              <div class="flex items-center justify-end gap-2 pt-1">
+                <button
+                  data-undo
+                  class="inline-flex items-center gap-1.5 rounded-md border border-slate-300 px-4 py-1.5 text-xs font-medium"
+                >
+                  <i data-lucide="undo-2" class="h-3.5 w-3.5"></i>
+                  Desfazer
+                </button>
+                <button
+                  data-close
+                  class="rounded-md bg-slate-900 px-4 py-1.5 text-xs font-medium text-white"
+                >
+                  Fechar
+                </button>
+              </div>
+              <p class="text-[11px] text-slate-500">
+                Fechar (ou Esc, ou clicar fora) mantém os valores aplicados: não é
+                desfazer. "Desfazer" só existe enquanto esta janela estiver aberta.
+                Salvar continua sendo um clique separado.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="pb-10 text-xs text-slate-500">
+        Spec: <code>docs/tasks/APRAS-95-spec.md</code>. Contrastes conferidos com
+        <code>backend/app/core/branding.py</code>:
+        <code>#6f746e</code> → 3,93 em <code>muted</code>, 4,30 em
+        <code>background</code> e 4,83 em <code>card</code>;
+        <code>#5d625c</code> → 5,07 / 5,55 / 6,23.
+      </footer>
+    </div>
+
+    <script>
+      const KEYS = [
+        ["background", "Fundo"],
+        ["foreground", "Texto"],
+        ["card", "Cartão"],
+        ["card-foreground", "Texto do cartão"],
+        ["primary", "Primária"],
+        ["primary-foreground", "Texto sobre a primária"],
+        ["secondary", "Secundária"],
+        ["secondary-foreground", "Texto sobre a secundária"],
+        ["accent", "Destaque (hover)"],
+        ["accent-foreground", "Texto sobre o destaque"],
+        ["muted", "Superfície discreta"],
+        ["muted-foreground", "Texto discreto"],
+        ["border", "Borda"],
+      ];
+
+      /* What the thirteen fields held before the paste. */
+      const PREV = {
+        background: "#ffffff",
+        foreground: "#0f172a",
+        card: "#ffffff",
+        "card-foreground": "#0f172a",
+        primary: "#7c3aed",
+        "primary-foreground": "#ffffff",
+        secondary: "#f1f5f9",
+        "secondary-foreground": "#0f172a",
+        accent: "#0ea5e9",
+        "accent-foreground": "#ffffff",
+        muted: "#f1f5f9",
+        "muted-foreground": "#64748b",
+        border: "#e2e8f0",
+      };
+
+      const BASE = {
+        background: "#f7f1e5",
+        foreground: "#1d2925",
+        card: "#ffffff",
+        "card-foreground": "#1d2925",
+        primary: "#174b40",
+        "primary-foreground": "#f7f1e5",
+        secondary: "#eee6d7",
+        "secondary-foreground": "#082f2a",
+        accent: "#ead6a4",
+        "accent-foreground": "#082f2a",
+        muted: "#eee6d7",
+        "muted-foreground": "#5d625c",
+        border: "#ddd1b6",
+      };
+
+      /* Ratios measured by backend/app/core/branding.py on the emitted scheme. */
+      const PAIRS_OK = [
+        ["foreground/background", "13,31", true],
+        ["card-foreground/card", "14,95", true],
+        ["primary-foreground/primary", "9,00", true],
+        ["secondary-foreground/secondary", "11,68", true],
+        ["accent-foreground/accent", "10,00", true],
+        ["muted-foreground/muted", "5,07", true],
+        ["muted-foreground/background", "5,55", true],
+        ["muted-foreground/card", "6,23", true],
+      ];
+      const PAIRS_FAIL = [
+        ["foreground/background", "13,31", true],
+        ["card-foreground/card", "14,95", true],
+        ["primary-foreground/primary", "9,00", true],
+        ["secondary-foreground/secondary", "11,68", true],
+        ["accent-foreground/accent", "10,00", true],
+        ["muted-foreground/muted", "3,93", false],
+        ["muted-foreground/background", "4,30", false],
+        ["muted-foreground/card", "4,83", true],
+      ];
+
+      const jsonFor = (mutedForeground) =>
+        JSON.stringify(
+          { mode: "advanced", light: { ...BASE, "muted-foreground": mutedForeground } },
+          null,
+          2,
+        );
+
+      /* A paste that the grammar refuses: `border` missing, `ring` unknown,
+         `muted-foreground` given as oklch(). Text is kept verbatim. */
+      const BAD_TEXT = `:root {
+  --background: #f7f1e5;
+  --foreground: #1d2925;
+  --card: #ffffff;
+  --card-foreground: #1d2925;
+  --primary: #174b40;
+  --primary-foreground: #f7f1e5;
+  --secondary: #eee6d7;
+  --secondary-foreground: #082f2a;
+  --accent: #ead6a4;
+  --accent-foreground: #082f2a;
+  --muted: #eee6d7;
+  --muted-foreground: oklch(0.55 0.01 140);
+  --ring: #174b40;
+}`;
+
+      const PROBLEMS = [
+        "Falta a chave obrigatória: border. As treze chaves são obrigatórias — uma paleta parcial não é mesclada com os campos atuais.",
+        "Chave desconhecida: ring. A API recusa a mesma chave, então esta tela também recusa.",
+        "muted-foreground: oklch(0.55 0.01 140) não é um hex de seis dígitos. Este campo aceita #rrggbb — o painel “Variáveis CSS emitidas” mostra oklch(), que não serve aqui.",
+      ];
+
+      const STATES = {
+        input: {
+          open: true,
+          result: false,
+          fields: PREV,
+          text: jsonFor("#5d625c"),
+          problems: null,
+          sub: "Foco entra na caixa de texto; Esc fecha; Tab circula dentro da janela.",
+        },
+        grammar: {
+          open: true,
+          result: false,
+          fields: PREV,
+          text: BAD_TEXT,
+          problems: PROBLEMS,
+          sub: "A recusa é lida aqui dentro, sem fechar a janela e sem perder o texto.",
+        },
+        ok: {
+          open: true,
+          result: true,
+          fields: { ...BASE, "muted-foreground": "#5d625c" },
+          pairs: PAIRS_OK,
+          text: jsonFor("#5d625c"),
+          sub: "Aplicado. A janela não fecha sozinha: é aqui que você vê o que mudou.",
+        },
+        fail: {
+          open: true,
+          result: true,
+          fields: { ...BASE, "muted-foreground": "#6f746e" },
+          pairs: PAIRS_FAIL,
+          text: jsonFor("#6f746e"),
+          sub: "Aplicado — e dois pares ficaram abaixo do mínimo. Nada foi enviado.",
+        },
+        closed: {
+          open: false,
+          result: true,
+          fields: { ...BASE, "muted-foreground": "#5d625c" },
+          pairs: PAIRS_OK,
+          text: jsonFor("#5d625c"),
+        },
+      };
+
+      const $ = (selector) => document.querySelector(selector);
+      const fieldsEl = $("[data-fields]");
+      const pairsEl = $("[data-pairs]");
+      const dialogEl = $("[data-dialog]");
+
+      const pairLi = (pair, ratio, passes) => `
+        <li class="rounded px-2 py-1 font-mono text-[11px] ${
+          passes ? "bg-slate-100 text-slate-600" : "bg-red-100 font-semibold text-red-700"
+        }">
+          ${pair} — ${ratio}:1${passes ? "" : ", abaixo do mínimo de 4,5:1"}
+        </li>`;
+
+      const paintPreview = (root, palette) => {
+        const el = $(`[data-${root}]`);
+        el.style.background = palette.background;
+        el.style.color = palette.foreground;
+        el.style.borderColor = palette.border;
+        $(`[data-${root}-muted]`).style.color = palette["muted-foreground"];
+        const chip = (name, bg, fg) => {
+          const chipEl = $(`[data-${root}-${name}]`);
+          if (!chipEl) return;
+          chipEl.style.background = palette[bg];
+          chipEl.style.color = palette[fg];
+          chipEl.textContent = `${bg} ${palette[bg]}`;
+        };
+        chip("primary", "primary", "primary-foreground");
+        chip("secondary", "secondary", "secondary-foreground");
+        chip("accent", "accent", "accent-foreground");
+        const card = $(`[data-${root}-card]`);
+        if (card) {
+          card.style.background = palette.card;
+          card.style.color = palette["card-foreground"];
+          card.style.border = `1px solid ${palette.border}`;
+          $(`[data-${root}-cardmuted]`).style.color = palette["muted-foreground"];
+        }
+      };
+
+      /* Closing the dialog keeps whatever was applied — the mock carries the
+         last applied palette into the "janela fechada" state. */
+      const closeFrom = (name) => {
+        const source = STATES[name];
+        if (source.result) {
+          STATES.closed.fields = source.fields;
+          STATES.closed.pairs = source.pairs;
+          STATES.closed.text = source.text;
+          STATES.closed.result = true;
+        } else {
+          /* Nothing was applied: the typed text is discarded and the thirteen
+             fields keep the values they already had. */
+          STATES.closed.fields = PREV;
+          STATES.closed.pairs = [];
+          STATES.closed.result = false;
+        }
+        render("closed");
+      };
+
+      let currentState = "fail";
+
+      const render = (name) => {
+        currentState = name;
+        const state = STATES[name];
+        const palette = state.fields;
+        const applied = state.result;
+
+        /* ---- the section behind the dialog ---- */
+        fieldsEl.innerHTML = KEYS.map(
+          ([key, label]) => `
+            <div class="space-y-1">
+              <label class="block text-xs font-medium">${label}</label>
+              <div class="flex items-center gap-2">
+                <span class="swatch shrink-0" style="background:${palette[key]}"></span>
+                <input
+                  readonly
+                  value="${palette[key]}"
+                  class="w-full rounded-md border ${
+                    key === "muted-foreground" && name === "fail"
+                      ? "border-red-400 bg-red-50"
+                      : "border-slate-300 bg-white"
+                  } px-2 py-1.5 font-mono text-xs"
+                />
+              </div>
+            </div>`,
+        ).join("");
+
+        const pairs = applied ? state.pairs : [];
+        pairsEl.innerHTML = pairs.map((p) => pairLi(...p)).join("");
+        $("[data-pairs-empty]").classList.toggle("hidden", applied);
+        $("[data-draft]").classList.toggle("hidden", !applied);
+        if (applied) paintPreview("preview", palette);
+
+        const failures = pairs.filter(([, , passes]) => !passes);
+        const refusalEl = $("[data-refusal]");
+        const allPassEl = $("[data-allpass]");
+        const saveEl = $("[data-save]");
+        const saveNoteEl = $("[data-save-note]");
+        refusalEl.classList.toggle("hidden", failures.length === 0);
+        allPassEl.classList.toggle("hidden", !(applied && failures.length === 0));
+        allPassEl.classList.toggle("flex", applied && failures.length === 0);
+        if (failures.length > 0) {
+          $("[data-refusal-body]").textContent = `${failures.length} combinação(ões) abaixo do mínimo legível de 4,5:1 (WCAG 2.1 AA, texto normal).`;
+          $("[data-refusal-list]").innerHTML = failures.map((p) => pairLi(...p)).join("");
+          saveEl.className =
+            "inline-flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-md bg-slate-900/40 px-3 py-2 text-sm font-medium text-white";
+          saveEl.setAttribute("disabled", "disabled");
+          saveNoteEl.textContent = "Salvar desabilitado enquanto um par estiver abaixo de 4,5:1.";
+          saveNoteEl.className = "text-center text-[11px] text-red-700";
+        } else {
+          saveEl.className =
+            "inline-flex w-full items-center justify-center gap-2 rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white";
+          saveEl.removeAttribute("disabled");
+          saveNoteEl.textContent = "";
+        }
+
+        /* ---- the dialog ---- */
+        dialogEl.classList.toggle("hidden", !state.open);
+        $("[data-dialog-sub]").textContent = state.sub ?? "";
+        $("[data-dialog-input]").classList.toggle("hidden", state.open && applied);
+        $("[data-dialog-result]").classList.toggle("hidden", !(state.open && applied));
+
+        $("[data-paste]").value = state.text;
+        const problemsEl = $("[data-problems]");
+        problemsEl.classList.toggle("hidden", !state.problems);
+        if (state.problems) {
+          $("[data-problem-list]").innerHTML = state.problems
+            .map(
+              (problem) => `
+                <li class="rounded bg-red-100 px-2 py-1 text-[11px] text-red-700">${problem}</li>`,
+            )
+            .join("");
+        }
+
+        if (state.open && applied) {
+          const dialogFailures = state.pairs.filter(([, , passes]) => !passes);
+          const line = $("[data-result-line]");
+          line.textContent = dialogFailures.length
+            ? "13 valores aplicados aos campos — e dois pares ficaram abaixo do mínimo. Nenhuma requisição foi enviada."
+            : "13 valores aplicados aos campos. Nada foi enviado ainda: Salvar continua sendo um clique separado.";
+          line.className = `rounded-md px-3 py-2 text-xs font-medium ${
+            dialogFailures.length ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-800"
+          }`;
+
+          $("[data-applied]").innerHTML = KEYS.map(([key]) => {
+            const changed = PREV[key] !== palette[key];
+            return `
+              <tr class="${changed ? "bg-amber-50" : ""} border-t border-slate-100">
+                <td class="px-2 py-1 font-sans">${key}${
+                  changed ? ' <span class="text-[10px] font-medium text-amber-700">alterado</span>' : ""
+                }</td>
+                <td class="px-2 py-1 text-slate-400">
+                  <span class="mini align-middle" style="background:${PREV[key]}"></span>
+                  ${PREV[key]}
+                </td>
+                <td class="px-2 py-1">
+                  <span class="mini align-middle" style="background:${palette[key]}"></span>
+                  ${palette[key]}
+                </td>
+              </tr>`;
+          }).join("");
+
+          $("[data-dpairs]").innerHTML = state.pairs.map((p) => pairLi(...p)).join("");
+          paintPreview("dpreview", palette);
+
+          const dRefusal = $("[data-dialog-refusal]");
+          dRefusal.classList.toggle("hidden", dialogFailures.length === 0);
+          if (dialogFailures.length) {
+            $("[data-dialog-refusal-body]").textContent = `${dialogFailures.length} combinação(ões) abaixo do mínimo legível de 4,5:1 (WCAG 2.1 AA, texto normal).`;
+            $("[data-dialog-refusal-list]").innerHTML = dialogFailures
+              .map((p) => pairLi(...p))
+              .join("");
+          }
+        }
+
+        document.querySelectorAll("[data-state-button]").forEach((button) => {
+          const active = button.dataset.stateButton === name;
+          button.className = active
+            ? "rounded-md bg-slate-900 px-3 py-1.5 font-medium text-white"
+            : "rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-600";
+        });
+
+        lucide.createIcons();
+      };
+
+      document.querySelectorAll("[data-state-button]").forEach((button) => {
+        button.addEventListener("click", () => render(button.dataset.stateButton));
+      });
+      $("[data-open]").addEventListener("click", () => render("fail"));
+      $("[data-close]").addEventListener("click", () => closeFrom(currentState));
+      $("[data-close-x]").addEventListener("click", () => closeFrom(currentState));
+      $("[data-undo]").addEventListener("click", () => render("input"));
+      dialogEl.addEventListener("click", (event) => {
+        if (event.target === dialogEl) closeFrom(currentState);
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") closeFrom(currentState);
+      });
+
+      render("fail");
+    </script>
+  </body>
+</html>

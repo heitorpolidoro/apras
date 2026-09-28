@@ -691,3 +691,502 @@ describe("a condominium with no colours", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+/**
+ * Pasting a palette instead of opening thirteen colour dialogs (APRAS-95).
+ *
+ * The distinction the whole feature rests on is pinned here twice: a
+ * **grammar** refusal applies nothing and keeps the text, while a **contrast**
+ * failure *is* applied and then measured — the thirteen values land in the
+ * draft and the section's existing `blocked` disables Save. An implementation
+ * that declined to apply the `#6f746e` palette would leave the previous one
+ * standing, and the previous one passes.
+ */
+describe("pasting an advanced palette", () => {
+  /** The palette the operator derived from the APRAS-60 obras mock. */
+  const WORKED: BrandPalette = {
+    background: "#f7f1e5",
+    foreground: "#1d2925",
+    card: "#ffffff",
+    "card-foreground": "#1d2925",
+    primary: "#174b40",
+    "primary-foreground": "#f7f1e5",
+    secondary: "#eee6d7",
+    "secondary-foreground": "#082f2a",
+    accent: "#ead6a4",
+    "accent-foreground": "#082f2a",
+    muted: "#eee6d7",
+    "muted-foreground": "#5d625c",
+    border: "#ddd1b6",
+  };
+
+  const jsonFor = (mutedForeground: string) =>
+    JSON.stringify({
+      mode: "advanced",
+      light: { ...WORKED, "muted-foreground": mutedForeground },
+    });
+
+  const cssFor = (palette: BrandPalette) =>
+    `/* paleta das obras */\n:root {\n${BRAND_AUTHORED_KEYS.map(
+      (key) => `  --${key}: ${palette[key]};`,
+    ).join("\n")}\n}`;
+
+  const dialog = () =>
+    screen.getByTestId("brand-paste-dialog") as HTMLElement;
+
+  const textarea = () =>
+    document.querySelector("textarea[data-brand-paste]") as HTMLTextAreaElement;
+
+  const openPaste = async () => {
+    const user = await switchTo("modeAdvanced");
+    await user.click(
+      within(await brandSection()).getByRole("button", {
+        name: t("tenantProfile.brand.paste.open"),
+      }),
+    );
+    return user;
+  };
+
+  /** Pastes in one change event: the dialog's textarea carries 400 characters,
+   *  and typing them one by one crosses vitest's per-test deadline for the
+   *  same reason `typeHex` exists above. */
+  const paste = (text: string) =>
+    fireEvent.change(textarea(), { target: { value: text } });
+
+  const apply = async (user: ReturnType<typeof userEvent.setup>) =>
+    user.click(
+      within(dialog()).getByRole("button", { name: t("tenantProfile.brand.paste.apply") }),
+    );
+
+  const valueOf = (key: string) =>
+    document.querySelector<HTMLInputElement>(`input[data-brand-hex="${key}"]`)?.value;
+
+  const saveButton = async () =>
+    within(await brandSection()).getByRole("button", {
+      name: t("tenantProfile.brand.save"),
+    });
+
+  it("offers the paste button in advanced mode only", async () => {
+    serve();
+    renderPage();
+    const section = await brandSection();
+
+    expect(
+      within(section).queryByRole("button", {
+        name: t("tenantProfile.brand.paste.open"),
+      }),
+    ).not.toBeInTheDocument();
+
+    await switchTo("modeAdvanced");
+
+    expect(
+      within(section).getByRole("button", {
+        name: t("tenantProfile.brand.paste.open"),
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("opens a modal dialog with a textarea, Aplicar and Cancelar, and focuses the textarea", async () => {
+    serve();
+    renderPage();
+    await openPaste();
+
+    const panel = dialog();
+    expect(panel).toHaveAttribute("role", "dialog");
+    expect(panel).toHaveAttribute("aria-modal", "true");
+    expect(panel.getAttribute("aria-labelledby")).toBe(
+      within(panel).getByRole("heading", { level: 2 }).id,
+    );
+    expect(textarea()).toBeInTheDocument();
+    expect(textarea()).toHaveFocus();
+    expect(
+      within(panel).getByRole("button", { name: t("tenantProfile.brand.paste.apply") }),
+    ).toBeInTheDocument();
+    expect(
+      within(panel).getByRole("button", { name: t("tenantProfile.brand.paste.cancel") }),
+    ).toBeInTheDocument();
+    // Thirteen pickers behind it, untouched by the dialog being open.
+    expect(hexInputs()).toHaveLength(13);
+  });
+
+  it("applies the thirteen values and stays open, showing them and the eight pairs", async () => {
+    serve();
+    renderPage();
+    const user = await openPaste();
+    const before = valueOf("background") as string;
+
+    paste(jsonFor("#5d625c"));
+    await apply(user);
+
+    const panel = dialog();
+    expect(panel).toBeInTheDocument();
+    expect(
+      within(panel).getByText(
+        t("tenantProfile.brand.paste.appliedOk").replace("{{values}}", "13"),
+      ),
+    ).toBeInTheDocument();
+    // The thirteen keys, each with the value it had and the value applied.
+    const rows = panel.querySelectorAll("tbody tr");
+    expect(rows).toHaveLength(13);
+    expect(rows[0].textContent).toContain(before);
+    expect(rows[0].textContent).toContain("#f7f1e5");
+    // Eight pairs, all of them, because the margin is the point.
+    const pairs = within(panel).getAllByTestId("brand-paste-pair");
+    expect(pairs).toHaveLength(8);
+    expect(pairs.map((pair) => pair.textContent).join(" ")).toContain(
+      "muted-foreground/muted — 5.07:1",
+    );
+    expect(
+      within(panel).queryByText(t("tenantProfile.brand.refusalTitle")),
+    ).not.toBeInTheDocument();
+
+    await user.click(
+      within(panel).getByRole("button", { name: t("tenantProfile.brand.paste.close") }),
+    );
+
+    expect(screen.queryByTestId("brand-paste-dialog")).not.toBeInTheDocument();
+    for (const key of BRAND_AUTHORED_KEYS) {
+      expect(valueOf(key)).toBe({ ...WORKED, "muted-foreground": "#5d625c" }[key]);
+    }
+    expect(await saveButton()).toBeEnabled();
+    expect(mockedPatch).not.toHaveBeenCalled();
+  });
+
+  it("applies a palette whose contrast fails, names both pairs and disables the save", async () => {
+    serve();
+    renderPage();
+    const user = await openPaste();
+
+    paste(jsonFor("#6f746e"));
+    await apply(user);
+
+    const panel = dialog();
+    expect(panel).toBeInTheDocument();
+    expect(mockedPatch).not.toHaveBeenCalled();
+    const text = panel.textContent ?? "";
+    expect(text).toContain("muted-foreground/muted — 3.93:1, abaixo do mínimo de 4.5:1");
+    expect(text).toContain(
+      "muted-foreground/background — 4.30:1, abaixo do mínimo de 4.5:1",
+    );
+    expect(
+      within(panel).getByText(t("tenantProfile.brand.paste.cannotSave")),
+    ).toBeInTheDocument();
+    expect(await saveButton()).toBeDisabled();
+
+    await user.click(
+      within(panel).getByRole("button", { name: t("tenantProfile.brand.paste.close") }),
+    );
+
+    // Applied, not refused: the pasted values are what the fields hold.
+    expect(valueOf("muted-foreground")).toBe("#6f746e");
+    expect(valueOf("primary")).toBe("#174b40");
+    expect(await saveButton()).toBeDisabled();
+    expect(mockedPatch).not.toHaveBeenCalled();
+  });
+
+  it("refuses a malformed paste without touching a single field", async () => {
+    serve();
+    renderPage();
+    const user = await openPaste();
+    const before = BRAND_AUTHORED_KEYS.map((key) => valueOf(key));
+    const text = cssFor(WORKED)
+      .replace("--border: #ddd1b6;", "--ring: #174b40;")
+      .replace("#5d625c", "oklch(0.55 0.01 140)");
+
+    paste(text);
+    await apply(user);
+
+    const panel = dialog();
+    const problems = within(panel).getByRole("alert");
+    expect(problems.textContent).toContain("border");
+    expect(problems.textContent).toContain("ring");
+    expect(problems.textContent).toContain("oklch(0.55 0.01 140)");
+    // The text stays exactly as pasted, so it can be corrected in place.
+    expect(textarea().value).toBe(text);
+    expect(BRAND_AUTHORED_KEYS.map((key) => valueOf(key))).toEqual(before);
+  });
+
+  it("never merges a partial paste onto the current fields", async () => {
+    serve();
+    renderPage();
+    const user = await openPaste();
+    const before = valueOf("primary");
+
+    paste("--primary: #174b40;\n--accent: #ead6a4;");
+    await apply(user);
+
+    expect(within(dialog()).getByRole("alert")).toBeInTheDocument();
+    expect(valueOf("primary")).toBe(before);
+  });
+
+  it("reads a CSS block wrapped in :root, with comments, to the same thirteen values", async () => {
+    serve();
+    renderPage();
+    const user = await openPaste();
+
+    paste(cssFor(WORKED).replace(/--/g, ""));
+    await apply(user);
+
+    expect(
+      within(dialog()).getByText(
+        t("tenantProfile.brand.paste.appliedOk").replace("{{values}}", "13"),
+      ),
+    ).toBeInTheDocument();
+    for (const key of BRAND_AUTHORED_KEYS) {
+      expect(valueOf(key)).toBe(WORKED[key]);
+    }
+  });
+
+  it("puts the fields back with Desfazer and returns to the input state", async () => {
+    serve();
+    renderPage();
+    const user = await openPaste();
+    const before = BRAND_AUTHORED_KEYS.map((key) => valueOf(key));
+
+    paste(jsonFor("#5d625c"));
+    await apply(user);
+    await user.click(
+      within(dialog()).getByRole("button", { name: t("tenantProfile.brand.paste.undo") }),
+    );
+
+    expect(BRAND_AUTHORED_KEYS.map((key) => valueOf(key))).toEqual(before);
+    // Back to the input state, with the text still there to be corrected.
+    expect(textarea().value).toBe(jsonFor("#5d625c"));
+    expect(
+      within(dialog()).queryByRole("button", {
+        name: t("tenantProfile.brand.paste.undo"),
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps an applied palette when Escape closes the dialog", async () => {
+    serve();
+    renderPage();
+    const user = await openPaste();
+
+    paste(jsonFor("#5d625c"));
+    await apply(user);
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByTestId("brand-paste-dialog")).not.toBeInTheDocument();
+    expect(valueOf("muted-foreground")).toBe("#5d625c");
+  });
+
+  it("keeps an applied palette when the backdrop is clicked", async () => {
+    serve();
+    renderPage();
+    const user = await openPaste();
+
+    paste(jsonFor("#5d625c"));
+    await apply(user);
+    await user.click(dialog());
+
+    expect(screen.queryByTestId("brand-paste-dialog")).not.toBeInTheDocument();
+    expect(valueOf("primary")).toBe("#174b40");
+  });
+
+  it("discards typed text and changes no field when cancelled before Aplicar", async () => {
+    serve();
+    renderPage();
+    const user = await openPaste();
+    const before = BRAND_AUTHORED_KEYS.map((key) => valueOf(key));
+
+    paste(jsonFor("#5d625c"));
+    await user.click(
+      within(dialog()).getByRole("button", {
+        name: t("tenantProfile.brand.paste.cancel"),
+      }),
+    );
+
+    expect(BRAND_AUTHORED_KEYS.map((key) => valueOf(key))).toEqual(before);
+    // Focus goes back to the button that opened it, and the text is gone.
+    const opener = within(await brandSection()).getByRole("button", {
+      name: t("tenantProfile.brand.paste.open"),
+    });
+    expect(opener).toHaveFocus();
+    await user.click(opener);
+    expect(textarea().value).toBe("");
+  });
+
+  it("cycles Tab and Shift+Tab inside the dialog", async () => {
+    serve();
+    renderPage();
+    const user = await openPaste();
+
+    const focusable = Array.from(
+      dialog().querySelectorAll<HTMLElement>("textarea, button"),
+    );
+    expect(focusable.length).toBeGreaterThan(1);
+
+    for (let index = 0; index < focusable.length + 1; index += 1) {
+      await user.tab();
+      expect(dialog().contains(document.activeElement)).toBe(true);
+    }
+    await user.tab({ shift: true });
+    expect(dialog().contains(document.activeElement)).toBe(true);
+  });
+
+  it("previews the pasted palette in the section, distinctly from the server's", async () => {
+    serve({
+      brand_theme: { mode: "advanced", light: READABLE, dark: null },
+      theme: THEME,
+    });
+    renderPage();
+    const user = await openPaste();
+
+    paste(jsonFor("#5d625c"));
+    await apply(user);
+    expect(within(dialog()).getByTestId("brand-paste-preview")).toBeInTheDocument();
+    await user.click(
+      within(dialog()).getByRole("button", { name: t("tenantProfile.brand.paste.close") }),
+    );
+
+    const draft = screen.getByTestId("brand-draft-preview");
+    expect(draft.style.background).toBe("rgb(247, 241, 229)");
+    // The server's own preview still renders the scheme it returned.
+    const section = await brandSection();
+    expect(
+      within(section).getByText(t("tenantProfile.brand.previewLight")),
+    ).toBeInTheDocument();
+  });
+
+  it("names the scheme a fault was found in, in the reader's own language", async () => {
+    serve();
+    renderPage();
+    const user = await openPaste();
+
+    paste(
+      JSON.stringify({
+        mode: "advanced",
+        light: WORKED,
+        dark: { ...WORKED, primary: "#fff" },
+      }),
+    );
+    await apply(user);
+
+    const problems = within(dialog()).getByRole("alert");
+    expect(problems.textContent).toContain(t("tenantProfile.brand.darkPalette"));
+    expect(problems.textContent).toContain("#fff");
+    expect(valueOf("primary")).not.toBe("#174b40");
+  });
+
+  it("reports a fault that names no key at all", async () => {
+    serve();
+    renderPage();
+    const user = await openPaste();
+
+    paste(`:root { ${cssFor(WORKED)} }\n.dark { ${cssFor(WORKED)} }`);
+    await apply(user);
+
+    expect(within(dialog()).getByRole("alert").textContent).toContain(
+      t("tenantProfile.brand.paste.problems.multipleBlocks"),
+    );
+  });
+
+  it("applies twenty-six values and clears derive-dark when a dark palette is pasted", async () => {
+    serve();
+    renderPage();
+    const user = await openPaste();
+
+    paste(
+      JSON.stringify({ mode: "advanced", light: WORKED, dark: READABLE }),
+    );
+    await apply(user);
+
+    const panel = dialog();
+    expect(
+      within(panel).getByText(
+        t("tenantProfile.brand.paste.appliedOk").replace("{{values}}", "26"),
+      ),
+    ).toBeInTheDocument();
+    // Both schemes previewed and both measured, the second list being the dark
+    // one the paste authored.
+    expect(within(panel).getByText(t("tenantProfile.brand.pairsDark"))).toBeInTheDocument();
+    expect(
+      within(panel).getByText(t("tenantProfile.brand.paste.draftDark")),
+    ).toBeInTheDocument();
+
+    await user.click(
+      within(panel).getByRole("button", { name: t("tenantProfile.brand.paste.close") }),
+    );
+
+    expect(
+      screen.getByLabelText(t("tenantProfile.brand.deriveDark")),
+    ).not.toBeChecked();
+    expect(hexInputs()).toHaveLength(26);
+    expect(valueOf("dark-primary")).toBe(READABLE.primary);
+  });
+
+  it("sets derive-dark when the paste says dark is null", async () => {
+    serve({
+      brand_theme: { mode: "advanced", light: READABLE, dark: READABLE },
+      theme: THEME,
+    });
+    renderPage();
+    const user = await openPaste();
+    expect(
+      screen.getByLabelText(t("tenantProfile.brand.deriveDark")),
+    ).not.toBeChecked();
+
+    paste(JSON.stringify({ mode: "advanced", light: WORKED, dark: null }));
+    await apply(user);
+    await user.click(
+      within(dialog()).getByRole("button", {
+        name: t("tenantProfile.brand.paste.close"),
+      }),
+    );
+
+    expect(screen.getByLabelText(t("tenantProfile.brand.deriveDark"))).toBeChecked();
+    expect(hexInputs()).toHaveLength(13);
+  });
+
+  it("wraps Shift+Tab from the textarea round to the dialog's last control", async () => {
+    serve();
+    renderPage();
+    const user = await openPaste();
+
+    const stops = Array.from(dialog().querySelectorAll<HTMLElement>("textarea, button"));
+    expect(textarea()).toHaveFocus();
+
+    await user.tab({ shift: true });
+
+    expect(document.activeElement).toBe(stops[stops.length - 1]);
+  });
+
+  it("sends exactly the body that typing the same thirteen sends", async () => {
+    serve();
+    mockedPatch.mockResolvedValue({ data: { ...PROFILE } } as never);
+    const { unmount } = renderPage();
+    const pasteUser = await openPaste();
+
+    paste(jsonFor("#5d625c"));
+    await apply(pasteUser);
+    await pasteUser.click(
+      within(dialog()).getByRole("button", { name: t("tenantProfile.brand.paste.close") }),
+    );
+    await pasteUser.click(await saveButton());
+
+    await waitFor(() => expect(mockedPatch).toHaveBeenCalledTimes(1));
+    const pasted = mockedPatch.mock.calls[0][1];
+
+    // The same palette, typed into the thirteen fields instead.
+    mockedPatch.mockClear();
+    unmount();
+    renderPage();
+    const typeUser = await switchTo("modeAdvanced");
+    for (const key of BRAND_AUTHORED_KEYS) {
+      await typeHex(typeUser, key, { ...WORKED, "muted-foreground": "#5d625c" }[key]);
+    }
+    await typeUser.click(await saveButton());
+
+    await waitFor(() => expect(mockedPatch).toHaveBeenCalledTimes(1));
+    expect(mockedPatch.mock.calls[0][1]).toEqual(pasted);
+    expect(pasted).toEqual({
+      brand_theme: {
+        mode: "advanced",
+        light: { ...WORKED, "muted-foreground": "#5d625c" },
+        dark: null,
+      },
+    });
+  });
+});

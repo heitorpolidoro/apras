@@ -10,6 +10,7 @@ import {
   auditScheme,
   contrastRatio,
   formatOklch,
+  hexPaletteToScheme,
   hexToOklch,
   isInGamut,
   MEASURED_PAIRS,
@@ -270,6 +271,71 @@ describe("auditHexPalette", () => {
 
   it("drops a malformed value rather than guessing at a colour", () => {
     expect(auditHexPalette({ ...readable, primary: "#GGG" })).toEqual([]);
+  });
+});
+
+/**
+ * The conversion `auditHexPalette` used to keep to itself (APRAS-95).
+ *
+ * A palette of thirteen `#rrggbb` values cannot be handed to anything that
+ * reads `oklch()` strings: `parseOklch` returns `null` for a hex and the caller
+ * skips the pair, so the result is an **empty** measurement rather than an
+ * error. The paste dialog has to show all eight pairs — the passing ones
+ * included, because the margin is the point — so the conversion is exported
+ * and both callers go through it.
+ */
+describe("hexPaletteToScheme", () => {
+  it("emits the same oklch strings the backend does, at 2dp", () => {
+    const scheme = hexPaletteToScheme({ muted: "#eee6d7" });
+
+    expect(scheme.muted).toMatch(/^oklch\(\d\.\d\d \d\.\d\d \d+\.\d\d\)$/);
+    expect(parseOklch(scheme.muted)).not.toBeNull();
+  });
+
+  it("leaves a value it cannot read empty rather than guessing", () => {
+    expect(hexPaletteToScheme({ primary: "white" })).toEqual({ primary: "" });
+  });
+
+  it("lets the converted palette be measured pair by pair", () => {
+    // The worked palette of APRAS-95 with the mock's own grey, which fails:
+    // `#6f746e` reads 3.93 on `muted` and 4.30 on `background`, as
+    // `build_theme` → `audit_contrast` reports them.
+    const scheme = hexPaletteToScheme({
+      background: "#f7f1e5",
+      foreground: "#1d2925",
+      card: "#ffffff",
+      "card-foreground": "#1d2925",
+      primary: "#174b40",
+      "primary-foreground": "#f7f1e5",
+      secondary: "#eee6d7",
+      "secondary-foreground": "#082f2a",
+      accent: "#ead6a4",
+      "accent-foreground": "#082f2a",
+      muted: "#eee6d7",
+      "muted-foreground": "#6f746e",
+      border: "#ddd1b6",
+    });
+
+    const read = (foreground: string, background: string) =>
+      Number(
+        contrastRatio(
+          parseOklch(scheme[foreground]) as Oklch,
+          parseOklch(scheme[background]) as Oklch,
+        ).toFixed(2),
+      );
+
+    expect(read("muted-foreground", "muted")).toBe(3.93);
+    expect(read("muted-foreground", "background")).toBe(4.3);
+    expect(read("muted-foreground", "card")).toBe(4.83);
+    // All eight pairs are readable once converted — the empty-list trap the
+    // export exists to close.
+    expect(
+      MEASURED_PAIRS.filter(
+        ([foreground, background]) =>
+          parseOklch(scheme[foreground] ?? "") !== null &&
+          parseOklch(scheme[background] ?? "") !== null,
+      ),
+    ).toHaveLength(8);
   });
 });
 
