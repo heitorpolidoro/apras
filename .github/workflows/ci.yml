@@ -18,6 +18,11 @@ jobs:
   backend:
     name: Backend Tests
     runs-on: ubuntu-latest
+    # Without this the job inherits GitHub's six-hour default. A run that
+    # hung after the tests had already passed burned exactly 365 minutes
+    # before it was cancelled; `backend-migrations` below has carried a
+    # timeout all along.
+    timeout-minutes: 45
     env:
       SECRET_KEY: "test-secret-key-for-ci"
       POSTGRES_URL: "postgresql://postgres:password@localhost/apras"
