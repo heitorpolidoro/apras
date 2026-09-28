@@ -1102,3 +1102,258 @@ def test_the_local_provider_accepts_and_honours_a_read_ceiling(tmp_path) -> None
     assert provider.read_file(url, max_bytes=1024) == b"x" * 1024
     # A ceiling below the file: refused, and nothing partial is handed back.
     assert provider.read_file(url, max_bytes=1023) is None
+
+
+# ---------------------------------------------------------------------------
+# Why a Blob refusal happened, not merely that one did (APRAS-101)
+#
+# `_describe` reads the response body only when it is JSON shaped exactly
+# `{"error": {"code", "message"}}`, and nothing logged anything at all, so the
+# production `400` on the logo upload arrived as a bare status: undiagnosable.
+# These cases pin the record -- and, above everything else, pin that the
+# credential scrub runs over the *whole* body before the 512-byte bound is
+# applied to it.
+# ---------------------------------------------------------------------------
+
+#: The provider's token for the credential cases. Token-shaped, so
+#: `_store_id` still reads `Str01dAbCdEf` out of it, with a tail segment that
+#: could only be a secret -- an assertion on its absence cannot pass by luck.
+SECRET_TOKEN = "vercel_blob_rw_Str01dAbCdEf_s3cr3tv4lu3"
+SECRET_SEGMENT = "s3cr3tv4lu3"
+
+#: Where the echoed token starts inside the straddle case's body. Numerically
+#: pinned rather than described as "a few bytes before the bound": the token
+#: runs from byte 498 to byte 536, so `BLOB_LOG_BODY_MAX_BYTES` (512) falls
+#: *inside* it and a truncate-then-scrub implementation leaks the prefix that
+#: fits. At this offset the leaked prefix is `vercel_blob_rw`, which is why the
+#: case asserts the absence of **every** prefix from that length up rather than
+#: only of `vercel_blob_rw_Str`: an assertion on the longer fragment alone
+#: would pass under both orderings here and discriminate nothing.
+STRADDLE_OFFSET = 498
+
+
+def _sole_record(caplog) -> object:
+    """The one WARNING the refusal produced, from this module's own logger."""
+    assert len(caplog.records) == 1
+    record = caplog.records[0]
+    assert record.levelname == "WARNING"
+    assert record.name == storage_service.__name__
+    return record
+
+
+def _refused_save(caplog, *, token: str = TOKEN) -> object:
+    """Drive one refused upload and hand back its single log record.
+
+    The canned response is whatever the `http` fixture the case installed
+    answers with.
+    """
+    with (
+        caplog.at_level("WARNING", logger=storage_service.__name__),
+        pytest.raises(StorageUnavailableError),
+    ):
+        _uploads(token=token).save_file(b"x", "logo.png", "image/png")
+    return _sole_record(caplog)
+
+
+def test_a_refused_upload_logs_the_status_the_method_and_the_apis_body(http, caplog):
+    http(
+        httpx.Response(
+            400,
+            json={"error": {"code": "bad_request", "message": "pathname is required"}},
+        )
+    )
+
+    message = _refused_save(caplog).getMessage()
+
+    assert "400" in message
+    assert "PUT" in message
+    assert "bad_request" in message
+    assert "pathname is required" in message
+
+
+@pytest.mark.parametrize(
+    ("body", "expected"),
+    [
+        pytest.param(
+            httpx.Response(400, text="Bad Request: missing pathname"),
+            "missing pathname",
+            id="plain-text",
+        ),
+        pytest.param(
+            httpx.Response(400, json={"message": "store suspended"}),
+            "store suspended",
+            id="bare-message-dict",
+        ),
+        pytest.param(
+            httpx.Response(400, text="<html><body>Gateway refused</body></html>"),
+            "Gateway refused",
+            id="an-intermediarys-html",
+        ),
+    ],
+)
+def test_a_body_the_error_shape_drops_still_reaches_the_record(
+    http, caplog, body, expected
+):
+    """The shape `_describe` reduces to a bare status -- the task's whole point.
+
+    The caller-visible message stays exactly what it was: only the record
+    carries the body.
+    """
+    http(body)
+
+    record = _refused_save(caplog)
+
+    assert expected in record.getMessage()
+
+
+def test_the_allowlisted_response_headers_reach_the_record(http, caplog):
+    http(
+        httpx.Response(
+            400,
+            text="refused",
+            headers={
+                "x-vercel-error": "BLOB_STORE_SUSPENDED",
+                "x-vercel-error-code": "store_suspended",
+                "x-vercel-id": "gru1::abc123",
+                "retry-after": "30",
+            },
+        )
+    )
+
+    message = _refused_save(caplog).getMessage()
+
+    for value in ("BLOB_STORE_SUSPENDED", "store_suspended", "gru1::abc123", "30"):
+        assert value in message
+
+
+def test_a_refusal_without_those_headers_still_logs_and_names_none_of_them(
+    http, caplog
+):
+    http(httpx.Response(400, text="refused"))
+
+    message = _refused_save(caplog).getMessage()
+
+    assert "refused" in message
+    for absent in (
+        "x-vercel-error",
+        "x-vercel-error-code",
+        "x-vercel-id",
+        "retry-after",
+    ):
+        assert absent not in message
+
+
+def test_a_2xx_without_a_usable_url_is_logged_with_its_body(http, caplog):
+    """The second refusal point: a 2xx whose body carries no usable `url`."""
+    http(httpx.Response(200, json={"pathname": "uploads/x.png"}))
+
+    message = _refused_save(caplog).getMessage()
+
+    assert "200" in message
+    assert "uploads/x.png" in message
+
+
+def test_no_record_can_carry_the_store_credential(http, caplog):
+    http(
+        httpx.Response(
+            400, json={"error": {"message": f"token {SECRET_TOKEN} rejeitado"}}
+        )
+    )
+
+    message = _refused_save(caplog, token=SECRET_TOKEN).getMessage()
+
+    assert SECRET_TOKEN not in message
+    assert SECRET_SEGMENT not in message
+    assert "Bearer" not in message
+    assert "authorization" not in message.lower()
+    assert "***" in message
+
+
+def test_the_credential_cannot_survive_the_truncation_boundary(http, caplog):
+    """The ordering of the two operations, proven rather than asserted.
+
+    Scrub-then-truncate replaces the whole token before a single byte is cut,
+    so no fragment of it survives. Truncate-then-scrub cuts the token at byte
+    512, and the surviving prefix no longer matches the full-token pattern --
+    it passes the scrub untouched and reaches a durable log stream.
+    """
+    body = "." * STRADDLE_OFFSET + SECRET_TOKEN + " (fim do corpo)"
+    assert len(body.encode("utf-8")) > storage_service.BLOB_LOG_BODY_MAX_BYTES
+    assert STRADDLE_OFFSET < storage_service.BLOB_LOG_BODY_MAX_BYTES
+    http(httpx.Response(400, text=body))
+
+    message = _refused_save(caplog, token=SECRET_TOKEN).getMessage()
+
+    assert SECRET_TOKEN not in message
+    assert SECRET_SEGMENT not in message
+    assert "vercel_blob_rw_Str" not in message
+    # Every prefix from the generic marker up, so the case discriminates at
+    # this offset instead of merely conforming to the description.
+    for cut in range(len("vercel_blob_rw"), len(SECRET_TOKEN) + 1):
+        assert SECRET_TOKEN[:cut] not in message
+
+
+@pytest.mark.parametrize(
+    "filler",
+    [
+        pytest.param("E", id="ascii"),
+        # Multibyte, so the bound has to be measured in **bytes**: 512 of these
+        # are 1024 bytes, which a character-count bound would wave through.
+        pytest.param("é", id="multibyte"),
+    ],
+)
+def test_a_long_refusal_body_is_bounded_in_bytes_and_marked(http, caplog, filler):
+    body = filler * (10 * 1024)
+    http(httpx.Response(400, text=body))
+
+    record = _refused_save(caplog)
+
+    logged_body = record.args[-1]
+    assert logged_body.endswith(storage_service.BLOB_LOG_TRUNCATION_MARKER)
+    kept = logged_body.removesuffix(storage_service.BLOB_LOG_TRUNCATION_MARKER)
+    assert len(kept.encode("utf-8")) <= storage_service.BLOB_LOG_BODY_MAX_BYTES
+    assert storage_service.BLOB_LOG_BODY_MAX_BYTES == 512
+    assert len(record.getMessage()) < len(body)
+
+
+def test_a_successful_upload_emits_no_record(http, caplog):
+    http()
+
+    with caplog.at_level("WARNING", logger=storage_service.__name__):
+        _, url = _uploads().save_file(b"x", "logo.png", "image/png")
+
+    assert url == BLOB_URL
+    assert caplog.records == []
+
+
+def test_a_failed_delete_is_no_longer_silent(http, caplog):
+    http(
+        httpx.Response(
+            404, json={"error": {"code": "not_found", "message": "blob not found"}}
+        )
+    )
+
+    with caplog.at_level("WARNING", logger=storage_service.__name__):
+        assert _uploads().delete_file(BLOB_URL) is False
+
+    message = _sole_record(caplog).getMessage()
+    assert "404" in message
+    assert "POST" in message
+    assert "blob not found" in message
+
+
+def test_the_scrub_is_a_no_op_with_no_token_configured_and_corrupts_nothing():
+    """The empty-token guard, which is not decoration.
+
+    `bytes.replace(b"", b"***")` inserts the replacement between *every* byte,
+    so a provider built without a token would log a body no one could read.
+    Unreachable through `save_file` -- `_store_id` refuses a token-less
+    provider before any request -- so it is exercised here directly.
+    """
+    provider = _uploads(token=None)
+    response = httpx.Response(400, text="pathname is required", headers={"e": "1"})
+
+    assert provider._refusal_body(response) == "pathname is required"
+    assert provider._refusal_headers(response) == {
+        "content-type": "text/plain; charset=utf-8"
+    }

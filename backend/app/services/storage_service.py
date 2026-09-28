@@ -374,6 +374,31 @@ BLOB_TIMEOUT = httpx.Timeout(connect=5.0, read=30.0, write=30.0, pool=5.0)
 #: it owns a safe default and the honouring of a caller's tighter one.
 BLOB_MAX_READ_BYTES = 2 * 1024 * 1024
 
+#: The most bytes of a refused Blob response body a single log record carries
+#: (APRAS-101). Comfortably holds a Blob API error JSON and stops an
+#: intermediary's HTML error page from being copied into Vercel's durable log
+#: stream. The bound is applied **after** the credential scrub, never before --
+#: see :meth:`VercelBlobStorageProvider._refusal_body`.
+BLOB_LOG_BODY_MAX_BYTES = 512
+
+#: Appended when the body was longer than the bound, so a truncated record can
+#: never be read as a complete one.
+BLOB_LOG_TRUNCATION_MARKER = " \u2026(truncado)"
+
+#: The *response* headers a refusal record may carry, each only when present.
+#: All five are diagnostic -- the error-code and ``retry-after`` pair is what
+#: identifies a ``400`` produced by an intermediary rather than by the Blob API
+#: -- and none of them can hold a credential of ours. The **request** headers
+#: are never logged: :meth:`VercelBlobStorageProvider._auth_headers` puts the
+#: store's read-write token in ``authorization``.
+BLOB_LOG_RESPONSE_HEADERS = (
+    "x-vercel-error",
+    "x-vercel-error-code",
+    "x-vercel-id",
+    "content-type",
+    "retry-after",
+)
+
 #: ``{storeId}.{access}.blob.vercel-storage.com`` is five labels, and the count
 #: is part of the read predicate: without it,
 #: ``{store}.public.a.blob.vercel-storage.com`` would pass. Named because a
@@ -443,9 +468,10 @@ class VercelBlobStorageProvider(BaseStorageProvider):
         store_id = self._store_id()
         pathname = self._pathname(stored_type, tenant_id)
 
+        request_url = f"{BLOB_API_BASE_URL}/?{urlencode({'pathname': pathname})}"
         response = self._request(
             "PUT",
-            f"{BLOB_API_BASE_URL}/?{urlencode({'pathname': pathname})}",
+            request_url,
             headers={
                 **self._auth_headers(store_id),
                 "x-vercel-blob-access": "public",
@@ -459,9 +485,13 @@ class VercelBlobStorageProvider(BaseStorageProvider):
             content=file_bytes,
         )
         if not response.is_success:
+            # Emitted **before** `_describe`, deliberately: the diagnostic must
+            # not depend on `_describe` (nor on the `_payload` parse inside it)
+            # staying non-raising for every body shape the API can answer.
+            self._log_refusal("PUT", request_url, response)
             raise StorageUnavailableError(self._describe(response))
 
-        url = self._url_of(response)
+        url = self._url_of(response, request_url)
         return url, url
 
     def delete_file(self, file_path: str) -> bool:
@@ -474,10 +504,11 @@ class VercelBlobStorageProvider(BaseStorageProvider):
         """
         if self.resolve_stored_path(file_path) is None:
             return False
+        delete_url = f"{BLOB_API_BASE_URL}/delete"
         try:
             response = self._request(
                 "POST",
-                f"{BLOB_API_BASE_URL}/delete",
+                delete_url,
                 headers={
                     **self._auth_headers(self._store_id()),
                     "content-type": "application/json",
@@ -486,7 +517,12 @@ class VercelBlobStorageProvider(BaseStorageProvider):
             )
         except StorageUnavailableError:
             return False
-        return response.is_success
+        if not response.is_success:
+            # Silent before APRAS-101: the `False` was swallowed by every
+            # caller, so a store that refuses deletes left no trace at all.
+            self._log_refusal("POST", delete_url, response)
+            return False
+        return True
 
     def resolve_stored_path(self, url: str | None) -> str | None:
         """The URL itself when it is a Blob object's, else ``None``."""
@@ -804,18 +840,95 @@ class VercelBlobStorageProvider(BaseStorageProvider):
                 detail = f" ({': '.join(parts)})" if parts else ""
         return f"o Vercel Blob respondeu {response.status_code}{detail}"
 
-    @classmethod
-    def _url_of(cls, response: httpx.Response) -> str:
-        """The ``url`` of a successful response, validated before it is used."""
-        payload = cls._payload(response)
+    def _url_of(self, response: httpx.Response, request_url: str) -> str:
+        """The ``url`` of a successful response, validated before it is used.
+
+        An instance method since APRAS-101, and taking the request URL: the
+        refusal record it now emits needs both the configured token (to scrub
+        it out of the body) and the URL that was asked for. The method it
+        records is the literal ``"PUT"`` because ``save_file``'s upload is its
+        only caller -- a 2xx with no usable ``url`` can arrive from nowhere
+        else.
+        """
+        payload = self._payload(response)
         url = payload.get("url") if isinstance(payload, dict) else None
         if not isinstance(url, str) or not url:
+            self._log_refusal("PUT", request_url, response)
             raise StorageUnavailableError(
                 "o Vercel Blob respondeu "
                 f"{response.status_code} sem uma URL utilizável; o contrato da "
                 f"API (x-api-version {BLOB_API_VERSION}) pode ter mudado"
             )
         return url
+
+    # -- why a refusal happened (APRAS-101) --------------------------------
+
+    def _log_refusal(self, method: str, url: str, response: httpx.Response) -> None:
+        """One WARNING per Blob response this provider cannot use.
+
+        ``_describe`` reads the body only when it is JSON shaped exactly
+        ``{"error": {"code", "message"}}``, and nothing logged anything, so
+        every other shape -- a bare ``{"message": ...}``, a plain-text line, an
+        intermediary's HTML page -- reached production as a bare status code.
+        This is the record that turns it into a sentence.
+
+        Diagnostic only: nothing a caller observes is derived from it. The raw
+        body is never promoted into the client-visible error, which also keeps
+        Vercel's own error text out of a browser response.
+        """
+        logger.warning(
+            "Vercel Blob: resposta inutilizável para %s %s: "
+            "status=%s, cabeçalhos=%s, corpo=%s",
+            method,
+            url,
+            response.status_code,
+            self._refusal_headers(response),
+            self._refusal_body(response),
+        )
+
+    def _refusal_headers(self, response: httpx.Response) -> dict[str, str]:
+        """The allowlisted response headers that are actually present.
+
+        A dict, so an absent header leaves no placeholder behind. Scrubbed all
+        the same: an API that echoed a request header back would otherwise put
+        the credential in the record.
+        """
+        present = {}
+        for name in BLOB_LOG_RESPONSE_HEADERS:
+            value = response.headers.get(name)
+            if value is not None:
+                present[name] = self._scrubbed_text(value)
+        return present
+
+    def _refusal_body(self, response: httpx.Response) -> str:
+        """The body, scrubbed over its **whole** length and only then bounded.
+
+        The order is a security property, not a preference. Truncating first
+        can cut an echoed token mid-string: the surviving prefix no longer
+        matches the full-token pattern, so it passes the scrub untouched and a
+        usable part of the store's read-write credential reaches Vercel's
+        durable log stream, where it stays permanently.
+
+        The bound is a byte slice over the scrubbed *bytes* rather than over
+        ``response.text``, so it is exact whatever the encoding, and the slice
+        is decoded with ``errors="replace"`` because it may land mid-character.
+        """
+        scrubbed = self._scrubbed_bytes(response.content)
+        if len(scrubbed) <= BLOB_LOG_BODY_MAX_BYTES:
+            return scrubbed.decode("utf-8", errors="replace")
+        kept = scrubbed[:BLOB_LOG_BODY_MAX_BYTES].decode("utf-8", errors="replace")
+        return kept + BLOB_LOG_TRUNCATION_MARKER
+
+    def _scrubbed_bytes(self, raw: bytes) -> bytes:
+        """``raw`` with every occurrence of the configured token replaced."""
+        token = self.token or ""
+        if not token:
+            return raw
+        return raw.replace(token.encode("utf-8", errors="replace"), b"***")
+
+    def _scrubbed_text(self, text: str) -> str:
+        """``text`` with every occurrence of the configured token replaced."""
+        return text.replace(self.token, "***") if self.token else text
 
 
 def upload_storage_provider() -> BaseStorageProvider:
