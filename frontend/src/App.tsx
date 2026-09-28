@@ -1,5 +1,11 @@
 import type React from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  Outlet,
+} from "react-router-dom";
 import TaskDashboard from "./features/task-management/components/TaskDashboard";
 import GeneralDashboardPage from "./features/dashboard/components/GeneralDashboardPage";
 import CategoriesPage from "./features/task-management/components/CategoriesPage";
@@ -104,6 +110,32 @@ const AppLayoutContent: React.FC<{ children: React.ReactNode }> = ({
   );
 };
 
+/**
+ * The application chrome, as the element of a pathless layout route
+ * (APRAS-106).
+ *
+ * `Navbar` and `AppLayoutContent` are both authenticated furniture: the first
+ * renders the sidebar and the sticky header, the second offsets the page by
+ * that sidebar's width. Wrapping `<Routes>` in them made every route carry
+ * them, which was invisible on the public routes only because an anonymous
+ * visitor sees neither — a signed-in one opening `/c/<slug>/obras` got app
+ * navigation on a public document and the document pushed right by a sidebar
+ * nobody else can see.
+ *
+ * Making the chrome a route element rather than a wrapper puts "public routes
+ * have no chrome" in the route table itself, where it is read by whoever adds
+ * the next route, instead of in a path condition inside the chrome components,
+ * where it would not be.
+ */
+const AppChrome: React.FC = () => (
+  <>
+    <Navbar />
+    <AppLayoutContent>
+      <Outlet />
+    </AppLayoutContent>
+  </>
+);
+
 function App() {
   return (
     <AuthProvider>
@@ -120,10 +152,12 @@ function App() {
         <SimulationProvider>
           <SidebarProvider>
             <BrowserRouter>
-              <div className="App min-h-screen bg-background">
-                <Navbar />
-                <AppLayoutContent>
-                  <Routes>
+              <div className="App min-h-screen bg-background text-foreground">
+                <Routes>
+                {/* The public routes. Outside `ProtectedRoute` and outside the chrome
+                    layout route below: `Navbar` and `AppLayoutContent` are
+                    authenticated furniture, and a signed-in visitor opening one of
+                    these must see the same page an anonymous one does. */}
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/signup" element={<SignupPage />} />
                 <Route
@@ -155,352 +189,359 @@ function App() {
                   element={<PublicObrasReportPage />}
                 />
 
-                <Route
-                  path="/tasks"
-                  element={
-                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/tasks"]}>
-                      <TaskDashboard />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/dashboard"
-                  element={<Navigate to="/tasks" replace />}
-                />
+                {/* APRAS-106: the authenticated chrome, as a pathless layout route.
+                    Everything below renders inside `Navbar` + `AppLayoutContent`; the
+                    seven public routes above are siblings and so render inside
+                    neither. The grouping is the rule: the next public route is
+                    correct by being placed above, not by someone remembering to
+                    update a condition. */}
+                <Route element={<AppChrome />}>
+                  <Route
+                    path="/tasks"
+                    element={
+                      <ProtectedRoute requiredAccess={ROUTE_ACCESS["/tasks"]}>
+                        <TaskDashboard />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/dashboard"
+                    element={<Navigate to="/tasks" replace />}
+                  />
 
-                <Route
-                  path="/categories"
-                  element={
-                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/categories"]}>
-                      <CategoriesPage />
-                    </ProtectedRoute>
-                  }
-                />
+                  <Route
+                    path="/categories"
+                    element={
+                      <ProtectedRoute requiredAccess={ROUTE_ACCESS["/categories"]}>
+                        <CategoriesPage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                <Route
-                  path="/welcome"
-                  element={
-                    <ProtectedRoute>
-                      <GuestWelcomePage />
-                    </ProtectedRoute>
-                  }
-                />
+                  <Route
+                    path="/welcome"
+                    element={
+                      <ProtectedRoute>
+                        <GuestWelcomePage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                <Route
-                  path="/lots"
-                  element={
-                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/lots"]}>
-                      <LotsPage />
-                    </ProtectedRoute>
-                  }
-                />
+                  <Route
+                    path="/lots"
+                    element={
+                      <ProtectedRoute requiredAccess={ROUTE_ACCESS["/lots"]}>
+                        <LotsPage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                <Route
-                  path="/authorizations"
-                  element={
-                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/authorizations"]}>
-                      <VisitorAuthPage />
-                    </ProtectedRoute>
-                  }
-                />
+                  <Route
+                    path="/authorizations"
+                    element={
+                      <ProtectedRoute requiredAccess={ROUTE_ACCESS["/authorizations"]}>
+                        <VisitorAuthPage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                <Route
-                  path="/gate"
-                  element={
-                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/gate"]}>
-                      <GatekeeperDashboard />
-                    </ProtectedRoute>
-                  }
-                />
+                  <Route
+                    path="/gate"
+                    element={
+                      <ProtectedRoute requiredAccess={ROUTE_ACCESS["/gate"]}>
+                        <GatekeeperDashboard />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                <Route
-                  path="/occurrences"
-                  element={
-                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/occurrences"]}>
-                      <OccurrenceBookPage />
-                    </ProtectedRoute>
-                  }
-                />
+                  <Route
+                    path="/occurrences"
+                    element={
+                      <ProtectedRoute requiredAccess={ROUTE_ACCESS["/occurrences"]}>
+                        <OccurrenceBookPage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                <Route
-                  path="/feedback"
-                  element={
-                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/feedback"]}>
-                      <FeedbackChannelPage />
-                    </ProtectedRoute>
-                  }
-                />
+                  <Route
+                    path="/feedback"
+                    element={
+                      <ProtectedRoute requiredAccess={ROUTE_ACCESS["/feedback"]}>
+                        <FeedbackChannelPage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                <Route
-                  path="/documents"
-                  element={
-                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/documents"]}>
-                      <DocumentCenterPage />
-                    </ProtectedRoute>
-                  }
-                />
+                  <Route
+                    path="/documents"
+                    element={
+                      <ProtectedRoute requiredAccess={ROUTE_ACCESS["/documents"]}>
+                        <DocumentCenterPage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                <Route
-                  path="/projects"
-                  element={
-                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/projects"]}>
-                      <ConstructionTrackerPage />
-                    </ProtectedRoute>
-                  }
-                />
+                  <Route
+                    path="/projects"
+                    element={
+                      <ProtectedRoute requiredAccess={ROUTE_ACCESS["/projects"]}>
+                        <ConstructionTrackerPage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                <Route
-                  path="/announcements"
-                  element={
-                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/announcements"]}>
-                      <AnnouncementFeedPage />
-                    </ProtectedRoute>
-                  }
-                />
+                  <Route
+                    path="/announcements"
+                    element={
+                      <ProtectedRoute requiredAccess={ROUTE_ACCESS["/announcements"]}>
+                        <AnnouncementFeedPage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                <Route
-                  path="/finance"
-                  element={
-                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/finance"]}>
-                      <FinanceDashboardPage />
-                    </ProtectedRoute>
-                  }
-                />
+                  <Route
+                    path="/finance"
+                    element={
+                      <ProtectedRoute requiredAccess={ROUTE_ACCESS["/finance"]}>
+                        <FinanceDashboardPage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                <Route
-                  path="/admin/users"
-                  element={
-                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/admin/users"]}>
-                      <AdminUserDashboard />
-                    </ProtectedRoute>
-                  }
-                />
+                  <Route
+                    path="/admin/users"
+                    element={
+                      <ProtectedRoute requiredAccess={ROUTE_ACCESS["/admin/users"]}>
+                        <AdminUserDashboard />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                <Route
-                  path="/users/contact-info"
-                  element={
-                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/users/contact-info"]}>
-                      <ContactInfoDashboard />
-                    </ProtectedRoute>
-                  }
-                />
+                  <Route
+                    path="/users/contact-info"
+                    element={
+                      <ProtectedRoute requiredAccess={ROUTE_ACCESS["/users/contact-info"]}>
+                        <ContactInfoDashboard />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                <Route
-                  path="/admin/photo-approvals"
-                  element={
-                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/admin/photo-approvals"]}>
-                      <PhotoApprovalQueuePage />
-                    </ProtectedRoute>
-                  }
-                />
+                  <Route
+                    path="/admin/photo-approvals"
+                    element={
+                      <ProtectedRoute requiredAccess={ROUTE_ACCESS["/admin/photo-approvals"]}>
+                        <PhotoApprovalQueuePage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                <Route
-                  path="/admin/access-control"
-                  element={
-                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/admin/access-control"]}>
-                      <AccessControlPage />
-                    </ProtectedRoute>
-                  }
-                />
+                  <Route
+                    path="/admin/access-control"
+                    element={
+                      <ProtectedRoute requiredAccess={ROUTE_ACCESS["/admin/access-control"]}>
+                        <AccessControlPage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                <Route
-                  path="/gate-monitor"
-                  element={
-                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/gate-monitor"]}>
-                      <GateMonitorPage />
-                    </ProtectedRoute>
-                  }
-                />
+                  <Route
+                    path="/gate-monitor"
+                    element={
+                      <ProtectedRoute requiredAccess={ROUTE_ACCESS["/gate-monitor"]}>
+                        <GateMonitorPage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                <Route
-                  path="/spaces"
-                  element={
-                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/spaces"]}>
-                      <ReservableSpacesPage />
-                    </ProtectedRoute>
-                  }
-                />
+                  <Route
+                    path="/spaces"
+                    element={
+                      <ProtectedRoute requiredAccess={ROUTE_ACCESS["/spaces"]}>
+                        <ReservableSpacesPage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                <Route
-                  path="/reservations"
-                  element={
-                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/reservations"]}>
-                      <SpaceBookingPage />
-                    </ProtectedRoute>
-                  }
-                />
+                  <Route
+                    path="/reservations"
+                    element={
+                      <ProtectedRoute requiredAccess={ROUTE_ACCESS["/reservations"]}>
+                        <SpaceBookingPage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                <Route
-                  path="/packages"
-                  element={
-                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/packages"]}>
-                      <PackageStatusPage />
-                    </ProtectedRoute>
-                  }
-                />
+                  <Route
+                    path="/packages"
+                    element={
+                      <ProtectedRoute requiredAccess={ROUTE_ACCESS["/packages"]}>
+                        <PackageStatusPage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                {/* APRAS-44. Three surfaces, three different rules: the
-                    management list, the catalogue + ladder editor, and the
-                    resident's own view. None of them is a `{ module }` rule --
-                    see the reasoning in `routeAccess.ts`. */}
-                <Route
-                  path="/infractions"
-                  element={
-                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/infractions"]}>
-                      <InfractionsPage />
-                    </ProtectedRoute>
-                  }
-                />
+                  {/* APRAS-44. Three surfaces, three different rules: the
+                      management list, the catalogue + ladder editor, and the
+                      resident's own view. None of them is a `{ module }` rule --
+                      see the reasoning in `routeAccess.ts`. */}
+                  <Route
+                    path="/infractions"
+                    element={
+                      <ProtectedRoute requiredAccess={ROUTE_ACCESS["/infractions"]}>
+                        <InfractionsPage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                <Route
-                  path="/infraction-rules"
-                  element={
-                    <ProtectedRoute
-                      requiredAccess={ROUTE_ACCESS["/infraction-rules"]}
-                    >
-                      <InfractionRulesPage />
-                    </ProtectedRoute>
-                  }
-                />
+                  <Route
+                    path="/infraction-rules"
+                    element={
+                      <ProtectedRoute
+                        requiredAccess={ROUTE_ACCESS["/infraction-rules"]}
+                      >
+                        <InfractionRulesPage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                <Route
-                  path="/my-infractions"
-                  element={
-                    <ProtectedRoute
-                      requiredAccess={ROUTE_ACCESS["/my-infractions"]}
-                    >
-                      <MyInfractionsPage />
-                    </ProtectedRoute>
-                  }
-                />
+                  <Route
+                    path="/my-infractions"
+                    element={
+                      <ProtectedRoute
+                        requiredAccess={ROUTE_ACCESS["/my-infractions"]}
+                      >
+                        <MyInfractionsPage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                {/* Voting is closed to PORTEIRO and GUEST: they never vote,
-                    in either modality (APRAS-33). */}
-                <Route
-                  path="/voting"
-                  element={
-                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/voting"]}>
-                      <AssemblyVotingPage />
-                    </ProtectedRoute>
-                  }
-                />
+                  {/* Voting is closed to PORTEIRO and GUEST: they never vote,
+                      in either modality (APRAS-33). */}
+                  <Route
+                    path="/voting"
+                    element={
+                      <ProtectedRoute requiredAccess={ROUTE_ACCESS["/voting"]}>
+                        <AssemblyVotingPage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                <Route
-                  path="/assets"
-                  element={
-                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/assets"]}>
-                      <AssetsInventoryPage />
-                    </ProtectedRoute>
-                  }
-                />
+                  <Route
+                    path="/assets"
+                    element={
+                      <ProtectedRoute requiredAccess={ROUTE_ACCESS["/assets"]}>
+                        <AssetsInventoryPage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                {/* Purchase quotations are an internal board/manager workflow:
-                    supplier prices under negotiation are not published to
-                    residents (APRAS-37). */}
-                <Route
-                  path="/purchases"
-                  element={
-                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/purchases"]}>
-                      <PurchaseRequestsPage />
-                    </ProtectedRoute>
-                  }
-                />
+                  {/* Purchase quotations are an internal board/manager workflow:
+                      supplier prices under negotiation are not published to
+                      residents (APRAS-37). */}
+                  <Route
+                    path="/purchases"
+                    element={
+                      <ProtectedRoute requiredAccess={ROUTE_ACCESS["/purchases"]}>
+                        <PurchaseRequestsPage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                <Route
-                  path="/admin/roles"
-                  element={
-                    <ProtectedRoute requiredAccess={ROUTE_ACCESS["/admin/roles"]}>
-                      <RolesAdminPage />
-                    </ProtectedRoute>
-                  }
-                />
+                  <Route
+                    path="/admin/roles"
+                    element={
+                      <ProtectedRoute requiredAccess={ROUTE_ACCESS["/admin/roles"]}>
+                        <RolesAdminPage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                <Route
-                  path="/admin/modules"
-                  element={
-                    <ProtectedRoute
-                      requiredAccess={ROUTE_ACCESS["/admin/modules"]}
-                    >
-                      <TenantModulesPage />
-                    </ProtectedRoute>
-                  }
-                />
+                  <Route
+                    path="/admin/modules"
+                    element={
+                      <ProtectedRoute
+                        requiredAccess={ROUTE_ACCESS["/admin/modules"]}
+                      >
+                        <TenantModulesPage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                <Route
-                  path="/admin/tenant-profile"
-                  element={
-                    <ProtectedRoute
-                      requiredAccess={ROUTE_ACCESS["/admin/tenant-profile"]}
-                    >
-                      <TenantProfilePage />
-                    </ProtectedRoute>
-                  }
-                />
+                  <Route
+                    path="/admin/tenant-profile"
+                    element={
+                      <ProtectedRoute
+                        requiredAccess={ROUTE_ACCESS["/admin/tenant-profile"]}
+                      >
+                        <TenantProfilePage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                <Route
-                  path="/subscription"
-                  element={
-                    <ProtectedRoute
-                      requiredAccess={ROUTE_ACCESS["/subscription"]}
-                    >
-                      <SubscriptionPage />
-                    </ProtectedRoute>
-                  }
-                />
+                  <Route
+                    path="/subscription"
+                    element={
+                      <ProtectedRoute
+                        requiredAccess={ROUTE_ACCESS["/subscription"]}
+                      >
+                        <SubscriptionPage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                <Route
-                  path="/admin/tenants"
-                  element={
-                    <ProtectedRoute
-                      requiredAccess={ROUTE_ACCESS["/admin/tenants"]}
-                    >
-                      <TenantsAdminPage />
-                    </ProtectedRoute>
-                  }
-                />
+                  <Route
+                    path="/admin/tenants"
+                    element={
+                      <ProtectedRoute
+                        requiredAccess={ROUTE_ACCESS["/admin/tenants"]}
+                      >
+                        <TenantsAdminPage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                <Route
-                  path="/admin/plans"
-                  element={
-                    <ProtectedRoute
-                      requiredAccess={ROUTE_ACCESS["/admin/plans"]}
-                    >
-                      <PlansAdminPage />
-                    </ProtectedRoute>
-                  }
-                />
+                  <Route
+                    path="/admin/plans"
+                    element={
+                      <ProtectedRoute
+                        requiredAccess={ROUTE_ACCESS["/admin/plans"]}
+                      >
+                        <PlansAdminPage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                <Route
-                  path="/admin/subscriptions"
-                  element={
-                    <ProtectedRoute
-                      requiredAccess={ROUTE_ACCESS["/admin/subscriptions"]}
-                    >
-                      <TenantSubscriptionsPage />
-                    </ProtectedRoute>
-                  }
-                />
+                  <Route
+                    path="/admin/subscriptions"
+                    element={
+                      <ProtectedRoute
+                        requiredAccess={ROUTE_ACCESS["/admin/subscriptions"]}
+                      >
+                        <TenantSubscriptionsPage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                <Route
-                  path="/admin/roles/:roleId"
-                  element={
-                    <ProtectedRoute
-                      requiredAccess={ROUTE_ACCESS["/admin/roles/:roleId"]}
-                    >
-                      <RoleDetailPage />
-                    </ProtectedRoute>
-                  }
-                />
+                  <Route
+                    path="/admin/roles/:roleId"
+                    element={
+                      <ProtectedRoute
+                        requiredAccess={ROUTE_ACCESS["/admin/roles/:roleId"]}
+                      >
+                        <RoleDetailPage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                <Route path="/" element={<RootRedirect />} />
-              </Routes>
-            </AppLayoutContent>
-          </div>
-        </BrowserRouter>
-      </SidebarProvider>
-    </SimulationProvider>
-  </TenantProvider>
-</AuthProvider>
+                  <Route path="/" element={<RootRedirect />} />
+                </Route>
+                </Routes>
+              </div>
+            </BrowserRouter>
+          </SidebarProvider>
+        </SimulationProvider>
+      </TenantProvider>
+    </AuthProvider>
   );
 }
 
