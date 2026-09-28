@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, StaticPool, create_engine, select
 
-from app.core.security import get_password_hash
+from app.core.security import get_password_hash, pwd_context
 from app.core.tenant_context import REQUEST_SCOPED_KEY
 from app.db import get_session
 from app.main import app
@@ -22,6 +22,19 @@ from app.models.user import User
 
 # Disable rate limiting for tests
 app.state.limiter.enabled = False
+
+# Lower bcrypt's cost for the test process only (APRAS-108). At the production
+# floor of 12 rounds a hash costs 253.3 ms and the suite makes 1770 of them:
+# ~460 s, roughly 60% of a 771 s run. At 4 rounds a hash costs 1.1 ms and the
+# full run takes ~311 s, with the same tests passing and the same coverage.
+#
+# `update()` mutates the context `app.core.security` already built instead of
+# rebinding it, so every `from app.core.security import pwd_context` alias sees
+# the same setting. It runs at module level rather than in a fixture because 4
+# has to be in force for hashes computed during collection and inside
+# session-scoped fixtures. bcrypt stores its cost in the hash itself, so
+# production hashes created at 12 rounds still verify here unchanged.
+pwd_context.update(bcrypt__rounds=4)
 
 
 # ---------------------------------------------------------------------------

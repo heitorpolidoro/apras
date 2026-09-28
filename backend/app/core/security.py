@@ -9,7 +9,26 @@ from passlib.context import CryptContext
 from app.core import clock
 from app.core.config import settings
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# The production bcrypt cost factor, and the floor below which it must never
+# go (APRAS-108). 12 is also passlib's own default, so making it explicit
+# changes nothing operationally -- it gives the floor a single addressable name.
+#
+# It is deliberately *not* configurable: no `Settings` field, no environment
+# read. A cost of 4 in production is a severe but silent defect -- every hash
+# still verifies, no endpoint changes behaviour, nothing logs -- so the only way
+# to lower it is to edit this line, which is a reviewable diff that
+# `tests/test_bcrypt_cost.py` fails on. Declaring a `BCRYPT_ROUNDS` settings
+# field is precisely what would create a deploy-time weakening route, because
+# `Settings` ignores undeclared environment rows today.
+#
+# The test suite does not touch this constant. `tests/conftest.py` lowers the
+# *context* with `pwd_context.update(bcrypt__rounds=4)`, which affects only the
+# test process.
+BCRYPT_ROUNDS = 12
+
+pwd_context = CryptContext(
+    schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=BCRYPT_ROUNDS
+)
 
 
 def get_token_expiration(remember_me: bool = False) -> timedelta:
