@@ -35,7 +35,17 @@ import type { User, Role } from "../../../types/auth";
  */
 
 vi.mock("../../../api/client", () => ({
-  default: { get: vi.fn(), post: vi.fn(), put: vi.fn(), patch: vi.fn(), delete: vi.fn() },
+  default: {
+    get: vi.fn(),
+    post: vi.fn(),
+    put: vi.fn(),
+    patch: vi.fn(),
+    delete: vi.fn(),
+    // `tenantLogoUrl` reads the base off this very object, so the mock has to
+    // carry it: the screen displays the logo through the public route
+    // (APRAS-105), never through `logo_url` verbatim.
+    defaults: { baseURL: "http://api.test/api/v1" },
+  },
 }));
 
 vi.mock("../context/SimulationContext", () => ({
@@ -55,6 +65,10 @@ const t = (key: string): string =>
       (node, part) => (node as Record<string, unknown>)?.[part],
       pt,
     ) as string;
+
+/** Where the screen must point the `<img>`: the public logo route, absolute. */
+const LOGO_ROUTE =
+  "http://api.test/api/v1/public/tenants/residencial-altos-da-serra-vi/logo";
 
 const mockedGet = vi.mocked(apiClient.get);
 const mockedPut = vi.mocked(apiClient.put);
@@ -127,7 +141,15 @@ describe("TenantProfilePage", () => {
     expect(await screen.findByText(t("tenantProfile.title"))).toBeInTheDocument();
     expect(await screen.findByDisplayValue(PROFILE.name)).toBeInTheDocument();
     const logo = await screen.findByAltText(t("tenantProfile.logoAlt"));
-    expect(logo).toHaveAttribute("src", "/static/uploads/2026/09/brasao.png");
+    // Through the public route and absolutely, never `logo_url` verbatim
+    // (APRAS-105 §D): the stored value is relative, and the API does not live
+    // on this origin, so rendering it as-is silently loaded nothing. The Blob
+    // store is private now besides, so the stored URL is not fetchable by a
+    // browser at all.
+    expect(logo).toHaveAttribute("src", LOGO_ROUTE);
+    expect(logo.getAttribute("src")).toMatch(/^http:\/\/api\.test\/api\/v1/);
+    expect(logo.getAttribute("src")).toMatch(/\/logo$/);
+    expect(logo).not.toHaveAttribute("src", "/static/uploads/2026/09/brasao.png");
   });
 
   it("renders a placeholder instead of a broken image when there is no logo", async () => {
@@ -186,7 +208,9 @@ describe("TenantProfilePage", () => {
     ).toBe("multipart/form-data");
 
     const logo = await screen.findByAltText(t("tenantProfile.logoAlt"));
-    expect(logo).toHaveAttribute("src", "/static/uploads/2026/09/novo.png");
+    // The route is keyed by slug, so the `src` does not change when the bytes
+    // behind it do -- what changes is that there is a logo to show at all.
+    expect(logo).toHaveAttribute("src", LOGO_ROUTE);
   });
 
   it("shows a translated message when the backend refuses the bytes with 422", async () => {

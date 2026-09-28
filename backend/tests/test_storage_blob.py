@@ -250,12 +250,30 @@ def test_save_file_puts_the_bytes_with_every_documented_header(http):
     assert call.headers["authorization"] == f"Bearer {TOKEN}"
     assert call.headers["x-api-version"] == BLOB_API_VERSION
     assert call.headers["x-vercel-blob-store-id"] == STORE_ID
-    assert call.headers["x-vercel-blob-access"] == "public"
+    assert call.headers["x-vercel-blob-access"] == storage_service.BLOB_STORE_ACCESS
     assert call.headers["x-add-random-suffix"] == "0"
     assert call.headers["x-content-type"] == "image/png"
     assert "x-allow-overwrite" not in {key.lower() for key in call.headers}
     assert url == BLOB_URL
     assert internal == BLOB_URL
+
+
+def test_the_store_access_sent_is_private_not_public(http):
+    """APRAS-105 §A: the production `400`, pinned so it cannot come back.
+
+    The store is configured with **private** access and answered
+    `{"error":{"code":"bad_request","message":"Cannot use public access on a
+    private store."}}` to every upload. The value is asserted literally here,
+    not through the constant, so that restoring `"public"` -- in the constant
+    or inline -- fails this case.
+    """
+    calls = http()
+
+    _uploads().save_file(b"\x89PNG-bytes", "logo.png", "image/png")
+
+    assert storage_service.BLOB_STORE_ACCESS == "private"
+    assert calls[0].headers["x-vercel-blob-access"] == "private"
+    assert calls[0].headers["x-vercel-blob-access"] != "public"
 
 
 def test_the_canonical_content_type_is_sent_not_the_clients_string(http):
@@ -867,10 +885,16 @@ def blob_read_fixture(monkeypatch: pytest.MonkeyPatch):
     return _install
 
 
-def test_read_file_gets_the_object_url_itself_with_no_credential(blob_read):
-    """ER 2: a `GET` on the CDN object URL, not on `vercel.com/api/blob`, and
-    no `authorization` header -- a public object needs none, and not sending
-    one means a bug in the host check could not leak the write token."""
+def test_read_file_gets_the_object_url_itself_with_the_store_credential(blob_read):
+    """ER 2, as APRAS-105 rewrites it: a `GET` on the CDN object URL, not on
+    `vercel.com/api/blob`, **carrying the store's own credential**.
+
+    The store is configured with private access (§A), so an object in it is
+    not readable anonymously. The credential is safe here for exactly one
+    reason: `resolve_own_url` has already reduced the reachable set to a single
+    host name fixed by our own token, and the case below proves a URL it
+    rejects produces no request at all.
+    """
     calls = blob_read(_served(b"PNGBYTES"))
 
     assert _uploads().read_file(READ_URL) == b"PNGBYTES"
@@ -879,7 +903,35 @@ def test_read_file_gets_the_object_url_itself_with_no_credential(blob_read):
     assert calls[0].method == "GET"
     assert calls[0].url == READ_URL
     assert BLOB_API_BASE_URL not in calls[0].url
-    assert "authorization" not in calls[0].headers
+    assert calls[0].headers["authorization"] == f"Bearer {TOKEN}"
+    assert calls[0].headers["x-vercel-blob-store-id"] == STORE_ID
+
+
+def test_a_private_store_that_refuses_an_anonymous_read_still_serves_us(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """ER 3: against a store that answers `403` without the credential and the
+    body with it, the read returns the object's exact bytes rather than `None`.
+
+    The double is the store, not the client: it decides from the request's
+    headers, so an implementation that dropped the `authorization` header would
+    get the same `403` production got and this case would fail with `None`.
+    """
+    seen: list[dict[str, str]] = []
+
+    def _stream(_self, method, url, **kwargs):
+        headers = {
+            key.lower(): value for key, value in (kwargs.get("headers") or {}).items()
+        }
+        seen.append(headers)
+        if headers.get("authorization") != f"Bearer {TOKEN}":
+            return _Streamed(403, chunks=[b"forbidden"])
+        return _served(b"PRIVATE-PNG-BYTES")
+
+    monkeypatch.setattr(httpx.Client, "stream", _stream)
+
+    assert _uploads().read_file(READ_URL) == b"PRIVATE-PNG-BYTES"
+    assert len(seen) == 1
 
 
 def test_read_file_takes_one_positional_argument(blob_read):
@@ -894,6 +946,12 @@ def test_read_file_takes_one_positional_argument(blob_read):
 def test_read_file_attempts_no_request_for_a_url_this_store_does_not_own(
     blob_read, url
 ):
+    """ER 4(b): **no outbound request at all**, not a credential-free one.
+
+    The distinction is the whole point now that the read carries a credential:
+    a probe of a foreign host that merely omits the token still confirms the
+    host exists and still leaks that we looked.
+    """
     calls = blob_read(_served(b"SECRET"))
 
     assert _uploads().read_file(url) is None
@@ -935,21 +993,73 @@ def test_read_file_returns_none_for_any_non_2xx(blob_read, status):
     assert _uploads().read_file(READ_URL) is None
 
 
-def test_a_redirect_is_not_followed(blob_read):
-    """A `3xx` is a non-success status, so the second request never happens --
-    including the one an SSRF would want, at the metadata address."""
-    calls = blob_read(
-        _served(
-            b"",
-            status=302,
-            headers={"location": "http://169.254.169.254/latest/meta-data/"},
-        )
+#: The address an SSRF wants a credentialled client redirected to: the cloud
+#: metadata endpoint, link-local and unroutable from outside the instance.
+METADATA_URL = "http://169.254.169.254/latest/meta-data/iam/security-credentials/"
+
+
+@pytest.fixture(name="blob_transport")
+def blob_transport_fixture(monkeypatch: pytest.MonkeyPatch):
+    """Capture every request at the **transport**, below redirect handling.
+
+    `blob_read` patches `httpx.Client.stream`, which sits *above* the redirect
+    machinery: with it in place httpx never gets to follow anything, so it
+    cannot witness `follow_redirects`. `httpx.HTTPTransport.handle_request` is
+    the layer a redirect request also passes through -- the seam
+    `test_project_report_branding.test_rendering_makes_no_outbound_request`
+    uses -- so a case installed here fails if the flag is ever flipped.
+    """
+
+    def _install(*responses: httpx.Response) -> list[httpx.Request]:
+        seen: list[httpx.Request] = []
+        queue = list(responses)
+
+        def _handle(_self, request: httpx.Request) -> httpx.Response:
+            seen.append(request)
+            if queue:
+                return queue.pop(0)
+            raise AssertionError(f"an unexpected request was made: {request.url}")
+
+        monkeypatch.setattr(httpx.HTTPTransport, "handle_request", _handle)
+        return seen
+
+    return _install
+
+
+def test_a_redirect_is_not_followed_so_no_other_host_is_asked(blob_transport):
+    """ER 4(c): a redirect target never receives the store credential.
+
+    The store answers the one legitimate request with a `302` at the metadata
+    address. Because `_read_object` builds its client with
+    `follow_redirects=False`, the `3xx` is simply a non-success status: the
+    transport sees exactly one request, the second one is never built, and the
+    credential therefore cannot reach a host `resolve_own_url` never saw.
+
+    The load-bearing assertion is the *absence* of any request to the redirect
+    host -- that is what turns red if `follow_redirects` becomes `True`. Note
+    that httpx would itself drop `Authorization` on a cross-origin redirect, so
+    asserting only "the redirect host got no credential" would hold either way
+    and prove nothing; what is asserted instead is that the credential is real,
+    observable, and present on the single request to our own host alone.
+    """
+    seen = blob_transport(
+        httpx.Response(302, headers={"location": METADATA_URL}, content=b""),
+        httpx.Response(200, content=b"LEAKED"),
     )
 
-    assert _uploads().read_file(READ_URL) is None
-    assert len(calls) == 1
-    assert calls[0].url == READ_URL
-    assert all("169.254.169.254" not in call.url for call in calls)
+    read = _uploads().read_file(READ_URL)
+
+    # First, because it is the assertion that names the violation: with the
+    # flag flipped this list grows the metadata URL.
+    assert [str(request.url) for request in seen] == [READ_URL]
+    assert read is None
+    assert seen[0].headers["authorization"] == f"Bearer {TOKEN}"
+    assert [
+        request
+        for request in seen
+        if request.url.host != urlparse(READ_URL).hostname
+        and request.headers.get("authorization") is not None
+    ] == []
 
 
 def test_read_file_returns_none_for_an_empty_body(blob_read):
@@ -1050,6 +1160,7 @@ def test_every_failure_is_logged_once_and_a_success_is_silent(blob_read, caplog)
     message = caplog.records[0].getMessage()
     assert "404" in message
     assert TOKEN not in message
+    assert "s3cr3trandom" not in message
 
 
 def test_the_base_provider_reads_nothing_and_owns_nothing():

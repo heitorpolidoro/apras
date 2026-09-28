@@ -25,16 +25,23 @@ Two rules follow, and the module is arranged around them:
    ``delete_file`` keeps a best-effort contract on every provider: it returns
    ``bool`` and never raises, so a failed cleanup cannot fail a request.
 
-A third rule arrived with the read side (APRAS-96). The Blob store used to be
-**write-only**, so a Blob-stored logo could only ever be *linked* from the
-obras report instead of embedded, on every render and for every tenant. Reading
-an object back is a ``GET`` on the object URL itself, and it is bounded and
-silent because its one caller is a public, uncached render:
+A third rule arrived with the read side (APRAS-96) and was rewritten by
+APRAS-105. The store is configured with **private** access -- see
+:data:`BLOB_STORE_ACCESS` -- so it is neither write-only nor anonymously
+readable: an object in it comes back only to a request carrying the store's own
+credential. Reading one is a ``GET`` on the object URL itself, and it is
+bounded and silent because its callers are public, uncached surfaces:
 :meth:`VercelBlobStorageProvider.read_file` reaches exactly one host -- the one
-this deployment's own token names -- carries no credential, follows no
-redirect, refuses a body past :data:`BLOB_MAX_READ_BYTES`, and **never raises**
-for any input. Every failure is one ``logger.warning`` and a ``None``; a
-success logs nothing.
+this deployment's own token names -- **carries the store credential**, follows
+no redirect, refuses a body past :data:`BLOB_MAX_READ_BYTES`, and **never
+raises** for any input. Every failure is one ``logger.warning`` and a ``None``;
+a success logs nothing.
+
+That the credential is attached at all is safe for one reason and one only:
+:meth:`VercelBlobStorageProvider.resolve_own_url` gates the URL first, and a
+URL it rejects produces **no outbound request at all** -- not a credential-free
+one. A probe of a foreign host that merely omitted the token would still
+confirm that host exists and still leak that we looked.
 """
 
 import abc
@@ -144,9 +151,12 @@ class BaseStorageProvider(abc.ABC):
         that owns a stricter limit can state it (APRAS-96).
 
         Never a network call on any provider that implements it against a
-        remote store without saying so: the one caller
-        (``TenantService.logo_data_uri``) runs inside an unauthenticated,
-        uncached render.
+        remote store without saying so: the callers
+        (``TenantService.logo_bytes``, behind the public logo route of
+        APRAS-105) run unauthenticated and uncached. On a store with private
+        access the request that reads an object carries that store's own
+        credential -- see
+        :meth:`VercelBlobStorageProvider._read_object` for why that is safe.
         """
         del url, max_bytes
         return None
@@ -368,10 +378,12 @@ BLOB_TIMEOUT = httpx.Timeout(connect=5.0, read=30.0, write=30.0, pool=5.0)
 #: The most bytes :meth:`VercelBlobStorageProvider.read_file` will buffer when
 #: the caller states no limit of its own. Exactly
 #: ``TenantService.LOGO_MAX_FILE_SIZE``, so **no logo the product ever accepted
-#: is refused by the default**. The consequence is the one APRAS-92 §B records:
-#: base64 inflates by 4/3, so a worst-case embed adds roughly 2.7 MiB to a
-#: render of an uncached public route. This provider does not own that policy --
-#: it owns a safe default and the honouring of a caller's tighter one.
+#: is refused by the default**. APRAS-92's base64 inflation no longer applies --
+#: APRAS-105 took the embed out and the logo route serves the bytes as they are
+#: -- but the ceiling still bounds what one serverless invocation buffers, and
+#: that caller states it explicitly rather than leaning on this default. This
+#: provider does not own that policy: it owns a safe default and the honouring
+#: of a caller's tighter one.
 BLOB_MAX_READ_BYTES = 2 * 1024 * 1024
 
 #: The most bytes of a refused Blob response body a single log record carries
@@ -398,6 +410,22 @@ BLOB_LOG_RESPONSE_HEADERS = (
     "content-type",
     "retry-after",
 )
+
+#: The access mode the store is configured with, sent as
+#: ``x-vercel-blob-access`` on every write (APRAS-105 §A).
+#:
+#: It was the literal ``"public"``, and the store is configured with **private**
+#: access, so every upload in production was refused with
+#: ``{"error":{"code":"bad_request","message":"Cannot use public access on a
+#: private store. The store is configured with private access."}}`` -- a ``400``
+#: that ``storage_service`` turned into the 503 the logo screen showed. Nothing
+#: was missing from the request; one header carried the wrong value.
+#:
+#: Deliberately **not** a setting: a value that can be wrong in production with
+#: no signal until an upload fails is precisely the failure being fixed, and it
+#: cannot vary per environment anyway -- without ``BLOB_READ_WRITE_TOKEN`` no
+#: Blob provider is built at all. One store, one access mode, one value.
+BLOB_STORE_ACCESS = "private"
 
 #: ``{storeId}.{access}.blob.vercel-storage.com`` is five labels, and the count
 #: is part of the read predicate: without it,
@@ -474,7 +502,7 @@ class VercelBlobStorageProvider(BaseStorageProvider):
             request_url,
             headers={
                 **self._auth_headers(store_id),
-                "x-vercel-blob-access": "public",
+                "x-vercel-blob-access": BLOB_STORE_ACCESS,
                 "x-content-type": stored_type,
                 # The object name is already a UUID, so there is nothing to
                 # disambiguate. `x-allow-overwrite` is deliberately **not**
@@ -595,11 +623,11 @@ class VercelBlobStorageProvider(BaseStorageProvider):
     ) -> bytes | None:
         """The object's bytes, or ``None``. **Never raises, for any input.**
 
-        The promise matters because the only caller is APRAS-92's obras report,
-        rendered on a public route: an escaping exception would reach
-        ``ServerErrorMiddleware``, which sits outside ``CORSMiddleware``, and
-        reproduce the bodiless, header-less 500 APRAS-94 §6 exists to prevent.
-        A report that cannot read a logo renders without one.
+        The promise matters because the caller is public and unauthenticated --
+        APRAS-105's logo route, reachable by anyone. An escaping exception would
+        reach ``ServerErrorMiddleware``, which sits outside ``CORSMiddleware``,
+        and reproduce the bodiless, header-less 500 APRAS-94 §6 exists to
+        prevent. A logo that cannot be read is a 404, never a 5xx.
 
         Every failure shape therefore collapses to the same ``None``, preceded
         by exactly one ``logger.warning`` naming the reason -- a ``None`` no one
@@ -636,18 +664,28 @@ class VercelBlobStorageProvider(BaseStorageProvider):
             return None
 
     def _read_object(self, url: str, ceiling: int) -> bytes | None:
-        """The one outbound request, streamed and credential-free."""
+        """The one outbound request, streamed and carrying the credential.
+
+        The store is configured with private access
+        (:data:`BLOB_STORE_ACCESS`), so an object in it is not readable
+        anonymously: without the header below the store answers a refusal and
+        the caller gets ``None``. ``url`` has already been through
+        :meth:`resolve_own_url`, whose four host clauses reduce the reachable
+        set to a single name per access value, fixed by our own token -- so the
+        credential cannot be sent to a host somebody else named, and a URL that
+        predicate rejects never reaches this method at all.
+        """
         # `follow_redirects=False` is also httpx's default, stated here so it
-        # reads as a decision: a `3xx` is not a success status, so it takes the
-        # ordinary non-2xx path and the server never issues the second request.
-        #
-        # No `authorization` header either. Everything this provider writes is
-        # `public`-access and needs no credential to be read, and a request that
-        # carries none cannot leak the write token even if the host check were
-        # ever wrong.
+        # reads as a decision, and it is now load-bearing rather than merely
+        # tidy: a `3xx` is not a success status, so it takes the ordinary
+        # non-2xx path, the client issues no second request, and the credential
+        # is therefore never forwarded to a redirect target -- which would be a
+        # host `resolve_own_url` never saw.
         with (
             httpx.Client(timeout=BLOB_TIMEOUT, follow_redirects=False) as client,
-            client.stream("GET", url) as response,
+            client.stream(
+                "GET", url, headers=self._auth_headers(self._store_id())
+            ) as response,
         ):
             return self._collect(response, url, ceiling)
 

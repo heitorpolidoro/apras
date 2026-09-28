@@ -30,6 +30,7 @@ from app.core import clock
 from app.core.exceptions import ForbiddenError
 from app.core.security import create_access_token, get_password_hash
 from app.core.tenant_context import acting_tenant_scope
+from app.core.urls import public_tenant_logo_url
 from app.models.document import AssociationDocument, DocumentFolder
 from app.models.enums import MilestoneStatus, ProjectStatus
 from app.models.project import ConstructionProject, ProjectMilestone, ProjectUpdate
@@ -278,7 +279,10 @@ def test_the_masthead_and_footer_name_the_acting_tenant(
 
     body = tenant_client.get(REPORT_URL, headers=_auth(insider, tenant_b.id)).text
 
-    assert 'src="https://proprio.example/logo-proprio.png"' in body
+    # The masthead links the acting tenant's own logo route, never the stored
+    # URL and never another condominium's (APRAS-105 §E).
+    assert f'src="{public_tenant_logo_url(tenant_b.slug)}"' in body
+    assert "proprio.example" not in body
     assert "logo-alheio" not in body
     assert "Condomínio Próprio" in body
     assert "Condomínio Alheio" not in body
@@ -801,7 +805,8 @@ def test_the_masthead_renders_the_logo_when_present(
 
     body = client.get(REPORT_URL, headers=_auth(admin)).text
 
-    assert 'src="https://cdn.example/logo.png"' in body
+    assert f'src="{public_tenant_logo_url(tenant.slug)}"' in body
+    assert "cdn.example" not in body
 
 
 def test_the_hero_renders_the_status_pill_cover_and_progress(
@@ -881,8 +886,8 @@ def test_the_tenant_row_is_resolved_by_id_and_a_missing_one_degrades(
 
     with acting_tenant_scope(session, DEFAULT_TENANT_ID):
         assert report._acting_tenant(session).id == DEFAULT_TENANT_ID
-        assert 'src="https://cdn.example/by-id.png"' in report.render_report_html(
-            session, admin
+        assert f'src="{public_tenant_logo_url(tenant.slug)}"' in (
+            report.render_report_html(session, admin)
         )
 
     ghost = uuid.uuid4()

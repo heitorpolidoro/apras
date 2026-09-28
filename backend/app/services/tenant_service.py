@@ -1,6 +1,5 @@
 """Tenant service layer for business logic (APRAS-41)."""
 
-import base64
 import io
 import itertools
 from pathlib import PurePosixPath
@@ -580,24 +579,34 @@ class TenantService:
     LOGO_ALLOWED_MIME_TYPES = frozenset({"image/jpeg", "image/png", "image/webp"})
 
     @classmethod
-    def logo_data_uri(cls, tenant: Tenant | None) -> str | None:
-        """The condominium's logo as a ``data:`` URI, or ``None`` (APRAS-92 §B).
+    def logo_bytes(cls, tenant: Tenant | None) -> tuple[bytes, str] | None:
+        """The condominium's logo as ``(payload, content_type)``, or ``None``.
 
         It lives here, beside :data:`LOGO_MAX_FILE_SIZE` and
         :data:`LOGO_ALLOWED_MIME_TYPES`, because those two already own every
-        logo rule and this reads both.
+        logo rule and this reads both. The public logo route of APRAS-105 is a
+        thin handler over it and turns every ``None`` into the same 404.
 
-        Four refusals, each ``None`` and none of them an error: no stored value;
-        a suffix ``app.core.uploads`` does not name as one of the three
+        It replaces ``logo_data_uri``, which base64-encoded the same bytes into
+        the obras report: APRAS-93 measured that embedding at ~89% of a
+        single-project report's bytes, on every render of an uncached public
+        route. The bytes now leave the document and the browser fetches them
+        once, on its own terms.
+
+        Four refusals, each ``None`` and none of them an error: no stored
+        value; a suffix ``app.core.uploads`` does not name as one of the three
         embeddable image types (``.svg`` and the inert ``.bin`` included); a
-        provider that cannot read its own objects back, which is the Blob store
-        until APRAS-96; and a file **above the upload ceiling**, so no logo the
-        product ever accepted is refused and the bound exists only against a
-        file swapped on disk. base64 inflates by 4/3, so the worst accepted case
-        adds ~2.7 MiB to a render -- recorded, and APRAS-93's to revisit.
+        provider that cannot read its own objects back; and a file **above the
+        upload ceiling**, refused by ``read_file`` itself rather than after
+        buffering -- the ceiling is stated here rather than left to
+        ``BLOB_MAX_READ_BYTES``'s default, so this caller's own limit is the
+        one that binds.
 
-        No network access: the bytes come from the provider's own store through
-        ``read_file``, whose base default is ``None``.
+        The read may be a network call: since APRAS-105 the Blob store is
+        configured with private access, so the provider fetches the object with
+        the store's own credential. That credential is attached only to a URL
+        ``resolve_own_url`` accepts, and it never reaches anything returned
+        here.
         """
         url = getattr(tenant, "logo_url", None)
         if not url:
@@ -607,12 +616,11 @@ class TenantService:
         if content_type is None or content_type not in cls.LOGO_ALLOWED_MIME_TYPES:
             return None
 
-        payload = _storage_provider.read_file(url)
-        if payload is None or len(payload) > cls.LOGO_MAX_FILE_SIZE:
+        payload = _storage_provider.read_file(url, max_bytes=cls.LOGO_MAX_FILE_SIZE)
+        if not payload:
             return None
 
-        encoded = base64.b64encode(payload).decode("ascii")
-        return f"data:{content_type};base64,{encoded}"
+        return payload, content_type
 
     @classmethod
     def update_profile(

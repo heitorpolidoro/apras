@@ -40,11 +40,12 @@ import pytest
 from app.core import clock
 from app.core.branding import build_theme, contrast_ratio, parse_oklch
 from app.core.security import create_access_token, get_password_hash
+from app.core.urls import public_tenant_logo_url
 from app.models.project import ConstructionProject
 from app.models.tenant import DEFAULT_TENANT_ID, Tenant, UserTenantLink
 from app.services import project_report_service as report
 from app.services import tenant_service as tenant_service_module
-from app.services.storage_service import BaseStorageProvider, LocalStorageProvider
+from app.services.storage_service import LocalStorageProvider
 from app.services.tenant_service import TenantService
 from tests.conftest import make_user
 
@@ -500,10 +501,15 @@ def _masthead(document: str) -> str:
     return match.group(0)
 
 
-def test_a_readable_local_logo_is_embedded_as_bytes(
+def test_a_stored_logo_is_referenced_by_the_public_route_absolutely(
     client: TestClient, session: Session, uploads: Path
 ):
-    """ER 19's first half, on both routes."""
+    """APRAS-105 §E: the bytes leave the document and a URL replaces them.
+
+    The URL is **absolute** and that is load-bearing: this document is injected
+    into an ``<iframe srcDoc>`` on the frontend's origin, so a relative ``src``
+    would resolve against the wrong base and load nothing at all.
+    """
     url = _store_logo(uploads, "logo.png", PNG_BYTES)
     tenant = _brand(session, None)
     tenant.logo_url = url
@@ -511,36 +517,38 @@ def test_a_readable_local_logo_is_embedded_as_bytes(
     session.commit()
     _project(session)
     admin = _admin(session)
+    expected = public_tenant_logo_url(tenant.slug)
 
     for body in (
         client.get(REPORT_URL, headers=_auth(admin)).text,
         client.get(_public_url(tenant.slug)).text,
     ):
-        assert 'src="data:image/png;base64,' in _masthead(body)
-        assert base64.b64encode(PNG_BYTES).decode("ascii") in body
-        assert '<img src="/static/uploads/' not in body
+        assert f'<img src="{expected}"' in _masthead(body)
+        assert expected.startswith("http://")
+        assert "data:image" not in body
+        assert "base64," not in body
+        # The storage URL is no longer a display source: it is storage truth
+        # and nothing else.
+        assert url not in body
 
 
-@pytest.mark.parametrize(
-    ("name", "payload"),
-    [
-        ("logo.svg", b"<svg xmlns='http://www.w3.org/2000/svg'/>"),
-        ("logo.bin", PNG_BYTES),
-        ("logo.png", b"x" * (TenantService.LOGO_MAX_FILE_SIZE + 1)),
-    ],
-)
-def test_a_logo_the_product_would_not_accept_is_not_embedded(
-    session: Session, uploads: Path, name: str, payload: bytes
+def test_the_masthead_reads_no_storage_at_all(
+    session: Session, uploads: Path, monkeypatch: pytest.MonkeyPatch
 ):
-    """An untyped suffix, active content, and a file swapped past the ceiling.
+    """The read moved behind the route, where the browser makes it once.
 
-    None of them is embedded, and none of them is *linked* either: the stored
-    value is relative, so rung 2 does not apply and the masthead renders the
-    no-logo layout.
+    Rendering used to hit the provider on every request of an uncached public
+    route; now it touches nothing.
     """
-    url = _store_logo(uploads, name, payload)
+
+    def explode(*_args, **_kwargs):
+        raise AssertionError("the renderer read storage")
+
+    monkeypatch.setattr(
+        tenant_service_module._storage_provider.__class__, "read_file", explode
+    )
     tenant = _brand(session, None)
-    tenant.logo_url = url
+    tenant.logo_url = _store_logo(uploads, "logo.png", PNG_BYTES)
     session.add(tenant)
     session.commit()
     _project(session)
@@ -548,33 +556,39 @@ def test_a_logo_the_product_would_not_accept_is_not_embedded(
 
     document = report.render_report_html(session, admin)
 
-    assert "<img" not in _masthead(document)
-    assert "base64," not in document
-    assert TenantService.logo_data_uri(tenant) is None
+    assert public_tenant_logo_url(tenant.slug) in _masthead(document)
 
 
-def test_a_missing_file_renders_no_logo_and_still_answers_200(
-    client: TestClient, session: Session, uploads: Path
+def test_a_report_with_a_logo_and_one_without_differ_by_under_two_kib(
+    session: Session, uploads: Path
 ):
+    """APRAS-93's measurement, now bounded.
+
+    The embedded logo was ~140 KiB of base64 and about 89% of a
+    single-project report's bytes. What is left is one URL.
+    """
     tenant = _brand(session, None)
-    tenant.logo_url = "/static/uploads/2026/09/gone.png"
+    tenant.logo_url = None
     session.add(tenant)
     session.commit()
     _project(session)
     admin = _admin(session)
 
-    internal = client.get(REPORT_URL, headers=_auth(admin))
-    public = client.get(_public_url(tenant.slug))
+    without = report.render_report_html(session, admin)
 
-    assert internal.status_code == 200
-    assert public.status_code == 200
-    for body in (internal.text, public.text):
-        assert "<img" not in _masthead(body)
+    tenant.logo_url = _store_logo(uploads, "logo.png", PNG_BYTES * 200)
+    session.add(tenant)
+    session.commit()
+
+    with_logo = report.render_report_html(session, admin)
+
+    assert abs(len(with_logo) - len(without)) < 2 * 1024
 
 
 def test_a_null_logo_url_renders_the_no_logo_masthead(
     client: TestClient, session: Session, uploads: Path
 ):
+    """ER: no logo, no broken image element -- no ``<img>`` at all."""
     tenant = _brand(session, None)
     tenant.logo_url = None
     session.add(tenant)
@@ -590,15 +604,41 @@ def test_a_null_logo_url_renders_the_no_logo_masthead(
         assert '<div class="name">Relatório de Obras</div>' in body
 
     # The same refusal at the unit that owns it: a condominium with nothing
-    # stored has no logo to embed, and asking for one is not an error.
-    assert TenantService.logo_data_uri(tenant) is None
-    assert TenantService.logo_data_uri(None) is None
+    # stored has no logo to serve, and asking for one is not an error.
+    assert TenantService.logo_bytes(tenant) is None
+    assert TenantService.logo_bytes(None) is None
+
+
+@pytest.mark.parametrize(
+    ("name", "payload"),
+    [
+        ("logo.svg", b"<svg xmlns='http://www.w3.org/2000/svg'/>"),
+        ("logo.bin", PNG_BYTES),
+        ("logo.png", b"x" * (TenantService.LOGO_MAX_FILE_SIZE + 1)),
+    ],
+)
+def test_a_logo_the_product_would_not_accept_is_never_served(
+    session: Session, uploads: Path, name: str, payload: bytes
+):
+    """An untyped suffix, active content, and a file swapped past the ceiling.
+
+    The unit that owns the logo rules refuses all three, so the public route
+    answers 404 for each -- the report's masthead links a URL that serves
+    nothing rather than publishing an SVG's active content.
+    """
+    url = _store_logo(uploads, name, payload)
+    tenant = _brand(session, None)
+    tenant.logo_url = url
+    session.add(tenant)
+    session.commit()
+
+    assert TenantService.logo_bytes(tenant) is None
 
 
 def test_a_value_escaping_the_uploads_directory_reads_nothing(
-    client: TestClient, session: Session, uploads: Path
+    session: Session, uploads: Path
 ):
-    """ER 20: the containment check, and the document it protects.
+    """ER 20: the containment check, at the unit the route reads through.
 
     Not reachable today -- ``logo_url`` is written only by the validated
     upload path -- but a read primitive invoked from an anonymous route must
@@ -610,44 +650,14 @@ def test_a_value_escaping_the_uploads_directory_reads_nothing(
 
     tenant = _brand(session, None)
     tenant.logo_url = "/static/uploads/../../../etc/passwd"
-    session.add(tenant)
-    session.commit()
-    _project(session)
-    admin = _admin(session)
 
-    internal = client.get(REPORT_URL, headers=_auth(admin))
-    public = client.get(_public_url(tenant.slug))
-
-    assert internal.status_code == 200
-    assert public.status_code == 200
-    for body in (internal.text, public.text):
-        assert "<img" not in _masthead(body)
-        assert "root:" not in body
-
-
-def test_an_absolute_url_is_linked_verbatim_when_its_bytes_are_unreadable(
-    client: TestClient, session: Session, uploads: Path
-):
-    """Rung 2: the one remaining external reference, kept deliberately."""
-    tenant = _brand(session, None)
-    tenant.logo_url = "https://cdn.example/logo-do-condominio.png"
-    session.add(tenant)
-    session.commit()
-    _project(session)
-    admin = _admin(session)
-
-    for body in (
-        client.get(REPORT_URL, headers=_auth(admin)).text,
-        client.get(_public_url(tenant.slug)).text,
-    ):
-        assert 'src="https://cdn.example/logo-do-condominio.png"' in _masthead(body)
-        assert "base64," not in body
+    assert TenantService.logo_bytes(tenant) is None
 
 
 def test_rendering_makes_no_outbound_request(
     client: TestClient, session: Session, uploads: Path, monkeypatch
 ):
-    """ER 19: the socket layer and all three clients are made to raise.
+    """The socket layer and all three clients are made to raise.
 
     ``httpx.Client.send`` itself is deliberately **not** patched -- the test
     client is an ``httpx.Client`` over an in-process ASGI transport, so
@@ -687,59 +697,9 @@ def test_rendering_makes_no_outbound_request(
     assert internal.status_code == 200
     assert public.status_code == 200
     for body in (internal.text, public.text):
-        assert 'src="https://cdn.example/remoto.png"' in _masthead(body)
-
-
-def test_a_logo_data_uri_is_refused_by_a_provider_that_cannot_read_back(
-    session: Session, monkeypatch: pytest.MonkeyPatch
-):
-    """The base default: "this backend cannot read its own objects back".
-
-    That is the rung every Vercel-Blob-stored logo takes until APRAS-96 lands,
-    and it must degrade to a link or to nothing -- never to an exception.
-    """
-
-    class CannotReadBack(BaseStorageProvider):
-        """A provider with the base defaults, i.e. Vercel Blob until APRAS-96."""
-
-        def save_file(self, file_bytes, filename, content_type, *, tenant_id=None):
-            raise AssertionError("the renderer must never write")
-
-        def delete_file(self, file_path):
-            return True
-
-    provider = CannotReadBack()
-    assert provider.resolve_own_url("/static/uploads/2026/09/logo.png") is None
-    assert provider.read_file("/static/uploads/2026/09/logo.png") is None
-
-    monkeypatch.setattr(tenant_service_module, "_storage_provider", provider)
-    tenant = _brand(session, None)
-    tenant.logo_url = "/static/uploads/2026/09/logo.png"
-
-    assert TenantService.logo_data_uri(tenant) is None
-
-
-def test_a_read_failure_never_escapes_the_renderer(
-    session: Session, monkeypatch: pytest.MonkeyPatch, caplog
-):
-    """One rule, three outcomes, and no fourth: a raise is logged and dropped."""
-
-    def boom(_tenant):
-        raise OSError("disk went away")
-
-    monkeypatch.setattr(TenantService, "logo_data_uri", staticmethod(boom))
-    tenant = _brand(session, None)
-    tenant.logo_url = "/static/uploads/2026/09/logo.png"
-    session.add(tenant)
-    session.commit()
-    _project(session)
-    admin = _admin(session)
-
-    with caplog.at_level("WARNING"):
-        document = report.render_report_html(session, admin)
-
-    assert "<img" not in _masthead(document)
-    assert any(record.levelname == "WARNING" for record in caplog.records)
+        assert public_tenant_logo_url(tenant.slug) in _masthead(body)
+        # The stored URL is never the `src`, not even when it is absolute.
+        assert "cdn.example" not in body
 
 
 # ---------------------------------------------------------------------------

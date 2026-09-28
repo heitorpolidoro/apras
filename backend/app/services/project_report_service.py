@@ -43,7 +43,6 @@ from __future__ import annotations
 
 import html
 import json
-import logging
 import re
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
@@ -56,6 +55,7 @@ from app.core.branding import build_theme
 from app.core.exceptions import ForbiddenError
 from app.core.money import ZERO
 from app.core.tenant_context import acting_tenant_id
+from app.core.urls import public_tenant_logo_url
 from app.models.document import DocumentFolder
 from app.models.enums import MilestoneStatus, ProjectStatus
 from app.models.project import ConstructionProject
@@ -67,7 +67,6 @@ from app.services.storage_service import (
     BaseStorageProvider,
     generated_storage_provider,
 )
-from app.services.tenant_service import TenantService
 
 if TYPE_CHECKING:  # pragma: no cover
     from datetime import date, datetime
@@ -75,8 +74,6 @@ if TYPE_CHECKING:  # pragma: no cover
 
     from app.models.project import ProjectMilestone, ProjectUpdate
     from app.models.user import User
-
-logger = logging.getLogger(__name__)
 
 #: The fixed, system-managed root folder the saved report is filed into.
 OBRAS_FOLDER_NAME = "Obras"
@@ -653,47 +650,41 @@ def _updates_html(updates: list[ProjectUpdate]) -> str:
 
 
 def _logo_html(tenant: Tenant | None) -> str:
-    """The masthead's logo: bytes, then a link, then nothing (APRAS-92 §B, D5).
+    """The masthead's logo: a link to the public logo route, or nothing.
 
-    One rule, three outcomes, in order:
+    Two outcomes, not three (APRAS-105 §E):
 
-    1. the storage provider could read its own object back, the suffix maps to
-       one of the three image types the logo allowlist permits and the file is
-       inside ``TenantService.LOGO_MAX_FILE_SIZE`` -> a ``data:`` URI, so a
-       report printed or filed in the Document Center carries its own logo
-       instead of depending on a URL staying reachable;
-    2. the bytes are not obtainable **and** the stored value is an absolute
-       ``http(s)`` URL -> today's ``<img src="...">``, unchanged. This is the
-       one remaining external reference and it is kept deliberately: after
-       APRAS-94 a Blob-stored logo takes this rung until APRAS-96 gives that
-       provider a ``read_file``, and refusing it would *remove* a logo that
-       works today;
-    3. anything else, an absent ``logo_url`` included -> **no ``<img>`` at
+    1. the tenant has a ``logo_url`` -> ``<img>`` pointing at
+       ``GET /api/v1/public/tenants/{slug}/logo``, named **absolutely**. The
+       URL has to be absolute because ``PublicObrasReportPage`` injects this
+       document into an ``<iframe srcDoc>``, whose relative URLs resolve
+       against the *parent* document's base -- the frontend's origin, not this
+       backend's -- so a relative ``src`` would silently load nothing;
+    2. anything else, an absent ``logo_url`` included -> **no ``<img>`` at
        all**, which is exactly today's no-logo masthead: the ``.mast`` flexbox
        puts the report block alone on the row.
 
-    **No outbound request is made.** The bytes come from the provider's own
-    store or not at all: on a public, unlimited, uncached route (D3) a
-    per-request fetch to an arbitrary host would be both an amplification
-    vector and an SSRF surface. A read failure is logged at warning level and
-    degrades to rung 2 or 3; no exception escapes the renderer.
+    The ``data:`` URI rung is gone, and with it this function's storage read.
+    APRAS-93 measured what it cost: a 105 KiB logo became ~140 KiB of base64
+    and about **89%** of a single-project report's bytes, on every render of a
+    route with no cache. The browser now fetches the image once and caches it
+    on its own terms.
+
+    **Accepted trade-off, recorded because it is not free.** ``save_report``
+    persists the rendered HTML as an ``AssociationDocument``, so an archived
+    report no longer carries its own logo: replacing the logo silently changes
+    it inside reports already filed, removing it leaves a broken image, and a
+    change of deployment domain stops an archived masthead resolving. The
+    operator chose this knowingly -- the archive stores HTML, never a PDF, and
+    it already links project photos by URL in exactly this way.
     """
     logo_url = getattr(tenant, "logo_url", None)
-    if not logo_url:
+    slug = getattr(tenant, "slug", None)
+    if not logo_url or not slug:
         return ""
 
     tenant_name = _e(getattr(tenant, "name", None))
-    try:
-        data_uri = TenantService.logo_data_uri(tenant)
-    except Exception:  # a report must render without its logo, whatever the store did
-        logger.warning("could not read the tenant logo for the report", exc_info=True)
-        data_uri = None
-
-    if data_uri is not None:
-        return f'<img src="{data_uri}" alt="{tenant_name}">'
-    if logo_url.lower().startswith(("http://", "https://")):
-        return f'<img src="{_e(logo_url)}" alt="{tenant_name}">'
-    return ""
+    return f'<img src="{_e(public_tenant_logo_url(slug))}" alt="{tenant_name}">'
 
 
 def _masthead_html(tenant: Tenant | None, today: date) -> str:

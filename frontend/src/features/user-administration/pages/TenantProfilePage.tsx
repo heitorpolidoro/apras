@@ -17,6 +17,7 @@ import {
   isValidSlug,
   slugifyName,
 } from "../../../api/tenantProfile";
+import { tenantLogoUrl } from "../../../api/publicBranding";
 import {
   useClearTenantLogo,
   useSetTenantLogo,
@@ -236,7 +237,12 @@ const TenantProfilePage: React.FC = () => {
             {data.logo_url ? (
               <div className="flex h-36 w-full items-center justify-center overflow-hidden rounded-lg border border-border bg-muted">
                 <img
-                  src={data.logo_url}
+                  // Never `data.logo_url` (APRAS-105 §D): that value is
+                  // storage truth and the "has a logo" flag, not a display
+                  // source. It is relative for a disk-stored logo — and the
+                  // API is on another origin — and unfetchable for a
+                  // Blob-stored one, since the store has private access.
+                  src={tenantLogoUrl(data.slug)}
                   alt={t("tenantProfile.logoAlt")}
                   className="max-h-32 max-w-[180px] object-contain"
                 />

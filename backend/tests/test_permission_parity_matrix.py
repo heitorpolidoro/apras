@@ -633,7 +633,7 @@ def test_matrix_covers_every_permission_mapped_route():
     assert len(CELLS) == EXPECTED_CELL_COUNT
 
 
-def test_the_twenty_nine_unguarded_routes_are_the_only_ones_excluded():
+def test_the_thirty_one_unguarded_routes_are_the_only_ones_excluded():
     """No cell may be dropped for any reason other than being unguarded.
 
     13 at the IAM F5 merge base; APRAS-39 added the two superuser-only
@@ -658,9 +658,11 @@ def test_the_twenty_nine_unguarded_routes_are_the_only_ones_excluded():
     grows it by one -- the unauthenticated condominium-branding read behind
     `/c/<slug>` -- and by zero cells, for the plainest version of that same
     reason: the route authenticates nobody, so there is no profile whose
-    answer a cell could record.
+    answer a cell could record. APRAS-92 and APRAS-105 each grow it by one
+    more -- the public obras report and the public logo route -- and by zero
+    cells, for that same plainest reason.
     """
-    assert len(UNGUARDED_ROUTES) == 30
+    assert len(UNGUARDED_ROUTES) == 31
     assert not (set(ROUTE_PERMISSIONS) & UNGUARDED_ROUTES)
 
 

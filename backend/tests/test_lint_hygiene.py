@@ -37,8 +37,11 @@ TESTS = BACKEND / "tests"
 #: already carries for the same decorator; the alternative -- adding
 #: `ARG001` to the `app/api/v1/endpoints/**` per-file ignores -- would
 #: silence every genuinely unused argument across 35 routers to save one
-#: line.
-NOQA_CAP = 70
+#: line. APRAS-105 raises it by exactly one again, and for exactly the same
+#: reason: the public logo route added to that same module carries the
+#: `30/minute` limit the operator decided on, so it declares the same unread
+#: `request: Request` its sibling does.
+NOQA_CAP = 71
 
 #: A ``noqa: CODE[, CODE...]`` directive followed by two spaces and a reason.
 NOQA_OK = re.compile(r"#\s*noqa:\s*[A-Z]+[0-9]+(\s*,\s*[A-Z]+[0-9]+)*\s+#\s+\S")

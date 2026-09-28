@@ -81,6 +81,31 @@ class Settings(BaseSettings):
     # every upload keeps going to local disk exactly as before.
     BLOB_READ_WRITE_TOKEN: str | None = None
 
+    # Where this API answers from, seen from a browser (APRAS-105 §D). The
+    # obras report is rendered here and displayed inside an `<iframe srcDoc>`
+    # on the *frontend's* origin, so every URL the report emits has to be
+    # absolute: a relative one resolves against the parent document and
+    # silently loads nothing.
+    #
+    # Three settings, read by `app.core.urls.public_api_base_url` in the order
+    # below -- they are its first three rungs, and a local `http://localhost:8000`
+    # is the fourth. All three are declared here rather than read from `os.environ`,
+    # because `model_config` below sets `case_sensitive=True`: pydantic then
+    # reads the two variables Vercel injects under their exact names with no
+    # extra code, and every rung stays overridable in a test by the same
+    # mechanism the rest of the suite already uses.
+    #
+    # `PUBLIC_API_BASE_URL` is the explicit override, for a backend served
+    # from a domain of our own.
+    PUBLIC_API_BASE_URL: str = ""
+    # Injected by Vercel: the project's production domain, stable across
+    # deployments. This is what makes production correct with no new
+    # environment variable for anybody to forget.
+    VERCEL_PROJECT_PRODUCTION_URL: str = ""
+    # Injected by Vercel: *this* deployment's domain, so a preview names
+    # itself. Neither carries a scheme, hence the `https://` the builder adds.
+    VERCEL_URL: str = ""
+
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
 
 

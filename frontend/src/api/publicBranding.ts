@@ -45,3 +45,25 @@ export const fetchPublicBranding = async (
   );
   return response.data;
 };
+
+/** The public logo route's path on the API, without the client's `baseURL`. */
+export const tenantLogoPath = (slug: string): string =>
+  `/public/tenants/${encodeURIComponent(slug)}/logo`;
+
+/**
+ * One condominium's logo, as an **absolute** URL (APRAS-105 §D).
+ *
+ * `logo_url` is storage truth and the "has a logo" flag; it is not a display
+ * source. Rendering it verbatim is what `TenantProfilePage` and
+ * `BrandedEntryPage` both did, and it silently loads nothing whenever the
+ * stored value is relative — the frontend and the backend are served from
+ * different hosts, so `/static/uploads/...` resolves against the wrong origin.
+ * Since the Blob store is configured with private access, the stored value is
+ * not fetchable by a browser at all: the bytes come from the route this helper
+ * names, which reads the object with the application's own credential.
+ *
+ * The base is read off the shared client, exactly as `publicReportUrl` does,
+ * so this file does not become a second definition of where the API lives.
+ */
+export const tenantLogoUrl = (slug: string): string =>
+  `${apiClient.defaults.baseURL ?? ""}${tenantLogoPath(slug)}`;

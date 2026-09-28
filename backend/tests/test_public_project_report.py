@@ -412,7 +412,8 @@ def test_the_thirty_first_request_inside_a_minute_is_still_a_200(
 def test_the_route_is_on_the_unguarded_allowlist():
     """ER 8: it authenticates nobody, so there is nobody to hold a permission."""
     assert ROUTE in UNGUARDED_ROUTES
-    assert len(UNGUARDED_ROUTES) == 30
+    # 31 since APRAS-105's public logo route joined the same prefix.
+    assert len(UNGUARDED_ROUTES) == 31
 
 
 def test_the_route_is_mounted_globally_scoped():

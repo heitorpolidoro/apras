@@ -405,5 +405,7 @@ def test_the_routes_are_unguarded_and_global():
     # of APRAS-52's operator-side subscription-history read. 29/33 since
     # APRAS-74's public condominium-branding read, which is unguarded *and*
     # global for the same pair of reasons as APRAS-71's two public routes.
-    assert len(UNGUARDED_ROUTES) == 30
-    assert len(GLOBAL_ROUTES) == 34
+    # 31/35 since APRAS-105's public logo route, mounted on that same
+    # `/public` prefix and unguarded *and* global for those same reasons.
+    assert len(UNGUARDED_ROUTES) == 31
+    assert len(GLOBAL_ROUTES) == 35

@@ -789,6 +789,16 @@ UNGUARDED_ROUTES: frozenset[tuple[str, str]] = frozenset(
         # gate. The condominium is named in the path and slug enumeration is
         # accepted, exactly as it is for the branding read.
         ("GET", "/api/v1/public/tenants/{slug}/projects/report"),
+        # APRAS-105 §C: the public logo route, which serves the bytes of the
+        # condominium's logo out of a Blob store configured with **private**
+        # access -- the store stays private, the route is public. Like the two
+        # lines above it authenticates nobody, so there is nobody to hold a
+        # permission and nothing a catalogue string could gate. Unlike the
+        # report, it carries a rate limit (30/minute per IP, the operator's
+        # decision): it performs an outbound fetch on every hit, so an
+        # unlimited route would turn one cheap inbound request into one
+        # outbound request we pay for.
+        ("GET", "/api/v1/public/tenants/{slug}/logo"),
     }
 )
 

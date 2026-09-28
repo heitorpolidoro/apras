@@ -12,6 +12,7 @@ import {
 } from "../../../lib/brandStylesheet";
 import {
   fetchPublicBranding,
+  tenantLogoUrl,
   type PublicTenantBranding,
 } from "../../../api/publicBranding";
 
@@ -192,7 +193,10 @@ const BrandedEntryPage: React.FC = () => {
         <div className="flex flex-col items-center text-center mb-8 gap-3">
           {branding?.logo_url && (
             <img
-              src={branding.logo_url}
+              // The public logo route, absolute (APRAS-105 §D). `logo_url`
+              // stays the flag that says there is one to show; it is no longer
+              // what shows it.
+              src={tenantLogoUrl(branding.slug)}
               alt={branding.name}
               className="h-14 w-14 rounded-xl object-contain"
             />

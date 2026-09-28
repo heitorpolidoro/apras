@@ -167,8 +167,8 @@ def test_permission_strings_follow_the_convention():
     assert not bad, f"permissions violating <module>:<action>: {bad}"
 
 
-def test_unguarded_allowlist_is_thirty_routes():
-    assert len(UNGUARDED_ROUTES) == 30
+def test_unguarded_allowlist_is_thirty_one_routes():
+    assert len(UNGUARDED_ROUTES) == 31
 
 
 def test_route_count_is_fully_accounted_for():
@@ -233,12 +233,19 @@ def test_route_count_is_fully_accounted_for():
     **238/208/30**, for exactly the same reason as APRAS-74's line above: it
     authenticates nobody. `PERMISSIONS` stays 175, `len(ROUTE_PERMISSIONS)`
     stays 208, no parity cell moves and no baseline file is written.
+
+    APRAS-105 adds **one** route and **no** mapped one -- the unauthenticated
+    logo route behind the same `/public` prefix, which serves the bytes of a
+    condominium's logo out of a Blob store configured with private access --
+    taking 238/208/30 to **239/208/31**. Same reason a third time: it
+    authenticates nobody. `PERMISSIONS` stays 175, `len(ROUTE_PERMISSIONS)`
+    stays 208, no parity cell moves and no baseline file is written.
     """
     total = len(_all_route_keys())
     assert set(ROUTE_PERMISSIONS) & UNGUARDED_ROUTES == set()
     assert len(ROUTE_PERMISSIONS) + len(UNGUARDED_ROUTES) == total
-    assert len(UNGUARDED_ROUTES) == 30
-    assert len(ROUTE_PERMISSIONS) == total - 30
+    assert len(UNGUARDED_ROUTES) == 31
+    assert len(ROUTE_PERMISSIONS) == total - 31
     assert len(ROUTE_PERMISSIONS) == 208
 
 

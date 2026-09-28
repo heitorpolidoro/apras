@@ -29,6 +29,9 @@ vi.mock("../../../api/client", () => ({
   default: {
     get: vi.fn(),
     post: vi.fn(),
+    // `tenantLogoUrl` reads the base off this very object: the screen shows
+    // the logo through the public route (APRAS-105), not `logo_url` verbatim.
+    defaults: { baseURL: "http://api.test/api/v1" },
     interceptors: {
       request: { use: vi.fn(), eject: vi.fn() },
       response: { use: vi.fn(), eject: vi.fn() },
@@ -142,15 +145,35 @@ describe("BrandedEntryPage", () => {
     expect(
       await screen.findByRole("heading", { name: "Condomínio Altos da Serra" }),
     ).toBeInTheDocument();
-    expect(screen.getByAltText("Condomínio Altos da Serra")).toHaveAttribute(
+    // Through the public logo route and absolutely (APRAS-105 §D): the stored
+    // value is relative and the API is on another origin, so rendering it
+    // verbatim loaded nothing -- and a private Blob store makes the stored URL
+    // unfetchable by a browser besides.
+    const logo = screen.getByAltText("Condomínio Altos da Serra");
+    expect(logo).toHaveAttribute(
       "src",
-      "/static/uploads/altos.png",
+      "http://api.test/api/v1/public/tenants/altos-da-serra/logo",
     );
+    expect(logo).not.toHaveAttribute("src", "/static/uploads/altos.png");
     expect(screen.getByLabelText(/E-mail/i)).toBeInTheDocument();
     expect(mockNavigate).not.toHaveBeenCalled();
     expect(requestedUrls()).toEqual([
       "/public/tenants/altos-da-serra/branding",
     ]);
+  });
+
+  it("renders no <img> at all for a condominium with no logo", async () => {
+    asMock(apiClient.get).mockResolvedValue({
+      data: { ...BRANDING, logo_url: null },
+    });
+
+    renderAt("altos-da-serra");
+
+    await screen.findByRole("heading", { name: "Condomínio Altos da Serra" });
+    expect(
+      screen.queryByAltText("Condomínio Altos da Serra"),
+    ).not.toBeInTheDocument();
+    expect(document.querySelectorAll("img")).toHaveLength(0);
   });
 
   it("submits the branded form through AuthContext.login", async () => {

@@ -293,8 +293,10 @@ def test_the_route_is_unguarded_by_permission_and_superuser_guarded():
     # its 18 cells in the additive `parity_matrix_baseline_61.json`.
     # 28 since APRAS-71's four administrator-invitation routes, none of
     # which maps to a catalogue permission; 29 since APRAS-74's public
-    # condominium-branding read, which maps to none for the same reason.
-    assert len(UNGUARDED_ROUTES) == 30
+    # condominium-branding read, which maps to none for the same reason;
+    # 30 since APRAS-92's public obras report and 31 since APRAS-105's public
+    # logo route, both on the same `/public` prefix and both mapping to none.
+    assert len(UNGUARDED_ROUTES) == 31
     assert len(ROUTE_PERMISSIONS) == 208
 
     route = next(
@@ -328,8 +330,10 @@ def test_the_superuser_route_is_tenant_scoped_like_the_rest_of_the_users_router(
     # mounted on the global tenants router and therefore join this set, as do
     # APRAS-40's seven and APRAS-52's history read.
     # 32 since APRAS-71: the invitation router is mounted GLOBAL_SCOPED.
-    # 33 since APRAS-74: so is the public branding router.
-    assert len(GLOBAL_ROUTES) == 34
+    # 33 since APRAS-74: so is the public branding router. 34 since APRAS-92's
+    # public obras report and 35 since APRAS-105's public logo route, both on
+    # that same GLOBAL_SCOPED `/public` mount.
+    assert len(GLOBAL_ROUTES) == 35
 
     route = next(
         r
