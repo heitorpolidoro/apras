@@ -136,3 +136,8 @@ gha-creds-*.json
 .env*
 !.env.example
 .meridian/
+
+# Fonte das obras: arquivos originais da construtora (.mpp, .xlsx, .pdf).
+# Ficam fora do git -- sao documentos de terceiros, podem conter dados
+# nao publicos, e o que o sistema precisa deles vive no banco.
+docs/obras-fonte/
