@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>APRAS-103 — Rótulos previsto × realizado sem curva prevista</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  /* Regras copiadas do relatório real (CSS_BODY de project_report_service.py),
+     com as cores da FALLBACK_PALETTE, para que a comparação seja fiel. */
+  :root {
+    --surface:#f7f1e5; --card:#fff; --ink:#082f2a; --text:#1d2925;
+    --muted:#6f746e; --soft:#eee6d7; --line:#ddd1b6; --brand:#174b40;
+    --brand-text:#174b40; --brand-alt:#c6a04a;
+  }
+  body { font-family:'DM Sans',system-ui,sans-serif; color:var(--text); }
+  .pv { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:3.5mm 4.5mm; margin-top:4mm; }
+  .pv small { display:block; color:var(--muted); font-size:7.5pt; letter-spacing:1px; font-weight:700; text-transform:uppercase; margin-bottom:2.5mm; }
+  .one { position:relative; padding-top:9mm; margin-top:1mm; }
+  .one .track { height:11px; background:var(--line); border-radius:20px; overflow:hidden; position:relative; }
+  .one .seg { position:absolute; top:0; height:100%; }
+  .one .seg.a { left:0; background:var(--brand); }
+  .one .seg.b { background:var(--brand-alt); }
+  .one .seg.b.behind { background:#c0392b; opacity:.7; }
+  .one .mark { position:absolute; top:0; width:1.5px; height:100%; background:var(--card); }
+  .one .tag { position:absolute; top:0; transform:translateX(-1px); border-left:1.5px solid var(--line); padding-left:2mm; height:9mm; font-size:7.5pt; color:var(--muted); line-height:1.2; white-space:nowrap; }
+  .one .tag b { display:block; font-size:10pt; color:var(--ink); }
+  .one .tag.real b { color:var(--brand-text); }
+  .one .tag.real { border-left-color:var(--brand-alt); }
+  .one.close { padding-bottom:9mm; }
+  .one .tag.below { top:auto; bottom:0; height:9mm; display:flex; flex-direction:column-reverse; justify-content:flex-start; }
+  .one.close .ends { position:absolute; left:0; right:0; bottom:6.5mm; }
+  .one .ends { display:flex; justify-content:space-between; font-size:7pt; color:var(--muted); margin-top:1.5mm; }
+  .pv .note { font-size:7.5pt; color:var(--muted); margin-top:2mm; }
+  .bad { outline:2px dashed #c0392b; outline-offset:6px; }
+  .good { outline:2px dashed #174b40; outline-offset:6px; }
+</style>
+</head>
+<body class="bg-[#efe9dc] p-6 md:p-10">
+<div class="max-w-5xl mx-auto space-y-10">
+
+  <header class="space-y-2">
+    <p class="text-xs font-bold tracking-widest uppercase text-[#9b7327]">APRAS-103 · mockup</p>
+    <h1 class="text-3xl font-bold text-[#082f2a]">Rótulos “previsto” e “realizado” quando não há curva prevista</h1>
+    <p class="text-[#6f746e] max-w-3xl">
+      No relatório público de obras (<code>/c/aprasvi/obras</code>), quando a obra não tem
+      curva prevista utilizável, os dois rótulos da barra “Avanço físico” são desenhados
+      na <strong>mesma faixa</strong> e ficam sobrepostos — ilegíveis. Abaixo: como está
+      hoje, como fica com a correção e por que a separação é sempre aplicada.
+    </p>
+  </header>
+
+  <!-- ------------------------------------------------------------------ -->
+  <section class="bg-white rounded-2xl border border-[#ddd1b6] p-6 space-y-5">
+    <div class="flex items-center gap-2">
+      <i data-lucide="bug" class="w-5 h-5 text-[#c0392b]"></i>
+      <h2 class="text-xl font-bold text-[#082f2a]">1. Como está hoje (defeito)</h2>
+    </div>
+    <p class="text-sm text-[#6f746e]">
+      Obra sem cronograma, medição em 0%. Os dois rótulos ficam em <code>left:0%</code>,
+      um por cima do outro: o travessão sobrepõe a porcentagem.
+    </p>
+
+    <div class="pv bad">
+      <small>Avanço físico · previsto até hoje &times; realizado</small>
+      <div class="one">
+        <div class="tag plan" style="left:0%"><span>previsto</span><b>—</b></div>
+        <div class="tag real" style="left:0%"><span>realizado</span><b>0%</b></div>
+        <div class="track"><div class="seg a" style="width:0%"></div></div>
+        <div class="ends"><span>Início</span><span>Conclusão</span></div>
+      </div>
+      <div class="note">Previsto conforme o cronograma físico-financeiro da empreiteira; realizado conforme a última medição.</div>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------------------ -->
+  <section class="bg-white rounded-2xl border border-[#ddd1b6] p-6 space-y-5">
+    <div class="flex items-center gap-2">
+      <i data-lucide="check-circle-2" class="w-5 h-5 text-[#174b40]"></i>
+      <h2 class="text-xl font-bold text-[#082f2a]">2. Como fica com a correção</h2>
+    </div>
+    <p class="text-sm text-[#6f746e]">
+      “realizado” acima da barra, “previsto —” abaixo dela — exatamente a separação que
+      o relatório já usa quando previsto e realizado são próximos.
+    </p>
+
+    <div class="pv good">
+      <small>Avanço físico · previsto até hoje &times; realizado</small>
+      <div class="one close">
+        <div class="tag plan below" style="left:0%"><span>previsto</span><b>—</b></div>
+        <div class="tag real" style="left:0%"><span>realizado</span><b>0%</b></div>
+        <div class="track"><div class="seg a" style="width:0%"></div></div>
+        <div class="ends"><span>Início</span><span>Conclusão</span></div>
+      </div>
+      <div class="note">Previsto conforme o cronograma físico-financeiro da empreiteira; realizado conforme a última medição.</div>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------------------ -->
+  <section class="bg-white rounded-2xl border border-[#ddd1b6] p-6 space-y-5">
+    <div class="flex items-center gap-2">
+      <i data-lucide="sliders-horizontal" class="w-5 h-5 text-[#9b7327]"></i>
+      <h2 class="text-xl font-bold text-[#082f2a]">3. Separação sempre, ou só quando colide?</h2>
+    </div>
+    <p class="text-sm text-[#6f746e]">
+      Arraste a medição e compare. <strong>A</strong> aplica a separação sempre;
+      <strong>B</strong> só quando a medição está perto de 0% (limiar de 8 pontos).
+      Em B, a barra <em>salta</em> quando a medição cruza 8% — o mesmo relatório muda de
+      forma de um mês para o outro. A especificação escolhe <strong>A</strong>.
+    </p>
+
+    <div class="flex items-center gap-4">
+      <label class="text-xs font-bold uppercase tracking-widest text-[#6f746e]">Realizado</label>
+      <input id="pct" type="range" min="0" max="100" value="0" class="flex-1 accent-[#174b40]">
+      <output id="pctOut" class="w-14 text-right font-bold text-[#174b40]">0%</output>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-5">
+      <div>
+        <p class="text-xs font-bold uppercase tracking-widest text-[#174b40] mb-2">A — sempre separado (escolhida)</p>
+        <div class="pv" id="boxA"></div>
+      </div>
+      <div>
+        <p class="text-xs font-bold uppercase tracking-widest text-[#9b7327] mb-2">B — separa só perto de 0%</p>
+        <div class="pv" id="boxB"></div>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-4 gap-4 pt-2">
+      <div><p class="text-xs font-bold uppercase tracking-widest text-[#6f746e] mb-2">0%</p><div class="pv" data-fixed="0"></div></div>
+      <div><p class="text-xs font-bold uppercase tracking-widest text-[#6f746e] mb-2">5%</p><div class="pv" data-fixed="5"></div></div>
+      <div><p class="text-xs font-bold uppercase tracking-widest text-[#6f746e] mb-2">37%</p><div class="pv" data-fixed="37"></div></div>
+      <div><p class="text-xs font-bold uppercase tracking-widest text-[#6f746e] mb-2">80%</p><div class="pv" data-fixed="80"></div></div>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------------------ -->
+  <section class="bg-white rounded-2xl border border-[#ddd1b6] p-6 space-y-5">
+    <div class="flex items-center gap-2">
+      <i data-lucide="lock" class="w-5 h-5 text-[#174b40]"></i>
+      <h2 class="text-xl font-bold text-[#082f2a]">4. Obras com curva prevista: nada muda</h2>
+    </div>
+    <p class="text-sm text-[#6f746e]">
+      Estes dois casos já funcionam e permanecem idênticos byte a byte — um teste passa a
+      fixar a marcação dos dois.
+    </p>
+
+    <div class="grid md:grid-cols-2 gap-5">
+      <div>
+        <p class="text-xs font-bold uppercase tracking-widest text-[#6f746e] mb-2">Distantes — previsto 13%, realizado 22%</p>
+        <div class="pv">
+          <small>Avanço físico · previsto até hoje &times; realizado</small>
+          <div class="one">
+            <div class="tag plan" style="left:13%"><span>previsto</span><b>13%</b></div>
+            <div class="tag real" style="left:22%"><span>realizado</span><b>22%</b></div>
+            <div class="track"><div class="seg a" style="width:13%"></div><div class="seg b" style="left:13%;width:9%"></div><div class="mark" style="left:13%"></div></div>
+            <div class="ends"><span>Início</span><span>Conclusão</span></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <p class="text-xs font-bold uppercase tracking-widest text-[#6f746e] mb-2">Próximos — previsto 20%, realizado 22%</p>
+        <div class="pv">
+          <small>Avanço físico · previsto até hoje &times; realizado</small>
+          <div class="one close">
+            <div class="tag plan below" style="left:20%"><span>previsto</span><b>20%</b></div>
+            <div class="tag real" style="left:22%"><span>realizado</span><b>22%</b></div>
+            <div class="track"><div class="seg a" style="width:20%"></div><div class="seg b" style="left:20%;width:2%"></div><div class="mark" style="left:20%"></div></div>
+            <div class="ends"><span>Início</span><span>Conclusão</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="bg-[#fdf8ee] rounded-2xl border border-[#ddd1b6] p-6 text-sm text-[#1d2925] space-y-2">
+    <div class="flex items-center gap-2 font-bold text-[#082f2a]">
+      <i data-lucide="info" class="w-4 h-4"></i> Observação registrada, não corrigida aqui
+    </div>
+    <p>
+      As três obras em produção não têm cronograma nenhum: a coluna
+      <code>planned_progress_json</code> guarda o literal JSON <code>null</code>, e é por
+      isso que o relatório as trata como “sem curva” — corretamente. Um teste SQL de
+      <code>IS NOT NULL</code> numa coluna JSON dá verdadeiro mesmo nesse caso, o que já
+      levou a concluir, por engano, que havia um payload malformado. Não há: a função de
+      leitura sequer é alcançada e não precisa de mudança. O que falta é <b>dado</b> — o
+      cronograma físico-financeiro, que ninguém forneceu. Esta tarefa corrige apenas a
+      sobreposição das etiquetas, que aparece justamente nesse caminho sem curva.
+    </p>
+  </section>
+</div>
+
+<script>
+  const GAP = 8;
+  const bar = (pct, below) => `
+    <small>Avanço físico · previsto até hoje &times; realizado</small>
+    <div class="one${below ? ' close' : ''}">
+      <div class="tag plan${below ? ' below' : ''}" style="left:0%"><span>previsto</span><b>—</b></div>
+      <div class="tag real" style="left:${pct}%"><span>realizado</span><b>${pct}%</b></div>
+      <div class="track"><div class="seg a" style="width:${pct}%"></div></div>
+      <div class="ends"><span>Início</span><span>Conclusão</span></div>
+    </div>`;
+
+  const slider = document.getElementById('pct');
+  const out = document.getElementById('pctOut');
+  const render = () => {
+    const pct = Number(slider.value);
+    out.textContent = pct + '%';
+    document.getElementById('boxA').innerHTML = bar(pct, true);
+    document.getElementById('boxB').innerHTML = bar(pct, pct < GAP);
+  };
+  slider.addEventListener('input', render);
+  render();
+
+  document.querySelectorAll('[data-fixed]').forEach((el) => {
+    el.innerHTML = bar(Number(el.dataset.fixed), true);
+  });
+
+  lucide.createIcons();
+</script>
+</body>
+</html>

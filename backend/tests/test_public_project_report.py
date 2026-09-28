@@ -459,3 +459,31 @@ def test_the_internal_route_keeps_its_permission_guard(
     session.commit()
 
     assert client.get(INTERNAL_URL, headers=_auth(user)).status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# §6 -- the avanço físico bar of a project with no planned curve (APRAS-103)
+# ---------------------------------------------------------------------------
+
+
+def test_a_project_without_a_curve_separates_the_two_labels(
+    client: TestClient, session: Session
+):
+    """APRAS-103: the shape every production project renders today.
+
+    ``planned_progress_json`` unset means ``_one_bar`` takes its no-curve
+    branch, which used to stack ``previsto —`` and ``realizado`` in the same
+    band. The plan tag now sits below the track, so the public document is
+    readable for a condominium that has no schedule on file.
+    """
+    tenant = _default_tenant(session)
+    _project(session, title="Obra sem cronograma", physical_progress_pct=0.0)
+
+    body = client.get(_url(tenant.slug)).text
+
+    assert '<div class="one close">' in body
+    assert '<div class="tag plan" style="left:0%">' not in body
+    assert (
+        '<div class="tag plan below" style="left:0%">'
+        "<span>previsto</span><b>—</b></div>" in body
+    )

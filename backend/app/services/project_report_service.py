@@ -498,11 +498,21 @@ def _one_bar(planned: float | None, realized: float) -> str:
     no ``seg b``, no ``mark``, and the plan tag reads ``previsto —``. There is
     nothing to compare against, and a zero-width gold segment would read as
     "on plan".
+
+    That branch also separates its two labels **unconditionally** (APRAS-103),
+    with the same ``one close`` / ``tag plan below`` pairing the two-value
+    branch uses when its values are within :data:`CLOSE_LABEL_GAP`. It is not
+    conditional on ``realized`` because nothing here is compared: the plan tag
+    is a constant ``—`` pinned at ``left:0%``, so a threshold would be a
+    layout rule derived from a quantity that does not describe it -- and it
+    would shift the whole bar the month a project's measurement crossed that
+    threshold, inside a document series the síndico reads side by side.
     """
     if planned is None:
         return (
-            '<div class="one">'
-            '<div class="tag plan" style="left:0%"><span>previsto</span><b>—</b></div>'
+            '<div class="one close">'
+            '<div class="tag plan below" style="left:0%">'
+            "<span>previsto</span><b>—</b></div>"
             f'<div class="tag real" style="left:{realized:.0f}%">'
             f"<span>realizado</span><b>{realized:.0f}%</b></div>"
             f'<div class="track"><div class="seg a" style="width:{realized:.0f}%">'

@@ -515,6 +515,90 @@ def test_no_curve_renders_the_realized_segment_alone():
     assert 'class="seg b' not in markup
     assert 'class="mark"' not in markup
     assert 'class="seg a" style="width:22%"' in markup
+    assert '<div class="ends"><span>Início</span><span>Conclusão</span></div>' in markup
+
+
+def test_no_curve_puts_the_plan_tag_in_the_band_below_the_track():
+    """APRAS-103: the two labels used to overprint each other.
+
+    The plan tag is a constant ``—`` pinned at ``left:0%``; the realized tag
+    starts at ``left:0%`` too, so above the track they collide. The no-curve
+    branch now borrows the two-value branch's own vocabulary -- ``one close``
+    on the wrapper, ``tag plan below`` on the plan tag -- which the stylesheet
+    already supports.
+    """
+    markup = _bar(None, 0.0)
+
+    assert markup.startswith('<div class="one close">')
+    assert (
+        '<div class="tag plan below" style="left:0%">'
+        "<span>previsto</span><b>—</b></div>" in markup
+    )
+    assert '<div class="tag plan" style="left:0%">' not in markup
+
+
+@pytest.mark.parametrize("realized", [0.0, 37.0, 80.0])
+def test_no_curve_separates_the_labels_at_every_realized_value(realized):
+    """There is no threshold here, on purpose.
+
+    A conditional would key the layout off ``realized`` alone -- a quantity
+    that does not describe the plan tag at all -- and would silently change
+    one project's report structure between two consecutive monthly issues of
+    a document the síndico compares side by side.
+    """
+    markup = _bar(None, realized)
+
+    assert 'class="one close"' in markup
+    assert 'class="tag plan below" style="left:0%"' in markup
+    assert f'class="tag real" style="left:{realized:.0f}%"' in markup
+
+
+#: The two-value branch, byte for byte, in the three shapes that between them
+#: exercise every conditional it has: a pair far from ``CLOSE_LABEL_GAP``
+#: (gap 8.8, both tags above the track), a pair inside it (gap 2.0, ``close``
+#: wrapper and ``below`` plan tag) and a behind-schedule pair (gap 23.0,
+#: ``seg b behind`` plus the ``mark``). Hand-tuned against the approved mock;
+#: APRAS-103 must not move a single byte of it.
+_TWO_VALUE_MARKUP = {
+    (13.2, 22.0): (
+        '<div class="one">'
+        '<div class="tag plan" style="left:13%"><span>previsto</span>'
+        "<b>13%</b></div>"
+        '<div class="tag real" style="left:22%"><span>realizado</span>'
+        "<b>22%</b></div>"
+        '<div class="track"><div class="seg a" style="width:13%"></div>'
+        '<div class="seg b" style="left:13%;width:9%"></div>'
+        '<div class="mark" style="left:13%"></div></div>'
+        '<div class="ends"><span>Início</span><span>Conclusão</span></div></div>'
+    ),
+    (20.0, 22.0): (
+        '<div class="one close">'
+        '<div class="tag plan below" style="left:20%"><span>previsto</span>'
+        "<b>20%</b></div>"
+        '<div class="tag real" style="left:22%"><span>realizado</span>'
+        "<b>22%</b></div>"
+        '<div class="track"><div class="seg a" style="width:20%"></div>'
+        '<div class="seg b" style="left:20%;width:2%"></div>'
+        '<div class="mark" style="left:20%"></div></div>'
+        '<div class="ends"><span>Início</span><span>Conclusão</span></div></div>'
+    ),
+    (45.0, 22.0): (
+        '<div class="one">'
+        '<div class="tag plan" style="left:45%"><span>previsto</span>'
+        "<b>45%</b></div>"
+        '<div class="tag real" style="left:22%"><span>realizado</span>'
+        "<b>22%</b></div>"
+        '<div class="track"><div class="seg a" style="width:22%"></div>'
+        '<div class="seg b behind" style="left:22%;width:23%"></div>'
+        '<div class="mark" style="left:45%"></div></div>'
+        '<div class="ends"><span>Início</span><span>Conclusão</span></div></div>'
+    ),
+}
+
+
+@pytest.mark.parametrize(("planned", "realized"), sorted(_TWO_VALUE_MARKUP))
+def test_the_two_value_branch_is_pinned_byte_for_byte(planned, realized):
+    assert _bar(planned, realized) == _TWO_VALUE_MARKUP[(planned, realized)]
 
 
 def test_a_project_without_a_curve_says_previsto_em_dash(
