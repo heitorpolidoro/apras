@@ -279,6 +279,22 @@ CSS_IMPORT = "@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght
 #: WCAG 1.4.1 holds where 1.4.11 misses. Hairlines and the page edge are
 #: decoration, which 1.4.11 exempts. APRAS-84 recorded the same risk for
 #: ``--primary`` as a graphical token; the tree-wide repair is not this task's.
+#:
+#: APRAS-112 removed one rule from the ``.one`` family and nothing else:
+#: ``.one.close .ends { position:absolute; left:0; right:0; bottom:6.5mm; }``.
+#: It took the ``Início``/``Conclusão`` row out of normal flow and dropped it
+#: into the same 9mm band ``.one.close``'s ``padding-bottom`` reserves for the
+#: ``previsto`` label, so in both layouts that put that label below the track
+#: -- the close branch and the no-curve branch -- the row sat across the track
+#: (34-45px) *and* the label (45-79px). In flow the row lands at 51-65px and
+#: the reserved band starts at 65px, flush, which costs the bar +5.204mm.
+#: ``tests/test_project_report_bar_geometry.py`` computes those bands out of
+#: this constant and asserts they stay disjoint; its calibration case holds
+#: the deleted rule so the checker is known to be able to fail. That module
+#: also pins every rule here whose selector mentions neither ``close`` nor
+#: ``below`` against a baseline captured before the removal, so this edit is
+#: provably confined to the close layout. Note the parser it uses reads no CSS
+#: comments: keep this commentary outside the string.
 CSS_BODY = """
 * { box-sizing:border-box; }
 html, body { margin:0; padding:0; }
@@ -339,7 +355,6 @@ h1,h2,h3,h4 { margin:0; }
 .one .tag.real { border-left-color:var(--brand-alt); }
 .one.close { padding-bottom:9mm; }
 .one .tag.below { top:auto; bottom:0; height:9mm; display:flex; flex-direction:column-reverse; justify-content:flex-start; }
-.one.close .ends { position:absolute; left:0; right:0; bottom:6.5mm; }
 .one .ends { display:flex; justify-content:space-between; font-size:7pt; color:var(--muted); margin-top:1.5mm; }
 .pv .note { font-size:7.5pt; color:var(--muted); margin-top:2mm; }
 .two { display:grid; grid-template-columns:1.1fr .9fr; gap:4mm; align-items:stretch; }

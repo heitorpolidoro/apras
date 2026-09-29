@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APRAS-112 — avanço físico bar layout, before and after</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  /* Verbatim from CSS_BODY (backend/app/services/project_report_service.py),
+     with the report's colour variables resolved to the fallback palette so the
+     bar reads the same as in the live document. */
+  :root {
+    --line:#dfe6e3; --card:#ffffff; --soft:#f2f6f4; --ink:#0d2b26;
+    --muted:#6d817c; --brand:#0f5c4f; --brand-alt:#c6a04a; --brand-text:#0f5c4f;
+  }
+  .report { font-family:"DM Sans", Arial, sans-serif; font-size:10.5pt; line-height:1.5; color:#0d2b26; }
+  .pv { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:3.5mm 4.5mm; }
+  .one { position:relative; padding-top:9mm; margin-top:1mm; }
+  .one .track { height:11px; background:var(--line); border-radius:20px; overflow:hidden; position:relative; }
+  .one .seg { position:absolute; top:0; height:100%; }
+  .one .seg.a { left:0; background:var(--brand); }
+  .one .seg.b { background:var(--brand-alt); }
+  .one .mark { position:absolute; top:0; width:1.5px; height:100%; background:var(--card); }
+  .one .tag { position:absolute; top:0; transform:translateX(-1px); border-left:1.5px solid var(--line); padding-left:2mm; height:9mm; font-size:7.5pt; color:var(--muted); line-height:1.2; white-space:nowrap; }
+  .one .tag b { display:block; font-size:10pt; color:var(--ink); }
+  .one .tag.real b { color:var(--brand-text); }
+  .one .tag.real { border-left-color:var(--brand-alt); }
+  .one.close { padding-bottom:9mm; }
+  .one .tag.below { top:auto; bottom:0; height:9mm; display:flex; flex-direction:column-reverse; justify-content:flex-start; }
+  .one .ends { display:flex; justify-content:space-between; font-size:7pt; color:var(--muted); margin-top:1.5mm; }
+
+  /* THE RULE AT FAULT — applied only inside .before */
+  .before .one.close .ends { position:absolute; left:0; right:0; bottom:6.5mm; }
+
+  /* Band outlines, so the overlap is visible. Mock-only. */
+  .outline .one .tag { outline:1px dashed #c0392b; outline-offset:0; background:rgba(192,57,43,.06); }
+  .outline .one .tag.real { outline-color:#c6a04a; background:rgba(198,160,74,.10); }
+  .outline .one .track { outline:1px dashed #0f5c4f; }
+  .outline .one .ends { outline:1px dashed #2563eb; background:rgba(37,99,235,.08); }
+  .col { min-width:0; }
+</style>
+</head>
+<body class="bg-slate-100 p-8">
+<div class="mx-auto max-w-6xl space-y-8">
+
+  <header>
+    <h1 class="text-2xl font-bold text-slate-900">APRAS-112 — Início / Conclusão vs. the progress bar</h1>
+    <p class="mt-2 text-slate-600 text-sm max-w-3xl">
+      The bar has three layout cases. Only the <strong>close</strong> case and the
+      <strong>no-curve</strong> case put the <em>previsto</em> label below the track, and only those
+      two are broken. Bands are outlined below: <span class="text-red-700">red = previsto label</span>,
+      <span class="text-amber-600">amber = realizado label</span>,
+      <span class="text-emerald-800">green = track</span>,
+      <span class="text-blue-700">blue = Início/Conclusão row</span>.
+      No decision is being asked for — this is what the fix looks like.
+    </p>
+    <label class="mt-4 inline-flex items-center gap-2 text-sm text-slate-700">
+      <input id="outline" type="checkbox" checked class="h-4 w-4"> Show band outlines
+    </label>
+  </header>
+
+  <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+    <!-- BEFORE -->
+    <div class="col rounded-xl border-2 border-red-300 bg-white p-5">
+      <h2 class="font-bold text-red-700">BEFORE — today's CSS</h2>
+      <p class="text-xs text-slate-500 mb-4"><code>.one.close .ends { position:absolute; bottom:6.5mm }</code></p>
+
+      <div class="report before space-y-6" id="before">
+        <div>
+          <p class="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-1">Close — previsto 20% / realizado 22%</p>
+          <div class="pv">
+            <div class="one close">
+              <div class="tag plan below" style="left:20%"><span>previsto</span><b>20%</b></div>
+              <div class="tag real" style="left:22%"><span>realizado</span><b>22%</b></div>
+              <div class="track"><div class="seg a" style="width:20%"></div><div class="seg b" style="left:20%;width:2%"></div><div class="mark" style="left:20%"></div></div>
+              <div class="ends"><span>Início</span><span>Conclusão</span></div>
+            </div>
+          </div>
+          <p class="mt-2 text-xs text-red-700">Ends row 40–54px sits across the track (34–45px) and the previsto label (45–79px).</p>
+        </div>
+
+        <div>
+          <p class="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-1">No curve — previsto — / realizado 22%</p>
+          <div class="pv">
+            <div class="one close">
+              <div class="tag plan below" style="left:0%"><span>previsto</span><b>&mdash;</b></div>
+              <div class="tag real" style="left:22%"><span>realizado</span><b>22%</b></div>
+              <div class="track"><div class="seg a" style="width:22%"></div></div>
+              <div class="ends"><span>Início</span><span>Conclusão</span></div>
+            </div>
+          </div>
+          <p class="mt-2 text-xs text-red-700">Same rules, same collision (APRAS-103 routes this branch through <code>close</code>).</p>
+        </div>
+
+        <div>
+          <p class="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-1">Far apart — previsto 45% / realizado 22%</p>
+          <div class="pv">
+            <div class="one">
+              <div class="tag plan" style="left:45%"><span>previsto</span><b>45%</b></div>
+              <div class="tag real" style="left:22%"><span>realizado</span><b>22%</b></div>
+              <div class="track"><div class="seg a" style="width:22%"></div><div class="seg b" style="left:22%;width:23%;background:#c0392b;opacity:.7"></div><div class="mark" style="left:45%"></div></div>
+              <div class="ends"><span>Início</span><span>Conclusão</span></div>
+            </div>
+          </div>
+          <p class="mt-2 text-xs text-slate-500">Already correct — the ends row is in flow. Must not change (ER4).</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- AFTER -->
+    <div class="col rounded-xl border-2 border-emerald-300 bg-white p-5">
+      <h2 class="font-bold text-emerald-800">AFTER — the close-scoped rule removed</h2>
+      <p class="text-xs text-slate-500 mb-4">Ends row stays in normal flow; the 9mm below-band starts after it. +5.2mm of bar height.</p>
+
+      <div class="report space-y-6" id="after">
+        <div>
+          <p class="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-1">Close — previsto 20% / realizado 22%</p>
+          <div class="pv">
+            <div class="one close">
+              <div class="tag plan below" style="left:20%"><span>previsto</span><b>20%</b></div>
+              <div class="tag real" style="left:22%"><span>realizado</span><b>22%</b></div>
+              <div class="track"><div class="seg a" style="width:20%"></div><div class="seg b" style="left:20%;width:2%"></div><div class="mark" style="left:20%"></div></div>
+              <div class="ends"><span>Início</span><span>Conclusão</span></div>
+            </div>
+          </div>
+          <p class="mt-2 text-xs text-emerald-800">Four disjoint bands: label 0–34, track 34–45, ends 51–65, previsto label 65–99.</p>
+        </div>
+
+        <div>
+          <p class="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-1">No curve — previsto — / realizado 22%</p>
+          <div class="pv">
+            <div class="one close">
+              <div class="tag plan below" style="left:0%"><span>previsto</span><b>&mdash;</b></div>
+              <div class="tag real" style="left:22%"><span>realizado</span><b>22%</b></div>
+              <div class="track"><div class="seg a" style="width:22%"></div></div>
+              <div class="ends"><span>Início</span><span>Conclusão</span></div>
+            </div>
+          </div>
+          <p class="mt-2 text-xs text-emerald-800">Fixed by the same single rule, with no branch of its own.</p>
+        </div>
+
+        <div>
+          <p class="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-1">Far apart — previsto 45% / realizado 22%</p>
+          <div class="pv">
+            <div class="one">
+              <div class="tag plan" style="left:45%"><span>previsto</span><b>45%</b></div>
+              <div class="tag real" style="left:22%"><span>realizado</span><b>22%</b></div>
+              <div class="track"><div class="seg a" style="width:22%"></div><div class="seg b" style="left:22%;width:23%;background:#c0392b;opacity:.7"></div><div class="mark" style="left:45%"></div></div>
+              <div class="ends"><span>Início</span><span>Conclusão</span></div>
+            </div>
+          </div>
+          <p class="mt-2 text-xs text-slate-500">Byte-identical to the left column: no shared rule is touched.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="rounded-xl border border-slate-300 bg-white p-5">
+    <h2 class="font-bold text-slate-900">Measured bands, relative to the top of <code>.one</code></h2>
+    <p class="text-sm text-slate-600 mt-1">
+      Live numbers from this page, so the model in the spec can be checked against a real layout engine.
+      The BEFORE close case should read track 34–45, ends 40–54, previsto 45–79 — the numbers measured
+      against the production document.
+    </p>
+    <div id="measure" class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono"></div>
+  </section>
+</div>
+
+<script>
+  const box = document.getElementById('outline');
+  function applyOutline() {
+    document.querySelectorAll('.report').forEach(r => r.classList.toggle('outline', box.checked));
+  }
+  box.addEventListener('change', applyOutline);
+  applyOutline();
+
+  function bands(one) {
+    const base = one.getBoundingClientRect().top;
+    const pick = (sel) => {
+      const el = one.querySelector(sel);
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      return [Math.round(r.top - base), Math.round(r.bottom - base)];
+    };
+    return {
+      'tag.real': pick('.tag.real'),
+      'track': pick('.track'),
+      'ends': pick('.ends'),
+      'tag.plan': pick('.tag.plan')
+    };
+  }
+  function overlaps(b) {
+    const keys = Object.keys(b).filter(k => b[k]);
+    const out = [];
+    for (let i = 0; i < keys.length; i++)
+      for (let j = i + 1; j < keys.length; j++) {
+        const [a1, a2] = b[keys[i]], [c1, c2] = b[keys[j]];
+        if (a1 < c2 && c1 < a2) out.push(keys[i] + ' x ' + keys[j]);
+      }
+    return [...new Set(out)];
+  }
+  const target = document.getElementById('measure');
+  [['BEFORE', 'before'], ['AFTER', 'after']].forEach(([label, id]) => {
+    const names = ['close', 'no curve', 'far apart'];
+    document.querySelectorAll('#' + id + ' .one').forEach((one, i) => {
+      const b = bands(one);
+      const ov = overlaps(b);
+      const card = document.createElement('div');
+      card.className = 'rounded border p-3 ' + (ov.length ? 'border-red-300 bg-red-50' : 'border-emerald-300 bg-emerald-50');
+      card.innerHTML = '<div class="font-bold">' + label + ' / ' + names[i] + '</div>' +
+        Object.entries(b).filter(([, v]) => v).map(([k, v]) => k + ': ' + v[0] + '–' + v[1] + 'px').join('<br>') +
+        '<div class="mt-2 ' + (ov.length ? 'text-red-700' : 'text-emerald-800') + '">' +
+        (ov.length ? 'OVERLAP: ' + ov.join(', ') : 'no overlap') + '</div>';
+      target.appendChild(card);
+    });
+  });
+</script>
+</body>
+</html>
