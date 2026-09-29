@@ -230,14 +230,30 @@ class _Audit:
                         changed = True
                 if not self.returns_safe[name]:
                     continue
-                returns = [
-                    node.value
-                    for node in ast.walk(fn)
-                    if isinstance(node, ast.Return) and node.value is not None
-                ]
-                if not all(self.is_safe(value, name) for value in returns):
+                if not self._returns_hold(fn, name):
                     self.returns_safe[name] = False
                     changed = True
+
+    def _returns_hold(
+        self, fn: ast.FunctionDef | ast.AsyncFunctionDef, name: str
+    ) -> bool:
+        """Is every value ``fn`` can hand back safe?
+
+        **A generator is never safe.** It has no ``ast.Return`` carrying the
+        values it produces, so ``all()`` over its (empty) return list is
+        vacuously true -- and a helper that yielded ``milestone.title``, joined
+        into the document by ``", ".join(...)``, audited ``SAFE``. Vacuous
+        truth is not "every return is safe", which is what the verdict claims,
+        so a ``yield`` anywhere in the body demotes the function outright.
+        """
+        if any(isinstance(node, ast.Yield | ast.YieldFrom) for node in ast.walk(fn)):
+            return False
+        returns = [
+            node.value
+            for node in ast.walk(fn)
+            if isinstance(node, ast.Return) and node.value is not None
+        ]
+        return all(self.is_safe(value, name) for value in returns)
 
     def _param_holds(self, function: str, param: str) -> bool:
         if _is_non_text(self.annotations[function].get(param)):
@@ -313,31 +329,62 @@ class _Audit:
         if func.attr in SAFE_TRANSFORMS:
             # A rearrangement of the receiver and the arguments, so it is safe
             # exactly when both are.
-            return self.is_safe(func.value, scope) and all(
-                self.is_safe(arg, scope) for arg in node.args
+            return self.is_safe(func.value, scope) and self._arguments_safe(
+                node, scope, node.args
             )
         if func.attr == "get":
             # A lookup in a safe mapping answers a safe value, or the default.
-            return self.is_safe(func.value, scope) and all(
-                self.is_safe(arg, scope) for arg in node.args[1:]
+            return self.is_safe(func.value, scope) and self._arguments_safe(
+                node, scope, node.args[1:]
             )
         return False
+
+    def _arguments_safe(
+        self, node: ast.Call, scope: str, positional: list[ast.expr]
+    ) -> bool:
+        """``positional`` **and every keyword**.
+
+        No ``str`` method this module calls takes a keyword, so leaving them
+        out was latent rather than live -- but "the analysis did not look" is
+        how the two false-``SAFE`` shapes ER7 records got in, and a keyword is
+        an argument.
+        """
+        return all(self.is_safe(arg, scope) for arg in positional) and all(
+            self.is_safe(keyword.value, scope) for keyword in node.keywords
+        )
 
     def _name_lookup(self, node: ast.expr, scope: str) -> bool:
         assert isinstance(node, ast.Name)
         return self._name_safe(node.id, scope)
 
     def _name_safe(self, name: str, scope: str) -> bool:
-        if name in self.module_names or name in self.functions:
-            return True
-        if _is_non_text(self.annotations.get(scope, {}).get(name)):
-            return True
+        """**Local scope first.** Python resolves a name to the local binding
+        whichever module-scope name it shadows, and so must this: a local
+        called ``html``, ``json``, ``date``, ``clock`` or any of the module's
+        own function names would otherwise read as safe whatever it holds --
+        ``html = project.description`` followed by ``f"<p>{html}</p>"`` was
+        ``SAFE`` while this method tested :attr:`module_names` first.
+        """
         fn = self.functions.get(scope)
         if fn is not None and name in _params(fn):
             return self.param_safe[(scope, name)]
         bindings = self.bindings.get(scope, {}).get(name)
-        if not bindings:
-            return False
+        if bindings:
+            return self._bindings_safe(name, scope, bindings)
+        if _is_non_text(self.annotations.get(scope, {}).get(name)):
+            return True
+        # Not bound in this function, so it resolves to module scope: a module
+        # body runs at import, where no stored value exists.
+        return name in self.module_names or name in self.functions
+
+    def _bindings_safe(self, name: str, scope: str, bindings: list[ast.expr]) -> bool:
+        """Every expression the local can hold has to be safe.
+
+        Checked **before** the name's annotation, not after: an annotation is
+        the author's claim about the value and the binding is the value, so a
+        local annotated ``str`` -- or ``int`` -- that is assigned a model field
+        is unsafe whatever its annotation says.
+        """
         key = (scope, name)
         if key in self._resolving:
             return True  # broken cycle; the other binding still decides
@@ -543,6 +590,25 @@ def escape_call_sites(tree: ast.Module) -> list[int]:
     the two share one traversal order by construction.
     """
     return [node.lineno for node in _escape_calls(tree)]
+
+
+def escape_calls_at_interpolations(tree: ast.Module) -> list[int]:
+    """The line of each ``_e(...)`` that is a ``{...}``'s whole expression.
+
+    A subset of :func:`escape_call_sites`: an ``_e()`` inside a ``join``'s
+    generator, or assigned to a local that is interpolated later, escapes just
+    as much but is not itself an interpolation, so it produces no ``ESCAPED``
+    verdict. Counting the two separately is what lets a test state the real
+    relation between them instead of asserting ``16 <= 20``.
+    """
+    return [
+        node.value.lineno
+        for node in ast.walk(tree)
+        if isinstance(node, ast.FormattedValue)
+        and isinstance(node.value, ast.Call)
+        and isinstance(node.value.func, ast.Name)
+        and node.value.func.id == ESCAPER
+    ]
 
 
 def without_escape(tree: ast.Module, index: int) -> ast.Module:
