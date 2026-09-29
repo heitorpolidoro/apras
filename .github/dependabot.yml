@@ -1,0 +1,59 @@
+version: 2
+
+updates:
+  # Backend. The ecosystem is `uv`, not `pip`: `pip` would drive only the
+  # generated `backend/requirements.txt` and leave `backend/uv.lock` behind,
+  # manufacturing exactly the two-files-disagree state that let 57 alerts
+  # accumulate (APRAS-116). `uv` updates `pyproject.toml`, `uv.lock` and the
+  # export together.
+  - package-ecosystem: "uv"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+    # Weekly and capped: there is one maintainer, and the failure mode this
+    # config exists to prevent is a queue nobody reads.
+    open-pull-requests-limit: 3
+    groups:
+      # One PR per week for all minor/patch version updates. Majors are
+      # deliberately left ungrouped so each arrives as its own reviewable PR.
+      backend-version-updates:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+        exclude-patterns:
+          # `ruff` is pinned exactly in `backend/pyproject.toml` because its
+          # rule set and its formatter both move between minor releases, and
+          # the `backend-lint` gate must not fail on a change that did not
+          # cause it. Bumping it is a deliberate one-line PR that re-runs the
+          # same harness (APRAS-54 §4.1), so it must not be swept into the
+          # grouped version-update PR. Excluded from the group rather than
+          # `ignore`d: `ignore` would suppress its security updates too.
+          - "ruff"
+      # Security fixes stay batched instead of arriving one per advisory,
+      # which is how 57 alerts became unreadable.
+      backend-security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
+
+  # Frontend.
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+    groups:
+      frontend-version-updates:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      frontend-security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
