@@ -915,7 +915,14 @@ def test_a_project_whose_every_milestone_is_complete_renders_only_the_done_card(
             completion_date=date(2026, 1, 1) + timedelta(days=index),
             display_order=index,
             description="Piso, Parede, Teto",
-            detail_json=_real_payload(pct=100.0),
+            # `_leaf_payload` and not `_real_payload`, for the reason that
+            # helper's docstring already gives: this case asserts the three
+            # tokens are absent from the **page**, and since APRAS-115 the
+            # stage-detail section legitimately prints the payload's leaf
+            # names title-cased -- the real Demolições leaves contain
+            # "PISO" and "PAREDES", so the claim would be ambiguous rather
+            # than false.
+            detail_json=_leaf_payload(100.0, "2026-01-01"),
         )
     admin = _user(session)
 
@@ -1068,12 +1075,22 @@ _NEW_CARD_SELECTORS = (
 
 
 def _new_card_rules():
-    """The `CSS_BODY` rules whose selector mentions a class APRAS-113 added."""
+    """The `CSS_BODY` rules whose selector mentions a class APRAS-113 added.
+
+    `details`-prefixed selectors are excluded, and that exclusion is narrow on
+    purpose. APRAS-115's stage-detail section reuses three of these class tokens
+    -- `.ttl`, `.top`, `.nm` -- under its own `details.ph` scope, which is
+    exactly the scoping this pin asks for, just not under `.grp`. Nothing is
+    lost: an *unscoped* `.nm { … }` still carries no `details` prefix and still
+    fails the case below, and every section rule is pinned as an exact ordered
+    list by `tests/test_project_report_stage_detail_section.py`.
+    """
     sheet = parse_css(report.CSS_BODY)
     return [
         rule
         for rule in sheet.rules + sheet.nested_rules
-        if _NEW_CARD_CLASSES
+        if not rule.selector.startswith("details")
+        and _NEW_CARD_CLASSES
         & {
             token.lstrip(".")
             for token in re.findall(r"\.[A-Za-z][\w-]*", rule.selector)

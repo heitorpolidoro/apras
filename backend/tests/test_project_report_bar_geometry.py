@@ -824,9 +824,21 @@ def test_the_duplicated_selectors_are_kept_in_two_namespaces(selector):
 
 
 def test_the_at_rules_are_parsed_as_blocks():
-    """`@page` carries declarations, `@media print` carries nested rules."""
+    """`@page` carries declarations, each `@media print` carries nested rules.
+
+    There are **two** print blocks, and that is deliberate rather than untidy.
+    `shared_rule_pairs` emits one pair per at-rule as `[prelude, whole raw
+    body]`, so APRAS-115 adding its rules *inside* the first block would have
+    reworded a pinned pair and broken the baseline's additions-only property. A
+    second block appends a new pair instead. Both preludes are pinned here so a
+    third one cannot appear unreviewed.
+    """
     blocks = parse_css(CSS_BODY).at_rules
-    assert [block.prelude for block in blocks] == ["@page", "@media print"]
+    assert [block.prelude for block in blocks] == [
+        "@page",
+        "@media print",
+        "@media print",
+    ]
     assert blocks[0].rules == ()
     assert blocks[0].body.strip() == "size:A4; margin:0;"
     assert [rule.selector for rule in blocks[1].rules] == [
@@ -834,6 +846,14 @@ def test_the_at_rules_are_parsed_as_blocks():
         ".page",
         ".page + .page, .page.brk",
         ".groups, .two, .week, .cyl",
+    ]
+    assert [rule.selector for rule in blocks[2].rules] == [
+        "details.all, details.ph",
+        (
+            "details.all:not([open])>.inner, details.ph:not([open])>ul,"
+            " details.ph:not([open])>.none"
+        ),
+        "details.all>summary::before, details.ph>summary::before",
     ]
 
 

@@ -303,6 +303,49 @@ CSS_IMPORT = "@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght
 #: ``below`` against a baseline captured before the removal, so this edit is
 #: provably confined to the close layout. Note the parser it uses reads no CSS
 #: comments: keep this commentary outside the string.
+#:
+#: APRAS-115 **appends** the ``details``/``.dot``/``.pp`` family for the stage
+#: detail section, plus a ``details.ph .none`` rule and a **second**
+#: ``@media print`` block, and it changes no existing rule's text. Three
+#: constraints shaped that, none of them tidiness:
+#:
+#: * ``shared_rule_pairs`` emits one pair per at-rule as
+#:   ``[prelude, whole raw body]``, so a declaration added *inside* the existing
+#:   ``@media print`` block rewords a pinned pair and the baseline diff stops
+#:   being additions-only. A brand-new block appends a new pair. Plain rules
+#:   after ``@page``/``@media print`` are valid CSS and likewise append.
+#: * ``.grp .none`` is card-scoped, and the section reuses ``<p class="none">``
+#:   for a stage whose ``leaves`` is empty. Editing that selector in place would
+#:   reword a pinned pair too, so the coverage arrives as an appended rule.
+#: * the mock (``docs/tasks/APRAS-113-mock.html``) cannot be ported verbatim:
+#:   ``--gold`` is ``--brand-alt``, ``--bg`` is ``--surface`` (**not**
+#:   ``--soft``), the hard-coded ``rgba(221,209,182,.4)`` row separator is
+#:   ``--line``, and the mock's ``--brand`` is *both* production ``--brand`` and
+#:   ``--brand-text``. Text takes ``--brand-text``, because
+#:   ``("brand","card")`` is absent from the branding suite's
+#:   ``REPORT_TEXT_PAIRS`` and already recorded below 3:1 -- a verbatim
+#:   ``color:var(--brand)`` would ship ~1.2:1 summary text for a yellow-brand
+#:   tenant with the whole suite green. Fills (``.dot.d``,
+#:   ``details.ph li.d::before``) keep ``--brand``: they are decorative state
+#:   markers and their lower bound is the risk recorded above.
+#:
+#: ``.inner``, ``.dot`` and ``.pp`` are appended **unscoped**, while ``.ttl``,
+#: ``.top`` and ``.nm`` -- which the cards already define -- are scoped under
+#: ``details.ph``. That asymmetry is deliberate, not an oversight: the latter
+#: three would otherwise collide with ``.grp .ttl``/``.top``/``.nm`` above,
+#: whereas the former three are names no other rule in this stylesheet uses,
+#: kept as the approved mock spells them so a reader can diff the two. The
+#: cost of the choice is that a future section reusing any of the three
+#: inherits these declarations silently; ``SECTION_SELECTORS`` in the test
+#: module pins the set, so such a reuse shows up as a failing selector list
+#: rather than as a visual surprise.
+#:
+#: Two more harmless facts, so neither is later read as a defect. ``.dot.w``
+#: is dead under :func:`_stage_detail_block_html`'s rule -- a stage is ``d``
+#: above 0% and ``n`` at 0%, never ``w`` -- and stays because deleting a rule
+#: out of a ported family costs more review than an unused selector. ``.dot``'s
+#: ``height:7px`` is invisible to APRAS-112's geometry suite, whose
+#: ``DECLARED_HEIGHT_BOXES`` only considers selectors beginning ``.one``.
 CSS_BODY = """
 * { box-sizing:border-box; }
 html, body { margin:0; padding:0; }
@@ -411,6 +454,41 @@ body { background:#fff; }
 .page + .page, .page.brk { page-break-before:always; break-before:page; }
 .groups, .two, .week, .cyl { page-break-inside:avoid; }
 }
+details.all { margin-top:4mm; background:var(--card); border:1px solid var(--line); border-radius:12px; }
+details.all>summary { list-style:none; cursor:pointer; padding:3mm 4mm; font-size:8.5pt; font-weight:700; color:var(--brand-text); display:flex; gap:6px; align-items:center; }
+details.all>summary em { font-style:normal; font-weight:400; color:var(--muted); }
+summary::-webkit-details-marker { display:none; }
+details.all>summary::before { content:"▸"; }
+details.all[open]>summary::before { content:"▾"; }
+details.all[open]>summary { border-bottom:1px solid var(--line); }
+.inner { padding:3mm 3.7mm 3.5mm; }
+details.ph { border:1px solid var(--line); border-radius:9px; margin-bottom:1.6mm; background:var(--surface); }
+details.ph:last-child { margin-bottom:0; }
+details.ph>summary { list-style:none; cursor:pointer; padding:2.1mm 2.7mm; display:flex; gap:2.4mm; align-items:center; }
+details.ph>summary::before { content:"▸"; color:var(--muted); }
+details.ph[open]>summary::before { content:"▾"; }
+details.ph .ttl { display:flex; flex-direction:column; min-width:0; }
+details.ph .top { font-size:6.5pt; letter-spacing:.9px; text-transform:uppercase; color:var(--muted); line-height:1.35; }
+details.ph .nm { font-size:9pt; font-weight:600; line-height:1.3; }
+details.ph .none { color:var(--muted); font-style:italic; font-size:8.5pt; margin:0; padding:1.3mm 3.2mm 2.4mm; border-top:1px solid var(--line); }
+.dot { width:7px; height:7px; border-radius:99px; flex:none; }
+.dot.d { background:var(--brand); }
+.dot.w { background:var(--brand-alt); }
+.dot.n { border:2px solid var(--muted); width:5px; height:5px; }
+.pp { margin-left:auto; font-variant-numeric:tabular-nums; color:var(--muted); font-weight:700; font-size:8.5pt; }
+details.ph ul { margin:0; padding:1.3mm 3.2mm 2.4mm 7.4mm; list-style:none; border-top:1px solid var(--line); }
+details.ph li { display:grid; grid-template-columns:1fr auto; gap:0 2.1mm; padding:1.1mm 0; font-size:8pt; position:relative; border-bottom:1px solid var(--line); }
+details.ph li:last-child { border:0; }
+details.ph li::before { content:""; position:absolute; left:-3.4mm; top:2.4mm; width:5px; height:5px; border-radius:99px; background:var(--line); }
+details.ph li.d::before { background:var(--brand); }
+details.ph li.w::before { background:var(--brand-alt); }
+details.ph li b { font-variant-numeric:tabular-nums; color:var(--muted); }
+details.ph li i { grid-column:1/3; font-style:normal; font-size:7.5pt; color:var(--muted); }
+@media print {
+details.all, details.ph { break-inside:avoid; }
+details.all:not([open])>.inner, details.ph:not([open])>ul, details.ph:not([open])>.none { display:block; }
+details.all>summary::before, details.ph>summary::before { content:"▾"; }
+}
 """
 
 
@@ -473,6 +551,130 @@ def split_title_and_kind(title: str | None) -> tuple[str, str | None]:
     if match is None:
         return raw, None
     return match.group("title").strip(), match.group("kind").strip()
+
+
+#: Portuguese words that stay lowercase inside a title unless they open it.
+#: Ported verbatim from the operator's ``sync_obras_from_drive.py``, which is
+#: the producer of every string this helper is applied to.
+TITLE_CASE_MINOR: frozenset[str] = frozenset(
+    {
+        "de",
+        "da",
+        "do",
+        "das",
+        "dos",
+        "e",
+        "em",
+        "com",
+        "para",
+        "a",
+        "o",
+        "as",
+        "os",
+        "no",
+        "na",
+    }
+)
+
+#: The **vowel-bearing** acronyms the contractor's data carries, which rule (a)
+#: below cannot recognise. Deliberately a named constant and deliberately
+#: short: the next acronym is meant to be a data edit here rather than a code
+#: change, and every acronym that has no vowel -- ``WC``, ``PCD``, ``PVC``,
+#: ``QDG``, ``CFTV`` -- must be **absent**, because listing one would mean
+#: rule (a) is not doing its job.
+TITLE_CASE_ACRONYMS: frozenset[str] = frozenset({"ART", "PNE"})
+
+#: Vowels, accented forms included: ``TÉRREO`` has one, ``QDG`` does not.
+_VOWELS = frozenset("AEIOUÁÂÃÀÄÉÊËÈÍÎÏÌÓÔÕÖÒÚÛÜÙ")
+
+#: Everything stripped before the vowel test, so trailing punctuation cannot
+#: hide an acronym: ``"PCD-"`` must be tested as ``"PCD"``.
+_NON_LETTERS = re.compile(r"[^0-9A-Za-zÀ-ÖØ-öø-ÿ]+")
+
+#: A slash **between two alphanumerics** -- ``AC/60``, ``1/2`` -- as opposed to
+#: the trailing slash the producer leaves on ``"PAVIMENTO SUPERIOR/"``. Only the
+#: former is a code; the latter is an ordinary word and must be cased.
+_INTERNAL_SLASH = re.compile(r"[0-9A-Za-zÀ-ÖØ-öø-ÿ]/[0-9A-Za-zÀ-ÖØ-öø-ÿ]")
+
+
+def _capitalise_first_letter(text: str) -> str:
+    """The first **letter** uppercased, not the first character.
+
+    The operator script's own ``part[:1].upper()`` renders the committed
+    fixture's ``"(TOLDO METALICO)"`` as ``"(toldo Metalico)"``, because the
+    opening parenthesis absorbs the ``upper()`` and the ``t`` never reaches it.
+    """
+    for index, character in enumerate(text):
+        if character.isalpha():
+            return text[:index] + character.upper() + text[index + 1 :]
+    return text
+
+
+def _title_case_token(token: str, *, initial: bool) -> str:
+    """One whitespace-delimited token of :func:`title_case`.
+
+    The rules, in order, and the order matters because the input is uniformly
+    SHOUTING -- so "already uppercase" is not a usable signal for anything:
+
+    (a) a punctuation-stripped token with **no vowel** passes through verbatim.
+        That keeps ``WC``, ``PCD``, ``PVC``, ``QDG`` and ``CFTV`` upper with no
+        list at all, which is what stops the defect moving to the next acronym
+        nobody thought to name.
+    (b) a token carrying a digit, or a slash between two alphanumerics, passes
+        unchanged: ``M2``, ``AC/60`` are codes, not words. The slash test is
+        deliberately *internal* rather than "contains a slash" -- the producer
+        writes ``"PAVIMENTO SUPERIOR/ LAVABO"``, and a contains-test would ship
+        ``SUPERIOR/`` still SHOUTING in the middle of a cased sentence.
+    (c) a token in :data:`TITLE_CASE_ACRONYMS` passes through verbatim: the
+        vowel-bearing residue rule (a) cannot see.
+
+    Anything else is lowercased and then capitalised, except a
+    :data:`TITLE_CASE_MINOR` preposition in non-initial position.
+    """
+    bare = _NON_LETTERS.sub("", token)
+    if not bare:
+        return token
+    if not _VOWELS & set(bare.upper()):
+        return token
+    if any(character.isdigit() for character in bare) or _INTERNAL_SLASH.search(token):
+        return token
+    if bare.upper() in TITLE_CASE_ACRONYMS:
+        return token
+    lowered = token.lower()
+    if not initial and lowered in TITLE_CASE_MINOR:
+        return lowered
+    return _capitalise_first_letter(lowered)
+
+
+def title_case(text: str) -> str:
+    """Portuguese-aware title case, for the **leaf names only**.
+
+    Ported from the operator's ``backend/scripts/sync_obras_from_drive.py`` --
+    run by hand, deliberately never committed -- because casing is presentation
+    and the producer stores serviço names exactly as the ``.mpp`` spells them,
+    SHOUTING. ``tests/data/obras_stage_detail_fixture.json`` is pinned against
+    that raw form, so the transform has to happen at render time.
+
+    ``"ENTRADA DE CAMINHÕES"`` becomes ``"Entrada de Caminhões"`` where a naive
+    :meth:`str.title` gives ``"Entrada De Caminhões"``. The port adds an
+    acronym-preserving mechanism the script's version lacks; see
+    :func:`_title_case_token` for the three rules and why an allowlist alone
+    would not do.
+
+    **Not for a milestone ``title``.** The producer already cased those, and
+    this lowercases before capitalising, so a second pass would flatten a
+    stored ``"WC"`` or an all-caps suffix -- a defect, not a no-op.
+    """
+    parts = re.split(r"(\s+)", text)
+    cased: list[str] = []
+    initial = True
+    for part in parts:
+        if not part.strip():
+            cased.append(part)
+            continue
+        cased.append(_title_case_token(part, initial=initial))
+        initial = False
+    return "".join(cased)
 
 
 def planned_to_date(payload: object, today: date | None = None) -> float | None:
@@ -903,6 +1105,168 @@ def _groups_html(milestones: list[ProjectMilestone]) -> str:
     return f'<div class="groups">{cards}</div>'
 
 
+def _stage_detail_sort_key(
+    milestone: ProjectMilestone,
+) -> tuple[int, str, UUID]:
+    """``(display_order, title, id)`` -- and the ordering must be **total**.
+
+    The first two are :func:`_stage_sort_key`, so the section reads in the same
+    order as the cards. ``id`` is the tiebreak, with no ``or 0`` fallback:
+    ``ProjectMilestone.id`` is a non-nullable ``uuid.UUID`` with
+    ``default_factory=uuid4``, so a fallback is dead code that would raise
+    ``TypeError`` comparing a ``UUID`` with an ``int`` if it ever fired.
+
+    Nothing forbids two rows sharing a ``display_order`` **and** a ``title``.
+    Without a unique third key those two would order by whatever the database
+    returned, the section would reorder between two renders of the same data,
+    and the report's golden tests would become flaky rather than wrong.
+    """
+    return (*_stage_sort_key(milestone), milestone.id)
+
+
+def _count_label(count: int, singular: str, plural: str) -> str:
+    """``1 frente`` / ``2 frentes`` -- spelled, never an ``s`` glued on."""
+    return f"{count} {singular if count == 1 else plural}"
+
+
+#: The date range separator, U+2013 EN DASH, exactly as the approved mock
+#: spells it. A named constant because ruff reports the glyph as confusable
+#: with a hyphen-minus at every literal use, and because the choice is the
+#: mock's rather than this module's.
+_DATE_RANGE_DASH = "\u2013"
+
+#: The leaf percentage at which a serviço is done. Named so the three-way state
+#: below reads as a rule rather than as a magic comparison.
+_LEAF_COMPLETE_PCT = 100.0
+
+
+def _leaf_dates_html(leaf: StageLeaf) -> str:
+    """``<i>14/09{dash}15/09</i>``, a single date, or **nothing at all**.
+
+    The producer writes ``null`` where the contractor's schedule carries no
+    date, so all three shapes reach here. With neither date the element is
+    omitted entirely rather than emitted empty or with a bare dash: ``<i>`` is
+    ``grid-column:1/3`` in its own grid row, so an empty one reserves a row for
+    nothing.
+
+    ``%d/%m`` with no year, because the approved mock omits it. Recorded
+    accepted ambiguity: a schedule spanning a year boundary shows ``05/01``
+    for two different years.
+    """
+    stamps = [stamp.strftime("%d/%m") for stamp in (leaf.start, leaf.finish) if stamp]
+    return f"<i>{_DATE_RANGE_DASH.join(stamps)}</i>" if stamps else ""
+
+
+def _stage_leaf_html(leaf: StageLeaf) -> str:
+    """One serviço row. The name is title-cased **before** ``_e``, so escaping
+    still sees the final text."""
+    if leaf.pct >= _LEAF_COMPLETE_PCT:
+        state = "d"
+    elif leaf.pct > 0:
+        state = "w"
+    else:
+        state = "n"
+    return (
+        f'<li class="{state}">{_e(title_case(leaf.name))}'
+        f"<b>{_pct(leaf.pct)}</b>{_leaf_dates_html(leaf)}</li>"
+    )
+
+
+def _stage_detail_block_html(milestone: ProjectMilestone, detail: StageDetail) -> str:
+    """One stage's inner ``<details class="ph">``, closed.
+
+    The title is split on the producer's ``" · "`` separator and used **as
+    stored** -- the producer already cased it, and :func:`title_case`
+    lowercases first, so a second pass would flatten an all-caps suffix. Only
+    the leaf names go through the caser.
+
+    A stage whose ``leaves`` is empty -- valid per APRAS-114 -- renders its
+    summary and the ``<p class="none">`` line the cards already use, so it is
+    visible rather than silently dropped and no new CSS class is invented. It
+    counts as one frente and zero serviços.
+    """
+    parent, name = _split_stage_title(milestone.title)
+    kicker = f'<span class="top">{_e(parent)}</span>' if parent else ""
+    dot = "d" if detail.pct > 0 else "n"
+    if detail.leaves:
+        body = "<ul>" + "".join(_stage_leaf_html(leaf) for leaf in detail.leaves)
+        body += "</ul>"
+    else:
+        body = '<p class="none">—</p>'
+    return (
+        f'<details class="ph"><summary><span class="dot {dot}"></span>'
+        f'<span class="ttl">{kicker}<span class="nm">{_e(name)}</span></span>'
+        f'<span class="pp">{_pct(detail.pct)}</span></summary>{body}</details>'
+    )
+
+
+def _stage_detail_html(milestones: Sequence[ProjectMilestone]) -> str:
+    """The collapsible stage-detail section, or ``""`` when there is nothing.
+
+    **Why ``<details>`` and not a script -- this is the whole design.**
+    ``PublicObrasReportPage.tsx`` injects the document into an
+    ``<iframe srcDoc sandbox="">``. An empty ``sandbox`` attribute turns *every*
+    restriction on, ``allow-scripts`` included, so **no JavaScript in this
+    document ever runs**: a ``<script>`` accordion is impossible, not merely
+    unwanted, and so is an inline ``onclick``. ``<details>``/``<summary>`` is
+    the only collapsible mechanism this renderer has, and it is also why
+    ``CSS_BODY``'s second ``@media print`` block forces the collapsed contents
+    visible on paper -- nobody can expand a printed report. A future reader who
+    "improves" this into a script produces a section that cannot be opened at
+    all, with no error anywhere.
+
+    **Which milestones appear:** every one whose ``detail_json`` decodes,
+    regardless of ``MilestoneStatus`` and regardless of whether a card above
+    shows it. The cards show at most three DONE and three UPCOMING; this is the
+    full list, which is the reason the section exists. A payload that is absent
+    or malformed contributes nothing -- ``decode_stage_detail`` is strict by
+    design and a partial read is not available.
+
+    **No decoded stage at all -> no section**: no wrapper, not an empty one, and
+    no "nenhum detalhe" placeholder. Every production row's ``detail_json`` is
+    NULL until the operator re-runs the sync by hand, so that is the **live**
+    state of every report today and its bytes must not move.
+
+    **Both totals are derived and neither is ever literal:** ``frentes`` is the
+    number of inner ``<details class="ph">`` emitted and ``serviços`` the number
+    of ``<li>``, so they count only what the section actually shows. In the
+    mixed rollout state a NULL milestone is counted in neither, because a
+    summary that promises 26 frentes and reveals 9 is worse than one that
+    promises 9.
+
+    Neither level carries ``open``, so the report opens showing exactly the
+    cards it shows today plus one collapsed summary line. Nesting is what keeps
+    it short: a flat list of 82 ``<li>`` behind one toggle would add about a
+    page per obra the moment it was expanded, and the per-stage toggle is what
+    lets the síndico open one frente.
+    """
+    stages = sorted(
+        (
+            (milestone, detail)
+            for milestone in milestones
+            if (detail := decode_stage_detail(milestone.detail_json)) is not None
+        ),
+        key=lambda pair: _stage_detail_sort_key(pair[0]),
+    )
+    if not stages:
+        return ""
+    frentes = _count_label(len(stages), "frente", "frentes")
+    # Serviços render in **payload order**, never re-sorted: that is the
+    # contractor's schedule order, it is meaningful, and list position is
+    # already a total order.
+    servicos = _count_label(
+        sum(len(detail.leaves) for _, detail in stages), "serviço", "serviços"
+    )
+    blocks = "".join(
+        _stage_detail_block_html(milestone, detail) for milestone, detail in stages
+    )
+    return (
+        '<details class="all"><summary>Mostrar detalhes '
+        f"<em>— {frentes}, {servicos}</em></summary>"
+        f'<div class="inner">{blocks}</div></details>'
+    )
+
+
 def _updates_html(updates: list[ProjectUpdate]) -> str:
     """The three latest bulletins. Neither the author nor `cost_impact` shows.
 
@@ -1059,7 +1423,13 @@ def _stages_html(project: ConstructionProject) -> str:
         f"{_one_bar(planned, realized)}"
         '<div class="note">Previsto conforme o cronograma físico-financeiro da '
         "empreiteira; realizado conforme a última medição.</div>"
-        "</div></section>"
+        "</div>"
+        # APRAS-115's section, **last child of this section** and additive: with
+        # no decoded payload it is the empty string, which is the state every
+        # production row is in and the reason the all-NULL page's committed
+        # baseline does not move.
+        f"{_stage_detail_html(list(project.milestones))}"
+        "</section>"
     )
 
 
