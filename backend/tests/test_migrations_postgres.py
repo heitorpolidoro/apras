@@ -64,7 +64,7 @@ _BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 #: revision appends to :data:`EXPECTED_HISTORY` and moves
 #: :data:`HEAD_REVISION` rather than hunting for literals.
 ROOT_REVISION = "0001_initial_schema"
-HEAD_REVISION = "0006_tenant_brand_theme"
+HEAD_REVISION = "0007_milestone_detail_json"
 
 #: The whole history, oldest first. ``upgrade head`` replays it in this order
 #: and each entry's ``down_revision`` is asserted to be its predecessor, so a
@@ -74,6 +74,7 @@ EXPECTED_HISTORY = (
     "0002_tenant_slug",
     "0003_tenant_invitation",
     "0005_purchase_line_items",
+    "0006_tenant_brand_theme",
     HEAD_REVISION,
 )
 

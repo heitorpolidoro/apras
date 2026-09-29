@@ -491,3 +491,84 @@ def test_milestone_and_update_not_found_errors(
         headers=_auth_headers(admin_token),
     )
     assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+
+def test_detail_json_never_reaches_a_milestone_response_schema(
+    client: TestClient, admin_token: str, session: Session
+):
+    """APRAS-114: the stage-detail column is invisible to the API.
+
+    `detail_json` is written only by an operator script and read only by the
+    report renderer, so no request or response schema lists it. All four
+    milestone schemas enumerate their fields explicitly, which is what makes
+    these four checks exhaustive.
+
+    Two anti-vacuity guards, because both halves of this case are the shape
+    that passes while asserting nothing: the serialized set is proven
+    non-empty *before* it is quantified over, and `ProjectMilestone` is
+    asserted to carry the column -- otherwise the whole test would pass on a
+    branch where the column was never added.
+    """
+    from app.models.project import ProjectMilestone as MilestoneModel
+    from app.schemas.project import (
+        MilestoneBase,
+        MilestoneCreate,
+        MilestoneRead,
+        MilestoneUpdate,
+    )
+
+    project = ConstructionProject(
+        title="Sede Social",
+        status=ProjectStatus.IN_PROGRESS,
+    )
+    session.add(project)
+    session.commit()
+    session.refresh(project)
+    session.add_all(
+        [
+            ProjectMilestone(
+                project_id=project.id,
+                title="Demolições",
+                status=MilestoneStatus.DONE,
+                display_order=1,
+                completion_date=date(2026, 9, 11),
+                detail_json={
+                    "pct": 49.55882352941177,
+                    "start": "2026-09-25",
+                    "leaves": [
+                        {
+                            "name": "DEMOLIÇÃO DE PAREDES",
+                            "pct": 0.0,
+                            "start": "2026-09-25",
+                            "finish": "2026-10-06",
+                        }
+                    ],
+                },
+            ),
+            ProjectMilestone(
+                project_id=project.id,
+                title="Instalações Hidraulicas",
+                status=MilestoneStatus.NEXT_STEPS,
+                display_order=2,
+                detail_json=None,
+            ),
+        ]
+    )
+    session.commit()
+
+    resp = client.get(
+        f"/api/v1/projects/{project.id}", headers=_auth_headers(admin_token)
+    )
+
+    assert resp.status_code == status.HTTP_200_OK
+    milestones = resp.json()["milestones"]
+    assert len(milestones) >= 1
+    for milestone in milestones:
+        assert "detail_json" not in milestone
+
+    for schema in (MilestoneBase, MilestoneCreate, MilestoneUpdate, MilestoneRead):
+        assert "detail_json" not in schema.model_fields
+
+    # The positive control: the column exists, so the four checks above are
+    # about a key that could have leaked rather than one that never existed.
+    assert "detail_json" in MilestoneModel.model_fields

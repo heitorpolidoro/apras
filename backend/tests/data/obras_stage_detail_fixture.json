@@ -1,0 +1,92 @@
+{
+  "Demolições — Térreo e Superior": {
+    "pct": 49.55882352941177,
+    "start": "2026-09-25",
+    "leaves": [
+      {
+        "name": "DEMOLIÇÃO DE PAREDES EM ALVENARIA CONFORME DEMARCAÇÃO DE PROJETO",
+        "pct": 0.0,
+        "start": "2026-09-25",
+        "finish": "2026-10-06"
+      },
+      {
+        "name": "REMOÇÃO DE PISO EXISTENTE PISO TÉRREO E PISO SUPERIOR AREAS SECAS E AREAS MOLHADAS",
+        "pct": 95.0,
+        "start": "2026-10-07",
+        "finish": "2026-10-19"
+      },
+      {
+        "name": "REMOÇÃO DE REVESTIMENTO EXISTENTE PISO TÉRREO E PISO SUPERIOR AREAS MOLHADAS",
+        "pct": 75.0,
+        "start": "2026-10-08",
+        "finish": "2026-10-15"
+      },
+      {
+        "name": "DESMONTAGEM DE LOUÇAS E METAIS EXISTENTES",
+        "pct": 50.0,
+        "start": "2026-10-08",
+        "finish": "2026-10-09"
+      },
+      {
+        "name": "REMOÇÃO DE ESQUADRIAS EXISTENTES",
+        "pct": 50.0,
+        "start": "2026-10-13",
+        "finish": "2026-10-14"
+      },
+      {
+        "name": "DESMONTAGEM DE ESTRUTURA EXISTENTE NA LATERAL DA FACHADA (TOLDO METALICO)",
+        "pct": 0.0,
+        "start": "2026-10-07",
+        "finish": "2026-10-13"
+      },
+      {
+        "name": "REMOÇÃO DE PEDRA DE GRANITO DA ESCADA PRINCIPAL DE ACESSO AO PAVIMENTO SUPERIOR",
+        "pct": 100.0,
+        "start": "2026-10-16",
+        "finish": "2026-10-20"
+      },
+      {
+        "name": "DESMONTAGEM DE MAQUINAS DE AR CONDICIONADO E INFRAS EXISTENTES",
+        "pct": 25.0,
+        "start": "2026-09-25",
+        "finish": "2026-09-28"
+      }
+    ]
+  },
+  "Instalações Hidraulicas — Térreo e Superior": {
+    "pct": 0.0,
+    "start": "2026-10-16",
+    "leaves": [
+      {
+        "name": "REALOCAÇÃO DE PONTOS DE ESGOTO PARA NOVO PLANO DE LAYOUT- INCLUSO NOVO BANHEIRO DE USO FEMININO E SALA 4- PAVIMENTO SUPERIOR/ LAVABO MASCULINO, FEMININO- COZINHA, WC E WC PCD- PAVIMENTO TÉRREO",
+        "pct": 0.0,
+        "start": "2026-10-16",
+        "finish": "2026-10-21"
+      },
+      {
+        "name": "REALOCAÇÃO DE PONTOS DE AGUA FRIA PARA NOVO PLANO DE LAYOUT- INCLUSO NOVO BANHEIRO DE USO FEMININO E SALA 4- PAVIMENTO SUPERIOR/ LAVABO MASCULINO, FEMININO- COZINHA, WC E WC PCD- PAVIMENTO TÉRREO",
+        "pct": 0.0,
+        "start": "2026-10-22",
+        "finish": "2026-10-27"
+      },
+      {
+        "name": "ESCAVAÇÃO, PREPARAÇÃO DE BASE E FECHAMENTO DE CAIXA DE PASSAGEM DE ESGOTO EM ALVENARIA - INCLUSO TAMPA DE CONCRETO ARMADO- SAIDA COZINHA E SANITARIOS DO PAVIMENTO SUPERIOR E TÉRREO",
+        "pct": 0.0,
+        "start": "2026-10-28",
+        "finish": "2026-11-04"
+      },
+      {
+        "name": "INSTALAÇÃO DE LOUÇAS E METAIS NAS AREAS MOLHADAS- TORNEIRAS, VASOS, CHUVEIROS, LAVATÓRIOS COM COLUNA, TANQUES E ACESSÓRIOS DE COMPOSIÇÃO",
+        "pct": 0.0,
+        "start": "2026-11-27",
+        "finish": "2026-12-01"
+      },
+      {
+        "name": "EXECUÇÃO DE INFRA DE ENCAMINHAMENTO DA REDE DE CAPTAÇÃO DE AGUAS PLUVIAIS DAS NOVAS INSTALAÇÕES- TUBULAÇÃO E CAIXAS DE PASSAGEM",
+        "pct": 0.0,
+        "start": "2026-11-05",
+        "finish": "2026-11-10"
+      }
+    ]
+  }
+}

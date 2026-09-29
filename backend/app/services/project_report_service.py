@@ -41,12 +41,19 @@ one.** See :func:`save_report` and :func:`_find_or_create_obras_folder`.
 
 from __future__ import annotations
 
+# `datetime` as a module, at *runtime*: the stage-detail models below are
+# pydantic, which resolves their annotations out of the module namespace when
+# the class is built, so the `TYPE_CHECKING`-only import at the bottom of this
+# block is not enough. Aliased because that block binds the bare name
+# `datetime` to the *class*.
+import datetime as _dt
 import html
 import json
 import re
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
 from sqlmodel import Session, select
 
 from app.api.deps import has_permission
@@ -483,6 +490,96 @@ def planned_to_date(payload: object, today: date | None = None) -> float | None:
         if month <= current and month >= best_month:
             best, best_month = float(pct), month
     return 0.0 if best is None else best
+
+
+#: ``datetime.date``, bound here rather than annotated as ``_dt.date`` inline:
+#: the binding is a *runtime* use of the import above, which is what keeps the
+#: import out of the ``TYPE_CHECKING`` block where pydantic could not see it.
+_StageDate = _dt.date
+
+
+class StageLeaf(BaseModel):
+    """One service inside a stage, as ``ProjectMilestone.detail_json`` holds it.
+
+    Frozen, so a decoded stage cannot be mutated by whoever renders it.
+
+    ``start`` and ``finish`` are nullable because the contractor's schedule
+    genuinely lacks dates on some services and the producer writes ``null``
+    there; a *present but unparseable* date is a different thing and is
+    malformed. Neither carries ``strict=True``, and that is measured rather
+    than assumed: on pydantic 2.13.3 a strict ``date`` rejects the ISO
+    **string** ``"2026-10-16"``, so a strict date field -- or the
+    ``model_config = {"strict": True}`` that implies one -- would make this
+    decoder refuse every real payload. Only ``pct`` and ``name`` are strict,
+    where strictness is what rejects ``True`` and ``"12.5"``.
+
+    ``extra="ignore"`` is load-bearing rather than polite -- the producer's leaf
+    dicts also carry ``id``, ``lvl``, ``summary`` and ``dur``, and if it dumps
+    them verbatim those keys reach the column.
+    """
+
+    model_config = ConfigDict(extra="ignore", frozen=True)
+
+    name: str = Field(strict=True, min_length=1)
+    pct: float = Field(strict=True, ge=0, le=100)
+    start: _StageDate | None = None
+    finish: _StageDate | None = None
+
+
+class StageDetail(BaseModel):
+    """A milestone's stage detail: the stage itself plus one entry per leaf.
+
+    ``pct`` is the stage's weighted physical progress, unrounded -- presentation
+    rounds, this does not. ``start`` is the stage's earliest leaf start; the
+    finish is already the milestone's ``due_date`` column, and the stage's own
+    ``name``/``top`` are already its ``title``, so neither is stored and both
+    are ignored if present.
+
+    ``leaves`` is declared **required with no default**, which is what makes an
+    absent key a ``ValidationError``: the producer always emits it, so its
+    absence means the payload did not come from the producer. It is a ``tuple``
+    so the decoded value is immutable, and an empty one is valid -- a stage
+    that is its own leaf is real, and refusing it would silently drop the stage
+    from the report.
+    """
+
+    model_config = ConfigDict(extra="ignore", frozen=True)
+
+    pct: float = Field(strict=True, ge=0, le=100)
+    start: _StageDate
+    leaves: tuple[StageLeaf, ...]
+
+
+#: Built once: a ``TypeAdapter`` compiles its validator on construction.
+_STAGE_DETAIL_ADAPTER = TypeAdapter(StageDetail)
+
+
+def decode_stage_detail(payload: object) -> StageDetail | None:
+    """One milestone's stage detail, or ``None`` for *no detail* (APRAS-114).
+
+    The parameter is ``object`` for the same reason :func:`planned_to_date`'s
+    is: the ``JSON`` column deserializes to a ``dict`` before it reaches
+    application code, so this function never parses a JSON string and must not
+    grow a wrapper that does. A wrapper would put the fixture-backed positive
+    control on a different entry point from the strictness guards it exists to
+    validate.
+
+    Strict in exactly the way :func:`planned_to_date` is, and for the same
+    reason: **one** unusable leaf invalidates the whole stage. A partially-read
+    stage understates the work, and that is the one number the síndico holds
+    against the measurement. So *no detail* for ``None``, a non-object payload,
+    an empty object, a ``pct`` that is missing, non-numeric (booleans and
+    numeric strings included) or outside 0-100, a stage ``start`` that is
+    missing or not a parseable ISO date, a ``leaves`` value that is not a list
+    **or absent entirely**, and any single leaf that will not parse.
+
+    ``NULL`` is the value every production row holds until the operator re-runs
+    the sync, and it is this function's ``None`` case -- not an error.
+    """
+    try:
+        return _STAGE_DETAIL_ADAPTER.validate_python(payload)
+    except ValidationError:
+        return None
 
 
 def decode_photos(photos_json: str | None) -> list[str]:

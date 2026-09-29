@@ -90,6 +90,27 @@ class ProjectMilestone(SQLModel, table=True):
     due_date: date | None = Field(default=None, nullable=True)
     completion_date: date | None = Field(default=None, nullable=True)
     display_order: int = Field(default=0, nullable=False)
+    # The stage's detail as the contractor's schedule holds it (APRAS-114):
+    # ``{"pct": float, "start": "YYYY-MM-DD", "leaves": [{"name": str,
+    # "pct": float, "start": ISO date | null, "finish": ISO date | null}]}``.
+    # The keys are the ones the operator's sync script already produces, so no
+    # translation step exists to drift; ``app.services.project_report_service
+    # .decode_stage_detail`` is the only reader and defines exactly which
+    # payloads are readable.
+    #
+    # Portable ``JSON`` rather than a Postgres type, and declared with an
+    # explicit ``sa_column`` like ``ConstructionProject.planned_progress_json``
+    # above, for the reason that column records: the test harness builds this
+    # schema on ``sqlite://`` with ``SQLModel.metadata.create_all()``.
+    #
+    # Nullable with no backfill and no server default -- ``NULL`` means "this
+    # stage has no detail" and is what every row holds until the operator
+    # re-runs the sync. **Nothing in application code writes it**: the writer
+    # is ``backend/scripts/sync_obras_from_drive.py``, an operator tool run by
+    # hand and deliberately never committed.
+    detail_json: dict[str, Any] | None = Field(
+        default=None, sa_column=Column(JSON, nullable=True)
+    )
     created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
     updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
 
