@@ -76,6 +76,7 @@ from app.services.storage_service import (
 )
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Sequence
     from datetime import date, datetime
     from uuid import UUID
 
@@ -347,6 +348,21 @@ h1,h2,h3,h4 { margin:0; }
 .grp li { margin:1.2mm 0; line-height:1.35; }
 .grp li::marker { color:var(--brand-alt); }
 .grp .none { color:var(--muted); font-style:italic; font-size:8.5pt; margin:0; }
+.grp ul.fr { margin:0; padding:0; list-style:none; }
+.grp ul.fr li { display:flex; gap:2mm; justify-content:space-between; align-items:flex-start; margin:0; padding:1.8mm 0; border-bottom:1px solid var(--line); }
+.grp ul.fr li:last-child { border-bottom:0; }
+.grp .ttl { display:flex; flex-direction:column; min-width:0; }
+.grp .top { font-size:6.5pt; letter-spacing:.9px; text-transform:uppercase; color:var(--muted); line-height:1.35; }
+.grp .nm { font-size:9pt; font-weight:600; line-height:1.3; }
+.grp .pc { font-size:8.5pt; font-weight:700; font-variant-numeric:tabular-nums; flex:none; color:var(--brand-text); }
+.grp .dgrp { margin-bottom:2.8mm; }
+.grp .dgrp:last-of-type { margin-bottom:0; }
+.grp .dhead { display:flex; align-items:center; gap:1.5mm; font-size:6.5pt; letter-spacing:.7px; text-transform:uppercase; color:var(--muted); border-bottom:1px solid var(--line); padding-bottom:1mm; margin-bottom:1.3mm; }
+.grp .dhead b { font-size:8.5pt; letter-spacing:0; text-transform:none; color:var(--ink); font-variant-numeric:tabular-nums; }
+.grp .dhead .cnt { margin-left:auto; background:var(--surface); border:1px solid var(--line); border-radius:99px; padding:0 1.5mm; font-size:7pt; color:var(--muted); }
+.grp .dsub { font-size:6.5pt; letter-spacing:.9px; text-transform:uppercase; color:var(--muted); margin:0 0 .8mm; }
+.grp .flow { margin:0; font-size:8.5pt; line-height:1.45; font-weight:600; color:var(--ink); }
+.grp .rest { margin:2mm 0 0; font-size:8pt; color:var(--muted); font-style:italic; }
 .pv { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:3.5mm 4.5mm; margin-top:4mm; }
 .pv small { display:block; color:var(--muted); font-size:7.5pt; letter-spacing:1px; font-weight:700; text-transform:uppercase; margin-bottom:2.5mm; }
 .one { position:relative; padding-top:9mm; margin-top:1mm; }
@@ -701,29 +717,188 @@ def _done_sort_key(milestone: ProjectMilestone) -> tuple[int, int, int]:
     return (0, -completion.toordinal(), milestone.display_order)
 
 
+def _stage_sort_key(milestone: ProjectMilestone) -> tuple[int, str]:
+    """``(display_order, title)`` -- never ``display_order`` alone.
+
+    ``ConstructionProject.milestones`` is ordered by ``display_order`` only, so
+    two rows sharing a value fall back to whatever the database returns, which
+    is stable neither across query plans nor after an update. Production's data
+    has no duplicate today; the tiebreak is here because APRAS-114 hit exactly
+    this with bulletins.
+    """
+    return (milestone.display_order, milestone.title or "")
+
+
 def _select_milestones(
     milestones: list[ProjectMilestone], status: MilestoneStatus
 ) -> list[ProjectMilestone]:
-    """The rows one card shows: three, three, or all of them."""
+    """The rows one card shows: three, or all of them.
+
+    ``NEXT_STEPS`` is uncapped since APRAS-113: the cap moved to the card, which
+    fills **three slots** with date groups first and plain items after, and the
+    remainder line counts the rows no slot reached. A selector that truncated
+    would hide those rows from that count. This function keeps its one job --
+    choosing rows -- and knows nothing about ``detail_json``.
+    """
     rows = [m for m in milestones if m.status == status]
     if status is MilestoneStatus.DONE:
         # "What was finished recently", not the whole history.
         return sorted(rows, key=_done_sort_key)[:3]
-    ordered = sorted(rows, key=lambda m: m.display_order)
-    # Everything in progress: the card the síndico is asked about is exactly
-    # the list of open fronts, so truncating it would hide one.
-    return ordered if status is MilestoneStatus.IN_PROGRESS else ordered[:3]
+    # Everything in progress, and every next step: the card the síndico is asked
+    # about is exactly the list of open fronts, so truncating it would hide one.
+    return sorted(rows, key=_stage_sort_key)
+
+
+#: The separator the operator's sync tool writes between a stage's parent
+#: ("frente") and the stage's own name: space, U+00B7, space.
+_TITLE_SEPARATOR = " · "
+
+#: How many rows the Próximos passos card has room for -- **slots**, not items:
+#: a date group consumes one slot however many names it prints, and a slot no
+#: group claimed is filled with one undated row.
+_NEXT_SLOTS = 3
+
+
+def _split_stage_title(title: str | None) -> tuple[str | None, str]:
+    """``"Fundações · Totem"`` -> ``("Fundações", "Totem")``; ``"Totem"`` ->
+    ``(None, "Totem")``.
+
+    ``ProjectMilestone`` has **no parent column**. The parent stage reaches this
+    repository only inside ``title``, because the operator's sync tool --
+    ``backend/scripts/sync_obras_from_drive.py``, run by hand and deliberately
+    never committed here -- writes ``title = f"{top} · {name}"`` for a stage
+    under a parent and ``title = name`` for one without. That coupling is the
+    whole reason the separator matters and it cannot be rediscovered from this
+    repository alone, which is why the script is named here.
+
+    The split takes the **first** separator only (``maxsplit=1``): ``top`` is
+    exactly one level, and the only separator the producer substitutes inside a
+    name is ``"- "`` -> ``" — "`` (em dash, not U+00B7), so a second occurrence
+    is an input it should never emit. Keeping it inside the name degrades safely
+    where an unpack would raise and a plain ``split`` would silently drop a
+    middle segment.
+
+    No case transform is applied: the producer already title-cased both halves,
+    and re-casing here would lowercase an all-caps suffix -- a defect, not a
+    no-op.
+    """
+    raw = title or ""
+    parent, separator, name = raw.partition(_TITLE_SEPARATOR)
+    if not separator:
+        return None, raw
+    return (parent.strip() or None), name
+
+
+def _stage_item_html(milestone: ProjectMilestone) -> str:
+    """One card row: the two-line title, then its percentage when there is one.
+
+    The percentage is a **sibling** of ``.ttl`` and not a child of it, because
+    ``.grp ul.fr li`` is the flex row and ``.pc`` its non-shrinking right-hand
+    cell; nesting it would silently move the figure under the name. With no
+    decodable payload no ``.pc`` element is emitted **at all** -- ``0%`` would
+    state a measurement nobody made -- and the row still prints its name.
+    """
+    parent, name = _split_stage_title(milestone.title)
+    kicker = f'<span class="top">{_e(parent)}</span>' if parent else ""
+    detail = decode_stage_detail(milestone.detail_json)
+    percentage = f'<span class="pc">{_pct(detail.pct)}</span>' if detail else ""
+    return (
+        f'<li><div class="ttl">{kicker}<span class="nm">{_e(name)}</span></div>'
+        f"{percentage}</li>"
+    )
+
+
+def _stage_items_html(milestones: Sequence[ProjectMilestone]) -> str:
+    """One ``<ul class="fr">`` of rows. Never called with an empty sequence: an
+    empty card prints ``<p class="none">`` instead of an empty list."""
+    return (
+        '<ul class="fr">' + "".join(_stage_item_html(m) for m in milestones) + "</ul>"
+    )
+
+
+def _date_group_html(start: date, milestones: Sequence[ProjectMilestone]) -> str:
+    """One date bucket of Próximos passos: the date once, the count, the shared
+    parent when there is one, and the names as a single inline list.
+
+    The kicker is hoisted only when **every** row in the bucket carries the same
+    non-empty parent; when the parents differ or are absent the element is
+    omitted entirely rather than emitted empty.
+    """
+    parents = {_split_stage_title(m.title)[0] for m in milestones}
+    shared = parents.pop() if len(parents) == 1 else None
+    kicker = f'<div class="dsub">{_e(shared)}</div>' if shared else ""
+    names = ", ".join(_e(_split_stage_title(m.title)[1]) for m in milestones)
+    return (
+        f'<div class="dgrp"><div class="dhead">a partir de '
+        f"<b>{_fmt_date(start)}</b>"
+        f'<span class="cnt">{len(milestones)}</span></div>'
+        f'{kicker}<p class="flow">{names}</p></div>'
+    )
+
+
+def _next_steps_html(milestones: Sequence[ProjectMilestone]) -> str:
+    """The Próximos passos body: date groups, then a tail, then the remainder.
+
+    Rows whose payload decodes are *datable* and bucket by their stage
+    ``start``; buckets are emitted in ascending date order. Rows with no payload
+    -- every production row today -- cannot be bucketed, so they fill whatever
+    slots the groups left, as plain items in ``(display_order, title)``.
+
+    The remainder line reports what no slot reached: ``N`` is every row whose
+    name is printed nowhere (the omitted buckets' rows *plus* the undated rows
+    that got no slot) and ``M`` is the number of distinct start dates among the
+    omitted **datable** rows only. The two are deliberately not counts of the
+    same set. With ``M == 0`` -- the all-NULL state -- the line says "sem data
+    prevista", because "em 0 datas" would be false rather than merely ugly.
+    """
+    buckets: dict[date, list[ProjectMilestone]] = {}
+    undated: list[ProjectMilestone] = []
+    for milestone in milestones:
+        detail = decode_stage_detail(milestone.detail_json)
+        if detail is None:
+            undated.append(milestone)
+        else:
+            buckets.setdefault(detail.start, []).append(milestone)
+
+    groups = [
+        (start, sorted(rows, key=_stage_sort_key))
+        for start, rows in sorted(buckets.items())
+    ]
+    shown_groups = groups[:_NEXT_SLOTS]
+    undated = sorted(undated, key=_stage_sort_key)
+    shown_undated = undated[: _NEXT_SLOTS - len(shown_groups)]
+
+    parts = [_date_group_html(start, rows) for start, rows in shown_groups]
+    if shown_undated:
+        parts.append(_stage_items_html(shown_undated))
+
+    omitted_groups = groups[len(shown_groups) :]
+    hidden = sum(len(rows) for _, rows in omitted_groups) + (
+        len(undated) - len(shown_undated)
+    )
+    if hidden:
+        dates = len(omitted_groups)
+        tail = f"em {dates} datas" if dates else "sem data prevista"
+        parts.append(f'<p class="rest">e mais {hidden} frentes {tail}</p>')
+    return "".join(parts) if parts else '<p class="none">—</p>'
 
 
 def _groups_html(milestones: list[ProjectMilestone]) -> str:
+    """The three milestone cards, as the approved APRAS-113 mock renders them.
+
+    Self-contained on purpose: APRAS-115 adds its own ``<details class="all">``
+    section *beside* this block and requires these three cards to be
+    byte-identical afterwards.
+    """
     cards = ""
     for css_class, label, status in MILESTONE_GROUPS:
         items = _select_milestones(milestones, status)
-        body = (
-            "<ul>" + "".join(f"<li>{_e(m.title)}</li>" for m in items) + "</ul>"
-            if items
-            else '<p class="none">—</p>'
-        )
+        if status is MilestoneStatus.NEXT_STEPS:
+            body = _next_steps_html(items)
+        elif items:
+            body = _stage_items_html(items)
+        else:
+            body = '<p class="none">—</p>'
         cards += f'<div class="grp {css_class}"><h4><i></i>{label}</h4>{body}</div>'
     return f'<div class="groups">{cards}</div>'
 

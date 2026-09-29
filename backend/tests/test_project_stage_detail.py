@@ -46,6 +46,22 @@ FIXTURE = DATA / "obras_stage_detail_fixture.json"
 #: regenerates it.
 BASELINE = DATA / "report_page_null_detail_baseline.html"
 
+#: The frame of the same all-NULL page **as it stood before APRAS-113**: the
+#: page text around the milestone-cards block, plus the milestone titles the
+#: old block printed. See
+#: :func:`test_the_all_null_frame_survives_the_card_rewrite` for what it
+#: proves, why it exists instead of a diff claim, and the command that made it.
+PRE113_FRAME = DATA / "report_page_pre113_frame.json"
+
+#: The separator the operator's (never committed) sync tool writes between a
+#: stage's parent and its own name. The pre-APRAS-113 card printed the whole
+#: title, this glyph included; the post-APRAS-113 card splits on it and prints
+#: it nowhere, which is what makes its presence in the artifact proof that the
+#: artifact predates the change.
+TITLE_SEPARATOR = " · "
+
+GROUPS_OPEN = '<div class="groups">'
+
 HYDRAULICS = "Instalações Hidraulicas — Térreo e Superior"
 DEMOLITIONS = "Demolições — Térreo e Superior"
 
@@ -383,11 +399,16 @@ PLANNED_CURVE = [
 #: project uses everywhere -- with no lint suppression on any of the literals.
 GENERATED_AT = _naive("2026-09-26T14:30:00")
 
+#: Every title carries the producer's `" · "` separator (APRAS-113), because
+#: that is the shape the operator's sync tool writes for a stage under a parent
+#: and it is the shape the card now splits. It is also what makes
+#: :data:`PRE113_FRAME` falsifiable: a regeneration of that artifact from the
+#: *post*-change renderer would drop the glyph from every entry.
 MILESTONE_TITLES = (
-    "Demolições — Térreo e Superior",
-    "Instalações Hidraulicas — Térreo e Superior",
-    "Alvenaria e Vedações",
-    "Pintura Geral",
+    "Demolições · Térreo e Superior",
+    "Instalações Hidraulicas · Térreo e Superior",
+    "Estruturas Metalicas · Alvenaria e Vedações",
+    "Acabamentos · Pintura Geral",
 )
 
 
@@ -495,10 +516,127 @@ def test_the_all_null_page_renders_the_committed_baseline():
     # strings, nor by silently exercising the populated state.
     assert baseline
     assert "Etapas da obra" in baseline
+    # Both halves, not the whole title: since APRAS-113 the card splits on
+    # `TITLE_SEPARATOR` and prints the glyph nowhere.
     for title in MILESTONE_TITLES:
-        assert title in baseline
+        for half in title.split(TITLE_SEPARATOR):
+            assert half in baseline
     project = null_detail_project()
     assert project.milestones
     assert all(m.detail_json is None for m in project.milestones)
 
     assert render_null_detail_page() == baseline
+
+
+# ---------------------------------------------------------------------------
+# The frame around the rewritten cards (APRAS-113 ER9/ER11)
+# ---------------------------------------------------------------------------
+
+
+def split_div_block(page: str, marker: str) -> tuple[str, str, str]:
+    """`(prefix, block, suffix)` around the `<div>` that `marker` opens.
+
+    The block is delimited by matching `<div` openings against `</div>`
+    closings from `marker` onwards, so the returned block is the whole element
+    however deeply it nests. A naive `split("</div>")` stops at the first inner
+    `<div>` -- and once an `<li>` nests a `<div class="ttl">` it stops one level
+    earlier still -- which is exactly the string surgery APRAS-113 replaces.
+
+    Raises rather than returning a plausible triple when the element is absent
+    or unbalanced: a helper that silently yields `("", "", page)` would make
+    every assertion built on it pass over a page with no such element at all.
+    """
+    start = page.find(marker)
+    if start == -1:
+        raise AssertionError(f"no {marker} in the rendered page")
+    depth = 0
+    index = start
+    while index < len(page):
+        opening = page.find("<div", index)
+        closing = page.find("</div>", index)
+        if closing == -1:
+            break
+        if opening != -1 and opening < closing:
+            depth += 1
+            index = opening + len("<div")
+            continue
+        depth -= 1
+        index = closing + len("</div>")
+        if depth == 0:
+            return page[:start], page[start:index], page[index:]
+    raise AssertionError(f"the element {marker} opens is not closed")
+
+
+def split_groups_block(page: str) -> tuple[str, str, str]:
+    """`(prefix, groups_block, suffix)` around the milestone-cards block."""
+    return split_div_block(page, GROUPS_OPEN)
+
+
+def test_the_all_null_frame_survives_the_card_rewrite():
+    """APRAS-113 ER9/ER11: the page around the cards did not move, and the
+    all-NULL card lost no row text.
+
+    `tests/data/report_page_null_detail_baseline.html` is a single 4 KiB line
+    with no trailing newline, so git renders its regeneration as a whole-file
+    replacement: there are no hunks, and "the change is confined to the cards"
+    is not a claim that diff can express. This case expresses it instead, out
+    of an artifact captured from the **pre**-APRAS-113 renderer and committed
+    beside it.
+
+    Two halves:
+
+    (a) the prefix and the suffix are byte-equal to the pre-change ones -- the
+        masthead, the hero, the bar, the budget block, the bulletins and the
+        footer are untouched;
+    (b) every title the old block printed still has *both* halves of its
+        `" · "` split inside the new block. Not the whole title: the separator
+        is now the boundary between the kicker and the name and is printed
+        nowhere, so a whole-title assertion here would be a requirement that
+        the change had not happened.
+
+    The artifact is trustworthy only if it predates the renderer change, and
+    the assertion that makes that checkable is the `TITLE_SEPARATOR` one: the
+    post-change card never emits that glyph, so a regeneration from the new
+    renderer would leave `titles` entries without it and fail here. Without
+    that line this case is one careless regeneration away from comparing the
+    new page to itself.
+
+    It was generated, **before** `project_report_service.py` was edited and
+    from the same seed this module's baseline uses, by running from `backend/`:
+
+        uv run python -c "
+        import json, re
+        from tests.test_project_stage_detail import (
+            PRE113_FRAME, render_null_detail_page, split_groups_block)
+        prefix, block, suffix = split_groups_block(render_null_detail_page())
+        PRE113_FRAME.write_text(json.dumps({
+            'prefix': prefix,
+            'suffix': suffix,
+            'titles': re.findall(r'<li>(.*?)</li>', block),
+        }, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+        "
+
+    That command is not re-runnable after the change and is not meant to be:
+    the new block emits no bare `<li>{title}</li>`, so it would capture an
+    empty `titles` list. It is recorded so the artifact's provenance is
+    readable, not so it can be refreshed.
+    """
+    frame = json.loads(PRE113_FRAME.read_text(encoding="utf-8"))
+
+    # Anti-vacuity, and the provenance check: an artifact regenerated from the
+    # post-change renderer has no titles at all, and one regenerated from a
+    # renderer that had already dropped the glyph would still be caught here.
+    assert len(frame["titles"]) == len(MILESTONE_TITLES)
+    for title in frame["titles"]:
+        assert TITLE_SEPARATOR in title, title
+
+    prefix, block, suffix = split_groups_block(render_null_detail_page())
+
+    assert prefix == frame["prefix"]
+    assert suffix == frame["suffix"]
+    # The rewritten card must not be able to satisfy (b) by being the old card.
+    assert TITLE_SEPARATOR not in block
+    for title in frame["titles"]:
+        parent, name = title.split(TITLE_SEPARATOR, 1)
+        assert parent in block, parent
+        assert name in block, name

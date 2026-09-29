@@ -15,6 +15,7 @@ accidentally returning the right row.
 from __future__ import annotations
 
 import ast
+import inspect
 import itertools
 import json
 import re
@@ -40,6 +41,8 @@ from app.models.user import User
 from app.services import project_report_service as report
 from app.services.storage_service import LocalStorageProvider
 from tests.conftest import make_user
+from tests.test_project_report_bar_geometry import parse_css
+from tests.test_project_stage_detail import split_div_block, split_groups_block
 
 if TYPE_CHECKING:  # pragma: no cover
     from fastapi.testclient import TestClient
@@ -167,6 +170,67 @@ def _text_of(document: str) -> str:
     stripped = re.sub(r"<style.*?</style>", " ", document, flags=re.DOTALL)
     stripped = re.sub(r"<svg.*?</svg>", " ", stripped, flags=re.DOTALL)
     return re.sub(r"<[^>]+>", " ", stripped)
+
+
+def _card(document: str, css_class: str) -> str:
+    """The whole markup of one milestone card, nesting included.
+
+    Shared by every §4 case (APRAS-113 ER11). The extraction this replaced --
+    `body.split('class="grp done"')[1].split("</div>")[0]` -- cut the card at
+    its first `</div>`, which since an item's `<li>` nests a
+    `<div class="ttl">` now falls *inside* the first row.
+    """
+    return split_div_block(document, f'<div class="grp {css_class}">')[1]
+
+
+def _names(markup: str) -> list[str]:
+    """The stage names `markup` prints as items, in document order."""
+    return re.findall(r'<span class="nm">(.*?)</span>', markup)
+
+
+def _kickers(markup: str) -> list[str]:
+    """The parent kickers `markup` prints, in document order."""
+    return re.findall(r'<span class="top">(.*?)</span>', markup)
+
+
+def _percentages(markup: str) -> list[str]:
+    """The per-item percentages `markup` prints, in document order."""
+    return re.findall(r'<span class="pc">(.*?)</span>', markup)
+
+
+#: The two real stage payloads APRAS-114 committed, keyed by milestone title.
+STAGE_FIXTURE: dict[str, dict] = json.loads(
+    (
+        Path(__file__).resolve().parent / "data" / "obras_stage_detail_fixture.json"
+    ).read_text(encoding="utf-8")
+)
+
+#: The comma-rich real stage, used wherever a case needs a payload that is not
+#: hand-written: its `pct` is 49.5588, which `_pct` renders `50%`.
+DEMOLITIONS_PAYLOAD = STAGE_FIXTURE["Demolições — Térreo e Superior"]
+
+
+def _real_payload(**overrides: object) -> dict:
+    """The real Demolições payload with `overrides` applied.
+
+    Cases override `pct` and `start` only; `leaves` stays as the contractor
+    wrote it, so nothing here can pass against a payload shape the producer
+    does not emit.
+    """
+    return dict(DEMOLITIONS_PAYLOAD) | overrides
+
+
+def _leaf_payload(pct: float, start: str) -> dict:
+    """A minimal one-leaf payload, for cases that must control every string in
+    it -- the `description` guard asserts tokens are absent from the *page*, so
+    a fixture leaf name could only muddy the claim."""
+    return {
+        "pct": pct,
+        "start": start,
+        "leaves": [
+            {"name": "ETAPA UNICA", "pct": pct, "start": start, "finish": start}
+        ],
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -351,6 +415,18 @@ def test_split_title_and_kind(raw, expected):
 def test_milestone_cards_select_three_all_and_three(
     client: TestClient, session: Session
 ):
+    """Rewritten for APRAS-113, not patched: the old body asserted `<li>` counts
+    and sliced each card with `split("</div>")[0]`, and both of those describe
+    the pre-113 markup rather than the selection this case is about.
+
+    The selection itself is unchanged in two of the three cards and only
+    *relaxed* in the third: three most-recent DONE, every IN_PROGRESS, and --
+    since `_select_milestones` lost its `[:3]` -- every NEXT_STEPS row, of which
+    the card still renders three, now through the 3-slot cap. These milestones
+    carry no `detail_json`, which is every production row today, so the next
+    card's three rows arrive as plain items and the remaining two as the
+    remainder line.
+    """
     project = _project(session, title="Obra com marcos")
     for index in range(5):
         _milestone(
@@ -380,15 +456,144 @@ def test_milestone_cards_select_three_all_and_three(
     admin = _user(session)
 
     body = client.get(REPORT_URL, headers=_auth(admin)).text
-    done = body.split('class="grp done"')[1].split("</div>")[0]
-    doing = body.split('class="grp doing"')[1].split("</div>")[0]
-    nxt = body.split('class="grp next"')[1].split("</div>")[0]
 
-    assert done.count("<li>") == 3
-    assert re.findall(r"<li>(.*?)</li>", done) == ["Feito 4", "Feito 3", "Feito 2"]
-    assert doing.count("<li>") == 2
-    assert nxt.count("<li>") == 3
-    assert re.findall(r"<li>(.*?)</li>", nxt) == ["Futuro 0", "Futuro 1", "Futuro 2"]
+    assert _names(_card(body, "done")) == ["Feito 4", "Feito 3", "Feito 2"]
+    assert _names(_card(body, "doing")) == ["Andando 0", "Andando 1"]
+    nxt = _card(body, "next")
+    assert _names(nxt) == ["Futuro 0", "Futuro 1", "Futuro 2"]
+    assert '<p class="rest">e mais 2 frentes sem data prevista</p>' in nxt
+
+
+def test_next_steps_selection_orders_by_display_order_then_title(session: Session):
+    """The sort key is `(display_order, title)` and never `display_order` alone.
+
+    `ConstructionProject.milestones` is ordered by `display_order` only, so rows
+    sharing one value fall back to whatever the database returns -- not stable
+    across plans or after an update. APRAS-114 hit exactly this with bulletins.
+    """
+    rows = [
+        ProjectMilestone(
+            title=title,
+            status=MilestoneStatus.NEXT_STEPS,
+            display_order=order,
+        )
+        for title, order in (("Zebra", 1), ("Alfa", 1), ("Meio", 0))
+    ]
+
+    selected = report._select_milestones(rows, MilestoneStatus.NEXT_STEPS)
+
+    assert [m.title for m in selected] == ["Meio", "Alfa", "Zebra"]
+
+
+def test_next_steps_selection_is_no_longer_capped_at_three(session: Session):
+    """The cap moved from the selector to the card's 3 *slots*, so the selector
+    must hand every row over -- the remainder line's `N` counts rows it never
+    saw otherwise."""
+    rows = [
+        ProjectMilestone(
+            title=f"Frente {index}",
+            status=MilestoneStatus.NEXT_STEPS,
+            display_order=index,
+        )
+        for index in range(7)
+    ]
+
+    assert len(report._select_milestones(rows, MilestoneStatus.NEXT_STEPS)) == 7
+
+
+# ---------------------------------------------------------------------------
+# §4b -- the card bodies APRAS-113 renders (the approved mock)
+# ---------------------------------------------------------------------------
+
+
+def test_each_done_and_doing_item_prints_its_own_percentage(
+    client: TestClient, session: Session
+):
+    """ER1: the mock's Portarias figures, 100% / 63% / 50%.
+
+    `50%` is the real Demolições payload's own 49.5588 through `_pct`, which is
+    what makes this case able to fail on a truncating formatter (49%) and on a
+    percentage read from `project.physical_progress_pct` (which is 22 here).
+    """
+    project = _project(
+        session, title="Obra com percentuais", physical_progress_pct=22.0
+    )
+    _milestone(
+        session,
+        project,
+        title="Mobilização de Canteiro e Instalações Provisórias",
+        status=MilestoneStatus.DONE,
+        completion_date=date(2026, 1, 1),
+        display_order=0,
+        detail_json=_real_payload(pct=100.0),
+    )
+    _milestone(
+        session,
+        project,
+        title="Serviços Preliminares",
+        status=MilestoneStatus.IN_PROGRESS,
+        display_order=0,
+        detail_json=_real_payload(pct=63.0),
+    )
+    _milestone(
+        session,
+        project,
+        title="Fundações · Locação de Estacas",
+        status=MilestoneStatus.IN_PROGRESS,
+        display_order=1,
+        detail_json=_real_payload(),
+    )
+    admin = _user(session)
+
+    body = client.get(REPORT_URL, headers=_auth(admin)).text
+
+    assert _percentages(_card(body, "done")) == ["100%"]
+    doing = _card(body, "doing")
+    assert _percentages(doing) == ["63%", "50%"]
+    assert _names(doing) == ["Serviços Preliminares", "Locação de Estacas"]
+    assert _kickers(doing) == ["Fundações"]
+    # The percentage is a *sibling* of the title block, not a child of it: `.pc`
+    # is the flex row's right-hand cell, so nesting it inside `.ttl` would move
+    # the figure under the name.
+    assert '</div><span class="pc">50%</span></li>' in doing
+
+
+def test_a_milestone_without_a_payload_prints_no_percentage_element(
+    client: TestClient, session: Session
+):
+    """ER1b/ER9: no detail means no `pc` element at all -- never `0%`, which
+    would state a measurement nobody made."""
+    project = _project(session, title="Obra sem payloads")
+    _milestone(
+        session,
+        project,
+        title="Mobilização de Canteiro",
+        status=MilestoneStatus.DONE,
+        completion_date=date(2026, 1, 1),
+        display_order=0,
+        detail_json=None,
+    )
+    _milestone(
+        session,
+        project,
+        title="Fundações · Locação de Estacas",
+        status=MilestoneStatus.IN_PROGRESS,
+        display_order=0,
+        detail_json=None,
+    )
+    admin = _user(session)
+
+    body = client.get(REPORT_URL, headers=_auth(admin)).text
+
+    done = _card(body, "done")
+    doing = _card(body, "doing")
+    assert _names(done) == ["Mobilização de Canteiro"]
+    assert _names(doing) == ["Locação de Estacas"]
+    assert _kickers(doing) == ["Fundações"]
+    assert 'class="pc"' not in done
+    assert 'class="pc"' not in doing
+    assert "0%" not in _text_of(done)
+    assert "0%" not in _text_of(doing)
 
 
 def test_an_empty_milestone_group_renders_an_em_dash(
@@ -400,6 +605,524 @@ def test_an_empty_milestone_group_renders_an_em_dash(
     body = client.get(REPORT_URL, headers=_auth(admin)).text
 
     assert body.count('<p class="none">—</p>') == 3
+
+
+def _next_steps(
+    session: Session,
+    project,
+    sizes: tuple[int, ...],
+    *,
+    undated: int = 0,
+    parent: str | None = "Fundações",
+    base: date = date(2026, 9, 25),
+) -> None:
+    """Seed NEXT_STEPS rows: `sizes[k]` of them starting on `base + k` days.
+
+    `undated` further rows carry `detail_json=None`, which is what every
+    production row carries today. `display_order` runs with the seeding order,
+    so a group's items are already in `(display_order, title)`.
+    """
+    order = 0
+    for index, size in enumerate(sizes):
+        start = base + timedelta(days=index)
+        for slot in range(size):
+            kicker = f"{parent} · " if parent else ""
+            _milestone(
+                session,
+                project,
+                title=f"{kicker}Frente {index}-{slot}",
+                status=MilestoneStatus.NEXT_STEPS,
+                display_order=order,
+                detail_json=_leaf_payload(0.0, start.isoformat()),
+            )
+            order += 1
+    for slot in range(undated):
+        _milestone(
+            session,
+            project,
+            title=f"Sem data · Frente {slot}",
+            status=MilestoneStatus.NEXT_STEPS,
+            display_order=order,
+            detail_json=None,
+        )
+        order += 1
+
+
+def test_next_steps_are_grouped_by_start_date_with_a_count_and_a_kicker(
+    client: TestClient, session: Session
+):
+    """ER2: the mock's 5/4/1 split, its date heads, counts, kicker and flow.
+
+    The group whose items share a parent hoists it into one `dsub`; the group
+    whose parents differ emits none. The item with the *lowest* `display_order`
+    sits in the *latest* group, so ordering the groups by `display_order`
+    reverses the rendered order and fails here.
+    """
+    project = _project(session, title="Obra agrupada")
+    first = date(2026, 9, 25)
+    second = date(2026, 10, 20)
+    third = date(2027, 1, 6)
+    shared = [
+        "Entrada de Caminhões",
+        "Saida de Veiculos e Caminhões",
+        "Entrada de Veiculos e Pórtico de Entrada",
+        "Totem",
+        "Pergolado",
+    ]
+    for index, name in enumerate(shared, start=10):
+        _milestone(
+            session,
+            project,
+            title=f"Fundações · {name}",
+            status=MilestoneStatus.NEXT_STEPS,
+            display_order=index,
+            detail_json=_leaf_payload(0.0, first.isoformat()),
+        )
+    mixed = [
+        ("Estruturas Metalicas", "Cobertura de Entrada de Caminhões"),
+        ("Estruturas Metalicas", "Cobertura de Saida de Veiculos"),
+        ("Fechamentos", "Cobertura de Entrada de Visitantes"),
+        ("Coberturas", "Pergolado Metalico"),
+    ]
+    for index, (top, name) in enumerate(mixed, start=20):
+        _milestone(
+            session,
+            project,
+            title=f"{top} · {name}",
+            status=MilestoneStatus.NEXT_STEPS,
+            display_order=index,
+            detail_json=_leaf_payload(0.0, second.isoformat()),
+        )
+    _milestone(
+        session,
+        project,
+        title="Totem Final",
+        status=MilestoneStatus.NEXT_STEPS,
+        display_order=0,
+        detail_json=_leaf_payload(0.0, third.isoformat()),
+    )
+    admin = _user(session)
+
+    card = _card(client.get(REPORT_URL, headers=_auth(admin)).text, "next")
+
+    assert card.count('<div class="dgrp">') == 3
+    assert re.findall(r"a partir de <b>(.*?)</b>", card) == [
+        "25/09/2026",
+        "20/10/2026",
+        "06/01/2027",
+    ]
+    assert re.findall(r'<span class="cnt">(.*?)</span>', card) == ["5", "4", "1"]
+    # One hoisted kicker, for the one group whose parents agree.
+    assert card.count('class="dsub"') == 1
+    assert '<div class="dsub">Fundações</div>' in card
+    flows = re.findall(r'<p class="flow">(.*?)</p>', card)
+    assert flows[0] == ", ".join(shared)
+    assert flows[1] == ", ".join(name for _, name in mixed)
+    assert flows[2] == "Totem Final"
+    # A grouped item is a name in the inline list, never its own bullet.
+    assert "<li>" not in card
+    assert 'class="rest"' not in card
+
+
+def test_the_remainder_line_counts_the_omitted_rows_and_their_dates(
+    client: TestClient, session: Session
+):
+    """ER3, the mock's Portarias shape: 23 rows over 10 dates, 3 groups shown
+    (5+4+1), so 13 names and 7 dates are missing."""
+    project = _project(session, title="Obra Portarias")
+    _next_steps(session, project, (5, 4, 1, 2, 2, 2, 2, 2, 2, 1))
+    admin = _user(session)
+
+    card = _card(client.get(REPORT_URL, headers=_auth(admin)).text, "next")
+
+    assert card.endswith('<p class="rest">e mais 13 frentes em 7 datas</p></div>')
+
+
+def test_the_all_null_card_says_sem_data_prevista_rather_than_em_zero_datas(
+    client: TestClient, session: Session
+):
+    """ER9: 23 rows with no payload -- today's live state. Three render as plain
+    items and the line must not claim "em 0 datas", which would be false."""
+    project = _project(session, title="Obra sem payload")
+    _next_steps(session, project, (), undated=23)
+    admin = _user(session)
+
+    card = _card(client.get(REPORT_URL, headers=_auth(admin)).text, "next")
+
+    assert len(_names(card)) == 3
+    assert _names(card) == ["Frente 0", "Frente 1", "Frente 2"]
+    assert _kickers(card) == ["Sem data"] * 3
+    assert 'class="dgrp"' not in card
+    assert card.endswith(
+        '<p class="rest">e mais 20 frentes sem data prevista</p></div>'
+    )
+    assert "em 0 datas" not in card
+
+
+def test_no_remainder_line_when_the_groups_cover_every_row(
+    client: TestClient, session: Session
+):
+    """ER3: `N == 0` emits nothing at all, not "e mais 0 frentes"."""
+    project = _project(session, title="Obra completa em três grupos")
+    _next_steps(session, project, (5, 4, 1))
+    admin = _user(session)
+
+    card = _card(client.get(REPORT_URL, headers=_auth(admin)).text, "next")
+
+    assert card.count('<div class="dgrp">') == 3
+    assert 'class="rest"' not in card
+
+
+def test_the_remainder_counts_undated_rows_in_n_but_not_in_m(
+    client: TestClient, session: Session
+):
+    """ER3, the mixed case: 5 date groups (5, 4, 1, 4, 3) plus 2 undated rows.
+
+    Three groups consume the three slots, so two groups (7 rows) and both
+    undated rows are omitted: `N = 9` names missing, `M = 2` dates missing. The
+    two figures are deliberately not counts of the same set -- `N` counts every
+    unprinted row, `M` only the distinct dates among the *datable* ones.
+    """
+    project = _project(session, title="Obra mista")
+    _next_steps(session, project, (5, 4, 1, 4, 3), undated=2)
+    admin = _user(session)
+
+    card = _card(client.get(REPORT_URL, headers=_auth(admin)).text, "next")
+
+    assert card.count('<div class="dgrp">') == 3
+    # No slot is left, so neither undated row is rendered as an item.
+    assert "<li>" not in card
+    assert card.endswith('<p class="rest">e mais 9 frentes em 2 datas</p></div>')
+
+
+def test_the_three_cards_are_distinguished_and_only_doing_carries_a_border(
+    client: TestClient, session: Session
+):
+    """ER4: the distinction, in the document and in the stylesheet.
+
+    Asserting `.grp.doing` declares `border-color` is not enough on its own --
+    adding the same declaration to the other two cards would keep it green while
+    destroying the distinction -- so the absence on `.done` and `.next` is
+    asserted beside it.
+    """
+    project = _project(session, title="Obra distinguida")
+    _milestone(
+        session,
+        project,
+        title="Serviços Preliminares",
+        status=MilestoneStatus.IN_PROGRESS,
+        display_order=0,
+    )
+    admin = _user(session)
+
+    body = client.get(REPORT_URL, headers=_auth(admin)).text
+
+    assert body.count('class="grp doing"') == 1
+    classes = re.findall(r'<div class="(grp [a-z]+)">', split_groups_block(body)[1])
+    assert classes == ["grp done", "grp doing", "grp next"]
+    assert len(set(classes)) == 3
+
+    rules = parse_css(report.CSS_BODY).rules
+    declaring = {
+        rule.selector for rule in rules if "border-color:" in rule.declarations
+    }
+    assert ".grp.doing" in declaring
+    assert declaring.isdisjoint({".grp.done", ".grp.next"})
+
+
+def _past_curve(final_pct: float) -> list[dict[str, object]]:
+    """A planned curve whose every month is elapsed, ending on `final_pct`.
+
+    `planned_to_date` reads the clock, so a page-level pin on the bar has to be
+    date-independent: with all three months already past, the last one stays
+    the last one as time advances and the planned figure is fixed from now on.
+    """
+    return [
+        {"month": "2020-01", "pct": 4.0},
+        {"month": "2020-02", "pct": 8.0},
+        {"month": "2020-03", "pct": final_pct},
+    ]
+
+
+def test_the_page_emits_the_pinned_bar_markup_byte_for_byte(
+    client: TestClient, session: Session
+):
+    """ER5: the far pair (13.2/22.0) and the close pair (20.0/22.0), verbatim.
+
+    `test_the_two_value_branch_is_pinned_byte_for_byte` pins `_one_bar` itself
+    and must not move a byte; this case checks the same two strings through the
+    real page, because APRAS-113 edits the module that renders it.
+    """
+    for title, planned in (("Obra Longe", 13.2), ("Obra Perto", 20.0)):
+        project = _project(
+            session,
+            title=title,
+            physical_progress_pct=22.0,
+            planned_progress_json=_past_curve(planned),
+        )
+        _milestone(
+            session,
+            project,
+            title="Fundações · Locação de Estacas",
+            status=MilestoneStatus.IN_PROGRESS,
+            display_order=0,
+            detail_json=_real_payload(),
+        )
+    admin = _user(session)
+
+    body = client.get(REPORT_URL, headers=_auth(admin)).text
+
+    # Containment alone would survive the bar being *wrapped* in new markup, so
+    # each pin is asserted with the bytes on both sides of it: the `.pv` label
+    # it follows and the note it precedes.
+    for key in ((13.2, 22.0), (20.0, 22.0)):
+        assert _TWO_VALUE_MARKUP[key] in body
+        assert (
+            "</small>" + _TWO_VALUE_MARKUP[key] + '<div class="note">Previsto conforme'
+        ) in body
+
+
+def test_a_project_with_no_milestones_renders_three_empty_cards(
+    client: TestClient, session: Session
+):
+    """ER6: three cards, each an em dash, and no list machinery anywhere."""
+    _project(session, title="Obra vazia")
+    admin = _user(session)
+
+    response = client.get(REPORT_URL, headers=_auth(admin))
+
+    assert response.status_code == 200
+    block = split_groups_block(response.text)[1]
+    for css_class in ("done", "doing", "next"):
+        assert _card(response.text, css_class).count('<p class="none">—</p>') == 1
+    assert "<ul" not in block
+    assert "dgrp" not in block
+    assert 'class="rest"' not in block
+
+
+def test_a_project_whose_every_milestone_is_complete_renders_only_the_done_card(
+    client: TestClient, session: Session
+):
+    """ER6/ER7: three DONE items with their percentages, two em dashes, and no
+    `description` token in the page."""
+    project = _project(session, title="Obra concluída")
+    for index in range(3):
+        _milestone(
+            session,
+            project,
+            title=f"Fundações · Frente {index}",
+            status=MilestoneStatus.DONE,
+            completion_date=date(2026, 1, 1) + timedelta(days=index),
+            display_order=index,
+            description="Piso, Parede, Teto",
+            detail_json=_real_payload(pct=100.0),
+        )
+    admin = _user(session)
+
+    response = client.get(REPORT_URL, headers=_auth(admin))
+
+    assert response.status_code == 200
+    body = response.text
+    done = _card(body, "done")
+    assert _names(done) == ["Frente 2", "Frente 1", "Frente 0"]
+    assert _percentages(done) == ["100%"] * 3
+    assert _card(body, "doing").count('<p class="none">—</p>') == 1
+    assert _card(body, "next").count('<p class="none">—</p>') == 1
+    for token in ("Piso", "Parede", "Teto"):
+        assert token not in body
+
+
+def test_the_description_column_is_never_split_into_items(
+    client: TestClient, session: Session
+):
+    """ER7: the inline list and the count come from the payload, never from
+    `description.split(", ")`.
+
+    48 of the 152 real serviço names carry a comma, so that split is wrong at
+    the source. If anyone reintroduces it the badge reads `5` instead of `1` and
+    the five tokens reach the document.
+    """
+    tokens = ("Piso", "Parede", "Teto", "Rodapé", "Soleira")
+    description = ", ".join(tokens)
+    project = _project(session, title="Obra com descrição")
+    _milestone(
+        session,
+        project,
+        title="Acabamentos · Revestimento Interno",
+        status=MilestoneStatus.NEXT_STEPS,
+        display_order=0,
+        description=description,
+        detail_json=_leaf_payload(0.0, "2026-10-20"),
+    )
+    admin = _user(session)
+
+    body = client.get(REPORT_URL, headers=_auth(admin)).text
+    card = _card(body, "next")
+
+    assert re.findall(r'<span class="cnt">(.*?)</span>', card) == ["1"]
+    assert re.findall(r'<p class="flow">(.*?)</p>', card) == ["Revestimento Interno"]
+    assert description not in body
+    for token in tokens:
+        assert token not in body
+
+
+# ---------------------------------------------------------------------------
+# §4c -- the title split (ER8) and the palette contract
+# ---------------------------------------------------------------------------
+
+
+def test_the_title_split_names_its_uncommitted_producer():
+    """ER8: the coupling is discoverable from the renderer.
+
+    `ProjectMilestone` has no parent column; the parent reaches this repository
+    only inside `title`, in a format an operator script that is deliberately
+    never committed here defines. Nothing in this repository can explain why the
+    separator matters, so the helper has to name the script.
+    """
+    source = inspect.getsource(report._split_stage_title)
+
+    assert "sync_obras_from_drive.py" in source
+
+
+@pytest.mark.parametrize(
+    ("title", "expected"),
+    [
+        ("Totem", (None, "Totem")),
+        ("Fundações · Totem", ("Fundações", "Totem")),
+        # A shape the producer does not emit: `top` is exactly one level and the
+        # only separator it substitutes inside a name is `"- "` -> `" — "`. Kept
+        # because `maxsplit=1` has to degrade safely -- an unpack would raise
+        # and a plain `split` would silently drop `Bloco A`.
+        ("Fundações · Bloco A · Totem", ("Fundações", "Bloco A · Totem")),
+        ("", (None, "")),
+        (None, (None, "")),
+    ],
+)
+def test_the_title_split_takes_the_first_separator_only(title, expected):
+    assert report._split_stage_title(title) == expected
+
+
+def test_the_three_title_shapes_render_kicker_and_name(
+    client: TestClient, session: Session
+):
+    """ER8, through the document: no separator means **no** kicker element, not
+    an empty one."""
+    project = _project(session, title="Obra com títulos")
+    for index, title in enumerate(
+        ("Totem", "Fundações · Totem", "Fundações · Bloco A · Totem")
+    ):
+        _milestone(
+            session,
+            project,
+            title=title,
+            status=MilestoneStatus.NEXT_STEPS,
+            display_order=index,
+            detail_json=None,
+        )
+    admin = _user(session)
+
+    body = client.get(REPORT_URL, headers=_auth(admin)).text
+    card = _card(body, "next")
+    items = re.findall(r"<li>.*?</li>", card)
+
+    assert len(items) == 3
+    assert 'class="nm">Totem<' in items[0]
+    assert 'class="top"' not in items[0]
+    assert _kickers(items[1]) == ["Fundações"]
+    assert _names(items[1]) == ["Totem"]
+    assert _kickers(items[2]) == ["Fundações"]
+    assert _names(items[2]) == ["Bloco A · Totem"]
+    # Never an empty kicker, anywhere on the page.
+    assert 'class="top"></span>' not in body
+    assert 'class="top"> <' not in body
+
+
+#: The class tokens APRAS-113 introduced into `CSS_BODY`. A rule is "new" when
+#: its selector mentions one of them, which is how the scoping assertion below
+#: can catch an *unscoped* `.pc { … }` -- selecting the new rules by their
+#: `.grp ` prefix instead would make "every new selector starts with `.grp`"
+#: true by construction, which is a vacuous test.
+_NEW_CARD_CLASSES = frozenset(
+    {"fr", "ttl", "top", "nm", "pc", "dgrp", "dhead", "cnt", "dsub", "flow", "rest"}
+)
+
+#: Every selector APRAS-113 adds, as an exact ordered list: an added rule that
+#: nobody reviewed fails here, and so does a dropped one.
+_NEW_CARD_SELECTORS = (
+    ".grp ul.fr",
+    ".grp ul.fr li",
+    ".grp ul.fr li:last-child",
+    ".grp .ttl",
+    ".grp .top",
+    ".grp .nm",
+    ".grp .pc",
+    ".grp .dgrp",
+    ".grp .dgrp:last-of-type",
+    ".grp .dhead",
+    ".grp .dhead b",
+    ".grp .dhead .cnt",
+    ".grp .dsub",
+    ".grp .flow",
+    ".grp .rest",
+)
+
+
+def _new_card_rules():
+    """The `CSS_BODY` rules whose selector mentions a class APRAS-113 added."""
+    sheet = parse_css(report.CSS_BODY)
+    return [
+        rule
+        for rule in sheet.rules + sheet.nested_rules
+        if _NEW_CARD_CLASSES
+        & {
+            token.lstrip(".")
+            for token in re.findall(r"\.[A-Za-z][\w-]*", rule.selector)
+        }
+    ]
+
+
+def test_the_new_card_rules_are_exactly_the_reviewed_scoped_set():
+    """Decision 8, made mechanical: every new selector is scoped under `.grp`.
+
+    The mock leaves `.ttl`, `.nm`, `.top` and `.pc` unscoped and its
+    `<details class="all">` subtree reuses two of them, so shipping them
+    unscoped would publish a styling hook for APRAS-115 -- which this task's
+    Out of Scope forbids.
+    """
+    selectors = [rule.selector for rule in _new_card_rules()]
+
+    assert selectors == list(_NEW_CARD_SELECTORS)
+    for selector in selectors:
+        assert selector.startswith(".grp ")
+
+
+def test_the_new_card_rules_carry_no_colour_literal_and_only_known_variables():
+    """The palette contract (ER13), in the order that makes it non-vacuous.
+
+    (a) is checked first and is what gives (b) its force: "every `var()` names a
+    known role" passes *vacuously* over `rgba(221,209,182,.45)`, the literal the
+    mock hard-codes for its row separator, because a literal is not a `var()`.
+    (c) is the collision the mock cannot express: its `--brand` equals both
+    production `--brand` and `--brand-text`, and `("brand", "card")` is absent
+    from `REPORT_TEXT_PAIRS` and already recorded below 3:1, so a text use of
+    `var(--brand)` on a card ships a real contrast regression with a green
+    suite.
+    """
+    rules = _new_card_rules()
+
+    # Anti-vacuity: an empty rule list satisfies every loop below.
+    assert len(rules) == len(_NEW_CARD_SELECTORS)
+
+    for rule in rules:
+        declarations = rule.declarations
+        for literal in ("#", "rgb(", "rgba(", "hsl("):
+            assert literal not in declarations, f"{rule.selector}: {declarations}"
+        for name in re.findall(r"var\(--([\w-]+)\)", declarations):
+            assert name in report.REPORT_ROLE_SOURCES, f"{rule.selector}: --{name}"
+        for declaration in declarations.split(";"):
+            prop, _, value = declaration.partition(":")
+            if prop.strip() == "color":
+                assert value.strip() != "var(--brand)", rule.selector
 
 
 def test_a_done_milestone_without_a_completion_date_sorts_last(session: Session):
@@ -1203,3 +1926,50 @@ def test_regenerating_adds_a_generated_row_and_leaves_a_legacy_row_alone(
     reread = session.get(AssociationDocument, legacy_id)
     assert reread.file_url == legacy_url
     assert reread.updated_at == legacy_updated
+
+
+def test_the_flat_list_rules_reset_what_they_inherit_from_the_older_ones():
+    """`.grp ul { padding-left:4mm }`, `.grp li { margin:1.2mm 0 }` and
+    `.grp li::marker` all predate APRAS-113 and all still apply to the new rows.
+
+    So the new rules have to both out-specify them -- `.grp ul.fr` (0,2,1) over
+    `.grp ul` (0,1,1), `.grp ul.fr li` (0,2,2) over `.grp li` (0,1,1) -- and
+    *reset* what they inherit. Without the reset every row keeps its bullet and
+    a 4mm indent: a visible drift from the approved mock that the selector list
+    and the palette contract both pass over.
+    """
+    declarations = {rule.selector: rule.declarations for rule in _new_card_rules()}
+
+    assert "list-style:none;" in declarations[".grp ul.fr"]
+    assert "padding:0;" in declarations[".grp ul.fr"]
+    assert "margin:0;" in declarations[".grp ul.fr"]
+    # `.grp li`'s vertical margin and the marker indent are replaced, not added
+    # to: the row is a flex line with its own padding.
+    assert "margin:0;" in declarations[".grp ul.fr li"]
+    assert "padding:1.8mm 0;" in declarations[".grp ul.fr li"]
+
+
+def test_the_card_applies_no_case_transform_to_either_half_of_the_title(
+    client: TestClient, session: Session
+):
+    """ER12: `title` is printed verbatim, both halves of it.
+
+    The sync tool already title-cased what it stored, and the Portuguese-aware
+    title-caser lowercases before capitalising -- so running it here would flatten
+    an all-caps suffix like `PCD`. Wiring one in is a defect, not a no-op. Leaf
+    names are a different matter and belong to APRAS-115, which prints them.
+    """
+    project = _project(session, title="Obra com siglas")
+    _milestone(
+        session,
+        project,
+        title="Instalações Hidraulicas · Lavabo WC PCD",
+        status=MilestoneStatus.IN_PROGRESS,
+        display_order=0,
+    )
+    admin = _user(session)
+
+    doing = _card(client.get(REPORT_URL, headers=_auth(admin)).text, "doing")
+
+    assert _kickers(doing) == ["Instalações Hidraulicas"]
+    assert _names(doing) == ["Lavabo WC PCD"]
