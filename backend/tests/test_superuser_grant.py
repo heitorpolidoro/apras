@@ -296,8 +296,8 @@ def test_the_route_is_unguarded_by_permission_and_superuser_guarded():
     # condominium-branding read, which maps to none for the same reason;
     # 30 since APRAS-92's public obras report and 31 since APRAS-105's public
     # logo route, both on the same `/public` prefix and both mapping to none.
-    assert len(UNGUARDED_ROUTES) == 31
-    assert len(ROUTE_PERMISSIONS) == 208
+    assert len(UNGUARDED_ROUTES) == 32
+    assert len(ROUTE_PERMISSIONS) == 210
 
     route = next(
         r
@@ -333,7 +333,7 @@ def test_the_superuser_route_is_tenant_scoped_like_the_rest_of_the_users_router(
     # 33 since APRAS-74: so is the public branding router. 34 since APRAS-92's
     # public obras report and 35 since APRAS-105's public logo route, both on
     # that same GLOBAL_SCOPED `/public` mount.
-    assert len(GLOBAL_ROUTES) == 35
+    assert len(GLOBAL_ROUTES) == 36
 
     route = next(
         r

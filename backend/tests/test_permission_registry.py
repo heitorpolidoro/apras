@@ -167,8 +167,8 @@ def test_permission_strings_follow_the_convention():
     assert not bad, f"permissions violating <module>:<action>: {bad}"
 
 
-def test_unguarded_allowlist_is_thirty_one_routes():
-    assert len(UNGUARDED_ROUTES) == 31
+def test_unguarded_allowlist_is_thirty_two_routes():
+    assert len(UNGUARDED_ROUTES) == 32
 
 
 def test_route_count_is_fully_accounted_for():
@@ -240,13 +240,23 @@ def test_route_count_is_fully_accounted_for():
     taking 238/208/30 to **239/208/31**. Same reason a third time: it
     authenticates nobody. `PERMISSIONS` stays 175, `len(ROUTE_PERMISSIONS)`
     stays 208, no parity cell moves and no baseline file is written.
+
+    APRAS-104 adds **three** routes: **two** permission-guarded -- `PUT` and
+    `DELETE /api/v1/projects/{id}/cover-photo`, the obra cover photo the form's
+    URL field used to set -- and **one** unguarded, the public cover-photo
+    route that serves those bytes out of the same private Blob store. That
+    takes 239/208/31 to **242/210/32**, with the two mapped routes' 12 cells in
+    `tests/data/parity_matrix_baseline_104.json`. `PERMISSIONS` stays 175 and
+    **no** catalogue permission is added: both writes reuse `projects:update`,
+    the permission that already authorises editing an obra's fields and which
+    could already set this very column through `PUT /api/v1/projects/{id}`.
     """
     total = len(_all_route_keys())
     assert set(ROUTE_PERMISSIONS) & UNGUARDED_ROUTES == set()
     assert len(ROUTE_PERMISSIONS) + len(UNGUARDED_ROUTES) == total
-    assert len(UNGUARDED_ROUTES) == 31
-    assert len(ROUTE_PERMISSIONS) == total - 31
-    assert len(ROUTE_PERMISSIONS) == 208
+    assert len(UNGUARDED_ROUTES) == 32
+    assert len(ROUTE_PERMISSIONS) == total - 32
+    assert len(ROUTE_PERMISSIONS) == 210
 
 
 def test_every_router_module_has_at_least_one_permission():

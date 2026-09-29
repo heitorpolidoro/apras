@@ -17,6 +17,7 @@ the same ``monkeypatch.setattr(settings, ...)`` used everywhere else.
 """
 
 from urllib.parse import quote
+from uuid import UUID
 
 from app.core.config import settings
 
@@ -63,4 +64,20 @@ def public_tenant_logo_url(slug: str) -> str:
     from emitting a path segment nobody meant.
     """
     path = f"{PUBLIC_PREFIX}/tenants/{quote(slug, safe='')}/logo"
+    return f"{public_api_base_url()}{API_V1_PREFIX}{path}"
+
+
+def public_project_cover_url(slug: str, project_id: UUID) -> str:
+    """The absolute URL of one obra's public cover-photo route (APRAS-104 §A).
+
+    The sibling of :func:`public_tenant_logo_url` and absolute for the same
+    reason: the hero's ``<img src>`` is read inside an ``<iframe srcDoc>``,
+    whose relative URLs resolve against the frontend's origin rather than this
+    backend's.
+
+    ``slug`` is percent-encoded with no safe characters, as it is above.
+    ``project_id`` is a :class:`~uuid.UUID`, so it has no character a path
+    segment could object to and is interpolated as it prints.
+    """
+    path = f"{PUBLIC_PREFIX}/tenants/{quote(slug, safe='')}/projects/{project_id}/cover"
     return f"{public_api_base_url()}{API_V1_PREFIX}{path}"

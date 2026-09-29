@@ -14,12 +14,17 @@ import type {
   ProjectUpdatePayload,
 } from '../../../types/project';
 import { useCreateMilestone, useCreateProject, useCreateProjectUpdate, useDeleteMilestone, useDeleteProject, useDeleteProjectUpdate, useProjectDetail, useProjects, useUpdateMilestone, useUpdateProject,  } from '../hooks/useProjects';
-import { getProjectsReport, saveProjectsReport } from '../../../api/projects';
+import {
+  deleteProjectCoverPhoto,
+  getProjectsReport,
+  putProjectCoverPhoto,
+  saveProjectsReport,
+} from '../../../api/projects';
 import { ProjectSummaryCard } from './ProjectSummaryCard';
 import { BudgetVsActualProgressBar } from './BudgetVsActualProgressBar';
 import { MilestoneTimeline } from './MilestoneTimeline';
 import { ProjectUpdateFeed } from './ProjectUpdateFeed';
-import { ProjectFormModal } from './ProjectFormModal';
+import { ProjectFormModal, type CoverPhotoIntent } from './ProjectFormModal';
 import { MilestoneFormModal } from './MilestoneFormModal';
 import { ProjectUpdateModal } from './ProjectUpdateModal';
 import { Button } from '../../../components/ui/button';
@@ -86,16 +91,53 @@ export const ConstructionTrackerPage: React.FC = () => {
   const deleteUpdateMutation = useDeleteProjectUpdate();
 
   // Handlers: Project
+  /**
+   * Save the obra, then apply the cover-photo intent (APRAS-104 §B).
+   *
+   * The order is forced and is not an implementation detail: `PUT
+   * /projects/{id}/cover-photo` needs an id, and a project that does not exist
+   * yet has none -- which is why the URL field could set a cover at creation
+   * time and a bare cover route could not.
+   *
+   * **On a successful create the modal is switched to editing the new obra
+   * before the cover step runs.** If the create succeeded and only the upload
+   * failed, a modal still in create mode would answer the operator's natural
+   * next action -- press Save again -- with a second `POST /projects`, i.e. a
+   * duplicate obra. Adopting the returned id first makes that second press a
+   * `PUT` by construction rather than by the operator being careful.
+   *
+   * A cover failure is re-thrown so the modal reports it and stays open. The
+   * obra itself is already saved and already in the list, so closing at that
+   * point loses nothing: the cover can be set from its edit screen.
+   */
   const handleSaveProject = async (
-    payload: ProjectCreatePayload | ProjectUpdatePayload
+    payload: ProjectCreatePayload | ProjectUpdatePayload,
+    cover: CoverPhotoIntent
   ) => {
+    let projectId: string;
     if (editingProject) {
       await updateProjectMutation.mutateAsync({
         id: editingProject.id,
         payload,
       });
+      projectId = editingProject.id;
     } else {
-      await createProjectMutation.mutateAsync(payload as ProjectCreatePayload);
+      const created = await createProjectMutation.mutateAsync(
+        payload as ProjectCreatePayload
+      );
+      projectId = created.id;
+      // Adopt the new obra, and refresh the list so it is visible behind the
+      // modal. Both happen before the cover step, deliberately.
+      setEditingProject(created);
+      await refetchProjects();
+    }
+
+    if (cover.file) {
+      await putProjectCoverPhoto(projectId, cover.file);
+      await refetchProjects();
+    } else if (cover.remove) {
+      await deleteProjectCoverPhoto(projectId);
+      await refetchProjects();
     }
   };
 

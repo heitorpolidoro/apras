@@ -107,6 +107,16 @@ GLOBAL_ROUTES: frozenset[tuple[str, str]] = frozenset(
         # `Tenant` itself is unscoped, so unlike the report it needs no acting
         # scope around it.
         ("GET", "/api/v1/public/tenants/{slug}/logo"),
+        # APRAS-104: the public cover-photo route, mounted beside the three
+        # above and global for the same reason -- neither a header nor a caller
+        # to resolve an acting tenant from, and the condominium is named in the
+        # path as the subject of the read. Like the *report* and unlike the logo
+        # it reads a tenant-scoped table (`ConstructionProject`), so the handler
+        # establishes the scope itself with `tenant_context.acting_tenant_scope`
+        # around the lookup and restores it afterwards; that scope is also what
+        # makes "this project belongs to this condominium" a 404 rather than a
+        # hand-written `where`.
+        ("GET", "/api/v1/public/tenants/{slug}/projects/{project_id}/cover"),
         # Authenticated by X-Device-Key, not a JWT: resolves its tenant from
         # the device it authenticates.
         ("POST", "/api/v1/access-control/webhook/verification"),
@@ -180,9 +190,12 @@ def test_allowlist_is_thirty_five_routes():
     rather than by resolving one from the request. APRAS-105 adds the
     thirty-fifth on that same mount -- the public logo route -- for the
     plainest version of the same reason: no header, no caller, and a slug in
-    the path.
+    the path. APRAS-104 adds the thirty-sixth on that same mount, the public
+    cover-photo route: no header and no caller again, and -- like the report and
+    unlike the logo -- a tenant-scoped table to read, so it establishes the
+    acting scope around its own lookup.
     """
-    assert len(GLOBAL_ROUTES) == 35
+    assert len(GLOBAL_ROUTES) == 36
 
 
 def test_route_count_is_fully_accounted_for():

@@ -97,6 +97,7 @@ BASELINE_51_PATH = BACKEND_ROOT / "tests" / "data" / "parity_matrix_baseline_51.
 BASELINE_60_PATH = BACKEND_ROOT / "tests" / "data" / "parity_matrix_baseline_60.json"
 BASELINE_61_PATH = BACKEND_ROOT / "tests" / "data" / "parity_matrix_baseline_61.json"
 BASELINE_63_PATH = BACKEND_ROOT / "tests" / "data" / "parity_matrix_baseline_63.json"
+BASELINE_104_PATH = BACKEND_ROOT / "tests" / "data" / "parity_matrix_baseline_104.json"
 LEGACY_BUNDLES_PATH = BACKEND_ROOT / "tests" / "data" / "legacy_role_bundles.json"
 HARNESS_PATH = BACKEND_ROOT / "tests" / "matrix_world.py"
 
@@ -124,6 +125,11 @@ APRAS_61_CELL_COUNT = 18
 #: sibling `PUT .../quotes/{quote_id}` route already records, profile for
 #: profile.
 APRAS_63_CELL_COUNT = 12
+#: **An addend** too: APRAS-104's two cover-photo writes are routes the F2 file
+#: never recorded. They mint no permission -- both reuse `projects:update` --
+#: so their statuses are exactly the statuses `PUT /api/v1/projects/{id}`
+#: already records, profile for profile.
+APRAS_104_CELL_COUNT = 12
 EXPECTED_CELL_COUNT = (
     F2_CELL_COUNT
     + APRAS_40_CELL_COUNT
@@ -131,6 +137,7 @@ EXPECTED_CELL_COUNT = (
     + APRAS_60_CELL_COUNT
     + APRAS_61_CELL_COUNT
     + APRAS_63_CELL_COUNT
+    + APRAS_104_CELL_COUNT
 )
 
 F2_MERGE_BASE_SHA = "02c2025abcda4626569921eafb3863dfc540eb9e"
@@ -208,12 +215,24 @@ APRAS_63_ROUTES = frozenset(
     }
 )
 
+#: The two routes APRAS-104 adds: the obra cover photo the internal form's URL
+#: field used to set. Both map to `projects:update`, the permission the sibling
+#: `PUT /api/v1/projects/{id}` already carries -- and which could already set
+#: this very column.
+APRAS_104_ROUTES = frozenset(
+    {
+        ("PUT", "/api/v1/projects/{id}/cover-photo"),
+        ("DELETE", "/api/v1/projects/{id}/cover-photo"),
+    }
+)
+
 ADDITIVE_ROUTES = (
     APRAS_40_ROUTES
     | APRAS_44_ROUTES
     | APRAS_60_ROUTES
     | APRAS_61_ROUTES
     | APRAS_63_ROUTES
+    | APRAS_104_ROUTES
 )
 
 #: The three cells APRAS-51 moves, `(profile, method, path) -> (old, new)`.
@@ -258,7 +277,7 @@ F5_PATH_RENAMES: dict[str, str] = {
 }
 
 WRITE_METHODS = frozenset({"POST", "PUT", "PATCH"})
-EXPECTED_REQUEST_BODY_COUNT = 103
+EXPECTED_REQUEST_BODY_COUNT = 104
 META_KEYS = frozenset(
     {"merge_base_sha", "generator", "harness", "cell_count", "regenerate"}
 )
@@ -494,6 +513,11 @@ def load_apras_63_baseline() -> dict:
     return load_file(BASELINE_63_PATH)
 
 
+def load_apras_104_baseline() -> dict:
+    """The additive file of APRAS-104, and only ever that."""
+    return load_file(BASELINE_104_PATH)
+
+
 def load_apras_51_baseline() -> dict:
     """The **overriding** file of APRAS-51 §6.2, and only ever that.
 
@@ -531,10 +555,10 @@ def cells_of_51() -> set[tuple[str, str, str]]:
 
 
 def load_union() -> dict[tuple[str, str, str], int]:
-    """The seven baselines as one `CELLS`-keyed cell map.
+    """The eight baselines as one `CELLS`-keyed cell map.
 
-    Six of them **partition**: overlap among F2, `_40`, `_44`, `_60`, `_61`
-    and `_63` is an error, not a merge, because a cell appearing in two would
+    Seven of them **partition**: overlap among F2, `_40`, `_44`, `_60`, `_61`,
+    `_63` and `_104` is an error, not a merge, because a cell appearing in two would
     mean one of them had been re-recorded. The seventh, `_51`, is an
     **overriding layer**: its
     keys must already exist (they are F2's), and for those keys only its value
@@ -550,6 +574,7 @@ def load_union() -> dict[tuple[str, str, str], int]:
         BASELINE_60_PATH,
         BASELINE_61_PATH,
         BASELINE_63_PATH,
+        BASELINE_104_PATH,
     ):
         for role, by_method in load_file(path)["cells"].items():
             for method, by_path in by_method.items():
@@ -662,7 +687,7 @@ def test_the_thirty_one_unguarded_routes_are_the_only_ones_excluded():
     more -- the public obras report and the public logo route -- and by zero
     cells, for that same plainest reason.
     """
-    assert len(UNGUARDED_ROUTES) == 31
+    assert len(UNGUARDED_ROUTES) == 32
     assert not (set(ROUTE_PERMISSIONS) & UNGUARDED_ROUTES)
 
 
@@ -1197,6 +1222,97 @@ def test_the_apras_63_baseline_matches_the_predicted_answers():
     assert recorded[("MANAGER", "PUT", f"{sibling}/attachment")] == 403
 
 
+# ---------------------------------------------------------------------------
+# The APRAS-104 additive baseline: the two cover-photo writes
+# ---------------------------------------------------------------------------
+
+
+def test_the_apras_104_baseline_declares_its_provenance():
+    """The same five `_meta` keys, its own merge base, and its own two routes."""
+    meta = load_apras_104_baseline()["_meta"]
+    assert set(meta) == META_KEYS, "no timestamp, hostname or absolute path"
+    assert re.fullmatch(r"[0-9a-f]{40}", meta["merge_base_sha"])
+    assert meta["cell_count"] == APRAS_104_CELL_COUNT == 12
+    assert meta["merge_base_sha"] in meta["regenerate"]
+    # No worktree, and honestly so: the two routes do not exist at the merge
+    # base, so no tree at that sha can reproduce these cells. The sha names the
+    # branch point the route delta is measured from -- the provenance of the
+    # accounting, not of the statuses.
+    assert "git worktree add" not in meta["regenerate"]
+    assert meta["regenerate"].count("--routes") == 2
+    assert BASELINE_104_PATH.name in meta["regenerate"]
+    assert (BACKEND_ROOT / meta["generator"]).exists()
+    assert (BACKEND_ROOT / meta["harness"]).exists()
+    assert meta["merge_base_sha"] != load_apras_63_baseline()["_meta"]["merge_base_sha"]
+
+
+def test_the_apras_104_baseline_carries_no_absolute_path_and_no_timestamp():
+    raw = BASELINE_104_PATH.read_text(encoding="utf-8")
+    assert str(BACKEND_ROOT) not in raw
+    assert not re.search(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}", raw)
+
+
+def test_the_apras_104_baseline_records_only_integer_status_codes():
+    for by_method in load_apras_104_baseline()["cells"].values():
+        for by_path in by_method.values():
+            for status in by_path.values():
+                assert isinstance(status, int)
+
+
+def test_the_apras_104_baseline_matches_the_predicted_answers():
+    """The prediction, written from the permission rather than read back.
+
+    Both routes carry `projects:update` (APRAS-104 §B) and both spell the guard
+    the way every other route in `endpoints/projects.py` does --
+    `_require_admin_permission(current_user, session, "projects:update")` as the
+    handler's first statement -- so the prediction is that permission's own
+    verdict: ADMINISTRATOR and DIRECTOR answer 200, and the other four answer
+    the plain 403.
+
+    RESIDENT and MANAGER are the interesting ones and are spelled out below.
+    Both **hold** `projects:read`, and MANAGER additionally holds
+    `projects:update_create`; neither holds `projects:update`. That is what
+    makes ER8's claim -- "a caller holding `projects:read` but not
+    `projects:update` is refused" -- a measured property of the recorded cells
+    rather than a promise made in a docstring.
+    """
+    cells = load_apras_104_baseline()["cells"]
+    recorded = {
+        (profile, method, path): status
+        for profile, by_method in cells.items()
+        for method, by_path in by_method.items()
+        for path, status in by_path.items()
+    }
+    passing = {"ADMINISTRATOR", "DIRECTOR"}
+    expected = {
+        (profile, method, path): (200 if profile in passing else 403)
+        for profile in PARITY_PROFILES
+        for method, path in APRAS_104_ROUTES
+    }
+    assert recorded == expected
+
+    # "No new permission string" as a measurement: every profile is answered
+    # exactly as the sibling `PUT /api/v1/projects/{id}` answers it, which is
+    # the route that could already write this column.
+    sibling = "/api/v1/projects/{id}"
+    union = load_union()
+    for profile in PARITY_PROFILES:
+        for method in ("PUT", "DELETE"):
+            assert recorded[
+                (profile, method, f"{sibling}/cover-photo")
+            ] == baseline_status(union, profile, "PUT", sibling), (
+                f"{profile} is answered differently from the sibling obra update"
+            )
+
+    # ER8's two profiles, by bundle rather than by assertion: they read obras
+    # and cannot give one a photo.
+    for profile in ("RESIDENT", "MANAGER"):
+        assert "projects:read" in bundle_of(profile)
+        assert "projects:update" not in bundle_of(profile)
+        assert recorded[(profile, "PUT", f"{sibling}/cover-photo")] == 403
+        assert recorded[(profile, "DELETE", f"{sibling}/cover-photo")] == 403
+
+
 def test_the_apras_51_baseline_declares_its_provenance():
     """Its own merge base, and a provenance caveat stronger than `_40`'s.
 
@@ -1328,6 +1444,9 @@ def test_the_three_baselines_partition_route_permissions_exactly():
     sixty_three = {
         (method, path) for _role, method, path in cells_of(load_apras_63_baseline())
     }
+    one_oh_four = {
+        (method, path) for _role, method, path in cells_of(load_apras_104_baseline())
+    }
 
     fifty_one = {
         (method, path) for _role, method, path in cells_of(load_apras_51_baseline())
@@ -1360,8 +1479,20 @@ def test_the_three_baselines_partition_route_permissions_exactly():
     assert not (forty_four & sixty_three), "the APRAS-44 and APRAS-63 baselines overlap"
     assert not (sixty & sixty_three), "the APRAS-60 and APRAS-63 baselines overlap"
     assert not (sixty_one & sixty_three), "the APRAS-61 and APRAS-63 baselines overlap"
-    assert f2 | forty | forty_four | sixty | sixty_one | sixty_three == set(
-        ROUTE_PERMISSIONS
+    assert one_oh_four == APRAS_104_ROUTES
+    assert len(one_oh_four) == 2
+    assert not (f2 & one_oh_four), "the F2 and APRAS-104 baselines overlap"
+    assert not (forty & one_oh_four), "the APRAS-40 and APRAS-104 baselines overlap"
+    assert not (forty_four & one_oh_four), (
+        "the APRAS-44 and APRAS-104 baselines overlap"
+    )
+    assert not (sixty & one_oh_four), "the APRAS-60 and APRAS-104 baselines overlap"
+    assert not (sixty_one & one_oh_four), "the APRAS-61 and APRAS-104 baselines overlap"
+    assert not (sixty_three & one_oh_four), (
+        "the APRAS-63 and APRAS-104 baselines overlap"
+    )
+    assert f2 | forty | forty_four | sixty | sixty_one | sixty_three | one_oh_four == (
+        set(ROUTE_PERMISSIONS)
     )
     assert f2 == set(ROUTE_PERMISSIONS) - ADDITIVE_ROUTES
 

@@ -121,3 +121,41 @@ export const saveProjectsReport = async (): Promise<AssociationDocument> => {
   );
   return response.data;
 };
+
+/**
+ * Replace one obra's cover photo (APRAS-104).
+ *
+ * Multipart with a single `file` field, the shape `PUT /tenant-profile/logo`
+ * already uses. The response is the updated project, whose
+ * `cover_photo_display_url` is the URL to render -- `cover_photo_url` beside it
+ * is what the storage provider returned and is not fetchable by a browser.
+ */
+export const putProjectCoverPhoto = async (
+  id: string,
+  file: File
+): Promise<ConstructionProject> => {
+  const formData = new FormData();
+  formData.append('file', file, file.name);
+  const response = await apiClient.put<ConstructionProject>(
+    `/projects/${id}/cover-photo`,
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } }
+  );
+  return response.data;
+};
+
+/**
+ * Drop one obra's cover photo (APRAS-104).
+ *
+ * In scope because the backend's `update_project` skips `null` values, so
+ * `PUT /projects/{id}` cannot clear the column at all. Idempotent: a second
+ * call is still a 200 with the same body.
+ */
+export const deleteProjectCoverPhoto = async (
+  id: string
+): Promise<ConstructionProject> => {
+  const response = await apiClient.delete<ConstructionProject>(
+    `/projects/${id}/cover-photo`
+  );
+  return response.data;
+};

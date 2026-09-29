@@ -882,11 +882,11 @@ model — so it stays importable from Alembic, from a script and from a test
 with no database.
 
 **Every mapped route is now proven enforced** (APRAS-51).
-`backend/tests/test_permission_alignment.py` places all 208 in exactly one
+`backend/tests/test_permission_alignment.py` places all 210 in exactly one
 declared enforcement form — 56 route-level `Depends(require_permission(P))`,
-5 `get_current_superuser`, 3 membership-gated, 5 service-enforced, 139
+5 `get_current_superuser`, 3 membership-gated, 5 service-enforced, 141
 in-handler — with the exception allowlist `UNENFORCED` **empty**, and sweeps
-the other 200 with a real request from a caller holding the whole catalogue
+the other 202 with a real request from a caller holding the whole catalogue
 except the route's own permission, pinning the *shape* of the refusal. Two
 forms are deliberate and are proven per route rather than excused: **five
 routes are enforced in a service** — the two ballot routes, whose

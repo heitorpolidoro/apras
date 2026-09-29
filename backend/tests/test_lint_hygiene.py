@@ -40,8 +40,13 @@ TESTS = BACKEND / "tests"
 #: line. APRAS-105 raises it by exactly one again, and for exactly the same
 #: reason: the public logo route added to that same module carries the
 #: `30/minute` limit the operator decided on, so it declares the same unread
-#: `request: Request` its sibling does.
-NOQA_CAP = 71
+#: `request: Request` its sibling does. APRAS-104 §D raises it by exactly one
+#: for the fourth time and for the third identical reason: the public
+#: cover-photo route in `endpoints/public_projects.py` carries the
+#: `300/minute` limit ER11 specifies, so it declares the same unread
+#: `request: Request` the two routes in `public_branding.py` do. The spec
+#: mandates that directive verbatim, in that module's shape.
+NOQA_CAP = 72
 
 #: A ``noqa: CODE[, CODE...]`` directive followed by two spaces and a reason.
 NOQA_OK = re.compile(r"#\s*noqa:\s*[A-Z]+[0-9]+(\s*,\s*[A-Z]+[0-9]+)*\s+#\s+\S")

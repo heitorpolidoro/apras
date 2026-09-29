@@ -1661,8 +1661,13 @@ describe("APRAS-81's ledger arithmetic", () => {
       ["ProjectSummaryCard.tsx", 33, ["bg-amber-100", "text-amber-800", "border-amber-200"]],
       ["ProjectSummaryCard.tsx", 38, ["bg-emerald-100", "text-emerald-800", "border-emerald-200"]],
       // 3 — the budget-bar fill ternary.
-      ["ProjectSummaryCard.tsx", 172, ["bg-red-500"]],
-      ["ProjectSummaryCard.tsx", 173, ["bg-emerald-500"]],
+      // +3 since APRAS-104: the cover `<img>` above these two gained a comment
+      // explaining why it reads `cover_photo_display_url` rather than the
+      // stored column. The *set* is untouched -- same file, same two classes,
+      // same two adjacent lines -- only the line numbers this ledger pins by
+      // moved, which is what any edit above them does.
+      ["ProjectSummaryCard.tsx", 175, ["bg-red-500"]],
+      ["ProjectSummaryCard.tsx", 176, ["bg-emerald-500"]],
       // 4 — `progressColor`.
       ["BudgetVsActualProgressBar.tsx", 23, ["bg-emerald-500"]],
       ["BudgetVsActualProgressBar.tsx", 25, ["bg-red-500"]],
@@ -1677,9 +1682,15 @@ describe("APRAS-81's ledger arithmetic", () => {
       ["BudgetVsActualProgressBar.tsx", 34, ["text-emerald-600", "dark:text-emerald-400"]],
       ["BudgetVsActualProgressBar.tsx", 46, ["text-emerald-600"]],
       // 8, 9, 10 — the report alerts and the delete-project control.
-      ["ConstructionTrackerPage.tsx", 271, ["border-emerald-200", "bg-emerald-50", "text-emerald-800"]],
-      ["ConstructionTrackerPage.tsx", 272, ["border-red-200", "bg-red-50", "text-red-800"]],
-      ["ConstructionTrackerPage.tsx", 317, ["text-red-600", "border-red-200", "hover:bg-red-50", "dark:hover:bg-red-950"]],
+      // +42 since APRAS-104: `handleSaveProject` grew the save-then-upload
+      // sequence and the comment stating why the created obra is adopted before
+      // the cover step (a modal still in create mode would answer a second
+      // Save with a duplicate `POST /projects`). The three sets themselves are
+      // untouched -- same file, same classes -- only the pinned line numbers
+      // moved.
+      ["ConstructionTrackerPage.tsx", 313, ["border-emerald-200", "bg-emerald-50", "text-emerald-800"]],
+      ["ConstructionTrackerPage.tsx", 314, ["border-red-200", "bg-red-50", "text-red-800"]],
+      ["ConstructionTrackerPage.tsx", 359, ["text-red-600", "border-red-200", "hover:bg-red-50", "dark:hover:bg-red-950"]],
       // 11 — `getConditionBadgeClass`, six branches.
       ["AssetTable.tsx", 32, ["bg-emerald-100", "text-emerald-800", "border-emerald-200"]],
       ["AssetTable.tsx", 34, ["bg-blue-100", "text-blue-800", "border-blue-200"]],
@@ -1886,7 +1897,7 @@ describe("APRAS-81's ledger arithmetic", () => {
       "min-h-screen bg-background",
     );
     for (const absent of ["bg-slate-50", "bg-muted", "dark:bg-slate-950"]) {
-      expect(matchesOn("ConstructionTrackerPage.tsx", 198)).not.toContain(absent);
+      expect(matchesOn("ConstructionTrackerPage.tsx", 240)).not.toContain(absent);
     }
     // The inventory page declares no background class and is not the page, so
     // its root is untouched.

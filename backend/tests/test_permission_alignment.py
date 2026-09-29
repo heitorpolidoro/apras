@@ -1,6 +1,6 @@
 """Every mapped route is in a *declared enforcement form* (APRAS-51).
 
-The defect this module closes: `ROUTE_PERMISSIONS` maps 208 routes to one
+The defect this module closes: `ROUTE_PERMISSIONS` maps 210 routes to one
 catalogue permission each, and on 25 of them that permission was never
 consulted anywhere in the request. The map claimed a gate the code did not
 have. Nothing noticed, because `test_permission_registry.py` only asserts a
@@ -131,7 +131,16 @@ HARNESS_PATH = BACKEND_ROOT / "tests" / "matrix_world.py"
 #: unchanged -- same five neutralised providers, same bodies, same statuses --
 #: and that is proven rather than asserted: all seven `tests/data/*.json`
 #: baselines stay byte-identical.
-HARNESS_SHA256 = "f3c5b4d4fdde4395134254b8860400e24fbcf13551e942649d432b90256adeaf"
+#:
+#: APRAS-104 moves it for one new route: `REQUEST_BODIES` gains the multipart
+#: body of `PUT /projects/{id}/cover-photo` (a real PNG, since the handler
+#: opens the bytes with Pillow), and `neutralised_storage` gains
+#: `project_service`'s provider, making it six neutralised providers rather
+#: than five. No existing cell's request or status changes, and that is proven
+#: rather than asserted: all seven `tests/data/parity_matrix_baseline*.json`
+#: files stay byte-identical, and the new route's twelve cells live in the
+#: eighth, `tests/data/parity_matrix_baseline_104.json`.
+HARNESS_SHA256 = "80b67b3fde15889390a4f023eff1f1648a3e89675869c9f112dcf7e65fabfc7d"
 
 
 # ---------------------------------------------------------------------------
@@ -147,7 +156,7 @@ EXPECTED_MEMBERSHIP_FORM = 3
 #: **E** -- `SERVICE_ENFORCED`, §4.4.
 EXPECTED_SERVICE_FORM = 5
 #: **H** -- derived, never listed: everything else, proven by the sweep.
-EXPECTED_IN_HANDLER_FORM = 139
+EXPECTED_IN_HANDLER_FORM = 141
 
 #: The exception allowlist. It ships **empty** and a future task may not grow
 #: it without deleting `test_no_mapped_route_is_unenforced`'s assertion: a
@@ -458,7 +467,13 @@ def success_status(method: str, path: str) -> int:
 
 
 def test_the_five_forms_partition_route_permissions():
-    """56 + 5 + 3 + 5 + 139 == 208, as an equality against the registry."""
+    """56 + 5 + 3 + 5 + 141 == 210, as an equality against the registry.
+
+    APRAS-104's two cover-photo writes are both **H** form: the guard is
+    `_require_admin_permission(current_user, session, "projects:update")` inside
+    the handler, exactly as every other route in `endpoints/projects.py` spells
+    it.
+    """
     dependency = set(dependency_form())
     superuser = superuser_form()
     membership = set(MEMBERSHIP_GATED)
@@ -479,7 +494,7 @@ def test_the_five_forms_partition_route_permissions():
             + EXPECTED_SERVICE_FORM
             + EXPECTED_IN_HANDLER_FORM
         )
-        == 208
+        == 210
         == len(ROUTE_PERMISSIONS)
     )
 
@@ -622,8 +637,10 @@ def test_the_permission_required_docstring_claims_no_fixed_route_count():
         assert anchor in doc, f"PermissionRequired's docstring does not name {anchor}"
 
 
-def test_the_swept_routes_are_two_hundred_and_eight_minus_eight():
-    assert len(SWEPT_ROUTES) == 200
+def test_the_swept_routes_are_two_hundred_and_ten_minus_eight():
+    """210 mapped routes since APRAS-104's two cover-photo writes, minus the
+    three membership-gated and the five service-enforced."""
+    assert len(SWEPT_ROUTES) == 202
     assert set(SWEPT_ROUTES) == (
         set(ROUTE_PERMISSIONS) - set(MEMBERSHIP_GATED) - set(SERVICE_ENFORCED)
     )

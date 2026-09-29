@@ -1,0 +1,59 @@
+{
+  "_meta": {
+    "cell_count": 12,
+    "generator": "tests/tools/record_parity_baseline.py",
+    "harness": "tests/matrix_world.py",
+    "merge_base_sha": "37e3f608fc5f42e2fd41ba87c8a336f62e92b26d",
+    "regenerate": "cd backend && POSTGRES_URL=sqlite:// SECRET_KEY=parity-matrix uv run python -m tests.tools.record_parity_baseline --out tests/data/parity_matrix_baseline_104.json --merge-base 37e3f608fc5f42e2fd41ba87c8a336f62e92b26d --routes 'PUT /api/v1/projects/{id}/cover-photo' --routes 'DELETE /api/v1/projects/{id}/cover-photo'"
+  },
+  "cells": {
+    "ADMINISTRATOR": {
+      "DELETE": {
+        "/api/v1/projects/{id}/cover-photo": 200
+      },
+      "PUT": {
+        "/api/v1/projects/{id}/cover-photo": 200
+      }
+    },
+    "DIRECTOR": {
+      "DELETE": {
+        "/api/v1/projects/{id}/cover-photo": 200
+      },
+      "PUT": {
+        "/api/v1/projects/{id}/cover-photo": 200
+      }
+    },
+    "GUEST": {
+      "DELETE": {
+        "/api/v1/projects/{id}/cover-photo": 403
+      },
+      "PUT": {
+        "/api/v1/projects/{id}/cover-photo": 403
+      }
+    },
+    "MANAGER": {
+      "DELETE": {
+        "/api/v1/projects/{id}/cover-photo": 403
+      },
+      "PUT": {
+        "/api/v1/projects/{id}/cover-photo": 403
+      }
+    },
+    "PORTEIRO": {
+      "DELETE": {
+        "/api/v1/projects/{id}/cover-photo": 403
+      },
+      "PUT": {
+        "/api/v1/projects/{id}/cover-photo": 403
+      }
+    },
+    "RESIDENT": {
+      "DELETE": {
+        "/api/v1/projects/{id}/cover-photo": 403
+      },
+      "PUT": {
+        "/api/v1/projects/{id}/cover-photo": 403
+      }
+    }
+  }
+}

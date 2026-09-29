@@ -143,6 +143,7 @@ from app.models.voting import Assembly, LotVoterEligibility, Vote, VoteOption
 from app.services import (
     announcement_service,
     finance_service,
+    project_service,
     purchase_service,
     tenant_service,
 )
@@ -206,17 +207,22 @@ def _cpf(seed: int) -> str:
 class _NullStorage(BaseStorageProvider):
     """The production storage providers, with their file system amputated.
 
-    The five upload routes in the matrix (`POST /uploads/photo`,
+    The six upload routes in the matrix (`POST /uploads/photo`,
     `POST /announcements/{id}/media`, `POST /finance/transactions/{id}/invoice`,
-    since APRAS-61 `PUT /tenant-profile/logo` and since APRAS-63
-    `PUT /purchase-requests/{id}/quotes/{id}/attachment`) reach a module-level
+    since APRAS-61 `PUT /tenant-profile/logo`, since APRAS-63
+    `PUT /purchase-requests/{id}/quotes/{id}/attachment` and since APRAS-104
+    `PUT /projects/{id}/cover-photo`) reach a module-level
     `LocalStorageProvider` that writes under
-    `backend/static/uploads`. The harness swaps all five for this stub while
+    `backend/static/uploads`. The harness swaps all six for this stub while
     the matrix runs: the handlers, the services and the status codes are
     untouched, and no cell can leave a file behind or make the baseline
     depend on a directory. `settings` carries no upload-directory knob, so
     redirecting the provider *is* how "point the upload directory somewhere
     disposable" is spelled in this codebase.
+
+    `resolve_stored_path` is left to the base class, which answers `None` for
+    every value: no cell's cleanup ever reaches `delete_file`, so no cell
+    depends on a previous one's object.
     """
 
     def save_file(self, file_bytes, filename, content_type, *, tenant_id=None):
@@ -235,6 +241,8 @@ def neutralised_storage() -> Iterator[None]:
     original_finance = finance_service._storage_provider
     original_tenant = tenant_service._storage_provider
     original_purchase = purchase_service._storage_provider
+    original_project = project_service._storage_provider
+    project_service._storage_provider = stub  # type: ignore[assignment]
     media_service.storage_provider = stub
     announcement_service._storage_provider = stub  # type: ignore[assignment]
     finance_service._storage_provider = stub  # type: ignore[assignment]
@@ -248,6 +256,7 @@ def neutralised_storage() -> Iterator[None]:
         finance_service._storage_provider = original_finance
         tenant_service._storage_provider = original_tenant
         purchase_service._storage_provider = original_purchase
+        project_service._storage_provider = original_project
 
 
 # ---------------------------------------------------------------------------
@@ -1045,7 +1054,7 @@ def _today() -> str:
     return clock.db_now().date().isoformat()
 
 
-#: `(METHOD, path) -> body spec`, for exactly the 102 POST/PUT/PATCH routes
+#: `(METHOD, path) -> body spec`, for exactly the 104 POST/PUT/PATCH routes
 #: of `ROUTE_PERMISSIONS`. The DELETE routes declare no body model and are
 #: deliberately absent. A missing entry is never allowed to default to `{}`.
 REQUEST_BODIES: dict[tuple[str, str], BodySpec] = {
@@ -1209,6 +1218,13 @@ REQUEST_BODIES: dict[tuple[str, str], BodySpec] = {
     # --- projects ----------------------------------------------------------
     ("POST", "/api/v1/projects"): _static({"title": "Matrix new project"}),
     ("PUT", "/api/v1/projects/{id}"): _static({"title": "Matrix renamed project"}),
+    # APRAS-104: the obra cover photo. A real PNG rather than `_FILE_BYTES`,
+    # for the reason `PUT /tenant-profile/logo` above states: the handler opens
+    # the bytes with Pillow, so a payload that is not an image would record a
+    # 400 about the file instead of this route's authorization answer.
+    ("PUT", "/api/v1/projects/{id}/cover-photo"): _static(
+        Upload("file", "capa.png", "image/png", content=_PNG_BYTES)
+    ),
     ("POST", "/api/v1/projects/{id}/milestones"): _static(
         {"title": "Matrix new milestone"}
     ),

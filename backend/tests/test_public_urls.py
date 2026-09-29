@@ -14,6 +14,7 @@ overridable here by the same `monkeypatch.setattr(settings, ...)` the rest of
 this suite uses.
 """
 
+import uuid
 from pathlib import Path
 
 import pytest
@@ -115,3 +116,48 @@ def test_the_builder_reads_settings_and_never_the_environment():
     assert "import os" not in text
     assert "os.environ" not in text
     assert "getenv" not in text
+
+
+# ---------------------------------------------------------------------------
+# The public cover-photo route (APRAS-104 §D)
+# ---------------------------------------------------------------------------
+
+
+def test_the_cover_url_is_absolute_and_names_the_route_as_fastapi_mounts_it(
+    monkeypatch: pytest.MonkeyPatch, no_base
+):
+    """The obras report's hero `<img src>`, which the `<iframe srcDoc>` forces
+    to be absolute for exactly the reason the logo's is."""
+    monkeypatch.setattr(
+        settings, "PUBLIC_API_BASE_URL", "https://apras-back.vercel.app"
+    )
+    project_id = uuid.UUID("2f1c9d4e-7b3a-4c58-9e10-5d6a7b8c9d01")
+
+    assert urls.public_project_cover_url("altos-da-serra", project_id) == (
+        "https://apras-back.vercel.app/api/v1/public/tenants/altos-da-serra"
+        f"/projects/{project_id}/cover"
+    )
+
+
+def test_a_cover_urls_slug_that_would_break_the_path_is_percent_encoded(
+    monkeypatch: pytest.MonkeyPatch, no_base
+):
+    monkeypatch.setattr(
+        settings, "PUBLIC_API_BASE_URL", "https://apras-back.vercel.app"
+    )
+    project_id = uuid.UUID("2f1c9d4e-7b3a-4c58-9e10-5d6a7b8c9d01")
+
+    assert urls.public_project_cover_url("a/b", project_id) == (
+        "https://apras-back.vercel.app/api/v1/public/tenants/a%2Fb"
+        f"/projects/{project_id}/cover"
+    )
+
+
+def test_the_cover_url_never_doubles_a_slash_before_the_api_prefix(
+    monkeypatch: pytest.MonkeyPatch, no_base
+):
+    monkeypatch.setattr(
+        settings, "PUBLIC_API_BASE_URL", "https://apras-back.vercel.app///"
+    )
+
+    assert "//api/v1" not in urls.public_project_cover_url("altos", uuid.uuid4())

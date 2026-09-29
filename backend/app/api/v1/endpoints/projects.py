@@ -3,7 +3,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, File, Query, UploadFile, status
 from fastapi.responses import HTMLResponse
 from sqlmodel import Session
 
@@ -11,6 +11,8 @@ from app.api import deps as api_deps
 from app.core.exceptions import ProjectAccessForbiddenError
 from app.db import get_session
 from app.models.enums import ProjectStatus
+from app.models.project import ConstructionProject
+from app.models.tenant import Tenant
 from app.models.user import User
 from app.schemas.document import AssociationDocumentRead
 from app.schemas.project import (
@@ -29,6 +31,25 @@ from app.services import project_report_service
 from app.services.project_service import ProjectService
 
 router = APIRouter()
+
+
+def _project_read(project: ConstructionProject, tenant: Tenant | None) -> ProjectRead:
+    """The one body every `ProjectRead` route in this module answers.
+
+    `cover_photo_display_url` is **derived on read** and never stored
+    (APRAS-104 §B), the shape `tenant_profile._profile_of` already uses for
+    `theme`: `ProjectService.cover_display_url` is the single rung choosing
+    between our public cover route and a third-party URL kept verbatim, so no
+    route here can disagree with another about which URL a client should load.
+
+    `ProjectService.get_project_detail` fills the same field itself, because it
+    builds `ProjectDetailRead` in the service and does not pass through here.
+    """
+    return ProjectRead.model_validate(project).model_copy(
+        update={
+            "cover_photo_display_url": ProjectService.cover_display_url(project, tenant)
+        }
+    )
 
 
 def _require_read_permission(
@@ -65,6 +86,7 @@ def _require_update_permission(
 def list_projects(
     session: Annotated[Session, Depends(get_session)],
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
+    tenant: Annotated[Tenant, Depends(api_deps.get_current_tenant)],
     status: Annotated[ProjectStatus | None, Query()] = None,
     skip: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
@@ -75,7 +97,7 @@ def list_projects(
         session=session, status=status, skip=skip, limit=limit
     )
     return PaginatedProjects(
-        items=[ProjectRead.model_validate(p) for p in items],
+        items=[_project_read(p, tenant) for p in items],
         total=total,
         skip=skip,
         limit=limit,
@@ -87,11 +109,12 @@ def create_project(
     project_in: ProjectCreate,
     session: Annotated[Session, Depends(get_session)],
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
+    tenant: Annotated[Tenant, Depends(api_deps.get_current_tenant)],
 ) -> ProjectRead:
     """Creates a new construction project (Admin/Director only)."""
     _require_admin_permission(current_user, session, "projects:create")
     project = ProjectService.create_project(session, project_in)
-    return ProjectRead.model_validate(project)
+    return _project_read(project, tenant)
 
 
 # -----------------------------------------------------------------------------
@@ -147,12 +170,76 @@ def update_project(
     project_in: ProjectUpdateSchema,
     session: Annotated[Session, Depends(get_session)],
     current_user: Annotated[User, Depends(api_deps.get_current_user)],
+    tenant: Annotated[Tenant, Depends(api_deps.get_current_tenant)],
 ) -> ProjectRead:
     """Updates construction project attributes (Admin/Director only)."""
     _require_admin_permission(current_user, session, "projects:update")
     project = ProjectService.get_project_by_id(session, id)
     updated = ProjectService.update_project(session, project, project_in)
-    return ProjectRead.model_validate(updated)
+    return _project_read(updated, tenant)
+
+
+# -----------------------------------------------------------------------------
+# The cover photo (APRAS-104)
+#
+# Declared **after** `GET /{id}` and `PUT /{id}`, which is safe in both
+# directions: `/{id}/cover-photo` is two segments and `/{id}` is one, so
+# neither can shadow the other whatever the order. The two report routes above
+# are the ones with a real ordering constraint -- a literal `report` competing
+# with a `{id}` parameter at the same depth.
+#
+# Both carry `projects:update`, the permission that already authorises editing
+# an obra's fields: a caller who may not edit an obra may not give it a photo,
+# and a caller who may, could already set this column through `PUT /{id}`. No
+# new catalogue string, so no permission-catalogue change.
+# -----------------------------------------------------------------------------
+
+
+@router.put("/{id}/cover-photo")
+async def set_project_cover_photo(
+    id: UUID,
+    file: Annotated[UploadFile, File()],
+    session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[User, Depends(api_deps.get_current_user)],
+    tenant: Annotated[Tenant, Depends(api_deps.get_current_tenant)],
+) -> ProjectRead:
+    """Replace one obra's cover photo. 400 on type, size or undecodable bytes.
+
+    The stored column records exactly what the provider returned; what a
+    client should *load* is the derived `cover_photo_display_url` in the body.
+    The previously stored object is deleted only when it was one of ours -- see
+    `ProjectService._delete_stored_cover`.
+    """
+    _require_admin_permission(current_user, session, "projects:update")
+    project = ProjectService.get_project_by_id(session, id)
+    file_bytes = await file.read()
+    updated = ProjectService.set_cover_photo(
+        session,
+        project,
+        file_bytes=file_bytes,
+        filename=file.filename or "capa.png",
+        content_type=file.content_type or "application/octet-stream",
+    )
+    return _project_read(updated, tenant)
+
+
+@router.delete("/{id}/cover-photo")
+def clear_project_cover_photo(
+    id: UUID,
+    session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[User, Depends(api_deps.get_current_user)],
+    tenant: Annotated[Tenant, Depends(api_deps.get_current_tenant)],
+) -> ProjectRead:
+    """Remove one obra's cover photo. Idempotent: a second call is still a 200.
+
+    200 with the read schema rather than 204, because that is what
+    `DELETE /api/v1/tenant-profile/logo` already declares and there is no
+    reason for the sibling resource to answer differently.
+    """
+    _require_admin_permission(current_user, session, "projects:update")
+    project = ProjectService.get_project_by_id(session, id)
+    updated = ProjectService.clear_cover_photo(session, project)
+    return _project_read(updated, tenant)
 
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)

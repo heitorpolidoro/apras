@@ -398,7 +398,7 @@ def test_the_routes_are_unguarded_and_global():
 
     # 206 since APRAS-61's three mapped condominium-profile writes, on top of
     # APRAS-60's two mapped report routes. None of the five is global.
-    assert len(ROUTE_PERMISSIONS) == 208
+    assert len(ROUTE_PERMISSIONS) == 210
     # 28/32 since APRAS-71's four administrator-invitation routes, which are
     # unguarded *and* global: two superuser-only and two public. 24/28 was
     # the state APRAS-61's self-scoped profile read left, on top of the 23/28
@@ -407,5 +407,5 @@ def test_the_routes_are_unguarded_and_global():
     # global for the same pair of reasons as APRAS-71's two public routes.
     # 31/35 since APRAS-105's public logo route, mounted on that same
     # `/public` prefix and unguarded *and* global for those same reasons.
-    assert len(UNGUARDED_ROUTES) == 31
-    assert len(GLOBAL_ROUTES) == 35
+    assert len(UNGUARDED_ROUTES) == 32
+    assert len(GLOBAL_ROUTES) == 36

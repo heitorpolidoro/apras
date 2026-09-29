@@ -64,9 +64,12 @@ export const ProjectSummaryCard: React.FC<ProjectSummaryCardProps> = ({
     >
       {/* Cover Image & Status Header */}
       <div className="relative aspect-video w-full bg-muted flex items-center justify-center overflow-hidden">
-        {project.cover_photo_url ? (
+        {/* `cover_photo_display_url`, never `cover_photo_url`: the stored column
+            is storage truth in a Blob store configured with private access, so
+            an `<img src>` pointed at it loads nothing (APRAS-104 §A). */}
+        {project.cover_photo_display_url ? (
           <img
-            src={project.cover_photo_url}
+            src={project.cover_photo_display_url}
             alt={project.title}
             className="w-full h-full object-cover"
           />

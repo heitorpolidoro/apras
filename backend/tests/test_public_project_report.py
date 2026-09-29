@@ -375,25 +375,31 @@ def test_the_thirty_first_request_inside_a_minute_is_still_a_200(
     # route *documents* the absence and names all three of `limiter`,
     # `Cache-Control` and `ETag`. A grep would forbid the module explaining
     # itself; the AST sees only what executes.
+    #
+    # Scoped to **this handler's** decorators since APRAS-104, which added a
+    # sibling cover-photo route to this module carrying a limiter of its own.
+    # The module-wide sweep this used to be would now fail on that sibling while
+    # claiming something about the report route -- and, worse, would have made
+    # D3 unfalsifiable for the report route the moment any neighbour acquired a
+    # decorator. `public_branding.py:20-23` already states the governing rule a
+    # module-wide sweep contradicts: a bytes route's limiter is its own and is
+    # not shared. `test_public_project_cover_route.py` holds the other half,
+    # asserting this handler is absent from slowapi's registry.
     tree = ast.parse(inspect.getsource(public_projects))
 
-    decorators = [
-        ast.unparse(decorator)
+    report_handlers = [
+        node
         for node in ast.walk(tree)
         if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
-        for decorator in node.decorator_list
+        and node.name == public_projects.get_public_projects_report.__name__
     ]
-    assert decorators, "no decorated handler found -- the check would be vacuous"
+    assert len(report_handlers) == 1, "the handler this case is about is not here"
+    decorators = [ast.unparse(d) for d in report_handlers[0].decorator_list]
+    assert decorators, "no decorator found on the handler -- the check would be vacuous"
     assert not [d for d in decorators if "limit" in d]
 
-    imported = {
-        alias.name
-        for node in ast.walk(tree)
-        if isinstance(node, ast.ImportFrom)
-        for alias in node.names
-    }
-    assert "limiter" not in imported
-
+    # And no `Cache-Control` or `ETag` anywhere in the module: neither route
+    # sets one, so this half stays module-wide.
     headers = [
         ast.unparse(node)
         for node in ast.walk(tree)
@@ -412,8 +418,9 @@ def test_the_thirty_first_request_inside_a_minute_is_still_a_200(
 def test_the_route_is_on_the_unguarded_allowlist():
     """ER 8: it authenticates nobody, so there is nobody to hold a permission."""
     assert ROUTE in UNGUARDED_ROUTES
-    # 31 since APRAS-105's public logo route joined the same prefix.
-    assert len(UNGUARDED_ROUTES) == 31
+    # 32 since APRAS-104's public cover-photo route joined the same prefix,
+    # after APRAS-105's public logo route made it 31.
+    assert len(UNGUARDED_ROUTES) == 32
 
 
 def test_the_route_is_mounted_globally_scoped():

@@ -53,6 +53,10 @@ const mockProject1: ConstructionProject = {
   actual_completion_date: null,
   status: 'IN_PROGRESS',
   cover_photo_url: 'https://example.com/cover.jpg',
+  // A third-party stored value is its own display URL (APRAS-104 §A.2): the
+  // provider did not mint it, so it cannot read it back and it is served
+  // verbatim.
+  cover_photo_display_url: 'https://example.com/cover.jpg',
   created_at: '2026-08-20T10:00:00Z',
   updated_at: '2026-08-20T10:00:00Z',
 };
@@ -70,6 +74,7 @@ const mockProject2: ConstructionProject = {
   actual_completion_date: '2026-08-15',
   status: 'COMPLETED',
   cover_photo_url: null,
+  cover_photo_display_url: null,
   created_at: '2026-08-15T10:00:00Z',
   updated_at: '2026-08-15T10:00:00Z',
 };
@@ -288,9 +293,18 @@ describe('Construction & Improvement Projects Feature Suite', () => {
           expect.objectContaining({
             title: 'Nova Guarita',
             total_budget: 75000,
-          })
+          }),
+          // The cover-photo intent, second since APRAS-104: nothing was picked
+          // and Remover was not pressed, so the caller issues no cover request
+          // at all.
+          { file: null, remove: false }
         );
       });
+      // And the payload carries no `cover_photo_url` key: the column is written
+      // only by the two cover routes now.
+      expect(handleSubmit.mock.calls[0][0]).not.toHaveProperty(
+        'cover_photo_url'
+      );
     });
 
     it('submits MilestoneFormModal correctly', async () => {

@@ -130,6 +130,18 @@ class ProjectRead(ProjectBase):
     created_at: datetime
     updated_at: datetime
 
+    #: Which URL a client should load for this obra's cover photo (APRAS-104).
+    #:
+    #: **Derived on read, never stored and never accepted on a write**, the
+    #: same shape `TenantProfileRead.theme` has. `cover_photo_url` beside it is
+    #: *storage truth* -- exactly what `save_file` returned -- and is not
+    #: fetchable by a browser, because the Blob store is configured with
+    #: private access. `ProjectService.cover_display_url` is the single rung
+    #: that chooses between our public cover route and a third-party URL stored
+    #: verbatim; a payload built without it answers `null`, which is why the
+    #: default is spelled here rather than inherited from a column.
+    cover_photo_display_url: str | None = None
+
     model_config = ConfigDict(from_attributes=True)
 
 

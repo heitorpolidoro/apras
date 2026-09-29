@@ -14,7 +14,25 @@ export interface ConstructionProject {
   estimated_completion_date?: string | null;
   actual_completion_date?: string | null;
   status: ProjectStatus;
+  /**
+   * Storage truth: exactly what the storage provider returned (APRAS-104 §A).
+   *
+   * **Not a display URL.** The Blob store is configured with private access,
+   * so an `<img src>` pointed at this loads nothing -- for an anonymous reader
+   * and for a signed-in administrator alike, because neither `<img>` carries a
+   * credential of ours. Render `cover_photo_display_url` instead.
+   */
   cover_photo_url?: string | null;
+  /**
+   * Which URL to load for this obra's cover photo, derived on read and never
+   * stored (APRAS-104 §B).
+   *
+   * Our public cover route when the provider owns the stored value, the stored
+   * value verbatim when it is a third-party URL (the Drive sync writes those),
+   * and `null` when there is no cover -- in which case the caller draws its own
+   * placeholder.
+   */
+  cover_photo_display_url?: string | null;
   created_at: string;
   updated_at: string;
 }

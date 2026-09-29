@@ -31,7 +31,7 @@ from app.core import clock
 from app.core.exceptions import ForbiddenError
 from app.core.security import create_access_token, get_password_hash
 from app.core.tenant_context import acting_tenant_scope
-from app.core.urls import public_tenant_logo_url
+from app.core.urls import public_project_cover_url, public_tenant_logo_url
 from app.models.document import AssociationDocument, DocumentFolder
 from app.models.enums import MilestoneStatus, ProjectStatus
 from app.models.project import ConstructionProject, ProjectMilestone, ProjectUpdate
@@ -39,6 +39,7 @@ from app.models.role import Role
 from app.models.tenant import DEFAULT_TENANT_ID, Tenant, UserTenantLink
 from app.models.user import User
 from app.services import project_report_service as report
+from app.services import project_service as project_service_module
 from app.services.storage_service import LocalStorageProvider
 from tests.conftest import make_user
 from tests.test_project_report_bar_geometry import parse_css
@@ -1990,3 +1991,104 @@ def test_the_card_applies_no_case_transform_to_either_half_of_the_title(
 
     assert _kickers(doing) == ["Instalações Hidraulicas"]
     assert _names(doing) == ["Lavabo WC PCD"]
+
+
+# ---------------------------------------------------------------------------
+# The hero's cover photo, served by a route of ours (APRAS-104 ER5)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(name="cover_storage")
+def cover_storage_fixture(tmp_path, monkeypatch: pytest.MonkeyPatch):
+    """A real `LocalStorageProvider` rooted in `tmp_path`, on the seam
+    `project_service` exposes: the rung under test is "does the provider own
+    this value", and only a real provider answers it the production way."""
+    provider = LocalStorageProvider(tmp_path / "uploads")
+    monkeypatch.setattr(project_service_module, "_storage_provider", provider)
+    return provider
+
+
+def _store_cover(provider: LocalStorageProvider, name: str = "capa.png") -> str:
+    target = provider.base_dir / "2026" / "09" / name
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(b"\x89PNG\r\n\x1a\ncapa")
+    return f"/static/uploads/2026/09/{name}"
+
+
+def test_the_hero_names_our_cover_route_absolutely_and_still_places_the_placeholder(
+    client: TestClient, session: Session, cover_storage: LocalStorageProvider
+):
+    """ER5, deliberately **one** test over **one** rendered document.
+
+    Both halves in the same document because a test that only checks the
+    placeholder passes on a renderer that emits the placeholder
+    unconditionally, and a test that only checks the `<img>` passes on one that
+    never emits a placeholder at all. Here project A must get the `<img>` *and*
+    project B must get the placeholder, out of a single render.
+
+    The URL is asserted **absolute**, from `public_project_cover_url`, because
+    `PublicObrasReportPage` injects this document into an `<iframe srcDoc>`
+    whose relative URLs resolve against the frontend's origin -- a relative
+    `src` fails silently, with no console error.
+
+    And A's raw stored value is asserted **absent**: the Blob store is private,
+    so emitting it would hand every reader a URL that cannot be fetched.
+    """
+    tenant = session.get(Tenant, DEFAULT_TENANT_ID)
+    stored = _store_cover(cover_storage)
+    with_cover = _project(session, title="Com capa", cover_photo_url=stored)
+    without_cover = _project(session, title="Sem capa", cover_photo_url=None)
+    admin = _user(session)
+
+    body = client.get(REPORT_URL, headers=_auth(admin)).text
+
+    expected = public_project_cover_url(tenant.slug, with_cover.id)
+    assert expected.startswith("http")
+    assert f'src="{expected}"' in body
+    assert '<div class="noimg"></div>' in body
+    assert f'src="{stored}"' not in body
+    # The placeholder belongs to B and the `<img>` to A, not the other way
+    # round: the hero order follows `created_at`, so A's fragment comes first.
+    hero_a = body.index(f'src="{expected}"')
+    hero_b = body.index('<div class="noimg"></div>')
+    assert hero_a < hero_b
+    assert str(without_cover.id) not in expected
+
+
+def test_a_third_party_cover_value_is_rendered_verbatim(
+    client: TestClient, session: Session, cover_storage: LocalStorageProvider
+):
+    """The second rung of §A.2, and a live write path rather than a tail:
+    `backend/scripts/sync_obras_from_drive.py` writes values of this shape on
+    every run, and a provider cannot read them back."""
+    _project(
+        session, title="Capa do Drive", cover_photo_url="https://cdn.example/capa.jpg"
+    )
+    admin = _user(session)
+
+    body = client.get(REPORT_URL, headers=_auth(admin)).text
+
+    assert 'src="https://cdn.example/capa.jpg"' in body
+
+
+def test_a_missing_tenant_row_degrades_the_cover_to_the_placeholder(
+    session: Session, cover_storage: LocalStorageProvider
+):
+    """`_page_html` takes `tenant: Tenant | None` and `_acting_tenant` can
+    answer `None`; that function's policy is that a missing row degrades like a
+    missing logo -- no `<img>`, never an exception. The cover follows it, and in
+    particular never falls back to the unfetchable stored value.
+
+    Unreachable in production, where both paths establish a tenant. Asserted
+    because a developer writing `tenant.slug` against a `| None` parameter is
+    the likely first draft.
+    """
+    project = _project(
+        session, title="Com capa", cover_photo_url=_store_cover(cover_storage)
+    )
+
+    fragment = report._hero_html(project, 1, None)
+
+    assert '<div class="noimg"></div>' in fragment
+    assert "<img" not in fragment
+    assert project.cover_photo_url not in fragment

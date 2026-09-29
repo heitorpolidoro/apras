@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>APRAS-104 — Foto de capa da obra por upload</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+      body {
+        font-family:
+          ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+      .noimg {
+        background:
+          repeating-linear-gradient(
+            45deg,
+            #e2e8f0,
+            #e2e8f0 8px,
+            #eef2f7 8px,
+            #eef2f7 16px
+          );
+      }
+    </style>
+  </head>
+  <body class="bg-slate-100 text-slate-900">
+    <div class="mx-auto max-w-6xl space-y-10 p-6">
+      <header class="space-y-1">
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          APRAS-104
+        </p>
+        <h1 class="text-2xl font-bold">
+          Foto de capa da obra: escolher um arquivo em vez de colar uma URL
+        </h1>
+        <p class="max-w-3xl text-sm text-slate-600">
+          O campo <em>“URL da Foto de Capa”</em> sai do formulário da obra e é
+          substituído pelo controle abaixo. O arquivo escolhido é validado no
+          navegador (tipo e tamanho), enviado depois que a obra é salva, e
+          guardado no provedor de armazenamento configurado. O relatório público
+          de obras carrega a imagem por uma rota nossa, porque o store do Blob é
+          privado.
+        </p>
+      </header>
+
+      <!-- ================= 1. O controle, nos dois estados ================= -->
+      <section class="space-y-4">
+        <h2 class="text-lg font-semibold">
+          1. O controle no formulário da obra (visão interna)
+        </h2>
+
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <!-- estado vazio -->
+          <div class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div
+              class="flex items-center justify-between border-b border-slate-100 px-5 py-4"
+            >
+              <h3 class="text-base font-bold">Editar Obra</h3>
+              <span
+                class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600"
+                >estado: sem foto</span
+              >
+            </div>
+            <div class="space-y-4 p-5">
+              <div>
+                <label class="mb-1 block text-sm font-medium text-slate-700"
+                  >Título da Obra *</label
+                >
+                <input
+                  class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  value="Reforma da Piscina Principal"
+                />
+              </div>
+
+              <div>
+                <label class="mb-1 block text-sm font-medium text-slate-700"
+                  >Foto de capa</label
+                >
+                <div
+                  class="flex items-center gap-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4"
+                >
+                  <div
+                    class="noimg flex h-20 w-32 shrink-0 items-center justify-center rounded-lg text-slate-500"
+                  >
+                    <i data-lucide="image-off" class="h-6 w-6"></i>
+                  </div>
+                  <div class="min-w-0 space-y-2">
+                    <p class="text-sm text-slate-600">
+                      Nenhuma foto escolhida.
+                    </p>
+                    <div class="flex flex-wrap items-center gap-2">
+                      <button
+                        onclick="pick('empty')"
+                        class="inline-flex items-center gap-2 rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800"
+                      >
+                        <i data-lucide="upload" class="h-4 w-4"></i>
+                        Escolher foto
+                      </button>
+                    </div>
+                    <p class="text-xs text-slate-500">
+                      JPEG, PNG ou WebP, até 5 MB.
+                    </p>
+                  </div>
+                </div>
+                <p
+                  id="empty-error"
+                  class="mt-2 hidden items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700"
+                ></p>
+              </div>
+
+              <div class="flex justify-end gap-2 border-t border-slate-100 pt-4">
+                <button
+                  class="rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+                >
+                  Cancelar
+                </button>
+                <button
+                  class="rounded-md bg-sky-700 px-3 py-1.5 text-sm font-medium text-white"
+                >
+                  Salvar Obra
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- estado com foto -->
+          <div class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div
+              class="flex items-center justify-between border-b border-slate-100 px-5 py-4"
+            >
+              <h3 class="text-base font-bold">Editar Obra</h3>
+              <span
+                class="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700"
+                >estado: com foto</span
+              >
+            </div>
+            <div class="space-y-4 p-5">
+              <div>
+                <label class="mb-1 block text-sm font-medium text-slate-700"
+                  >Título da Obra *</label
+                >
+                <input
+                  class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  value="Modernização das Portarias"
+                />
+              </div>
+
+              <div>
+                <label class="mb-1 block text-sm font-medium text-slate-700"
+                  >Foto de capa</label
+                >
+                <div
+                  class="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4"
+                >
+                  <img
+                    id="filled-preview"
+                    alt="Foto de capa da obra"
+                    class="h-20 w-32 shrink-0 rounded-lg object-cover"
+                    src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='200'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%230f766e'/%3E%3Cstop offset='1' stop-color='%23134e4a'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='320' height='200' fill='url(%23g)'/%3E%3Ccircle cx='250' cy='45' r='26' fill='%23fde68a' opacity='.85'/%3E%3Crect x='30' y='120' width='90' height='60' fill='%23e7e5e4' opacity='.9'/%3E%3Crect x='140' y='95' width='70' height='85' fill='%23d6d3d1' opacity='.9'/%3E%3Crect x='0' y='180' width='320' height='20' fill='%23292524' opacity='.6'/%3E%3C/svg%3E"
+                  />
+                  <div class="min-w-0 space-y-2">
+                    <p
+                      id="filled-name"
+                      class="truncate text-sm font-medium text-slate-700"
+                    >
+                      capa-portarias.jpg
+                    </p>
+                    <div class="flex flex-wrap items-center gap-2">
+                      <button
+                        onclick="pick('filled')"
+                        class="inline-flex items-center gap-2 rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800"
+                      >
+                        <i data-lucide="repeat" class="h-4 w-4"></i>
+                        Trocar foto
+                      </button>
+                      <button
+                        onclick="removePhoto()"
+                        class="inline-flex items-center gap-2 rounded-md border border-red-200 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50"
+                      >
+                        <i data-lucide="trash-2" class="h-4 w-4"></i>
+                        Remover
+                      </button>
+                    </div>
+                    <p class="text-xs text-slate-500">
+                      A foto anterior é apagada do armazenamento depois que a
+                      troca é gravada.
+                    </p>
+                  </div>
+                </div>
+                <p
+                  id="filled-error"
+                  class="mt-2 hidden items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700"
+                ></p>
+              </div>
+
+              <div class="flex justify-end gap-2 border-t border-slate-100 pt-4">
+                <button
+                  class="rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+                >
+                  Cancelar
+                </button>
+                <button
+                  class="rounded-md bg-sky-700 px-3 py-1.5 text-sm font-medium text-white"
+                >
+                  Salvar Obra
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <p class="text-xs text-slate-500">
+          Os dois botões “Escolher/Trocar foto” abrem um seletor de arquivos
+          real. Escolha um arquivo que não seja imagem, ou maior que 5 MB, para
+          ver a recusa que o formulário mostra sem chamar a API.
+        </p>
+      </section>
+
+      <!-- ================= 2. O cartão da obra ================= -->
+      <section class="space-y-4">
+        <h2 class="text-lg font-semibold">
+          2. O cartão da obra na visão interna
+        </h2>
+        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div
+            class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+          >
+            <div class="relative aspect-video w-full">
+              <img
+                class="h-full w-full object-cover"
+                alt="Modernização das Portarias"
+                src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='180'%3E%3Crect width='320' height='180' fill='%230f766e'/%3E%3Ccircle cx='260' cy='40' r='22' fill='%23fde68a'/%3E%3Crect x='30' y='105' width='90' height='55' fill='%23e7e5e4'/%3E%3Crect x='140' y='85' width='70' height='75' fill='%23d6d3d1'/%3E%3C/svg%3E"
+              />
+              <span
+                class="absolute left-3 top-3 rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700"
+                >Em Andamento</span
+              >
+            </div>
+            <div class="space-y-1 p-4">
+              <p class="font-semibold">Modernização das Portarias</p>
+              <p class="text-xs text-slate-500">
+                src = /api/v1/public/tenants/aprasvi/projects/&lt;id&gt;/cover
+              </p>
+            </div>
+          </div>
+
+          <div
+            class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+          >
+            <div
+              class="relative flex aspect-video w-full items-center justify-center bg-slate-100"
+            >
+              <div class="flex flex-col items-center text-slate-500">
+                <i data-lucide="building-2" class="mb-1 h-10 w-10 opacity-50"></i>
+                <span class="text-xs">Sem foto de capa</span>
+              </div>
+              <span
+                class="absolute left-3 top-3 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-600"
+                >Planejada</span
+              >
+            </div>
+            <div class="space-y-1 p-4">
+              <p class="font-semibold">Troca dos Portões da Garagem</p>
+              <p class="text-xs text-slate-500">
+                cover_photo_display_url = null → o placeholder de hoje
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 3. O relatório público ================= -->
+      <section class="space-y-4">
+        <h2 class="text-lg font-semibold">
+          3. O herói do relatório de obras — as duas metades da ER3
+        </h2>
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Obra 01 • Portarias
+            </p>
+            <h3 class="mt-1 text-xl font-bold">Modernização das Portarias</h3>
+            <div class="mt-4 rounded-xl border border-slate-200 p-3">
+              <img
+                class="mb-3 h-36 w-full rounded-lg object-cover"
+                alt="Foto de capa da obra"
+                src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='480' height='220'%3E%3Crect width='480' height='220' fill='%230f766e'/%3E%3Ccircle cx='400' cy='50' r='26' fill='%23fde68a'/%3E%3Crect x='40' y='130' width='130' height='70' fill='%23e7e5e4'/%3E%3Crect x='200' y='100' width='100' height='100' fill='%23d6d3d1'/%3E%3C/svg%3E"
+              />
+              <p class="text-xs text-slate-500">Progresso geral</p>
+              <p class="font-bold">62% concluído</p>
+            </div>
+            <p class="mt-3 text-xs text-slate-500">
+              <code>&lt;img src="https://apras-back.vercel.app/api/v1/public/tenants/aprasvi/projects/&lt;id&gt;/cover"&gt;</code>
+              — URL absoluta, porque o documento é injetado num
+              <code>iframe srcDoc</code>.
+            </p>
+          </div>
+
+          <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Obra 02 • Garagem
+            </p>
+            <h3 class="mt-1 text-xl font-bold">Troca dos Portões da Garagem</h3>
+            <div class="mt-4 rounded-xl border border-slate-200 p-3">
+              <div class="noimg mb-3 h-36 w-full rounded-lg"></div>
+              <p class="text-xs text-slate-500">Progresso geral</p>
+              <p class="font-bold">8% concluído</p>
+            </div>
+            <p class="mt-3 text-xs text-slate-500">
+              <code>&lt;div class="noimg"&gt;&lt;/div&gt;</code> — o placeholder
+              de hoje, inalterado.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 4. Como a imagem chega ao leitor ================= -->
+      <section class="space-y-3">
+        <h2 class="text-lg font-semibold">
+          4. Por onde a imagem chega a quem lê o relatório
+        </h2>
+        <ol
+          class="list-decimal space-y-2 rounded-2xl border border-slate-200 bg-white p-5 pl-9 text-sm text-slate-700 shadow-sm"
+        >
+          <li>
+            O síndico escolhe o arquivo →
+            <code>PUT /api/v1/projects/&lt;id&gt;/cover-photo</code> (permissão
+            <code>projects:update</code>).
+          </li>
+          <li>
+            O provedor grava o objeto no store privado e devolve uma URL;
+            <code>cover_photo_url</code> guarda exatamente essa URL.
+          </li>
+          <li>
+            O objeto anterior é apagado depois do commit da coluna — nunca
+            antes.
+          </li>
+          <li>
+            O relatório e o cartão apontam para
+            <code>GET /api/v1/public/tenants/&lt;slug&gt;/projects/&lt;id&gt;/cover</code>,
+            que lê o objeto com a credencial da aplicação e devolve só os bytes.
+          </li>
+          <li>
+            URL de terceiro já gravada (Drive, CDN) continua a ser renderizada
+            como está: o provedor não é dono dela, então não há rota nossa nem
+            apagamento.
+          </li>
+        </ol>
+      </section>
+
+      <!-- ========== 5. Obra criada, foto falhou (recuperação) ========== -->
+      <section class="space-y-3">
+        <h2 class="text-lg font-semibold">
+          5. A obra foi criada, mas o envio da foto falhou
+        </h2>
+        <p class="text-sm text-slate-600">
+          A foto escolhida na criação só pode ser enviada depois de a obra
+          existir (ela precisa de um id). Se a criação deu certo e o envio da
+          foto falhou, o modal passa a <strong>editar a obra criada</strong> —
+          ele nunca continua em modo de criação, para que apertar "Salvar"
+          outra vez não crie uma segunda obra.
+        </p>
+        <div
+          class="mx-auto w-full max-w-xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg"
+        >
+          <div
+            class="flex items-center justify-between border-b border-slate-200 px-5 py-3"
+          >
+            <h3 class="text-base font-bold">Editar Obra</h3>
+            <span
+              class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700"
+              >Obra salva</span
+            >
+          </div>
+          <div class="space-y-4 p-5">
+            <div>
+              <label class="text-sm font-medium text-slate-700">Título</label>
+              <input
+                class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                value="Modernização das Portarias"
+                readonly
+              />
+            </div>
+            <div>
+              <span class="text-sm font-medium text-slate-700"
+                >Foto de capa</span
+              >
+              <div
+                class="mt-1 flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"
+              >
+                <i data-lucide="alert-triangle" class="mt-0.5 h-4 w-4"></i>
+                <div class="space-y-1">
+                  <p class="font-semibold">
+                    A obra foi criada, mas a foto de capa não foi enviada.
+                  </p>
+                  <p>
+                    Tente enviar novamente. Se fechar esta janela, a obra
+                    continua na lista sem foto e você pode escolher a capa
+                    depois, pela edição.
+                  </p>
+                </div>
+              </div>
+              <div class="mt-3 flex gap-2">
+                <button
+                  class="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50"
+                >
+                  <i data-lucide="upload" class="h-4 w-4"></i>
+                  Tentar enviar de novo
+                </button>
+                <button
+                  class="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50"
+                >
+                  <i data-lucide="image" class="h-4 w-4"></i>
+                  Escolher outra foto
+                </button>
+              </div>
+            </div>
+            <div class="flex justify-end gap-2 border-t border-slate-200 pt-4">
+              <button
+                class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50"
+              >
+                Fechar
+              </button>
+              <button
+                class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+              >
+                Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+        <p class="text-sm text-slate-600">
+          Neste estado, "Salvar" envia um
+          <code>PUT /api/v1/projects/&lt;id&gt;</code> mais o envio da capa —
+          nunca um segundo <code>POST /api/v1/projects</code>.
+        </p>
+      </section>
+    </div>
+
+    <script>
+      const MAX = 5 * 1024 * 1024;
+      const TYPES = ["image/png", "image/jpeg", "image/webp"];
+
+      function showError(which, message) {
+        const box = document.getElementById(which + "-error");
+        box.textContent = message;
+        box.classList.remove("hidden");
+        box.classList.add("flex");
+      }
+
+      function clearError(which) {
+        const box = document.getElementById(which + "-error");
+        box.textContent = "";
+        box.classList.add("hidden");
+        box.classList.remove("flex");
+      }
+
+      function pick(which) {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = TYPES.join(",");
+        input.onchange = () => {
+          const file = input.files && input.files[0];
+          if (!file) return;
+          if (!TYPES.includes(file.type)) {
+            showError(
+              which,
+              "Formato de imagem inválido. Formatos aceitos: JPEG, PNG, WebP.",
+            );
+            return;
+          }
+          if (file.size > MAX) {
+            showError(
+              which,
+              "Arquivo excede o limite máximo permitido de 5MB.",
+            );
+            return;
+          }
+          clearError(which);
+          if (which === "filled") {
+            document.getElementById("filled-preview").src =
+              URL.createObjectURL(file);
+            document.getElementById("filled-name").textContent = file.name;
+          } else {
+            showOk(file);
+          }
+        };
+        input.click();
+      }
+
+      function showOk(file) {
+        const box = document.getElementById("empty-error");
+        box.textContent =
+          "Arquivo aceito: " +
+          file.name +
+          " — será enviado quando a obra for salva.";
+        box.className =
+          "mt-2 flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700";
+      }
+
+      function removePhoto() {
+        document.getElementById("filled-name").textContent =
+          "Foto removida (DELETE /projects/<id>/cover-photo)";
+        document.getElementById("filled-preview").classList.add("opacity-30");
+      }
+
+      lucide.createIcons();
+    </script>
+  </body>
+</html>

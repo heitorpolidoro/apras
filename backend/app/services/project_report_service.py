@@ -70,6 +70,7 @@ from app.models.role import Role
 from app.models.tenant import DEFAULT_TENANT_ID, Tenant
 from app.schemas.document import AssociationDocumentCreate
 from app.services import document_service
+from app.services.project_service import ProjectService
 from app.services.storage_service import (
     BaseStorageProvider,
     generated_storage_provider,
@@ -1349,7 +1350,24 @@ def _masthead_html(tenant: Tenant | None, today: date) -> str:
     )
 
 
-def _hero_html(project: ConstructionProject, number: int) -> str:
+def _hero_html(project: ConstructionProject, number: int, tenant: Tenant | None) -> str:
+    """One obra's hero block, cover photo included.
+
+    ``tenant`` is here for the cover alone (APRAS-104 §A): the ``<img src>``
+    must be the **absolute** URL of our public cover route, which needs the
+    condominium's slug, and the previous signature had no tenant in scope while
+    its only caller -- ``_page_html`` -- does.
+
+    The column itself is never rendered. ``cover_photo_url`` is *storage truth*
+    and the Blob store is configured with private access, so the stored value
+    is unfetchable by a browser; ``ProjectService.cover_display_url`` is the
+    single rung that turns it into something a reader can load, and it answers
+    a third-party URL verbatim for the rows the Drive sync writes.
+
+    A ``None`` tenant degrades to the ``noimg`` placeholder rather than to the
+    stored value, following ``_acting_tenant``'s stated policy that a missing
+    row behaves like a missing logo -- never an ``AttributeError``.
+    """
     title, kind = split_title_and_kind(project.title)
     kicker = f"Obra {number:02d} • {_e(kind)}" if kind else f"Obra {number:02d}"
     status_label = PROJECT_STATUS_LABELS.get(project.status, str(project.status))
@@ -1358,9 +1376,10 @@ def _hero_html(project: ConstructionProject, number: int) -> str:
         max(update.created_at for update in updates) if updates else project.updated_at
     )
     progress = float(project.physical_progress_pct or 0.0)
+    cover_url = ProjectService.cover_display_url(project, tenant)
     cover = (
-        f'<img src="{_e(project.cover_photo_url)}" alt="Foto de capa da obra">'
-        if project.cover_photo_url
+        f'<img src="{_e(cover_url)}" alt="Foto de capa da obra">'
+        if cover_url
         else '<div class="noimg"></div>'
     )
     return (
@@ -1461,7 +1480,7 @@ def _page_html(
     return (
         f'<div class="{page_class}">'
         f"{_masthead_html(tenant, generated_at.date())}"
-        f"{_hero_html(project, number)}"
+        f"{_hero_html(project, number, tenant)}"
         f"{_stages_html(project)}"
         f"{_budget_html(project)}"
         '<section class="section"><div class="section-head">'

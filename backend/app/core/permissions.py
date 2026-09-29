@@ -502,6 +502,12 @@ ROUTE_PERMISSIONS: dict[tuple[str, str], str] = {
         "DELETE",
         "/api/v1/projects/{id}/milestones/{milestone_id}",
     ): "projects:milestone_delete",
+    # APRAS-104: the cover photo, uploaded rather than pasted. Both carry
+    # `projects:update` -- the permission that already authorises editing an
+    # obra's fields, and which could already set this very column through
+    # `PUT /api/v1/projects/{id}`. No new catalogue string.
+    ("PUT", "/api/v1/projects/{id}/cover-photo"): "projects:update",
+    ("DELETE", "/api/v1/projects/{id}/cover-photo"): "projects:update",
     ("POST", "/api/v1/projects/{id}/updates"): "projects:update_create",
     (
         "DELETE",
@@ -799,6 +805,18 @@ UNGUARDED_ROUTES: frozenset[tuple[str, str]] = frozenset(
         # unlimited route would turn one cheap inbound request into one
         # outbound request we pay for.
         ("GET", "/api/v1/public/tenants/{slug}/logo"),
+        # APRAS-104 §A: the public cover-photo route, which serves the bytes of
+        # one obra's cover out of the same Blob store configured with
+        # **private** access -- the store stays private, the route is public.
+        # Like the three lines above it authenticates nobody, so there is
+        # nobody to hold a permission and nothing a catalogue string could
+        # gate. Like the logo and unlike the report it carries a rate limit
+        # (300/minute per IP): it performs one outbound Blob fetch on every
+        # hit, and it is a *worse* amplifier than the logo, because one report
+        # view costs one logo fetch but N cover fetches. The tenfold number is
+        # page-view parity with the logo's 30/minute at a tenfold fan-out, not
+        # a looser policy.
+        ("GET", "/api/v1/public/tenants/{slug}/projects/{project_id}/cover"),
     }
 )
 
