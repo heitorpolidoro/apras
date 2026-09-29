@@ -109,7 +109,7 @@ const PublicObrasReportPage: React.FC = () => {
         obras={obras}
         onClose={() => setIsPrintDialogOpen(false)}
         onSelect={(index) => {
-          void openObraPrintWindow(reportHtml, index);
+          openObraPrintWindow(reportHtml, index);
         }}
       />
       <iframe

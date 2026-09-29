@@ -114,6 +114,20 @@ export const ONE_OBRA_REPORT = wrap(PAGE_ONE);
 /** No obra: the modal opens onto the empty state. */
 export const NO_OBRA_REPORT = wrap("");
 
+/**
+ * One obra whose hero kicker carries **no kind** — `_hero_html` writes plain
+ * `Obra 01`, with no `•`, when the project's kind is unset. Every production row
+ * today has one, but the renderer's branch exists and the modal must show a
+ * title-only row rather than an empty second line.
+ */
+export const NO_KIND_REPORT = wrap(
+  replaceOnce(
+    PAGE_ONE,
+    '<span class="kicker">Obra 01 • Edificação</span>',
+    '<span class="kicker">Obra 01</span>',
+  ),
+);
+
 export const OBRA_ONE_TITLE = "Sede Social — Reforma";
 export const OBRA_TWO_TITLE = "Portarias — Ampliação";
 export const OBRA_ONE_KIND = "Edificação";

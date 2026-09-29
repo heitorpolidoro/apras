@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import ObraPrintDialog from "../components/ObraPrintDialog";
@@ -63,6 +63,17 @@ describe("ObraPrintDialog", () => {
     expect(screen.getByText("Reforma")).toBeInTheDocument();
   });
 
+  it("shows a title-only row for an obra whose hero carries no kind", async () => {
+    // `_hero_html` writes `Obra 01` with no separator when the project has no
+    // kind, so `listObrasFromReport` yields `kind: ""` and the row must not
+    // render an empty second line.
+    render(<Harness obras={[{ index: 0, title: "Quadra", kind: "" }]} />);
+    await openDialog();
+
+    const row = screen.getByRole("button", { name: /Quadra/ });
+    expect(row.querySelectorAll("span > span")).toHaveLength(1);
+  });
+
   it("reports the chosen obra's index and closes", async () => {
     const onSelect = vi.fn();
     render(<Harness obras={OBRAS} onSelect={onSelect} />);
@@ -110,9 +121,10 @@ describe("ObraPrintDialog", () => {
     const { user } = await openDialog();
     const dialog = screen.getByRole("dialog");
 
-    const focusable = Array.from(
-      dialog.querySelectorAll<HTMLElement>("button"),
-    );
+    // Scoped to the panel, not the dialog: the scrim is a `tabIndex={-1}`
+    // button outside the panel and is deliberately not a stop in the cycle.
+    const panel = within(dialog).getByTestId("obra-print-panel");
+    const focusable = Array.from(panel.querySelectorAll<HTMLElement>("button"));
     expect(focusable.length).toBeGreaterThan(1);
     const first = focusable[0];
     const last = focusable[focusable.length - 1];

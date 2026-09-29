@@ -9,6 +9,7 @@ import {
   TWO_OBRA_REPORT,
   ONE_OBRA_REPORT,
   NO_OBRA_REPORT,
+  NO_KIND_REPORT,
   OBRA_ONE_TITLE,
   OBRA_TWO_TITLE,
   OBRA_ONE_KIND,
@@ -51,6 +52,14 @@ describe("listObrasFromReport", () => {
       expect(obra.kind).not.toContain("Desenvolvimento");
       expect(obra.kind).not.toContain("Acompanhamento visual");
     }
+  });
+
+  it("yields an empty kind when the hero's kicker carries none", () => {
+    // `Obra 01` with no `•`: the ordinal is already the row's position, so there
+    // is nothing to show beside the title.
+    expect(listObrasFromReport(NO_KIND_REPORT)).toEqual([
+      { index: 0, title: OBRA_ONE_TITLE, kind: "" },
+    ]);
   });
 
   it("returns one entry for a single-obra report and none for an empty one", () => {
@@ -170,7 +179,7 @@ describe("openObraPrintWindow", () => {
       .spyOn(window, "open")
       .mockReturnValue(opened as unknown as Window);
 
-    await openObraPrintWindow(TWO_OBRA_REPORT, 1);
+    openObraPrintWindow(TWO_OBRA_REPORT, 1);
 
     expect(createObjectURL).toHaveBeenCalledTimes(1);
     const blob = createObjectURL.mock.calls[0][0] as Blob;
@@ -188,10 +197,40 @@ describe("openObraPrintWindow", () => {
     });
   });
 
-  it("returns null when the popup is blocked, without throwing", async () => {
+  it("returns null when the popup is blocked, without throwing", () => {
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:blocked");
     vi.spyOn(window, "open").mockReturnValue(null);
 
-    await expect(openObraPrintWindow(ONE_OBRA_REPORT, 0)).resolves.toBeNull();
+    expect(openObraPrintWindow(ONE_OBRA_REPORT, 0)).toBeNull();
+  });
+
+  it("waits for the new window's webfonts when it has them", async () => {
+    // The companion to the test above, whose stub omits `document.fonts` to
+    // exercise the guard. This one supplies a `fonts` whose `ready` is still
+    // pending, and asserts nothing prints until it settles — the reason the wait
+    // is there at all is that printing before DM Sans swaps in prints the
+    // fallback face.
+    let settle: () => void = () => undefined;
+    const ready = new Promise<void>((resolve) => {
+      settle = resolve;
+    });
+    const opened = fakeWindow() as ReturnType<typeof fakeWindow> & {
+      document: { fonts?: { ready: Promise<void> } };
+    };
+    opened.document.fonts = { ready };
+
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:with-fonts");
+    vi.spyOn(window, "open").mockReturnValue(opened as unknown as Window);
+
+    openObraPrintWindow(ONE_OBRA_REPORT, 0);
+    opened.fire("load");
+
+    await Promise.resolve();
+    expect(opened.print).not.toHaveBeenCalled();
+
+    settle();
+    await vi.waitFor(() => {
+      expect(opened.print).toHaveBeenCalledTimes(1);
+    });
   });
 });

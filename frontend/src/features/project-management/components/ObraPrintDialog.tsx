@@ -12,7 +12,8 @@ interface ObraPrintDialogProps {
   onSelect: (index: number) => void;
 }
 
-const FOCUSABLE = 'button, [href], [tabindex]:not([tabindex="-1"])';
+const FOCUSABLE =
+  'button:not([tabindex="-1"]), [href], [tabindex]:not([tabindex="-1"])';
 
 /**
  * APRAS-118 — the obra selector behind the public report's print control.
@@ -60,19 +61,21 @@ const ObraPrintDialog: React.FC<ObraPrintDialogProps> = ({
       if (event.key !== "Tab") return;
 
       const items = focusable();
-      if (items.length === 0) return;
       const first = items[0];
-      const last = items[items.length - 1];
-      const active = document.activeElement;
+      const last = items.at(-1);
+      // The panel always carries the close button, so both ends exist whenever
+      // the dialog is open; the narrowing is for the type, not for a case.
+      if (!first || !last) return;
 
       // The trap: only the two edges need handling, and a focus that escaped
       // the panel entirely is pulled back to the near edge.
-      if (event.shiftKey && (active === first || !panelRef.current?.contains(active))) {
+      const outside = !panelRef.current?.contains(document.activeElement);
+      const atEdge = event.shiftKey
+        ? document.activeElement === first
+        : document.activeElement === last;
+      if (atEdge || outside) {
         event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && (active === last || !panelRef.current?.contains(active))) {
-        event.preventDefault();
-        first.focus();
+        (event.shiftKey ? last : first).focus();
       }
     };
 
@@ -96,21 +99,32 @@ const ObraPrintDialog: React.FC<ObraPrintDialogProps> = ({
       aria-modal="true"
       aria-label={t("projects.publicReport.printTitle")}
       className="fixed inset-0 z-50 flex items-center justify-center"
-      onClick={onClose}
     >
       {/*
-        The scrim. `alert-modal.tsx` uses a raw black palette literal, logged as
+        The scrim, and a real `<button>` rather than a `<div onClick>`: the
+        click-outside affordance then needs no keyboard handler of its own and no
+        `stopPropagation` on the panel, because the panel is its sibling and not
+        its child. `tabIndex={-1}` keeps it out of the focus trap, which reads
+        the panel only — a blank full-screen tab stop would be worse than none.
+
+        Its colour: `alert-modal.tsx` uses a raw black palette literal, logged as
         a `GAP-OVERLAY` row; `project-management/` is a migrated directory and
         APRAS-85's guard denies new ones there, so this is the app's own
         background at 80% — which also dims correctly in both themes, where a
         fixed black does not. The literal is deliberately not written even in
         this comment: the guard scans source text, not JSX.
       */}
-      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
+      <button
+        type="button"
+        tabIndex={-1}
+        aria-label={t("projects.publicReport.printClose")}
+        onClick={onClose}
+        className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+      />
       <div
         ref={panelRef}
+        data-testid="obra-print-panel"
         className="relative z-10 w-full max-w-sm mx-4 bg-card rounded-xl border border-border shadow-xl p-5"
-        onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-3 flex items-start justify-between gap-3">
           <h3 className="text-base font-semibold text-foreground">

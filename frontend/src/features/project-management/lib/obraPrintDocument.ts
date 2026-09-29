@@ -169,12 +169,14 @@ const whenFontsReady = async (opened: Window): Promise<void> => {
  * and `blob:` in `script-src`; `frontend/vercel.json` ships no CSP today and
  * that is a fact which can change.
  *
- * Returns the opened window, or `null` when the popup was blocked.
+ * Returns the opened window, or `null` when the popup was blocked. Synchronous
+ * on purpose: the wait for the new window's `load` and its webfonts happens in
+ * the listener below, so there is nothing here for a caller to await.
  */
-export const openObraPrintWindow = async (
+export const openObraPrintWindow = (
   html: string,
   index: number,
-): Promise<Window | null> => {
+): Window | null => {
   const url = URL.createObjectURL(
     new Blob([buildObraPrintDocument(html, index)], { type: "text/html" }),
   );
