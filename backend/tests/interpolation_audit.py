@@ -37,6 +37,28 @@ function's parameter is safe only when *every* call site inside the module
 passes a safe argument, and a public function's parameters are always ``RAW``
 because callers outside the module are not visible here. Both directions of
 that rule are pessimistic.
+
+**What it does not track**, so that nobody reads the paragraph above as a
+guarantee it is not:
+
+* **subscript and attribute assignment targets.** ``parts[0] = stored`` and
+  ``obj.field = stored`` bind nothing this analysis sees, so a container
+  proven safe stays safe after one;
+* **cross-function mutation.** A callee appending to a list its caller passed
+  in is invisible; only ``name.append(...)`` inside the same function binds;
+* **``**payload`` call sites.** :meth:`_Audit._callsites` maps arguments to
+  parameters by position and by keyword name, so a call that splats a mapping
+  contributes nothing and the parameter is judged on the other call sites
+  alone;
+* **module-scope containers written at runtime.** A module-level ``dict``
+  filled by subscript after import is still treated as import-time data;
+* **``strftime``/``isoformat`` on a non-date receiver.** They are safe by
+  method name, not by the receiver's type.
+
+Each needs contorted code that this module does not contain, which is why they
+are recorded rather than fixed -- but every one of them is a way to reach
+``SAFE`` with a stored string, and a future renderer written in any of those
+shapes gets no protection from this file.
 """
 
 from __future__ import annotations
@@ -49,11 +71,22 @@ from dataclasses import dataclass
 #: The module's escaper. A call to it is what ``ESCAPED`` means.
 ESCAPER = "_e"
 
-#: Builtins whose result cannot be storage text: numeric coercions, sizes and
-#: ordering. ``str`` is **not** here -- ``str(stored)`` is exactly the hole.
+#: Builtins whose result cannot be storage text **whatever they are given**:
+#: numeric coercions and sizes. ``str`` is not here -- ``str(stored)`` is
+#: exactly the hole -- and neither are ``max``/``min``/``sorted``, which are
+#: :data:`ELEMENT_SELECTORS` below.
 SAFE_CALLABLES = frozenset(
-    {"len", "float", "int", "abs", "round", "max", "min", "sum", "bool", "Decimal"}
+    {"len", "float", "int", "abs", "round", "sum", "bool", "Decimal"}
 )
+
+#: Builtins that **return one of their arguments**, or a rearrangement of
+#: them, rather than converting anything: over stored text they answer stored
+#: text. ``max(update.created_at for update in updates)`` is a real line of the
+#: audited module, so ``f"{max(u.title for u in updates)}"`` is one edit away
+#: -- and while these three sat in :data:`SAFE_CALLABLES` it audited ``SAFE``.
+#: They are routed through the composite rule instead: safe exactly when every
+#: argument is.
+ELEMENT_SELECTORS = frozenset({"max", "min", "sorted"})
 
 #: Methods safe on any receiver. ``strftime``/``isoformat`` answer a date
 #: stamp; ``join`` is handled separately because its safety is its arguments'.
@@ -314,6 +347,8 @@ class _Audit:
         assert isinstance(node, ast.Call)
         func = node.func
         if isinstance(func, ast.Name):
+            if func.id in ELEMENT_SELECTORS:
+                return self._arguments_safe(node, scope, node.args)
             return (
                 func.id == ESCAPER
                 or func.id in SAFE_CALLABLES

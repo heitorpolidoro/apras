@@ -65,11 +65,22 @@ assertion here is deliberately *not* about `_e` at all --
 that site's real defence is `urls.public_tenant_logo_url`'s `quote()` and
 saying otherwise would repeat exactly that mistake.
 
-The audit's own pessimism is pinned too, by three synthetic modules rather
-than by prose: two false-`SAFE` shapes shipped past the single synthetic case
-this module opened with -- a helper that `yield`s, whose returns were
-vacuously safe, and a local shadowing a module-scope name -- so each rule now
-has a case that fails when its rule is removed.
+The audit's own pessimism is pinned too, by **five** synthetic modules rather
+than by prose, one per rule. This module opened with one, the plain attribute
+read, and four false-`SAFE` shapes have since been found past it: a helper
+that `yield`s, whose returns were vacuously safe; a local shadowing a
+module-scope name; a local trusted for its annotation over its binding; and
+`max`/`min`/`sorted`, which return one of their arguments rather than
+converting anything. Every one of those rules now has a case that goes red
+when the rule is removed, checked by re-introducing each old behaviour in
+full -- the fourth taught that reverting a rule which lives in two places
+(a set membership *and* a dispatch branch) has to revert both, or the revert
+proves nothing.
+
+`tests/interpolation_audit.py` also records, in its own docstring, the shapes
+it does **not** track. Two of the four false-`SAFE` findings were shapes the
+prose had implicitly claimed; a list of the known gaps is the cheapest thing
+that stops the next reader assuming there are none.
 
 `tests/data/obras_stage_detail_fixture.json` is a real extract pinned by
 APRAS-114 against literal names and counts, so, following APRAS-115, the
@@ -353,6 +364,14 @@ def test_the_audit_sees_the_whole_module_and_not_a_handful():
     audit that walked nothing satisfies all of them. This pins the shape of
     the inventory instead: three figures, and one named site of each verdict.
 
+    **Where the `escaped` cross-check has teeth is the scope difference, not
+    the predicate.** The two counts run near-identical predicates over one
+    AST, so it is worth saying what that can catch: `audit` walks the module's
+    **top-level** functions, while `escape_calls_at_interpolations` walks the
+    whole tree, so a renderer moved into a class or a nested `def` -- a
+    refactor nobody would think of as touching escaping -- drops out of the
+    audit's inventory and shows up here as an inequality.
+
     *Fails if:* the AST walk stops finding f-strings -- a renamed module, a
     renderer moved out of module scope, a parse the audit silently swallows.
     """
@@ -495,6 +514,81 @@ def _render(project):
 
     assert verdicts["html"] == RAW
     assert verdicts["PREFIX"] == SAFE
+
+
+def test_the_audit_does_not_trust_a_builtin_that_returns_its_argument():
+    """ER8, shape 4 of 5: `max`/`min`/`sorted` are selectors, not coercions.
+
+    `len`, `float` and `int` answer a number whatever they are handed;
+    `max`, `min` and `sorted` hand **one of their arguments back**, so over
+    stored text they answer stored text. While they sat among the numeric
+    coercions, both interpolations below audited `SAFE` -- and this is not a
+    contrived shape: `project_report_service.py:1376` already reads
+    `max(update.created_at for update in updates)`, so the hostile form is one
+    edit away rather than hypothetical.
+
+    The numeric use is asserted too. These three are now routed through the
+    composite rule -- safe exactly when every argument is -- rather than
+    dropped, so `{max(a, b):.1f}` over two floats has to stay `SAFE` or the
+    fix would be a blunt demotion that the real module would then have to
+    declare an exemption for.
+
+    *Fails if:* `max`/`min`/`sorted` are moved back into `SAFE_CALLABLES`, or
+    `ELEMENT_SELECTORS` stops reaching `_arguments_safe`.
+    """
+    source = """
+import html
+
+
+def _e(value):
+    return html.escape("" if value is None else str(value))
+
+
+def _render(project, updates, low: float, high: float):
+    return (
+        f'<p>{min(project.title, project.description)}</p>'
+        f'<p>{max(update.title for update in updates)}</p>'
+        f'<i>{max(low, high):.1f}</i>'
+    )
+"""
+    verdicts = {item.expression: item.verdict for item in audit(ast.parse(source))}
+
+    assert verdicts["min(project.title, project.description)"] == RAW
+    # `ast.unparse` parenthesises a lone generator argument.
+    assert verdicts["max((update.title for update in updates))"] == RAW
+    assert verdicts["max(low, high)"] == SAFE
+
+
+def test_the_audit_believes_a_local_binding_over_its_annotation():
+    """ER9, shape 5 of 5: an annotation is a claim, the binding is the value.
+
+    **This is the case whose absence made a docstring lie.** The revision that
+    reordered `_name_safe` documented checking bindings *before* a name's
+    annotation as load-bearing, and reported both `_name_safe` changes as
+    confirmed by re-introducing the old behaviour. Only the locals-first half
+    was ever tested: swapping these two blocks back left the suite green at 36
+    passed, and the module below audited `SAFE`. A prose claim about the
+    audit's pessimism that no test holds up is worse than no claim, because it
+    stops the next reader checking -- which is this task's whole subject.
+
+    *Fails if:* `_name_safe` consults `self.annotations` before
+    :meth:`_bindings_safe`.
+    """
+    source = """
+import html
+
+
+def _e(value):
+    return html.escape("" if value is None else str(value))
+
+
+def _render(project):
+    count: int = project.title
+    return f'<p>{count}</p>'
+"""
+    verdicts = {item.expression: item.verdict for item in audit(ast.parse(source))}
+
+    assert verdicts["count"] == RAW
 
 
 @pytest.mark.parametrize("index", range(len(escape_call_sites(TREE))))
