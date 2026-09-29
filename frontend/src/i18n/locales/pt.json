@@ -893,6 +893,10 @@
     "publicReport": {
       "title": "Relatório de Obras",
       "openForPrinting": "Abrir para impressão",
+      "printTitle": "Imprimir uma obra",
+      "printDescription": "Escolha a obra que será impressa. Uma por vez.",
+      "printEmpty": "Nenhuma obra publicada neste condomínio.",
+      "printClose": "Fechar",
       "unavailable": "Relatório indisponível",
       "unavailableMessage": "Este condomínio não tem relatório de obras publicado, ou o link não é válido."
     }

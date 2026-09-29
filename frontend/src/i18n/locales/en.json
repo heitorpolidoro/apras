@@ -893,6 +893,10 @@
     "publicReport": {
       "title": "Construction report",
       "openForPrinting": "Open for printing",
+      "printTitle": "Print one project",
+      "printDescription": "Choose the project to print. One at a time.",
+      "printEmpty": "No project published for this condominium.",
+      "printClose": "Close",
       "unavailable": "Report unavailable",
       "unavailableMessage": "This condominium has no published construction report, or the link is not valid."
     }
