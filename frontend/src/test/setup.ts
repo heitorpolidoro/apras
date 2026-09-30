@@ -1,4 +1,10 @@
-import "@testing-library/jest-dom";
+// The `/vitest` entry point, not the bare one: the bare import augments Jest's
+// `expect`, and Vitest 4 happened to pick that up. Vitest 5 does not, so every
+// `toBeInTheDocument` and friend became a type error -- 1489 of them across 108
+// files -- while the tests themselves still passed, because the matchers were
+// registered at runtime either way. `npm run build` runs `tsc`, so only the
+// build caught it.
+import "@testing-library/jest-dom/vitest";
 import { vi } from "vitest";
 import pt from "../i18n/locales/pt.json";
 
