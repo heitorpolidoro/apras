@@ -21,17 +21,16 @@ This module pins all three layers, from the inside out:
 """
 
 import pytest
-from fastapi import status
-from fastapi.testclient import TestClient
-from pydantic import ValidationError
-from sqlmodel import Session
-
 from app.core import security
 from app.core.password_policy import BCRYPT_MAX_PASSWORD_BYTES
 from app.models.user import User
 from app.schemas.invitation import InvitationAcceptRequest
 from app.schemas.token import ResetPasswordRequest
 from app.schemas.user import UserCreate
+from fastapi import status
+from fastapi.testclient import TestClient
+from pydantic import ValidationError
+from sqlmodel import Session
 
 #: A valid password of exactly `BCRYPT_MAX_PASSWORD_BYTES` bytes: the limit is
 #: inclusive, and a test that only proves rejection above it would also pass if

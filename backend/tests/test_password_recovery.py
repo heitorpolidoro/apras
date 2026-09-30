@@ -1,9 +1,8 @@
+from app.core import security
+from app.models.user import User
 from fastapi import status
 from fastapi.testclient import TestClient
 from sqlmodel import Session
-
-from app.core import security
-from app.models.user import User
 
 
 def test_forgot_password_flow(client: TestClient, normal_user: User):

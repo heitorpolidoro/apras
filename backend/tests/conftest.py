@@ -4,9 +4,6 @@ import uuid
 from pathlib import Path
 
 import pytest
-from fastapi.testclient import TestClient
-from sqlmodel import Session, SQLModel, StaticPool, create_engine, select
-
 from app.core.security import get_password_hash, password_hasher
 from app.core.tenant_context import REQUEST_SCOPED_KEY
 from app.db import get_session
@@ -20,6 +17,8 @@ from app.models.tenant import (
     UserTenantLink,
 )
 from app.models.user import User
+from fastapi.testclient import TestClient
+from sqlmodel import Session, SQLModel, StaticPool, create_engine, select
 
 # Disable rate limiting for tests
 app.state.limiter.enabled = False
