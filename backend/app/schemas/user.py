@@ -12,6 +12,7 @@ from pydantic import (
     field_validator,
 )
 
+from app.core.password_policy import BCRYPT_MAX_PASSWORD_BYTES
 from app.schemas.role import RoleRead
 from app.schemas.tenant import TenantMembershipSummary
 
@@ -60,14 +61,29 @@ def normalize_cpf(value: str) -> str:
 
 
 def validate_password_strength(value: str) -> str:
-    """The one password rule: 8+ characters with a letter, a digit and a symbol.
+    """The one password rule: 8+ characters with a letter, a digit and a symbol,
+    and no more of them than bcrypt can hash.
 
     Shared for the same reason as `normalize_cpf`: a second copy of the rule
     is a second rule, and the weaker of the two is the one that decides.
+
+    The ceiling is bcrypt's 72-byte key schedule, imported rather than restated
+    so the number cannot drift from the hasher that enforces it. It is measured
+    in UTF-8 **bytes**, not characters: 72 accented characters are 144 bytes, so
+    a character count would let a password through that `get_password_hash`
+    then refuses. Before this check existed, bcrypt 4 truncated silently and two
+    passwords differing only after byte 72 were the same credential -- both
+    hashed alike and both verified; under bcrypt 5 the same input is a
+    `ValueError` out of the hasher, i.e. a 500. A 422 here is the only answer
+    that is neither.
     """
     if len(value) < PASSWORD_MIN_LENGTH:
         raise ValueError(
             f"Password must have at least {PASSWORD_MIN_LENGTH} characters"
+        )
+    if len(value.encode("utf-8")) > BCRYPT_MAX_PASSWORD_BYTES:
+        raise ValueError(
+            f"Password must have at most {BCRYPT_MAX_PASSWORD_BYTES} bytes"
         )
     if not re.search(r"[A-Za-z]", value):
         raise ValueError("Password must contain at least one letter")
@@ -89,7 +105,15 @@ class UserCreate(UserBase):
     """The one account-minting body. Signup posts it; the invitation accept
     path (APRAS-71) builds it, so neither can create what the other refuses."""
 
-    password: str = Field(..., min_length=PASSWORD_MIN_LENGTH)
+    password: str = Field(
+        ...,
+        min_length=PASSWORD_MIN_LENGTH,
+        # Characters, where `validate_password_strength` counts bytes: a
+        # string of 72 bytes is at most 72 characters, so this rejects
+        # nothing the byte rule allows. It is here to put the ceiling in
+        # the OpenAPI schema, and to bound the input before the validator.
+        max_length=BCRYPT_MAX_PASSWORD_BYTES,
+    )
     cpf: str
 
     @field_validator("cpf")

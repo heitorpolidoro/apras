@@ -28,8 +28,11 @@ def test_reset_password_flow(client: TestClient, session: Session, normal_user: 
     # Generate valid reset token
     token = security.create_password_reset_token(normal_user.email)
 
-    # Reset password using the valid token
-    new_password = "new_secret_password!"
+    # Reset password using the valid token. The password now has to satisfy
+    # `validate_password_strength`: `ResetPasswordRequest` applies `UserCreate`'s
+    # rule, where it used to declare a bare `str` and apply nothing at all (see
+    # tests/test_password_length_limit.py).
+    new_password = "NewSecretPassword123!"
     response = client.post(
         "/api/v1/auth/reset-password",
         json={"token": token, "new_password": new_password},
@@ -44,7 +47,12 @@ def test_reset_password_flow(client: TestClient, session: Session, normal_user: 
     # Test resetting with an invalid/expired token
     response = client.post(
         "/api/v1/auth/reset-password",
-        json={"token": "invalid_or_expired_token", "new_password": "some_password"},
+        json={
+            # Valid against the password rule on purpose: the 400 below must be
+            # the token's doing, not a 422 from the body.
+            "token": "invalid_or_expired_token",
+            "new_password": "SomePassword123!",
+        },
     )
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert "inválido" in response.json()["detail"].lower()
