@@ -5,19 +5,19 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "alembic>=1.18.4",
+    "alembic>=1.20.0",
     "bcrypt<4.1.0",
     "email-validator>=2.3.0",
-    "fastapi>=0.136.0",
+    "fastapi>=0.141.1",
     "passlib[bcrypt]>=1.7.4",
     "pillow>=11.0.0",
-    "psycopg2-binary>=2.9.11",
+    "psycopg2-binary>=2.9.13",
     "pydantic-settings>=2.14.2",
-    "pyjwt>=2.10.1",
+    "pyjwt>=2.15.0",
     "python-multipart>=0.0.31",
-    "slowapi>=0.1.9",
-    "sqlmodel>=0.0.38",
-    "uvicorn>=0.44.0",
+    "slowapi>=0.1.10",
+    "sqlmodel>=0.0.47",
+    "uvicorn>=0.54.0",
     "httpx>=0.28.1",
     "qrcode>=8.2",
 ]
@@ -25,7 +25,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "httpx>=0.28.1",
-    "pytest>=9.0.3",
+    "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
     # Reads `pytest.ini`'s `timeout` / `timeout_method`. Without it those two
     # settings are an "Unknown config option" warning and nothing else, which
