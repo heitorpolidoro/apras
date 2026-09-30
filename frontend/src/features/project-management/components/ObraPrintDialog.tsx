@@ -49,7 +49,9 @@ const ObraPrintDialog: React.FC<ObraPrintDialogProps> = ({
         : null;
 
     const focusable = (): HTMLElement[] =>
-      Array.from(panelRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? []);
+      Array.from(
+        panelRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [],
+      );
 
     focusable()[0]?.focus();
 

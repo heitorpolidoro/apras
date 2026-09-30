@@ -82,8 +82,9 @@ describe("buildObraPrintDocument", () => {
     // `details.all:not([open])>.inner { display:block }`, so the section the
     // screen shows collapsed at 15.0mm prints expanded at 1771mm. Without this
     // half the absence below would pass on a fixture that never had it.
-    expect(parse(TWO_OBRA_REPORT).querySelectorAll("details.all").length)
-      .toBeGreaterThan(0);
+    expect(
+      parse(TWO_OBRA_REPORT).querySelectorAll("details.all").length,
+    ).toBeGreaterThan(0);
 
     const built = parse(buildObraPrintDocument(TWO_OBRA_REPORT, 1));
     expect(built.querySelectorAll("details.all")).toHaveLength(0);
@@ -117,9 +118,7 @@ describe("buildObraPrintDocument", () => {
     // before: the appended class, a surviving `page brk`, and any adjacent
     // `.page` sibling.
     const broken = Array.from(
-      built.querySelectorAll(
-        `.${PRINT_BREAK_CLASS}, .page.brk, .page + .page`,
-      ),
+      built.querySelectorAll(`.${PRINT_BREAK_CLASS}, .page.brk, .page + .page`),
     );
     expect(broken).toHaveLength(1);
     expect(broken[0]).toBe(budget);

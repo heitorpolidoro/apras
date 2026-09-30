@@ -86,9 +86,7 @@ describe("PublicObrasReportPage", () => {
     it("is a button, not a link to the API host", async () => {
       const { container } = renderAt("altos-da-serra");
 
-      await waitFor(() =>
-        screen.getByRole("button", { name: /impress/i }),
-      );
+      await waitFor(() => screen.getByRole("button", { name: /impress/i }));
       expect(
         screen.queryByRole("link", { name: /impress/i }),
       ).not.toBeInTheDocument();

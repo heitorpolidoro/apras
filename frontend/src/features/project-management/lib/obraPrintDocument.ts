@@ -114,14 +114,15 @@ export const buildObraPrintDocument = (html: string, index: number): string => {
   for (const detail of Array.from(page.querySelectorAll("details.all"))) {
     detail.remove();
   }
-  page.querySelector(".budget-col")?.closest("section")
+  page
+    .querySelector(".budget-col")
+    ?.closest("section")
     ?.classList.add(PRINT_BREAK_CLASS);
 
   const head = report.head.cloneNode(true) as HTMLElement;
   const breakRule = report.createElement("style");
   // Appended, never an `@page`: the sheet size stays the one the clone brought.
-  breakRule.textContent =
-    `.${PRINT_BREAK_CLASS} { break-before:page; page-break-before:always; }`;
+  breakRule.textContent = `.${PRINT_BREAK_CLASS} { break-before:page; page-break-before:always; }`;
   head.append(breakRule);
 
   return (

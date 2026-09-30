@@ -66,9 +66,7 @@ const withStageDetail = (page: string): string => {
         "the stages section; the APRAS-118 fixture cannot place `details.all`.",
     );
   }
-  return (
-    page.slice(0, sectionEnd) + STAGE_DETAIL_HTML + page.slice(sectionEnd)
-  );
+  return page.slice(0, sectionEnd) + STAGE_DETAIL_HTML + page.slice(sectionEnd);
 };
 
 const replaceOnce = (html: string, from: string, to: string): string => {
@@ -90,7 +88,7 @@ const PAGE_ONE = withStageDetail(baselinePage);
 const PAGE_TWO = replaceOnce(
   replaceOnce(
     replaceOnce(PAGE_ONE, '<div class="page">', '<div class="page brk">'),
-    "<h1 class=\"serif\">Sede Social — Reforma</h1>",
+    '<h1 class="serif">Sede Social — Reforma</h1>',
     '<h1 class="serif">Portarias — Ampliação</h1>',
   ),
   '<span class="kicker">Obra 01 • Edificação</span>',
@@ -138,6 +136,5 @@ export const OBRA_TWO_KIND = "Reforma";
  * than written: the absence criterion compares the built document's count
  * against this, so an injected rule shows up as a difference.
  */
-export const FIXTURE_HEAD_AT_PAGE_COUNT = (
-  stylesheet.match(/@page/g) ?? []
-).length;
+export const FIXTURE_HEAD_AT_PAGE_COUNT = (stylesheet.match(/@page/g) ?? [])
+  .length;
