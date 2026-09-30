@@ -114,29 +114,115 @@ const ROWS: readonly Row[] = [
   // §1d — neutral text.
   { source: "text-slate-900", target: "text-foreground", dL: 6.8, dE: 8.2 },
   { source: "text-gray-900", target: "text-foreground", dL: 7.0, dE: 7.95 },
-  { source: "text-slate-600", target: "text-muted-foreground", dL: 8.4, dE: 9.76 },
-  { source: "text-gray-600", target: "text-muted-foreground", dL: 8.4, dE: 9.22 },
-  { source: "text-slate-500", target: "text-muted-foreground", dL: 2.4, dE: 5.77 },
-  { source: "text-gray-500", target: "text-muted-foreground", dL: 2.1, dE: 4.29 },
-  { source: "text-slate-400", target: "text-muted-foreground", dL: 17.4, dE: 18.02 },
-  { source: "text-gray-400", target: "text-muted-foreground", dL: 17.7, dE: 18.0 },
-  { source: "text-white", target: "text-primary-foreground", dL: 85.0, dE: 85.02 },
-  { source: "text-white", target: "text-destructive-foreground", dL: 2.0, dE: 2.0 },
+  {
+    source: "text-slate-600",
+    target: "text-muted-foreground",
+    dL: 8.4,
+    dE: 9.76,
+  },
+  {
+    source: "text-gray-600",
+    target: "text-muted-foreground",
+    dL: 8.4,
+    dE: 9.22,
+  },
+  {
+    source: "text-slate-500",
+    target: "text-muted-foreground",
+    dL: 2.4,
+    dE: 5.77,
+  },
+  {
+    source: "text-gray-500",
+    target: "text-muted-foreground",
+    dL: 2.1,
+    dE: 4.29,
+  },
+  {
+    source: "text-slate-400",
+    target: "text-muted-foreground",
+    dL: 17.4,
+    dE: 18.02,
+  },
+  {
+    source: "text-gray-400",
+    target: "text-muted-foreground",
+    dL: 17.7,
+    dE: 18.0,
+  },
+  {
+    source: "text-white",
+    target: "text-primary-foreground",
+    dL: 85.0,
+    dE: 85.02,
+  },
+  {
+    source: "text-white",
+    target: "text-destructive-foreground",
+    dL: 2.0,
+    dE: 2.0,
+  },
 
   // §1e — brand, accent and destructive.
   { source: "bg-indigo-500", target: "bg-primary", dL: 3.5, dE: 33.15 },
-  { source: "text-indigo-500", target: "text-primary-text", dL: 6.5, dE: 30.66 },
+  {
+    source: "text-indigo-500",
+    target: "text-primary-text",
+    dL: 6.5,
+    dE: 30.66,
+  },
   { source: "border-indigo-500", target: "border-primary", dL: 3.5, dE: 33.15 },
   { source: "ring-indigo-500", target: "ring-ring", dL: 3.5, dE: 33.15 },
   { source: "bg-indigo-600", target: "bg-primary", dL: 10.9, dE: 37.24 },
-  { source: "text-indigo-600", target: "text-primary-text", dL: 0.9, dE: 32.71 },
-  { source: "border-indigo-600", target: "border-primary", dL: 10.9, dE: 37.24 },
-  { source: "accent-indigo-600", target: "accent-primary-foreground", dL: 36.1, dE: 45.18 },
-  { source: "bg-indigo-700", target: "bg-primary/90", dL: 16.3, dE: 37.33, alpha: 90 },
-  { source: "text-indigo-700", target: "text-primary-text", dL: 6.3, dE: 31.25 },
-  { source: "text-indigo-800", target: "text-primary-text", dL: 12.2, dE: 29.11 },
-  { source: "text-indigo-900", target: "text-primary-text", dL: 16.1, dE: 27.2 },
-  { source: "text-indigo-300", target: "text-primary-text", dL: 26.5, dE: 32.58 },
+  {
+    source: "text-indigo-600",
+    target: "text-primary-text",
+    dL: 0.9,
+    dE: 32.71,
+  },
+  {
+    source: "border-indigo-600",
+    target: "border-primary",
+    dL: 10.9,
+    dE: 37.24,
+  },
+  {
+    source: "accent-indigo-600",
+    target: "accent-primary-foreground",
+    dL: 36.1,
+    dE: 45.18,
+  },
+  {
+    source: "bg-indigo-700",
+    target: "bg-primary/90",
+    dL: 16.3,
+    dE: 37.33,
+    alpha: 90,
+  },
+  {
+    source: "text-indigo-700",
+    target: "text-primary-text",
+    dL: 6.3,
+    dE: 31.25,
+  },
+  {
+    source: "text-indigo-800",
+    target: "text-primary-text",
+    dL: 12.2,
+    dE: 29.11,
+  },
+  {
+    source: "text-indigo-900",
+    target: "text-primary-text",
+    dL: 16.1,
+    dE: 27.2,
+  },
+  {
+    source: "text-indigo-300",
+    target: "text-primary-text",
+    dL: 26.5,
+    dE: 32.58,
+  },
   { source: "border-indigo-400", target: "border-primary", dL: 5.3, dE: 28.84 },
   { source: "bg-indigo-50", target: "bg-accent", dL: 0.2, dE: 2.38 },
   { source: "bg-indigo-100", target: "bg-accent", dL: 3.0, dE: 4.92 },
@@ -144,15 +230,31 @@ const ROWS: readonly Row[] = [
   { source: "border-indigo-100", target: "border-border", dL: 1.0, dE: 4.02 },
   { source: "border-indigo-200", target: "border-border", dL: 5.0, dE: 8.58 },
   { source: "bg-emerald-500", target: "bg-primary", dL: 7.6, dE: 7.89 },
-  { source: "text-emerald-500", target: "text-primary-text", dL: 17.6, dE: 18.6 },
+  {
+    source: "text-emerald-500",
+    target: "text-primary-text",
+    dL: 17.6,
+    dE: 18.6,
+  },
   { source: "border-emerald-500", target: "border-primary", dL: 7.6, dE: 7.89 },
   { source: "ring-emerald-500", target: "ring-ring", dL: 7.6, dE: 7.89 },
   { source: "bg-emerald-600", target: "bg-primary", dL: 2.4, dE: 2.59 },
   { source: "text-emerald-600", target: "text-primary-text", dL: 7.6, dE: 8.4 },
   { source: "border-emerald-600", target: "border-primary", dL: 2.4, dE: 2.59 },
   { source: "ring-emerald-600", target: "ring-ring", dL: 2.4, dE: 2.59 },
-  { source: "bg-emerald-700", target: "bg-primary/90", dL: 11.2, dE: 11.72, alpha: 90 },
-  { source: "text-emerald-700", target: "text-primary-text", dL: 1.2, dE: 1.82 },
+  {
+    source: "bg-emerald-700",
+    target: "bg-primary/90",
+    dL: 11.2,
+    dE: 11.72,
+    alpha: 90,
+  },
+  {
+    source: "text-emerald-700",
+    target: "text-primary-text",
+    dL: 1.2,
+    dE: 1.82,
+  },
   { source: "text-red-600", target: "text-destructive", dL: 0.3, dE: 0.6 },
   { source: "bg-red-600", target: "bg-destructive", dL: 0.3, dE: 0.6 },
   { source: "text-red-500", target: "text-destructive", dL: 5.7, dE: 5.75 },
@@ -284,7 +386,8 @@ const lab = (colour: Oklch): [number, number, number] => [
   colour.c * 100 * Math.sin((colour.h * Math.PI) / 180),
 ];
 
-const deltaL = (from: Oklch, to: Oklch): number => Math.abs(lab(from)[0] - lab(to)[0]);
+const deltaL = (from: Oklch, to: Oklch): number =>
+  Math.abs(lab(from)[0] - lab(to)[0]);
 
 const deltaE = (from: Oklch, to: Oklch): number => {
   const [l1, a1, b1] = lab(from);
@@ -360,7 +463,21 @@ const build = async (candidates: readonly string[]): Promise<Sheet> => {
 
   const rule = (className: string): Rule => {
     const selector = `.${escapeClass(className)}`;
-    const found = parsed.find((candidate) => candidate.selector === selector);
+    // Tailwind does not always emit a bare `.class` selector: since 4.3 the
+    // `divide-*` utilities arrive as `:where(.divide-x > :not(:last-child))`.
+    // The shape is Tailwind's business; what this suite measures is the colour
+    // the utility resolves to. So accept either, while still requiring the
+    // class to appear as a whole token -- a substring match would let
+    // `.divide-slate-200` be answered by a rule for `.divide-slate-2000`.
+    const token = new RegExp(
+      `\\.${escapeClass(className).replace(/[\\^$*+?.()|[\\]{}]/g, "\\$&")}(?![\\w-])`,
+    );
+    const found = parsed.find(
+      (candidate) =>
+        candidate.selector === selector ||
+        (candidate.selector.startsWith(":where(") &&
+          token.test(candidate.selector)),
+    );
     if (found === undefined) {
       throw new Error(`Tailwind emitted no rule for ${className}`);
     }
@@ -503,23 +620,25 @@ describe("§1k, the brand text token (APRAS-88)", () => {
     for (const source of BRAND_TEXT_CLASSES) {
       const rows = ROWS.filter((row) => row.source === source);
 
-      expect(rows.map((row) => row.target), source).toEqual([
-        "text-primary-text",
-      ]);
+      expect(
+        rows.map((row) => row.target),
+        source,
+      ).toEqual(["text-primary-text"]);
     }
   });
 
   it("leaves every non-text brand utility on *-primary", () => {
     // The other half of §1k: `bg-`, `border-`, `ring-` and `accent-` are
     // graphical objects at a 3:1 floor and do not move.
-    const graphical = ROWS.filter(
-      (row) =>
-        /^(bg|border|ring|accent)-(indigo|emerald)-[567]00$/.test(row.source),
+    const graphical = ROWS.filter((row) =>
+      /^(bg|border|ring|accent)-(indigo|emerald)-[567]00$/.test(row.source),
     );
 
     expect(graphical.length).toBe(14);
     for (const row of graphical) {
-      expect(row.target, row.source).toMatch(/^(bg|border|ring|accent)-(primary|ring)/);
+      expect(row.target, row.source).toMatch(
+        /^(bg|border|ring|accent)-(primary|ring)/,
+      );
       expect(row.target).not.toContain("primary-text");
     }
   });

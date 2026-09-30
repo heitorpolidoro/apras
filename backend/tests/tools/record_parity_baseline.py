@@ -99,6 +99,10 @@ def _git(*args: str) -> str:
         capture_output=True,
         text=True,
         check=True,
+        # Bounded like every other `subprocess.run` in the test tree: a `git`
+        # that stops to prompt (a credential helper, a pager) with its output
+        # captured would otherwise hang the recorder with nothing on screen.
+        timeout=60,
     ).stdout
 
 

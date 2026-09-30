@@ -13,7 +13,7 @@ dependencies = [
     "pillow>=11.0.0",
     "psycopg2-binary>=2.9.11",
     "pydantic-settings>=2.14.2",
-    "pyjwt>=2.10.1",
+    "pyjwt>=2.15.0",
     "python-multipart>=0.0.31",
     "slowapi>=0.1.9",
     "sqlmodel>=0.0.38",
@@ -27,6 +27,10 @@ dev = [
     "httpx>=0.28.1",
     "pytest>=9.0.3",
     "pytest-cov>=7.1.0",
+    # Reads `pytest.ini`'s `timeout` / `timeout_method`. Without it those two
+    # settings are an "Unknown config option" warning and nothing else, which
+    # is why `tests/test_suite_hygiene.py` asserts this line exists.
+    "pytest-timeout>=2.4.0",
     # Exact, never `>=`: ruff's rule set and its formatter both move between
     # minor releases, and the one thing the `backend-lint` gate must not do is
     # fail on a change that did not cause it. Bumping ruff is a deliberate

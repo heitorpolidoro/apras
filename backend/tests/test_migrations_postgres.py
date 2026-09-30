@@ -60,6 +60,11 @@ from app.services.tenant_service import LEGACY_ROLE_NAMES
 TEST_POSTGRES_URL = os.environ.get("TEST_POSTGRES_URL")
 _BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+#: The ceiling on one ``alembic`` invocation. Generous by ~30x: the whole
+#: module, which runs the migration twice for 16 of its cases, is a couple of
+#: minutes. See :func:`_alembic`.
+_ALEMBIC_TIMEOUT = 300
+
 #: The head, and the root, spelled once each: a task that adds a third
 #: revision appends to :data:`EXPECTED_HISTORY` and moves
 #: :data:`HEAD_REVISION` rather than hunting for literals.
@@ -135,6 +140,13 @@ def _alembic(*args: str) -> subprocess.CompletedProcess:
         capture_output=True,
         text=True,
         check=False,
+        # A hung `alembic` is what this job's `timeout-minutes` note already
+        # names as the thing it guards against, and it guards against it by
+        # *cancelling* the job -- which publishes no logs. Bounded here, a
+        # wedged migration is a `TimeoutExpired` naming the argv instead.
+        # Steady state for the whole module is a couple of minutes over ~40
+        # invocations.
+        timeout=_ALEMBIC_TIMEOUT,
     )
 
 
