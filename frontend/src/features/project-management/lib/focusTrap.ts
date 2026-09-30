@@ -18,8 +18,9 @@
  * Note `items[items.length - 1]` and not `items.at(-1)`: `at` is typed
  * `T | undefined` whatever the index, which is what forced the original
  * `if (!first || !last) return` — a guard for the type, not for a case, and one
- * that could never be false. Indexing is typed `T` under this project's
- * `tsconfig`, so after the emptiness check there is nothing left to narrow.
+ * that could never be false. Plain indexing is typed `T` here, because
+ * `noUncheckedIndexedAccess` is not part of `strict`, so after the two guards
+ * there is nothing left to narrow.
  */
 
 /**
@@ -53,18 +54,35 @@ export const cycleTabWithin = (
   panel: HTMLElement | null,
 ): HTMLElement | null => {
   const items = focusableWithin(panel);
-  if (items.length === 0) return null;
+  // One guard, and emptiness is the whole of it: `focusableWithin(null)` is
+  // already empty, so a missing panel arrives here as an empty list. The
+  // `panel === null` half is for the type checker alone -- `strictNullChecks` is
+  // on, because TypeScript 6 enables `strict` by default even though this
+  // tsconfig never says so. It is deliberately *not* written as a separate
+  // guard: splitting it produced a branch that no mutation could redden, which
+  // is this repository's most common defect. Null is pinned where it is actually
+  // handled, in `focusableWithin`'s own case.
+  //
+  // Past here `panel` is usable unguarded, so nothing below needs optional
+  // chaining, and indexing `items` needs no narrowing either --
+  // `noUncheckedIndexedAccess` is not part of `strict`.
+  if (panel === null || items.length === 0) return null;
 
-  const first = items[0];
-  const last = items[items.length - 1];
+  // One conditional, not three: the pair is `[where focus re-enters, the edge
+  // it leaves from]`. Tab leaves the last control and re-enters at the first;
+  // Shift+Tab is exactly the mirror. With a single control it is both, which is
+  // what a one-button dialog needs -- the trap may never release focus to the
+  // page behind it.
+  const [reentry, edge] = event.shiftKey
+    ? [items[items.length - 1], items[0]]
+    : [items[0], items[items.length - 1]];
 
-  const active = panel?.ownerDocument.activeElement ?? null;
-  const outside = !panel?.contains(active);
-  const atEdge = event.shiftKey ? active === first : active === last;
-  if (!atEdge && !outside) return null;
+  // Focus that escaped the panel is treated as being at the edge, so the next
+  // Tab comes back in rather than walking the rest of the page.
+  const active = panel.ownerDocument.activeElement;
+  if (active !== edge && panel.contains(active)) return null;
 
-  const target = event.shiftKey ? last : first;
   event.preventDefault();
-  target.focus();
-  return target;
+  reentry.focus();
+  return reentry;
 };

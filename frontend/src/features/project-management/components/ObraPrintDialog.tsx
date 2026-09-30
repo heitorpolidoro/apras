@@ -39,7 +39,11 @@ const ObraPrintDialog: React.FC<ObraPrintDialogProps> = ({
   const panelRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
-    if (!open) return;
+    // `undefined` and not a bare `return`: this callback's other exit hands back
+    // a cleanup function, and mixing an implicit and an explicit return is what
+    // DeepSource's JS-0045 objects to. `null` is not an option -- React types
+    // the callback as returning `void | Destructor`.
+    if (!open) return undefined;
 
     const opener =
       document.activeElement instanceof HTMLElement

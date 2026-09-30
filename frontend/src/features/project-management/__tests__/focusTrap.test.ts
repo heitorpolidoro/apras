@@ -146,6 +146,10 @@ describe("cycleTabWithin", () => {
     expect(event.prevented).toBe(false);
   });
 
+  // This pins the composition, not a branch of its own: a missing panel reaches
+  // `cycleTabWithin` as `focusableWithin`'s empty list, and that handling is
+  // pinned by `focusableWithin`'s own case above. What is asserted here is that
+  // the two compose without throwing.
   it("does nothing when there is no panel at all", () => {
     const event = tab(false);
     expect(cycleTabWithin(event, null)).toBeNull();
