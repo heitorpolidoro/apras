@@ -298,7 +298,7 @@ as the source of truth.
 | Database              | PostgreSQL 16                                      |
 | DB Driver             | psycopg2-binary                                    |
 | Migrations            | Alembic ≥ 1.18                                     |
-| Authentication        | PyJWT (HS256), passlib + bcrypt                    |
+| Authentication        | PyJWT (HS256), bcrypt ≥ 5 (no passlib)             |
 | Settings              | pydantic-settings (`.env` driven)                  |
 | Validation            | email-validator, python-multipart                  |
 | Rate Limiting         | slowapi                                            |
