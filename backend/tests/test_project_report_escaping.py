@@ -67,13 +67,20 @@ saying otherwise would repeat exactly that mistake.
 
 The audit's own pessimism is pinned too, by one synthetic module per rule
 rather than by prose -- :data:`ANALYSER_RULE_CASES` counts them. This module
-opened with one, the plain attribute read, and **six** false-`SAFE` shapes
+opened with one, the plain attribute read, and **ten** false-`SAFE` shapes
 have since been found past it: a helper that `yield`s, whose returns were
 vacuously safe; a local shadowing a module-scope name; a local trusted for its
-annotation over its binding; `max`/`min`/`sorted`, which return one of their
+annotation over its binding; an attribute trusted for its receiver's
+annotation over the same; `max`/`min`/`sorted`, which return one of their
 arguments rather than converting anything; a keyword argument nothing walked;
-and a parameter rebound in the body, where the short-circuit on its call sites
-hid the rebinding.
+a parameter rebound in the body, where the short-circuit on its call sites hid
+the rebinding; and all three directions of the parameter analysis itself.
+
+The pattern across those ten is worth naming, because it is the task's subject
+applied to the task's own tooling: **every one of them was a claim in prose
+that no assertion held up.** The last three survived four code-review rounds
+because the reviews checked the analyser's rules; they were found by reading
+the documentation as if it were a specification and mutating what it promised.
 
 Each rule's case was confirmed by re-introducing its old behaviour in full,
 and two of those reverts taught something the first pass got wrong. A rule
@@ -123,6 +130,7 @@ from tests.interpolation_audit import (
     audit,
     escape_call_sites,
     escape_calls_at_interpolations,
+    uninventoried_interpolations,
     without_escape,
 )
 
@@ -161,8 +169,17 @@ TREE = ast.parse(SOURCE)
 #: local shadowing a module-scope name; selectors that return an argument
 #: rather than converting it; a local binding believed over its annotation; an
 #: attribute whose receiver's annotation is contradicted by its binding; a
-#: keyword argument that reaches the output; a parameter rebound in the body.
-ANALYSER_RULE_CASES = 8
+#: keyword argument that reaches the output; a parameter rebound in the body;
+#: the three directions of the parameter analysis -- a public function's
+#: parameter, the conjunction over call sites, and the no-call-site default --
+#: and a module name any function rebinds through `global`.
+#:
+#: Those last three are why this count exists at all. They were documented in
+#: `interpolation_audit`'s module docstring and pinned by nothing, and four
+#: rounds of code review did not find them because the reviews were reading
+#: `_RULES`; QA read the card, tested the *documentation*, and deleting the
+#: public-function clause turned out to be a live false `SAFE`.
+ANALYSER_RULE_CASES = 12
 
 #: Entries in :data:`interpolation_audit._RULES`. Hand-kept, like the count
 #: above, and checked for the same reason: the dispatch is where a whole node
@@ -679,6 +696,177 @@ def _render(project):
 
     assert verdicts["max(ROWS, default=project.description)"] == RAW
     assert verdicts["_e(sorted(ROWS, key=_order))"] == ESCAPED
+
+
+def test_the_audit_distrusts_a_public_functions_parameter():
+    """An analyser rule: a public function's callers are not in this module.
+
+    `_param_holds` answers `False` for any function whose name does not start
+    with an underscore, whatever its in-module call sites pass, because the
+    module's public surface is reachable from code this AST does not contain.
+    Deleting that clause is a **live false `SAFE`**: with it gone, the public
+    renderer below is judged on its one internal call site, which passes a
+    literal, and `{public_label}` audits `SAFE` while any outside caller can
+    hand it a stored string.
+
+    The private twin takes the identical literal call site and must stay
+    `SAFE`, so what is pinned is the public/private distinction rather than
+    "distrust every parameter".
+
+    *Fails if:* `_param_holds` stops answering `False` for a public function.
+    """
+    source = """
+import html
+
+
+def _e(value):
+    return html.escape("" if value is None else str(value))
+
+
+def render_card(public_label):
+    return f'<p>{public_label}</p>'
+
+
+def _card(private_label):
+    return f'<span>{private_label}</span>'
+
+
+def _render():
+    return render_card("Obra") + _card("Obra")
+"""
+    verdicts = {item.expression: item.verdict for item in audit(ast.parse(source))}
+
+    assert verdicts["public_label"] == RAW
+    assert verdicts["private_label"] == SAFE
+
+
+def test_the_audit_requires_every_call_site_to_be_safe_not_one():
+    """An analyser rule: the call-site check is a conjunction.
+
+    One private helper, two call sites, one of them passing a stored field.
+    `all(...)` makes the parameter `RAW`; `any(...)` would let the literal call
+    site vouch for the other, which is the classic way a taint analysis is
+    quietly turned off.
+
+    *Fails if:* `_param_holds` weakens `all(...)` over its call sites to
+    `any(...)`.
+    """
+    source = """
+import html
+
+
+def _e(value):
+    return html.escape("" if value is None else str(value))
+
+
+def _card(text):
+    return f'<p>{text}</p>'
+
+
+def _render(project):
+    return _card("Obra") + _card(project.title)
+"""
+    verdicts = {item.expression: item.verdict for item in audit(ast.parse(source))}
+
+    assert verdicts["text"] == RAW
+
+
+def test_the_audit_distrusts_a_parameter_with_no_call_site_at_all():
+    """An analyser rule: no evidence is not evidence of safety.
+
+    A private helper nothing in the module calls has an empty call-site list,
+    and `all(...)` over an empty list is vacuously true -- the same vacuous
+    truth that made a generator's returns safe. `_param_holds` answers `False`
+    before reaching it. Flipping that default is how a helper added today and
+    wired up tomorrow would be audited as safe in between.
+
+    *Fails if:* `_param_holds` returns `True` when `callsites` has no entry.
+    """
+    source = """
+import html
+
+
+def _e(value):
+    return html.escape("" if value is None else str(value))
+
+
+def _orphan(text):
+    return f'<p>{text}</p>'
+"""
+    verdicts = {item.expression: item.verdict for item in audit(ast.parse(source))}
+
+    assert verdicts["text"] == RAW
+
+
+def test_the_audit_drops_a_module_name_any_function_rebinds_with_global():
+    """An analyser rule: `global` takes a name out of import-time data.
+
+    A module body runs at import, which is why a module-scope name is `SAFE`.
+    A `global` declaration breaks that premise: the function doing the
+    rebinding sees its own binding, but every **other** function resolves the
+    name at module scope and would read a request-time value as a constant.
+
+    Offered as a documented gap and fixed instead, because the list of
+    untracked shapes is for what cannot be reached and this is reachable in
+    plain Python -- the same judgement as the nested `def`, reaching the
+    opposite conclusion only because the fix is one set difference rather than
+    a scope stack.
+
+    The ordinary module constant beside it must stay `SAFE`.
+
+    *Fails if:* `_module_scope_names` stops subtracting `ast.Global` names.
+    """
+    source = """
+import html
+
+CACHED = "Obra"
+PREFIX = "Obra"
+
+
+def _e(value):
+    return html.escape("" if value is None else str(value))
+
+
+def _warm(project):
+    global CACHED
+    CACHED = project.title
+
+
+def _render():
+    return f'<p>{CACHED}</p><span>{PREFIX}</span>'
+"""
+    verdicts = {item.expression: item.verdict for item in audit(ast.parse(source))}
+
+    assert verdicts["CACHED"] == RAW
+    assert verdicts["PREFIX"] == SAFE
+
+
+def test_nothing_in_the_report_module_renders_where_the_audit_cannot_see():
+    """The inventory's precondition: no interpolation outside its reach.
+
+    `audit` walks the module's **top-level** functions, so an f-string in a
+    method or in a nested `def` is skipped or scoped wrongly. Both were on the
+    "does not track" list, and that was too kind: an uninventoried renderer is
+    invisible rather than pessimistic, and every other case in this module is a
+    statement about a set that such a renderer would simply have left.
+
+    Asserted in both directions, because the empty-list half alone is also
+    satisfied by a helper that never reports anything.
+
+    *Fails if:* a renderer moves into a class or a nested `def` -- which is
+    now a loud failure naming the line, instead of silence.
+    """
+    assert uninventoried_interpolations(TREE) == []
+
+    hidden = ast.parse(
+        """
+class Renderer:
+    def render(self, project):
+        return f'<p>{project.title}</p>'
+"""
+    )
+    assert uninventoried_interpolations(hidden) == [4]
+    assert audit(hidden) == []
 
 
 def test_the_audit_checks_an_attribute_receiver_against_its_binding():

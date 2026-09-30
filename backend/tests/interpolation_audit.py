@@ -37,8 +37,12 @@ function's parameter is safe only when *every* call site inside the module
 passes a safe argument, and a public function's parameters are always ``RAW``
 because callers outside the module are not visible here. Both directions of
 that rule are pessimistic **for a parameter of a module-level function**,
-which is the only kind :attr:`_Audit.functions` collects; a nested function's
-parameter is not covered by it at all, and is the last bullet below.
+which is the only kind :attr:`_Audit.functions` collects. All three directions
+-- the public-function clause, the conjunction over call sites, and the
+no-call-site default -- have a case each in
+``tests/test_project_report_escaping.py``; they were documented here and
+pinned by nothing for four review rounds, and deleting the public-function
+clause was a live false ``SAFE``.
 
 **What it does not track**, so that nobody reads the paragraph above as a
 guarantee it is not:
@@ -56,16 +60,20 @@ guarantee it is not:
   filled by subscript after import is still treated as import-time data;
 * **``strftime``/``isoformat`` on a non-date receiver.** They are safe by
   method name, not by the receiver's type;
-* **a nested function's parameter.** :attr:`_Audit.functions` holds the
-  module's top-level functions only, so a ``def`` inside a ``def`` is walked
-  for its f-strings under the *enclosing* function's scope. Its parameters are
-  therefore neither judged on call sites nor treated pessimistically: they are
-  resolved as names in the enclosing scope, so one that collides with a safe
-  enclosing local audits ``SAFE`` whatever the inner function is passed. This
-  is plain runnable Python, not a contortion -- it is on this list rather than
-  fixed because the audited module has no nested renderer and no f-string
-  inside its one lambda, and because fixing it means giving the analysis a
-  scope stack, which is a different piece of work than the rest of this file.
+
+Two shapes that were on this list are no longer silent, which is a different
+thing from being tracked. :attr:`_Audit.functions` holds the module's
+top-level functions only, so an f-string in a **method** was never inventoried
+at all, and one in a ``def`` **nested** inside another ``def`` was walked under
+the enclosing function's scope -- where a parameter colliding with a safe
+enclosing local audits ``SAFE`` whatever the inner function is passed. Neither
+is analysed now either: giving this file a scope stack is a different piece of
+work. But :func:`uninventoried_interpolations` reports both, and a test over
+the audited module asserts it finds nothing, so a renderer that moves into a
+class or a nested ``def`` fails loudly with its line number instead of
+vanishing from the inventory. An uninventoried renderer is invisible, not
+pessimistic, and that distinction is what put these two here rather than
+above.
 
 Each needs contorted code that this module does not contain, which is why they
 are recorded rather than fixed -- but every one of them is a way to reach
@@ -216,7 +224,16 @@ class _Audit:
                             alias.asname or alias.name.split(".")[0]
                             for alias in inner.names
                         )
-        return names
+        # A name any function declares ``global`` is no longer import-time
+        # data: the function that rebinds it sees its own binding, but every
+        # *other* function resolves the name here and would read a value
+        # written at request time as a module constant.
+        return names - {
+            name
+            for node in ast.walk(self.tree)
+            if isinstance(node, ast.Global)
+            for name in node.names
+        }
 
     @staticmethod
     def _annotations(
@@ -658,6 +675,50 @@ def escape_call_sites(tree: ast.Module) -> list[int]:
     the two share one traversal order by construction.
     """
     return [node.lineno for node in _escape_calls(tree)]
+
+
+def uninventoried_interpolations(tree: ast.Module) -> list[int]:
+    """The lines of every ``{...}`` :func:`audit` does **not** classify.
+
+    :attr:`_Audit.functions` holds the module's top-level functions, so an
+    f-string in a method, or in a ``def`` nested inside another ``def``, is
+    either skipped entirely or walked under the wrong scope. Both were
+    recorded as untracked shapes -- and "untracked" was too kind: an
+    uninventoried renderer is **invisible**, not pessimistic, so a renderer
+    moved into a class would take its interpolations out of the audit's reach
+    with nothing failing.
+
+    This turns that silence into a report. It makes no judgement about the
+    values: it answers only "is anything being rendered where the audit is not
+    looking", which is the question the inventory's own guarantee rests on.
+    """
+    parents: dict[int, ast.AST] = {}
+    for node in ast.walk(tree):
+        for child in ast.iter_child_nodes(node):
+            parents[id(child)] = node
+    inventoried = {
+        id(node)
+        for node in tree.body
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
+    }
+
+    def enclosing(node: ast.AST) -> ast.AST | None:
+        current = node
+        while id(current) in parents:
+            current = parents[id(current)]
+            if isinstance(
+                current, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef
+            ):
+                return current
+        return None
+
+    return [
+        node.lineno
+        for node in ast.walk(tree)
+        if isinstance(node, ast.FormattedValue)
+        and (scope := enclosing(node)) is not None
+        and id(scope) not in inventoried
+    ]
 
 
 def escape_calls_at_interpolations(tree: ast.Module) -> list[int]:
