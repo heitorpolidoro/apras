@@ -360,7 +360,21 @@ const build = async (candidates: readonly string[]): Promise<Sheet> => {
 
   const rule = (className: string): Rule => {
     const selector = `.${escapeClass(className)}`;
-    const found = parsed.find((candidate) => candidate.selector === selector);
+    // Tailwind does not always emit a bare `.class` selector: since 4.3 the
+    // `divide-*` utilities arrive as `:where(.divide-x > :not(:last-child))`.
+    // The shape is Tailwind's business; what this suite measures is the colour
+    // the utility resolves to. So accept either, while still requiring the
+    // class to appear as a whole token -- a substring match would let
+    // `.divide-slate-200` be answered by a rule for `.divide-slate-2000`.
+    const token = new RegExp(
+      `\\.${escapeClass(className).replace(/[\\^$*+?.()|[\\]{}]/g, "\\$&")}(?![\\w-])`,
+    );
+    const found = parsed.find(
+      (candidate) =>
+        candidate.selector === selector ||
+        (candidate.selector.startsWith(":where(") &&
+          token.test(candidate.selector)),
+    );
     if (found === undefined) {
       throw new Error(`Tailwind emitted no rule for ${className}`);
     }
