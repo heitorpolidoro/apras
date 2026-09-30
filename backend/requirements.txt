@@ -10,7 +10,7 @@ anyio==4.14.2
     # via
     #   httpx
     #   starlette
-bcrypt==4.0.1
+bcrypt==5.0.0
     # via
     #   backend
     #   passlib
