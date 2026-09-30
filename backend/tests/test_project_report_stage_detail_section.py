@@ -549,14 +549,19 @@ def test_the_stage_title_reaches_the_summary_escaped_on_both_halves():
     assert '<b>"a"</b>' not in section.lower()
 
 
-def test_a_real_comma_rich_leaf_name_survives_apart_from_its_casing():
+def test_a_real_comma_rich_leaf_name_is_not_over_escaped():
     """ER2: the committed fixture's name, title-cased and otherwise verbatim.
 
-    This case guards **over**-escaping only -- that `_e` does not mangle an
-    innocent name on the way past. It says nothing about *under*-escaping,
-    which is the direction that carries the risk here, and which
+    **Named for its direction** (APRAS-117). This case guards *over*-escaping
+    only -- that `_e` does not mangle an innocent name on the way past -- and
+    it says nothing at all about *under*-escaping, which is the direction that
+    carries the risk. Its previous name, `..._survives_apart_from_its_casing`,
+    read as escaping coverage and is exactly the shape that stops the next
+    person looking: every escape in the report module was unpinned while it
+    passed. The under-escaping direction is
     :func:`test_the_section_is_present_non_empty_and_carries_no_script_or_handler`
-    step 4 is what pins.
+    step 4 here, and `tests/test_project_report_escaping.py` for the module
+    as a whole.
 
     *Fails if:* escaping mangles the name, the names ship SHOUTING, or a naive
     `.title()` renders `Wc`, `Pcd` and `De`.

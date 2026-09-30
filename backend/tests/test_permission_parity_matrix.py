@@ -704,22 +704,28 @@ def test_the_matrix_world_runs_with_every_module_active():
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
     SQLModel.metadata.create_all(engine)
-    with Session(engine) as session:
-        matrix_world.build_world(session)
-        tenants = session.exec(select(Tenant)).all()
-        assert tenants
-        for tenant in tenants:
-            assert tenant.disabled_modules == [], (
-                f"matrix world tenant {tenant.name!r} has modules disabled: "
-                f"{tenant.disabled_modules}"
-            )
+    try:
+        with Session(engine) as session:
+            matrix_world.build_world(session)
+            tenants = session.exec(select(Tenant)).all()
+            assert tenants
+            for tenant in tenants:
+                assert tenant.disabled_modules == [], (
+                    f"matrix world tenant {tenant.name!r} has modules disabled: "
+                    f"{tenant.disabled_modules}"
+                )
 
-        for tenant in tenants:
-            tenant_context.set_acting_tenant(session, tenant.id)
-            assert filter_by_modules(PERMISSIONS, deps.disabled_modules(session)) == (
-                PERMISSIONS
-            )
-    SQLModel.metadata.drop_all(engine)
+            for tenant in tenants:
+                tenant_context.set_acting_tenant(session, tenant.id)
+                assert filter_by_modules(
+                    PERMISSIONS, deps.disabled_modules(session)
+                ) == (PERMISSIONS)
+        SQLModel.metadata.drop_all(engine)
+    finally:
+        # `StaticPool` holds the connection that *is* this in-memory database;
+        # see `tests/conftest.py`'s `session_fixture` for why nothing above
+        # releases it.
+        engine.dispose()
 
 
 def test_every_path_parameter_has_a_binding():
