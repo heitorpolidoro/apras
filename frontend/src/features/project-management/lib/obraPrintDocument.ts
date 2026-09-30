@@ -187,7 +187,11 @@ export const openObraPrintWindow = (
   opened.addEventListener(
     "load",
     () => {
-      void whenFontsReady(opened).then(() => {
+      // `whenFontsReady` swallows its own failure, so `.then` is the whole
+      // story and there is nothing here that can reject. No `void` operator:
+      // it reads as if a rejection were being discarded, and DeepSource's
+      // JS-0098 objects to it for that reason.
+      whenFontsReady(opened).then(() => {
         opened.print();
       });
     },

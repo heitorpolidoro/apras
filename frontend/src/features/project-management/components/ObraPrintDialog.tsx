@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { HardHat, Printer, X } from "lucide-react";
 import { cn } from "../../../lib/utils";
 import type { ObraEntry } from "../lib/obraPrintDocument";
+import { cycleTabWithin, focusableWithin } from "../lib/focusTrap";
 
 interface ObraPrintDialogProps {
   open: boolean;
@@ -12,8 +13,6 @@ interface ObraPrintDialogProps {
   onSelect: (index: number) => void;
 }
 
-const FOCUSABLE =
-  'button:not([tabindex="-1"]), [href], [tabindex]:not([tabindex="-1"])';
 
 /**
  * APRAS-118 — the obra selector behind the public report's print control.
@@ -48,36 +47,15 @@ const ObraPrintDialog: React.FC<ObraPrintDialogProps> = ({
         ? document.activeElement
         : null;
 
-    const focusable = (): HTMLElement[] =>
-      Array.from(
-        panelRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [],
-      );
+    focusableWithin(panelRef.current)[0]?.focus();
 
-    focusable()[0]?.focus();
-
+    // Escape closes, Tab cycles, everything else is the browser's. The cycling
+    // itself lives in `../lib/focusTrap` — see that module for why.
     const handler = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         onClose();
-        return;
-      }
-      if (event.key !== "Tab") return;
-
-      const items = focusable();
-      const first = items[0];
-      const last = items.at(-1);
-      // The panel always carries the close button, so both ends exist whenever
-      // the dialog is open; the narrowing is for the type, not for a case.
-      if (!first || !last) return;
-
-      // The trap: only the two edges need handling, and a focus that escaped
-      // the panel entirely is pulled back to the near edge.
-      const outside = !panelRef.current?.contains(document.activeElement);
-      const atEdge = event.shiftKey
-        ? document.activeElement === first
-        : document.activeElement === last;
-      if (atEdge || outside) {
-        event.preventDefault();
-        (event.shiftKey ? last : first).focus();
+      } else if (event.key === "Tab") {
+        cycleTabWithin(event, panelRef.current);
       }
     };
 
