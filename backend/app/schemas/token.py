@@ -1,8 +1,9 @@
 """Token schemas for authentication."""
 
+from pydantic import BaseModel, Field, field_validator
+
 from app.core.password_policy import BCRYPT_MAX_PASSWORD_BYTES
 from app.schemas.user import PASSWORD_MIN_LENGTH, validate_password_strength
-from pydantic import BaseModel, Field, field_validator
 
 
 class Token(BaseModel):

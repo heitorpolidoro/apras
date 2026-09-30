@@ -143,6 +143,22 @@ ignore = [
 # simply never allowed to rewrite them.
 exclude = ["alembic/versions/*.py"]
 
+# Not for us -- `ruff check` does our import sorting, and this project runs no
+# standalone isort. This section is for the repository's style bot, which runs
+# `isort` over the files a pull request touches and pushes the result onto the
+# branch. Plain isort's defaults classify `app` as *third-party*, so it merges
+# the first-party block into the third-party one and every touched file then
+# fails ruff's `I001` -- which is what broke the required `Backend Lint (ruff)`
+# check on this branch, on code that was ruff-clean when pushed.
+#
+# isort reads the nearest config walking up from each file, so these keys reach
+# it for everything under `backend/`. `known_first_party` is the fix; `profile`
+# and `line_length` keep the rest of its output matching the ruff formatter.
+[tool.isort]
+profile = "black"
+line_length = 88
+known_first_party = ["app", "tests"]
+
 [tool.coverage.run]
 omit = [
     "app/seed.py",

@@ -5,6 +5,7 @@ from typing import Any
 
 import bcrypt
 import jwt
+
 from app.core import clock
 from app.core.config import settings
 from app.core.password_policy import BCRYPT_MAX_PASSWORD_BYTES

@@ -3,9 +3,6 @@
 import re
 from uuid import UUID
 
-from app.core.password_policy import BCRYPT_MAX_PASSWORD_BYTES
-from app.schemas.role import RoleRead
-from app.schemas.tenant import TenantMembershipSummary
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -14,6 +11,10 @@ from pydantic import (
     computed_field,
     field_validator,
 )
+
+from app.core.password_policy import BCRYPT_MAX_PASSWORD_BYTES
+from app.schemas.role import RoleRead
+from app.schemas.tenant import TenantMembershipSummary
 
 #: A CPF is 11 digits: 9 base digits plus the two check digits.
 CPF_DIGITS = 11

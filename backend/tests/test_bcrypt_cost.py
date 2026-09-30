@@ -40,6 +40,8 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+import pytest
+
 from app.core import security
 from app.core.config import Settings
 
@@ -54,10 +56,7 @@ PRODUCTION_FLOOR = 12
 #: The cost ``tests/conftest.py`` puts in force for this process.
 TEST_ROUNDS = 4
 
-#: A hash generated at cost 12, for password ``prod-era-password`` -- a stand-in
-#: for every password already stored in production. It is checked in precisely
-#: so a cost-4 hasher can be proven not to invalidate it.
-PROD_ERA_HASH = "$2b$12$N7D1OMxeQ7i0SlTfVHsOBeqdzlUkVcv5iuFRBxtccYZ23TS2Ui5cq"
+#: The password behind the production-era hash the fixture below computes.
 PROD_ERA_PASSWORD = "prod-era-password"
 
 #: Every plausible spelling a deploy might use to try to configure the cost.
@@ -351,14 +350,46 @@ def test_passlib_is_not_installed() -> None:
     )
 
 
-def test_a_production_era_hash_still_verifies() -> None:
+@pytest.fixture(scope="session")
+def production_era_hash() -> str:
+    """A hash at the production cost, computed rather than checked in.
+
+    This used to be a literal `$2b$12$...` in the source. It is computed now for
+    two reasons. The first is that a checked-in bcrypt hash is a credential as
+    far as a secret scanner is concerned, and a scanner cannot tell a test
+    fixture from a real one. The second is the better reason: the test never
+    needed *that* hash. bcrypt salts every hash, so no two are alike and none of
+    them is special -- what the test needs is *a* hash at the production cost,
+    and pinning particular bytes pinned nothing the test was about.
+
+    Derived from `PRODUCTION_FLOOR` rather than from a literal 12, so it follows
+    the floor up if the floor ever rises. A literal would have gone on testing
+    12 while production moved, and would still have passed.
+
+    Session-scoped: one hash at the production cost is about a quarter of a
+    second, and this is the only place in the suite that wants one.
+    """
+    hashed = security.BcryptHasher(rounds=PRODUCTION_FLOOR).hash(PROD_ERA_PASSWORD)
+    # Anchor, and the whole reason this fixture is not a one-liner. If it ever
+    # came back at the suite's cost 4 -- because the hasher stopped honouring
+    # its `rounds`, say -- the test below would be verifying a cost-4 hash under
+    # a cost-4 hasher, which is exactly the thing it exists to rule out. It
+    # would pass, and prove nothing.
+    assert hashed.startswith(f"$2b${PRODUCTION_FLOOR:02d}$"), (
+        f"the fixture must be a cost-{PRODUCTION_FLOOR} hash, not "
+        f"{hashed[:7]!r}; otherwise the test it feeds is vacuous."
+    )
+    return hashed
+
+
+def test_a_production_era_hash_still_verifies(production_era_hash: str) -> None:
     """bcrypt carries its cost in the hash; verification reads it, not ours."""
     assert security.password_hasher.rounds == TEST_ROUNDS, (
         "this test is only meaningful under the suite's lowered cost; "
         f"the hasher carries {security.password_hasher.rounds}."
     )
-    assert security.verify_password(PROD_ERA_PASSWORD, PROD_ERA_HASH) is True
-    assert security.verify_password("not-the-password", PROD_ERA_HASH) is False
+    assert security.verify_password(PROD_ERA_PASSWORD, production_era_hash) is True
+    assert security.verify_password("not-the-password", production_era_hash) is False
 
 
 def test_hashes_made_in_the_suite_use_the_lowered_cost() -> None:
