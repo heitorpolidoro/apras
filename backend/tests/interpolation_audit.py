@@ -32,17 +32,28 @@ this audit exists to prevent, silently. Where the two were in tension the
 strict side was taken -- which is why ``_stylesheet`` reports ``RAW`` even
 though ``app.core.branding`` validates its palette into ``oklch(...)``.
 
-The parameter analysis is intraprocedural-plus-call-sites: a module-private
-function's parameter is safe only when *every* call site inside the module
-passes a safe argument, and a public function's parameters are always ``RAW``
-because callers outside the module are not visible here. Both directions of
-that rule are pessimistic **for a parameter of a module-level function**,
-which is the only kind :attr:`_Audit.functions` collects. All three directions
--- the public-function clause, the conjunction over call sites, and the
-no-call-site default -- have a case each in
-``tests/test_project_report_escaping.py``; they were documented here and
-pinned by nothing for four review rounds, and deleting the public-function
-clause was a live false ``SAFE``.
+The parameter analysis is intraprocedural-plus-call-sites. A **public**
+function's parameters are always ``RAW``, because callers outside the module
+are not visible here -- checked before anything else, so not even a non-text
+annotation lifts it; an annotation is not enforced at runtime, and on a public
+parameter it would be a promise made by a caller this AST cannot read. A
+**module-private** function's parameter is safe when its annotation says it
+cannot be text -- ``_masthead_html(today: date)`` rests on that -- or when
+*every* call site inside the module passes a safe argument; an empty
+call-site list is not "every", so a helper nothing calls is ``RAW``.
+
+That sentence has been wrong once already, in the revision that fixed the
+thing it describes: it claimed public parameters were always ``RAW`` while the
+annotation was checked *first*, so ``def render_card(stamp: int)`` audited
+``SAFE``. The order was changed to match the sentence rather than the other
+way round, because the sentence was the better rule -- and the real module's
+verdicts did not move. Each of the three directions now has a case in
+``tests/test_project_report_escaping.py``, which is four more than they had
+through four review rounds, when deleting the public clause was a live false
+``SAFE`` that nothing failed on.
+
+All of this is pessimistic **for a parameter of a module-level function**,
+which is the only kind :attr:`_Audit.functions` collects.
 
 **What it does not track**, so that nobody reads the paragraph above as a
 guarantee it is not:
@@ -61,19 +72,19 @@ guarantee it is not:
 * **``strftime``/``isoformat`` on a non-date receiver.** They are safe by
   method name, not by the receiver's type;
 
-Two shapes that were on this list are no longer silent, which is a different
+Four shapes that were on this list are no longer silent, which is a different
 thing from being tracked. :attr:`_Audit.functions` holds the module's
-top-level functions only, so an f-string in a **method** was never inventoried
-at all, and one in a ``def`` **nested** inside another ``def`` was walked under
-the enclosing function's scope -- where a parameter colliding with a safe
-enclosing local audits ``SAFE`` whatever the inner function is passed. Neither
-is analysed now either: giving this file a scope stack is a different piece of
-work. But :func:`uninventoried_interpolations` reports both, and a test over
-the audited module asserts it finds nothing, so a renderer that moves into a
-class or a nested ``def`` fails loudly with its line number instead of
-vanishing from the inventory. An uninventoried renderer is invisible, not
-pessimistic, and that distinction is what put these two here rather than
-above.
+top-level functions only, so an f-string in a **method**, in a **class body**
+or in a **lambda** was never inventoried at all, and one in a ``def``
+**nested** inside another ``def`` was walked under the enclosing function's
+scope -- where a parameter colliding with a safe enclosing local audits
+``SAFE`` whatever the inner function is passed. None of the four is analysed
+now either: giving this file a scope stack is a different piece of work. But
+:func:`uninventoried_interpolations` reports all four, and a test over the
+audited module asserts it finds nothing, so a renderer that moves into any of
+them fails loudly with its line number instead of vanishing from the
+inventory. An uninventoried renderer is invisible, not pessimistic, and that
+distinction is what put these here rather than above.
 
 Each needs contorted code that this module does not contain, which is why they
 are recorded rather than fixed -- but every one of them is a way to reach
@@ -318,11 +329,23 @@ class _Audit:
         return all(self.is_safe(value, name) for value in returns)
 
     def _param_holds(self, function: str, param: str) -> bool:
+        """Can this parameter never hold storage text?
+
+        **The public clause comes first, and the ordering is the claim.** A
+        non-text annotation is trusted for a private function's parameter --
+        `_masthead_html(today: date)` rests on it -- but an annotation is not
+        enforced at runtime, so trusting one on a *public* parameter would be
+        trusting a caller this AST cannot see to honour it. With the annotation
+        checked first, ``def render_card(stamp: int)`` audited ``SAFE`` while
+        the module docstring said a public function's parameters are always
+        ``RAW``.
+        """
+        if not function.startswith("_"):
+            # Public entry point: its callers are outside this module, and
+            # nothing here can make them pass what the annotation says.
+            return False
         if _is_non_text(self.annotations[function].get(param)):
             return True
-        if not function.startswith("_"):
-            # Public entry point: its callers are outside this module.
-            return False
         sites = self.callsites.get((function, param))
         if not sites:
             return False
@@ -703,11 +726,21 @@ def uninventoried_interpolations(tree: ast.Module) -> list[int]:
     }
 
     def enclosing(node: ast.AST) -> ast.AST | None:
+        """The nearest scope-forming ancestor, or ``None`` at module level.
+
+        ``Lambda`` is one of them: a lambda body is not a function this audit
+        collects, and its parameters resolve nowhere, so an f-string inside one
+        slipped both the audit *and* the first version of this guard -- the one
+        place a renderer could still hide silently. ``ClassDef`` is here for an
+        f-string in a **class body**; a method's own f-string stops at the
+        method's ``FunctionDef`` and never reaches the class.
+        """
         current = node
         while id(current) in parents:
             current = parents[id(current)]
             if isinstance(
-                current, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef
+                current,
+                ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef | ast.Lambda,
             ):
                 return current
         return None

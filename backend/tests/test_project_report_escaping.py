@@ -713,7 +713,17 @@ def test_the_audit_distrusts_a_public_functions_parameter():
     `SAFE`, so what is pinned is the public/private distinction rather than
     "distrust every parameter".
 
-    *Fails if:* `_param_holds` stops answering `False` for a public function.
+    **The annotated public parameter is the third assertion, and it is why the
+    public clause now runs before the annotation check.** A non-text annotation
+    is trusted for a private parameter -- `_masthead_html(today: date)` rests
+    on it -- but an annotation is not enforced at runtime, so on a public
+    parameter it trusts a caller this AST cannot see. Checked in the old order,
+    `def render_card(stamp: int)` audited `SAFE` while the analyser's own
+    docstring said a public function's parameters are always `RAW`. Reordering
+    made the sentence true; the real module's verdicts did not change.
+
+    *Fails if:* `_param_holds` stops answering `False` for a public function,
+    or checks a non-text annotation before it does.
     """
     source = """
 import html
@@ -723,8 +733,8 @@ def _e(value):
     return html.escape("" if value is None else str(value))
 
 
-def render_card(public_label):
-    return f'<p>{public_label}</p>'
+def render_card(public_label, stamp: int):
+    return f'<p>{public_label}</p><i>{stamp}</i>'
 
 
 def _card(private_label):
@@ -732,11 +742,12 @@ def _card(private_label):
 
 
 def _render():
-    return render_card("Obra") + _card("Obra")
+    return render_card("Obra", 1) + _card("Obra")
 """
     verdicts = {item.expression: item.verdict for item in audit(ast.parse(source))}
 
     assert verdicts["public_label"] == RAW
+    assert verdicts["stamp"] == RAW
     assert verdicts["private_label"] == SAFE
 
 
@@ -845,28 +856,63 @@ def test_nothing_in_the_report_module_renders_where_the_audit_cannot_see():
     """The inventory's precondition: no interpolation outside its reach.
 
     `audit` walks the module's **top-level** functions, so an f-string in a
-    method or in a nested `def` is skipped or scoped wrongly. Both were on the
-    "does not track" list, and that was too kind: an uninventoried renderer is
-    invisible rather than pessimistic, and every other case in this module is a
-    statement about a set that such a renderer would simply have left.
+    method, a class body, a `lambda` or a nested `def` is skipped or scoped
+    wrongly. Those were on the "does not track" list, and that was too kind: an
+    uninventoried renderer is invisible rather than pessimistic, and every
+    other case in this module is a statement about a set that such a renderer
+    would simply have left.
 
-    Asserted in both directions, because the empty-list half alone is also
-    satisfied by a helper that never reports anything.
+    **Each hiding place is asserted separately**, because one shape passing
+    says nothing about the others -- the `lambda` slipped the first version of
+    this guard entirely, and the `ClassDef` branch of `enclosing` could be
+    deleted with the suite green while the method case still passed, since a
+    method's f-string stops at the method's own `FunctionDef` and never reaches
+    the class. Only an f-string in the **class body** reaches it.
 
-    *Fails if:* a renderer moves into a class or a nested `def` -- which is
-    now a loud failure naming the line, instead of silence.
+    The `audit() == []` clauses are the gap itself written as an assertion: for
+    these shapes the audit reports nothing, and the guard is what makes that
+    loud rather than silent.
+
+    *Fails if:* a renderer moves into a class, a method, a lambda or a nested
+    `def` -- now a failure naming the line -- or if `enclosing` stops treating
+    any of those as a scope.
     """
     assert uninventoried_interpolations(TREE) == []
 
-    hidden = ast.parse(
+    method = ast.parse(
         """
 class Renderer:
     def render(self, project):
         return f'<p>{project.title}</p>'
 """
     )
-    assert uninventoried_interpolations(hidden) == [4]
-    assert audit(hidden) == []
+    class_body = ast.parse(
+        """
+class Renderer:
+    heading = f'<h1>{TITLE}</h1>'
+"""
+    )
+    module_lambda = ast.parse("render = lambda project: f'<p>{project.title}</p>'\n")
+    nested = ast.parse(
+        """
+def _outer(project):
+    def _inner(title):
+        return f'<p>{title}</p>'
+
+    return _inner(project.title)
+"""
+    )
+
+    assert uninventoried_interpolations(method) == [4]
+    assert uninventoried_interpolations(class_body) == [3]
+    assert uninventoried_interpolations(module_lambda) == [1]
+    assert uninventoried_interpolations(nested) == [4]
+    # The method, the class body and the lambda are not inventoried at all; the
+    # nested `def` is, but under `_outer`'s scope, which is the wrong one.
+    assert audit(method) == []
+    assert audit(class_body) == []
+    assert audit(module_lambda) == []
+    assert [item.function for item in audit(nested)] == ["_outer"]
 
 
 def test_the_audit_checks_an_attribute_receiver_against_its_binding():
