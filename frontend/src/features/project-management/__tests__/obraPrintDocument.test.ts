@@ -232,4 +232,52 @@ describe("openObraPrintWindow", () => {
       expect(opened.print).toHaveBeenCalledTimes(1);
     });
   });
+
+  it("swallows a print() that throws because the window was closed", async () => {
+    // `print()` throws on a window the user closed while the fonts were still
+    // settling, and that rejects the chain inside the load listener. The
+    // `.catch` on it is therefore reachable code, not a linter concession.
+    //
+    // The assertion is a real one, not the absence of a crash: an unhandled
+    // rejection is captured from `process` and asserted empty. Relying on
+    // Vitest's own unhandled-error report would be the shape this project keeps
+    // shipping -- a test that passes while its subject throws, red only because
+    // something outside the test noticed.
+    const rejections: unknown[] = [];
+    const record = (reason: unknown) => rejections.push(reason);
+    process.on("unhandledRejection", record);
+
+    try {
+      const opened = fakeWindow();
+      const closed = new Error("window closed");
+      opened.print.mockImplementation(() => {
+        throw closed;
+      });
+      vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:closed-window");
+      vi.spyOn(window, "open").mockReturnValue(opened as unknown as Window);
+
+      const handle = openObraPrintWindow(ONE_OBRA_REPORT, 0);
+      expect(handle).toBe(opened as unknown as Window);
+
+      opened.fire("load");
+
+      // Positive anchor first: the chain did reach `print()` and it did throw.
+      // Without this, the emptiness below would also hold for a chain that
+      // never ran at all.
+      await vi.waitFor(() => {
+        expect(opened.print).toHaveBeenCalledTimes(1);
+      });
+      expect(opened.print.mock.results[0]).toEqual({
+        type: "throw",
+        value: closed,
+      });
+
+      // A macrotask, because Node decides a rejection is unhandled only after
+      // the microtask queue has drained.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(rejections).toEqual([]);
+    } finally {
+      process.off("unhandledRejection", record);
+    }
+  });
 });
