@@ -22,6 +22,14 @@ jobs:
     # hung after the tests had already passed burned exactly 365 minutes
     # before it was cancelled; `backend-migrations` below has carried a
     # timeout all along.
+    #
+    # It is the *last* backstop, not the first one, and deliberately so: a job
+    # this cancels publishes **no logs at all**, which is why the two recorded
+    # hangs (jobs 109644454563 and 109661776896, on a commit whose backend
+    # tree was byte-identical to one that had just passed in 10m57s) could not
+    # be diagnosed from CI. The `timeout` wrapper on the pytest step below,
+    # and `pytest-timeout` inside pytest, are what turn the next hang into a
+    # failing step with a readable log.
     timeout-minutes: 45
     env:
       SECRET_KEY: "test-secret-key-for-ci"
@@ -47,10 +55,22 @@ jobs:
         cd backend
         uv sync --all-groups
 
+    # `timeout` here, and not only `timeout-minutes` above, because the two
+    # kill the run in opposite ways. `timeout-minutes` cancels the *job*, and a
+    # cancelled job's logs are unavailable; `timeout` fails a *step*, so
+    # everything pytest wrote before it wedged -- the summary line it had
+    # already reached, and `pytest-timeout`'s dump of every thread's stack when
+    # one test is the one stuck -- is in the log the next person opens.
+    #
+    # 30m against a ~11m steady state: enough head-room for a slow runner,
+    # short enough that a hang costs a third of what it used to. `--signal=INT`
+    # first so pytest can still print its own summary and coverage report, and
+    # SIGKILL 60s later for a process too wedged to answer.
     - name: Run tests with coverage
       run: |
         cd backend
-        uv run pytest --cov=app --cov-report=xml:coverage.xml --junitxml=test-results.xml tests/
+        timeout --signal=INT --kill-after=60s 30m \
+          uv run pytest --cov=app --cov-report=xml:coverage.xml --junitxml=test-results.xml tests/
 
     - name: Upload Backend Test Data
       uses: actions/upload-artifact@v7
@@ -131,10 +151,15 @@ jobs:
         echo "server_encoding=$enc"
         test "$enc" = "UTF8"
 
+    # Wrapped for the same reason the `backend` job's step is: this job's
+    # `timeout-minutes` cancels it and publishes nothing, and its own note
+    # above already names a hung `alembic` subprocess as what it guards
+    # against. A step that fails at 15m leaves the log that says which case.
     - name: Run Postgres migration tests
       run: |
         cd backend
-        uv run pytest tests/test_migrations_postgres.py -v --durations=15 \
+        timeout --signal=INT --kill-after=60s 15m \
+          uv run pytest tests/test_migrations_postgres.py -v --durations=15 \
           --junitxml=migration-test-results.xml -o addopts=
 
     # `if: always()` is required: a green-but-empty pytest run is the exact

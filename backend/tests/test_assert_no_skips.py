@@ -26,6 +26,20 @@ MODULE = pathlib.Path(__file__).resolve().parent / "test_migrations_postgres.py"
 #: real run of it rather than guessed (`migration-test-results.xml`).
 MODULE_CLASSNAME = "tests.test_migrations_postgres"
 
+#: Every `subprocess.run` below is bounded. `capture_output=True` with no
+#: `timeout` blocks the parent until the child exits *and* its pipes close, so
+#: one wedged child is a pytest process that finishes its tests and then never
+#: exits -- the recorded shape of the two `Backend Tests` runs cancelled at
+#: 55m0s with no logs. `SUBPROCESS_TIMEOUT` sizes the nested pytest collection
+#: (a whole interpreter start plus a conftest import: 4.7 s measured here) and
+#: `CLI_TIMEOUT` the two bare `python scripts/assert_no_skips.py` calls. Both
+#: are an order of magnitude above their real cost, so nothing healthy is
+#: anywhere near them; a
+#: `TimeoutExpired` is a real failure with a real traceback, which is the whole
+#: point.
+SUBPROCESS_TIMEOUT = 120
+CLI_TIMEOUT = 60
+
 
 def _load():
     """Import the CLI helper by path -- `scripts/` is deliberately not a package."""
@@ -108,6 +122,7 @@ def test_the_floor_is_the_modules_real_case_count():
         text=True,
         check=False,
         cwd=str(SCRIPT.parents[1]),
+        timeout=SUBPROCESS_TIMEOUT,
     )
     assert result.returncode == 0, result.stdout + result.stderr
     collected = sum(
@@ -215,6 +230,7 @@ def test_the_cli_entry_point_exits_non_zero_without_a_traceback():
         text=True,
         check=False,
         cwd=str(SCRIPT.parents[1]),
+        timeout=CLI_TIMEOUT,
     )
     assert result.returncode != 0
     assert "Traceback" not in result.stderr
@@ -227,6 +243,7 @@ def test_the_cli_entry_point_exits_zero_on_a_green_artifact(tmp_path):
         text=True,
         check=False,
         cwd=str(SCRIPT.parents[1]),
+        timeout=CLI_TIMEOUT,
     )
     assert result.returncode == 0, result.stderr
     assert f"collected={_floor()} skipped=0" in result.stdout

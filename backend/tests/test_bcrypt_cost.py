@@ -106,6 +106,11 @@ def test_environment_cannot_lower_the_production_cost() -> None:
         capture_output=True,
         text=True,
         check=False,
+        # Bounded for the reason `tests/test_assert_no_skips.py` states at
+        # length: an unbounded `capture_output=True` child is a parent that can
+        # hang for the whole of the job's `timeout-minutes`, and a cancelled
+        # job publishes no logs. One interpreter start and one import.
+        timeout=60,
     )
 
     assert result.returncode == 0, result.stderr

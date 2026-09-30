@@ -248,6 +248,37 @@ as the source of truth.
   cases, because a fully-skipped run exits 0. `ci.yml` also accepts
   `workflow_dispatch`, so any branch can be run manually with
   `gh workflow run ci.yml --ref <branch>`.
+- **A hung run must not be a silent one.** A job killed by GitHub's
+  `timeout-minutes` is **cancelled**, and GitHub publishes **no logs for a
+  cancelled job** — which is why `Backend Tests` being cancelled at 55m0s
+  twice in a row (on a commit whose backend tree was byte-identical to one
+  that had just passed in 10m57s) could not be diagnosed from CI at all.
+  `timeout-minutes` is therefore the *last* backstop, and three guards sit in
+  front of it:
+  1. **`timeout` wraps every backend `uv run pytest`** in `ci.yml`
+     (`--signal=INT --kill-after=60s`, 30m for `backend` and 15m for
+     `backend-migrations`). It fails a **step**, and a failed step keeps its
+     log.
+  2. **`pytest-timeout` caps one test** — `pytest.ini`'s `timeout = 300` with
+     `timeout_method = thread`. `thread`, never the default `signal`: SIGALRM
+     reaches the main thread only, so it cannot interrupt a wait inside a
+     helper thread, which is the shape a leaked client portal or an unjoined
+     pool worker produces. The thread method dumps every stack on the way out.
+  3. **Every `subprocess.run` in `backend/tests/` passes a `timeout`.** With
+     `capture_output=True` and none, the parent blocks until the child exits
+     *and* its pipes close, so one wedged child is a pytest that finishes its
+     tests and never exits.
+  `conftest.py`'s `pytest_sessionfinish` additionally **names any non-daemon
+  thread still alive** when the last test ends — the interpreter joins those
+  on the way out, so one of them is the difference between a summary line and
+  an exit. It prints and never fails: there is no test left for a failure to
+  attach to, and a run whose only problem is a leaked thread must still
+  publish its coverage artefact. `backend/tests/test_suite_hygiene.py` pins
+  all four rules, plus "every engine the test tree builds is disposed" —
+  `StaticPool` holds the one connection that *is* an in-memory SQLite
+  database, and the per-test engine used not to be disposed, so ~4000 of them
+  were closed whenever the garbage collector reached them (the
+  `ResourceWarning: unclosed database` flood).
 - **Migrate** — `migrate.yml` runs Alembic migrations on push to `master`.
 - **Release** — `release.yml` handles semantic versioning and releases.
 - **Static Analysis** — SonarCloud and DeepSource are integrated for code quality and security scanning.

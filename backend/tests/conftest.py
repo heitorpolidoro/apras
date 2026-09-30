@@ -1,4 +1,5 @@
 import json
+import threading
 import uuid
 from pathlib import Path
 
@@ -76,6 +77,55 @@ PROFILE_ROLE_NAMES: dict[str, str] = {
 }
 
 
+# ---------------------------------------------------------------------------
+# Why a hung run leaves no trace, and what this prints instead
+# ---------------------------------------------------------------------------
+
+
+def pytest_sessionfinish(session, exitstatus) -> None:
+    """Name every non-daemon thread still alive when the last test ends.
+
+    CPython's interpreter shutdown *joins* non-daemon threads, and
+    `concurrent.futures` additionally registers an `atexit` hook that joins its
+    worker threads. So one thread that never returns is a process that runs its
+    tests, prints its summary, reports its coverage -- and then never exits.
+    That is the exact recorded shape of the hang that burned 365 minutes of
+    runner time before the job was cancelled, and of `Backend Tests` being
+    cancelled at 55m0s twice on a commit whose backend tree had just passed in
+    10m57s.
+
+    It prints rather than fails, deliberately. This hook runs after the last
+    test, where there is no test left for a failure to attach to; the exit
+    status is already decided; and a run whose only problem is a leaked thread
+    must still publish `coverage.xml` and `test-results.xml`. The value here is
+    the *name*, which is what turns "the process will not exit" into "this
+    fixture leaked that thread" without a reproduction.
+    """
+    lingering = [
+        thread
+        for thread in threading.enumerate()
+        if thread is not threading.main_thread() and not thread.daemon
+    ]
+    if not lingering:
+        return
+    reporter = session.config.pluginmanager.get_plugin("terminalreporter")
+    lines = [
+        "The interpreter joins these on the way out, so a run that appears to",
+        "hang after its summary is almost certainly waiting on one of them:",
+        *(f"  - {thread.name!r} (alive={thread.is_alive()})" for thread in lingering),
+    ]
+    if reporter is None:  # pragma: no cover - `-p no:terminal`
+        print(
+            "\n".join(
+                ["", f"{len(lingering)} non-daemon thread(s) still alive", *lines]
+            )
+        )
+        return
+    reporter.write_sep("=", f"{len(lingering)} non-daemon thread(s) still alive")
+    for line in lines:
+        reporter.write_line(line)
+
+
 def bundle(profile: str) -> frozenset[str]:
     """The permissions a `profile` grants: the recording plus its tier."""
     return frozenset(LEGACY_BUNDLES[profile]) | NEW_TIER[profile]
@@ -141,14 +191,29 @@ def make_user(
 
 @pytest.fixture(name="session")
 def session_fixture():
-    """Provide an isolated in-memory SQLite session for each test."""
+    """Provide an isolated in-memory SQLite session for each test.
+
+    `engine.dispose()` is not optional hygiene. `StaticPool` holds the single
+    connection that *is* the in-memory database, and neither closing the
+    `Session` nor `drop_all` releases it: before this `finally` the engine
+    simply fell out of scope and its connection was closed whenever the
+    garbage collector reached it. That is what emitted one
+    `ResourceWarning: unclosed database` per test -- some 4000 of them, from
+    the `gc.collect()` pytest's `unraisableexception` plugin runs between
+    tests -- and it made the number of connections the process really held a
+    function of GC timing rather than of the suite. Disposing here closes it
+    deterministically, at the end of the test that opened it.
+    """
     engine = create_engine(
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
     SQLModel.metadata.create_all(engine)
-    with Session(engine) as session:
-        yield session
-    SQLModel.metadata.drop_all(engine)
+    try:
+        with Session(engine) as session:
+            yield session
+        SQLModel.metadata.drop_all(engine)
+    finally:
+        engine.dispose()
 
 
 @pytest.fixture(name="default_tenant", autouse=True)
@@ -184,8 +249,16 @@ def client_fixture(session: Session):
 
     app.dependency_overrides[get_session] = get_session_override
     client = TestClient(app)
-    yield client
-    app.dependency_overrides.clear()
+    try:
+        yield client
+    finally:
+        app.dependency_overrides.clear()
+        # A `TestClient` is an `httpx.Client`, and one built without `with`
+        # is never closed. Nothing in it reaches a socket here, but its
+        # transport is the one object in this fixture that owns anything the
+        # interpreter has to tear down at exit; closing it keeps that bounded
+        # by the test rather than by the run.
+        client.close()
 
 
 @pytest.fixture(name="admin_user")
@@ -307,8 +380,11 @@ def tenant_client_fixture(session: Session):
     client = TestClient(app)
     client.request_sessions = request_sessions
     client.request_session_ids = session_ids
-    yield client
-    app.dependency_overrides.clear()
+    try:
+        yield client
+    finally:
+        app.dependency_overrides.clear()
+        client.close()
 
 
 @pytest.fixture(name="user_in_tenant_a")
