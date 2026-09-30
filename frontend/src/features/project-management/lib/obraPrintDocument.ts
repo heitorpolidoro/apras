@@ -187,13 +187,23 @@ export const openObraPrintWindow = (
   opened.addEventListener(
     "load",
     () => {
-      // `whenFontsReady` swallows its own failure, so `.then` is the whole
-      // story and there is nothing here that can reject. No `void` operator:
-      // it reads as if a rejection were being discarded, and DeepSource's
-      // JS-0098 objects to it for that reason.
-      whenFontsReady(opened).then(() => {
-        opened.print();
-      });
+      // The two analysers want opposite things here, so this satisfies both.
+      // DeepSource's JS-0098 rejects the `void` operator that used to sit in
+      // front of this call; SonarCloud treats an unhandled rejection as a
+      // reliability *bug*, and dropping `void` without more is what turned the
+      // quality gate's rating to C. A terminal `.catch` is what both accept.
+      //
+      // And it is not dead code bought to satisfy a linter. `whenFontsReady`
+      // swallows its own failure, true -- but `print()` throws if the window
+      // was closed while the fonts were still settling, and that rejects this
+      // chain. There is nothing to recover: the document is already gone.
+      // `.catch(() => undefined)` is the same shape `whenFontsReady` uses for
+      // the same reason a few lines above.
+      whenFontsReady(opened)
+        .then(() => {
+          opened.print();
+        })
+        .catch(() => undefined);
     },
     { once: true },
   );
