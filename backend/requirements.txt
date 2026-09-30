@@ -83,7 +83,7 @@ pydantic-settings==2.15.0
     # via backend
 pygments==2.20.0
     # via pytest
-pyjwt==2.13.0
+pyjwt==2.15.0
     # via backend
 pytest==9.0.3
     # via pytest-cov
