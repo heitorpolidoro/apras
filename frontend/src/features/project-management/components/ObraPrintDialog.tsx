@@ -13,7 +13,6 @@ interface ObraPrintDialogProps {
   onSelect: (index: number) => void;
 }
 
-
 /**
  * APRAS-118 — the obra selector behind the public report's print control.
  *
