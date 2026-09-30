@@ -36,7 +36,9 @@ The parameter analysis is intraprocedural-plus-call-sites: a module-private
 function's parameter is safe only when *every* call site inside the module
 passes a safe argument, and a public function's parameters are always ``RAW``
 because callers outside the module are not visible here. Both directions of
-that rule are pessimistic.
+that rule are pessimistic **for a parameter of a module-level function**,
+which is the only kind :attr:`_Audit.functions` collects; a nested function's
+parameter is not covered by it at all, and is the last bullet below.
 
 **What it does not track**, so that nobody reads the paragraph above as a
 guarantee it is not:
@@ -53,7 +55,17 @@ guarantee it is not:
 * **module-scope containers written at runtime.** A module-level ``dict``
   filled by subscript after import is still treated as import-time data;
 * **``strftime``/``isoformat`` on a non-date receiver.** They are safe by
-  method name, not by the receiver's type.
+  method name, not by the receiver's type;
+* **a nested function's parameter.** :attr:`_Audit.functions` holds the
+  module's top-level functions only, so a ``def`` inside a ``def`` is walked
+  for its f-strings under the *enclosing* function's scope. Its parameters are
+  therefore neither judged on call sites nor treated pessimistically: they are
+  resolved as names in the enclosing scope, so one that collides with a safe
+  enclosing local audits ``SAFE`` whatever the inner function is passed. This
+  is plain runnable Python, not a contortion -- it is on this list rather than
+  fixed because the audited module has no nested renderer and no f-string
+  inside its one lambda, and because fixing it means giving the analysis a
+  scope stack, which is a different piece of work than the rest of this file.
 
 Each needs contorted code that this module does not contain, which is why they
 are recorded rather than fixed -- but every one of them is a way to reach
@@ -337,10 +349,22 @@ class _Audit:
 
     def _attribute_safe(self, node: ast.expr, scope: str) -> bool:
         """A component of a date or a number is not text; a dot into anything
-        else is a model field until proven otherwise."""
+        else is a model field until proven otherwise.
+
+        The receiver has to satisfy **both** halves: its annotation says it is
+        not text, *and* :meth:`is_safe` agrees about the name itself. The
+        annotation alone made this the third site to believe a claim over a
+        binding -- ``stamp: date = project.description`` then ``{stamp.year}``
+        audited ``SAFE`` -- and it also made the analysis contradict itself on
+        one name in one function, calling ``{when}`` ``RAW`` while ``{when.year}``
+        was ``SAFE``. An annotation is not evidence about the value; it only
+        says which attributes would be non-text *if* the annotation held.
+        """
         assert isinstance(node, ast.Attribute)
-        return isinstance(node.value, ast.Name) and _is_non_text(
-            self.annotations.get(scope, {}).get(node.value.id)
+        return (
+            isinstance(node.value, ast.Name)
+            and _is_non_text(self.annotations.get(scope, {}).get(node.value.id))
+            and self.is_safe(node.value, scope)
         )
 
     def _call_safe(self, node: ast.expr, scope: str) -> bool:

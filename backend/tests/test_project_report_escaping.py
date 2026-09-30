@@ -113,6 +113,7 @@ from app.models.project import ConstructionProject, ProjectMilestone, ProjectUpd
 from app.models.tenant import Tenant
 from app.models.user import User
 from app.services import project_report_service as report
+from tests import interpolation_audit
 from tests.interpolation_audit import (
     ELEMENT_SELECTORS,
     ESCAPED,
@@ -131,23 +132,42 @@ if TYPE_CHECKING:  # pragma: no cover
 SOURCE = Path(report.__file__).read_text(encoding="utf-8")
 TREE = ast.parse(SOURCE)
 
-#: How many synthetic cases pin an analyser rule. Every one of them opens its
-#: docstring with ``An analyser rule``, and :func:`test_every_analyser_rule_is_accounted_for`
-#: counts them against this number, so a rule added without a case -- or a case
-#: whose rule quietly went away -- fails here.
+#: How many synthetic cases pin an analyser rule, and how many entries the
+#: analyser's dispatch table holds. :func:`test_every_analyser_rule_is_accounted_for`
+#: checks both numbers.
 #:
-#: This replaces the per-case ordinals ("shape 3 of 5") that used to carry the
-#: same information. They were introduced *as* the device for making drift
-#: visible and then went stale twice without failing anything, which is the
-#: exact shape this module exists to remove. A number beside the list, checked
-#: by a test, cannot rot silently.
+#: **What that catches, exactly.** A case losing its ``An analyser rule``
+#: docstring prefix fails, and a new entry in :data:`interpolation_audit._RULES`
+#: fails. What it does **not** catch is a rule loosened *inside* an existing
+#: entry -- a name added to ``SAFE_METHODS``, a new node type folded into the
+#: composite rule. The first version of this comment claimed "a rule added
+#: without a case fails here", and the reviewer disproved it by prepending
+#: ``((ast.Await, ast.Dict, ast.Starred, ast.Lambda), _Audit._always_safe)``
+#: to the dispatch: 91 tests passed, this one included, because nothing
+#: connected it to the analyser at all. The ``_RULES`` count is that
+#: connection, and it is worth exactly one mutation's worth of protection --
+#: no more, which is why the limit is written down beside it.
 #:
-#: The rules, in case order: a plain attribute read; a generator's vacuously
-#: safe returns; a local shadowing a module-scope name; selectors that return
-#: an argument rather than converting it; a binding believed over its
-#: annotation; a keyword argument that reaches the output; a parameter rebound
-#: in the body.
-ANALYSER_RULE_CASES = 7
+#: This replaces the per-case ordinals ("shape 3 of 5"). They were introduced
+#: *as* the device for making drift visible and went stale twice without
+#: failing anything, which is the shape this module exists to remove. **The
+#: list below is deliberately unordered** for that reason: an ordering claim
+#: over eight cases has exactly the property that retired the ordinals, and
+#: the ordering half of the first version of this list was already permuted in
+#: the commit that introduced it. The count is checked; the order is not
+#: claimed.
+#:
+#: The rules: a plain attribute read; a generator's vacuously safe returns; a
+#: local shadowing a module-scope name; selectors that return an argument
+#: rather than converting it; a local binding believed over its annotation; an
+#: attribute whose receiver's annotation is contradicted by its binding; a
+#: keyword argument that reaches the output; a parameter rebound in the body.
+ANALYSER_RULE_CASES = 8
+
+#: Entries in :data:`interpolation_audit._RULES`. Hand-kept, like the count
+#: above, and checked for the same reason: the dispatch is where a whole node
+#: kind can be declared safe in one line.
+ANALYSER_DISPATCH_RULES = 7
 
 
 # ---------------------------------------------------------------------------
@@ -661,6 +681,54 @@ def _render(project):
     assert verdicts["_e(sorted(ROWS, key=_order))"] == ESCAPED
 
 
+def test_the_audit_checks_an_attribute_receiver_against_its_binding():
+    """An analyser rule: an annotation says *which* attributes would be safe.
+
+    `_attribute_safe` let a date-or-number annotation on the receiver make any
+    attribute of it safe, without asking whether the name actually held such a
+    value. `stamp: date = project.description` then `{stamp.year}` audited
+    `SAFE` -- the third site in this analyser to believe a claim over a
+    binding, after `_name_safe` and its parameter branch.
+
+    It also made the analysis **contradict itself on one name in one
+    function**: `{when}` `RAW` and `{when.year}` `SAFE`, for the same `when`.
+    That is what decided this as a fix rather than a documented gap; reaching
+    an injection through it needs both a wrong annotation and an attribute
+    carrying stored text, which alone would have put it in the gap tier.
+
+    The safe half is the real module's own shape -- `_masthead_html`'s
+    `today: date`, reached from a call site that passes a safe argument -- and
+    it has to keep auditing `SAFE`, or `{today.year}` in the masthead would
+    need a declared exemption.
+
+    *Fails if:* `_attribute_safe` stops consulting `is_safe` about its
+    receiver.
+    """
+    source = """
+import html
+from datetime import date
+
+NOW = None
+
+
+def _e(value):
+    return html.escape("" if value is None else str(value))
+
+
+def _card(today: date, project):
+    stamp: date = project.description
+    return f'<i>{stamp.year}</i><b>{today.year}</b>'
+
+
+def _render(project):
+    return _card(NOW, project)
+"""
+    verdicts = {item.expression: item.verdict for item in audit(ast.parse(source))}
+
+    assert verdicts["stamp.year"] == RAW
+    assert verdicts["today.year"] == SAFE
+
+
 def test_the_audit_sees_a_parameter_rebound_in_the_body():
     """An analyser rule: a parameter is its call sites **and** its rebindings.
 
@@ -1006,15 +1074,16 @@ def test_a_hostile_brand_theme_never_reaches_the_style_block():
 
 
 def test_every_analyser_rule_is_accounted_for():
-    """The drift guard over the cases above, and over this module's own prose.
+    """The drift guard over the cases above, and over the analyser's dispatch.
 
-    A rule the analyser relies on but nothing pins is how three of the four
-    false-`SAFE` shapes reached review, so the count is checked rather than
-    maintained by hand. The convention it rests on is one line of each
-    docstring, which is cheap enough to keep true.
+    A rule the analyser relies on but nothing pins is how most of the
+    false-`SAFE` shapes reached review, so both counts are checked rather than
+    maintained by hand alone. See :data:`ANALYSER_RULE_CASES` for what this
+    does and does not catch -- it is narrower than it first claimed.
 
     *Fails if:* an analyser rule gains or loses a case without
-    :data:`ANALYSER_RULE_CASES` and its list being updated.
+    :data:`ANALYSER_RULE_CASES` and its list being updated, or a node kind is
+    added to `_RULES` without :data:`ANALYSER_DISPATCH_RULES` being updated.
     """
     cases = sorted(
         name
@@ -1025,3 +1094,4 @@ def test_every_analyser_rule_is_accounted_for():
     )
 
     assert len(cases) == ANALYSER_RULE_CASES, cases
+    assert len(interpolation_audit._RULES) == ANALYSER_DISPATCH_RULES
