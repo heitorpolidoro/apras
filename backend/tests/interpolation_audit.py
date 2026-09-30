@@ -399,11 +399,20 @@ class _Audit:
         own function names would otherwise read as safe whatever it holds --
         ``html = project.description`` followed by ``f"<p>{html}</p>"`` was
         ``SAFE`` while this method tested :attr:`module_names` first.
+
+        **A parameter is judged on its call sites *and* on every rebinding.**
+        Returning on ``param_safe`` alone made the ordinary ``or``-default
+        form invisible -- ``label = label or project.description`` audited
+        ``SAFE``, because the short-circuit returned before :attr:`bindings`
+        was consulted even though ``_bindings`` had already collected the
+        rebinding.
         """
+        bindings = self.bindings.get(scope, {}).get(name)
         fn = self.functions.get(scope)
         if fn is not None and name in _params(fn):
-            return self.param_safe[(scope, name)]
-        bindings = self.bindings.get(scope, {}).get(name)
+            if not self.param_safe[(scope, name)]:
+                return False
+            return not bindings or self._bindings_safe(name, scope, bindings)
         if bindings:
             return self._bindings_safe(name, scope, bindings)
         if _is_non_text(self.annotations.get(scope, {}).get(name)):

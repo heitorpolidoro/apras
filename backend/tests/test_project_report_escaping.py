@@ -65,17 +65,25 @@ assertion here is deliberately *not* about `_e` at all --
 that site's real defence is `urls.public_tenant_logo_url`'s `quote()` and
 saying otherwise would repeat exactly that mistake.
 
-The audit's own pessimism is pinned too, by **five** synthetic modules rather
-than by prose, one per rule. This module opened with one, the plain attribute
-read, and four false-`SAFE` shapes have since been found past it: a helper
-that `yield`s, whose returns were vacuously safe; a local shadowing a
-module-scope name; a local trusted for its annotation over its binding; and
-`max`/`min`/`sorted`, which return one of their arguments rather than
-converting anything. Every one of those rules now has a case that goes red
-when the rule is removed, checked by re-introducing each old behaviour in
-full -- the fourth taught that reverting a rule which lives in two places
-(a set membership *and* a dispatch branch) has to revert both, or the revert
-proves nothing.
+The audit's own pessimism is pinned too, by one synthetic module per rule
+rather than by prose -- :data:`ANALYSER_RULE_CASES` counts them. This module
+opened with one, the plain attribute read, and **six** false-`SAFE` shapes
+have since been found past it: a helper that `yield`s, whose returns were
+vacuously safe; a local shadowing a module-scope name; a local trusted for its
+annotation over its binding; `max`/`min`/`sorted`, which return one of their
+arguments rather than converting anything; a keyword argument nothing walked;
+and a parameter rebound in the body, where the short-circuit on its call sites
+hid the rebinding.
+
+Each rule's case was confirmed by re-introducing its old behaviour in full,
+and two of those reverts taught something the first pass got wrong. A rule
+living in two places -- a set membership *and* a dispatch branch -- has to be
+reverted in both. And an assertion can draw its verdict from a **different
+rule than the one it names**: the selector case's safe half was first written
+`{max(low, high):.1f}`, and a numeric format spec is decided before `is_safe`
+is consulted at all, so it passed with the rule emptied, with the rule's
+branch deleted, and with the names put back among the coercions. It carries no
+format spec now.
 
 `tests/interpolation_audit.py` also records, in its own docstring, the shapes
 it does **not** track. Two of the four false-`SAFE` findings were shapes the
@@ -106,9 +114,11 @@ from app.models.tenant import Tenant
 from app.models.user import User
 from app.services import project_report_service as report
 from tests.interpolation_audit import (
+    ELEMENT_SELECTORS,
     ESCAPED,
     RAW,
     SAFE,
+    SAFE_CALLABLES,
     audit,
     escape_call_sites,
     escape_calls_at_interpolations,
@@ -120,6 +130,25 @@ if TYPE_CHECKING:  # pragma: no cover
 
 SOURCE = Path(report.__file__).read_text(encoding="utf-8")
 TREE = ast.parse(SOURCE)
+
+#: How many synthetic cases pin an analyser rule. Every one of them opens its
+#: docstring with ``An analyser rule``, and :func:`test_every_analyser_rule_is_accounted_for`
+#: counts them against this number, so a rule added without a case -- or a case
+#: whose rule quietly went away -- fails here.
+#:
+#: This replaces the per-case ordinals ("shape 3 of 5") that used to carry the
+#: same information. They were introduced *as* the device for making drift
+#: visible and then went stale twice without failing anything, which is the
+#: exact shape this module exists to remove. A number beside the list, checked
+#: by a test, cannot rot silently.
+#:
+#: The rules, in case order: a plain attribute read; a generator's vacuously
+#: safe returns; a local shadowing a module-scope name; selectors that return
+#: an argument rather than converting it; a binding believed over its
+#: annotation; a keyword argument that reaches the output; a parameter rebound
+#: in the body.
+ANALYSER_RULE_CASES = 7
+
 
 # ---------------------------------------------------------------------------
 # The declared exemptions
@@ -419,7 +448,7 @@ def test_the_module_escapes_or_provably_cannot_need_to():
 
 
 def test_the_audit_catches_a_newly_added_unescaped_field():
-    """ER3/ER7, shape 1 of 3: a plain attribute read.
+    """An analyser rule, one per case: a plain attribute read (ER3/ER7).
 
     A synthetic module in the shape of the real one -- an escaper, a private
     renderer, a field read off a model. The audit must call the unescaped
@@ -448,7 +477,7 @@ def _render(project):
 
 
 def test_the_audit_does_not_trust_a_helper_that_yields():
-    """ER7(a), shape 2 of 3: a generator's returns are vacuously safe.
+    """An analyser rule: a generator's returns are vacuously safe (ER7a).
 
     A function that `yield`s carries no `ast.Return` with the values it
     produces, so `all(...)` over its return list is true of nothing --
@@ -482,7 +511,7 @@ def _render(milestones):
 
 
 def test_the_audit_resolves_a_local_before_the_module_name_it_shadows():
-    """ER7(b), shape 3 of 3: a local shadowing a module-scope name.
+    """An analyser rule: a local shadowing a module-scope name (ER7b).
 
     `_name_safe` used to answer from `module_names` first, so a local called
     `html`, `json`, `date`, `re`, `clock` -- or any of the module's 45
@@ -517,24 +546,37 @@ def _render(project):
 
 
 def test_the_audit_does_not_trust_a_builtin_that_returns_its_argument():
-    """ER8, shape 4 of 5: `max`/`min`/`sorted` are selectors, not coercions.
+    """An analyser rule: `max`/`min`/`sorted` select, they do not convert (ER8).
 
     `len`, `float` and `int` answer a number whatever they are handed;
     `max`, `min` and `sorted` hand **one of their arguments back**, so over
     stored text they answer stored text. While they sat among the numeric
-    coercions, both interpolations below audited `SAFE` -- and this is not a
-    contrived shape: `project_report_service.py:1376` already reads
+    coercions, both `RAW` interpolations below audited `SAFE` -- and this is
+    not a contrived shape: `project_report_service.py:1376` already reads
     `max(update.created_at for update in updates)`, so the hostile form is one
     edit away rather than hypothetical.
 
-    The numeric use is asserted too. These three are now routed through the
-    composite rule -- safe exactly when every argument is -- rather than
-    dropped, so `{max(a, b):.1f}` over two floats has to stay `SAFE` or the
-    fix would be a blunt demotion that the real module would then have to
-    declare an exemption for.
+    **The `SAFE` half carries no format spec, and that is the whole point of
+    it.** As first written it was `{max(low, high):.1f}`, and `_classify`
+    answers `SAFE` on a numeric spec *before* `is_safe` is ever consulted --
+    the audit's own reason string for it was `numeric format spec :.1f`. So it
+    drew its verdict from a different rule than the one it claimed to pin: it
+    passed with `ELEMENT_SELECTORS` emptied, with the dispatch branch deleted,
+    and with the names put back among the coercions. Only the conjunction of
+    two of those reddened it. Without the spec, `{max(low, high)}` over two
+    `float` parameters is `SAFE` through this rule and `RAW` without it.
 
-    *Fails if:* `max`/`min`/`sorted` are moved back into `SAFE_CALLABLES`, or
-    `ELEMENT_SELECTORS` stops reaching `_arguments_safe`.
+    I also has to withdraw the reason I gave for routing these through the
+    composite rule rather than dropping them: I claimed dropping would force a
+    new declared exemption, and it would not have. The module's only selector
+    inside an interpolation is `project_report_service.py:908`, which carries
+    `:.1f` and is therefore safe by format spec either way. Routing is the
+    more precise rule and that is its justification; no exemption was ever at
+    stake.
+
+    *Fails if:* the `ELEMENT_SELECTORS` branch stops reaching
+    `_arguments_safe` -- by deletion, or by the set being emptied -- which the
+    `SAFE` assertion now catches on its own.
     """
     source = """
 import html
@@ -548,7 +590,7 @@ def _render(project, updates, low: float, high: float):
     return (
         f'<p>{min(project.title, project.description)}</p>'
         f'<p>{max(update.title for update in updates)}</p>'
-        f'<i>{max(low, high):.1f}</i>'
+        f'<i>{max(low, high)}</i>'
     )
 """
     verdicts = {item.expression: item.verdict for item in audit(ast.parse(source))}
@@ -559,8 +601,107 @@ def _render(project, updates, low: float, high: float):
     assert verdicts["max(low, high)"] == SAFE
 
 
+def test_no_builtin_is_both_a_coercion_and_a_selector():
+    """The invariant that makes the rule above one rule rather than two.
+
+    `_call_safe` consults `ELEMENT_SELECTORS` first, so a name in **both**
+    sets is decided by the branch and its `SAFE_CALLABLES` membership is dead
+    code -- which is exactly why putting `max` back among the coercions while
+    leaving the branch in place changed no verdict and reddened nothing. That
+    revert is a real regression of intent even when it is a semantic no-op
+    today, because it survives the next reordering of the dispatch. One line
+    of set algebra states the intent that the dispatch order otherwise hides.
+
+    *Fails if:* a selector is added to `SAFE_CALLABLES`, or vice versa.
+    """
+    assert SAFE_CALLABLES.isdisjoint(ELEMENT_SELECTORS)
+
+
+def test_the_audit_checks_a_keyword_argument_that_reaches_the_output():
+    """An analyser rule: keywords are arguments (`_arguments_safe`).
+
+    `max(..., default=x)` returns `x` for an empty iterable, so a keyword can
+    reach the document as directly as a positional -- the clause was written
+    as latent, and this is the shape that makes it live. `sorted(rows,
+    key=_stage_sort_key)`, the real module's own keyword use, stays `SAFE`
+    because a module function is a safe name, so both directions are asserted.
+
+    **The iterable is a module-scope constant on purpose.** Written as
+    `max(rows, default=project.description)` over a parameter, the `RAW`
+    verdict came from `rows` -- an uncalled private function's parameter is
+    unsafe -- so removing the keyword clause entirely left the case green and
+    it pinned the parameter rule a second time instead of this one. With
+    `ROWS` provably safe, the keyword is the only thing left to decide.
+
+    *Fails if:* `_arguments_safe` stops walking `node.keywords`.
+    """
+    source = """
+import html
+
+ROWS = ()
+
+
+def _e(value):
+    return html.escape("" if value is None else str(value))
+
+
+def _order(row):
+    return 0
+
+
+def _render(project):
+    return (
+        f'<p>{max(ROWS, default=project.description)}</p>'
+        f'<p>{_e(sorted(ROWS, key=_order))}</p>'
+    )
+"""
+    verdicts = {item.expression: item.verdict for item in audit(ast.parse(source))}
+
+    assert verdicts["max(ROWS, default=project.description)"] == RAW
+    assert verdicts["_e(sorted(ROWS, key=_order))"] == ESCAPED
+
+
+def test_the_audit_sees_a_parameter_rebound_in_the_body():
+    """An analyser rule: a parameter is its call sites **and** its rebindings.
+
+    `_name_safe` returned on `param_safe` alone, so the ordinary `or`-default
+    form was invisible: `label = label or project.description` audited `SAFE`
+    while `_bindings` had already collected the rebinding -- only the
+    short-circuit hid it. Same class as the annotation ordering, and the same
+    unpinned prose claim ("Python resolves a name to the local binding ... and
+    so must this"), so it is fixed rather than documented as a gap.
+
+    The safe half matters as much: a parameter that is *not* rebound, reached
+    from a call site that passes a literal, has to stay `SAFE`, or the fix
+    would be "distrust every parameter".
+
+    *Fails if:* `_name_safe` returns for a parameter before consulting
+    `self.bindings`.
+    """
+    source = """
+import html
+
+
+def _e(value):
+    return html.escape("" if value is None else str(value))
+
+
+def _card(label, kicker, project):
+    label = label or project.description
+    return f'<p>{label}</p><span>{kicker}</span>'
+
+
+def _render(project):
+    return _card(None, "Obra", project)
+"""
+    verdicts = {item.expression: item.verdict for item in audit(ast.parse(source))}
+
+    assert verdicts["label"] == RAW
+    assert verdicts["kicker"] == SAFE
+
+
 def test_the_audit_believes_a_local_binding_over_its_annotation():
-    """ER9, shape 5 of 5: an annotation is a claim, the binding is the value.
+    """An analyser rule: an annotation is a claim, the binding is the value (ER9).
 
     **This is the case whose absence made a docstring lie.** The revision that
     reordered `_name_safe` documented checking bindings *before* a name's
@@ -862,3 +1003,25 @@ def test_a_hostile_brand_theme_never_reaches_the_style_block():
         "a :root value is not an oklch() triple"
     )
     assert "</style" not in sheet.lower()
+
+
+def test_every_analyser_rule_is_accounted_for():
+    """The drift guard over the cases above, and over this module's own prose.
+
+    A rule the analyser relies on but nothing pins is how three of the four
+    false-`SAFE` shapes reached review, so the count is checked rather than
+    maintained by hand. The convention it rests on is one line of each
+    docstring, which is cheap enough to keep true.
+
+    *Fails if:* an analyser rule gains or loses a case without
+    :data:`ANALYSER_RULE_CASES` and its list being updated.
+    """
+    cases = sorted(
+        name
+        for name, value in list(globals().items())
+        if name.startswith("test_")
+        and callable(value)
+        and (value.__doc__ or "").startswith("An analyser rule")
+    )
+
+    assert len(cases) == ANALYSER_RULE_CASES, cases
