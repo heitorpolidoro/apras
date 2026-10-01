@@ -6,10 +6,12 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "alembic>=1.18.4",
-    "bcrypt<4.1.0",
+    # `bcrypt` directly, with no passlib in front of it: passlib 1.7.4 is that
+    # project's last release (2020-10-08) and cannot initialise a bcrypt 5
+    # backend at all. `app/core/security.BcryptHasher` replaced it.
+    "bcrypt<5.1.0",
     "email-validator>=2.3.0",
     "fastapi>=0.136.0",
-    "passlib[bcrypt]>=1.7.4",
     "pillow>=11.0.0",
     "psycopg2-binary>=2.9.11",
     "pydantic-settings>=2.14.2",
@@ -140,6 +142,22 @@ ignore = [
 # narrow and a genuinely new problem still fails the gate); the formatter is
 # simply never allowed to rewrite them.
 exclude = ["alembic/versions/*.py"]
+
+# Not for us -- `ruff check` does our import sorting, and this project runs no
+# standalone isort. This section is for the repository's style bot, which runs
+# `isort` over the files a pull request touches and pushes the result onto the
+# branch. Plain isort's defaults classify `app` as *third-party*, so it merges
+# the first-party block into the third-party one and every touched file then
+# fails ruff's `I001` -- which is what broke the required `Backend Lint (ruff)`
+# check on this branch, on code that was ruff-clean when pushed.
+#
+# isort reads the nearest config walking up from each file, so these keys reach
+# it for everything under `backend/`. `known_first_party` is the fix; `profile`
+# and `line_length` keep the rest of its output matching the ruff formatter.
+[tool.isort]
+profile = "black"
+line_length = 88
+known_first_party = ["app", "tests"]
 
 [tool.coverage.run]
 omit = [

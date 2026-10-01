@@ -7,7 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, StaticPool, create_engine, select
 
-from app.core.security import get_password_hash, pwd_context
+from app.core.security import get_password_hash, password_hasher
 from app.core.tenant_context import REQUEST_SCOPED_KEY
 from app.db import get_session
 from app.main import app
@@ -29,13 +29,19 @@ app.state.limiter.enabled = False
 # ~460 s, roughly 60% of a 771 s run. At 4 rounds a hash costs 1.1 ms and the
 # full run takes ~311 s, with the same tests passing and the same coverage.
 #
-# `update()` mutates the context `app.core.security` already built instead of
-# rebinding it, so every `from app.core.security import pwd_context` alias sees
-# the same setting. It runs at module level rather than in a fixture because 4
-# has to be in force for hashes computed during collection and inside
-# session-scoped fixtures. bcrypt stores its cost in the hash itself, so
-# production hashes created at 12 rounds still verify here unchanged.
-pwd_context.update(bcrypt__rounds=4)
+# This assigns to the attribute of the hasher `app.core.security` already built
+# instead of rebinding the name, so every
+# `from app.core.security import password_hasher` alias sees the same setting --
+# the same property the passlib-era `pwd_context.update(bcrypt__rounds=4)` had,
+# and the reason this is one mutable attribute rather than a constructor
+# argument. It runs at module level rather than in a fixture because 4 has to be
+# in force for hashes computed during collection and inside session-scoped
+# fixtures. bcrypt stores its cost in the hash itself, so production hashes
+# created at 12 rounds still verify here unchanged.
+#
+# `tests/test_bcrypt_cost.py` is what keeps this from reaching production: it
+# re-reads the cost from a subprocess, where this line is not loaded.
+password_hasher.rounds = 4
 
 
 # ---------------------------------------------------------------------------
