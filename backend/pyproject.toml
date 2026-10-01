@@ -37,7 +37,7 @@ dev = [
     # minor releases, and the one thing the `backend-lint` gate must not do is
     # fail on a change that did not cause it. Bumping ruff is a deliberate
     # one-line PR that re-runs the same harness (APRAS-54 §4.1).
-    "ruff==0.16.5",
+    "ruff==0.16.9",
     "zxing-cpp>=3.1.1",
 ]
 
