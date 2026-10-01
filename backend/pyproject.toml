@@ -5,21 +5,21 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "alembic>=1.18.4",
+    "alembic>=1.20.0",
     # `bcrypt` directly, with no passlib in front of it: passlib 1.7.4 is that
     # project's last release (2020-10-08) and cannot initialise a bcrypt 5
     # backend at all. `app/core/security.BcryptHasher` replaced it.
     "bcrypt<5.1.0",
     "email-validator>=2.3.0",
-    "fastapi>=0.136.0",
+    "fastapi>=0.141.1",
     "pillow>=11.0.0",
-    "psycopg2-binary>=2.9.11",
+    "psycopg2-binary>=2.9.13",
     "pydantic-settings>=2.14.2",
     "pyjwt>=2.15.0",
     "python-multipart>=0.0.31",
-    "slowapi>=0.1.9",
+    "slowapi>=0.1.10",
     "sqlmodel>=0.0.38",
-    "uvicorn>=0.44.0",
+    "uvicorn>=0.54.0",
     "httpx>=0.28.1",
     "qrcode>=8.2",
 ]
@@ -27,7 +27,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "httpx>=0.28.1",
-    "pytest>=9.0.3",
+    "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
     # Reads `pytest.ini`'s `timeout` / `timeout_method`. Without it those two
     # settings are an "Unknown config option" warning and nothing else, which
