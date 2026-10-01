@@ -1,11 +1,13 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Spinner } from "../../../components/ui/spinner";
+import { fetchPublicProjectsReport } from "../../../api/publicProjects";
+import ObraPrintDialog from "./ObraPrintDialog";
 import {
-  fetchPublicProjectsReport,
-  publicReportUrl,
-} from "../../../api/publicProjects";
+  listObrasFromReport,
+  openObraPrintWindow,
+} from "../lib/obraPrintDocument";
 
 /**
  * `/c/<slug>/obras` — the condominium's obras report, to a visitor who is not
@@ -20,9 +22,13 @@ import {
  * reason it is sandboxed is that the document is a whole page with its own
  * `<style>`, which would otherwise leak into the app's own stylesheet.
  *
- * Beside it, a plain `<a target="_blank">` to the API URL for printing. Because
- * the route is unauthenticated a direct link works, and the report's print CSS
- * then applies to a real top-level document.
+ * Beside it, the print control. It used to be a plain `<a target="_blank">` to
+ * the API URL, which put the backend host in front of a resident; since
+ * APRAS-118 it is a button opening `ObraPrintDialog`, and choosing an obra
+ * opens a top-level blob document built from the HTML this page already holds
+ * — no second request, no backend origin, one obra per sheet set. The iframe
+ * and its `sandbox=""` are untouched: a sandboxed iframe cannot print itself,
+ * which is why the printed document is top level and not this frame.
  *
  * A failed read — a 404 for an unknown *or* inactive condominium, or a
  * transport failure — renders a short "unavailable" panel. Never a blank
@@ -42,6 +48,14 @@ const PublicObrasReportPage: React.FC = () => {
   // The slug the fetch below was issued for, so React 19's double-invoked
   // development effects do not issue it twice.
   const requestedSlug = useRef<string | null>(null);
+  const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
+
+  // Parsed from the HTML already in state: the report holds every obra as one
+  // `div.page`, so the list costs no request.
+  const obras = useMemo(
+    () => (reportHtml === null ? [] : listObrasFromReport(reportHtml)),
+    [reportHtml],
+  );
 
   useEffect(() => {
     if (requestedSlug.current === slug) return;
@@ -82,15 +96,22 @@ const PublicObrasReportPage: React.FC = () => {
         <h1 className="text-sm font-semibold text-foreground">
           {t("projects.publicReport.title")}
         </h1>
-        <a
-          href={publicReportUrl(slug)}
-          target="_blank"
-          rel="noreferrer"
-          className="text-sm font-medium text-foreground underline"
+        <button
+          type="button"
+          onClick={() => setIsPrintDialogOpen(true)}
+          className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {t("projects.publicReport.openForPrinting")}
-        </a>
+        </button>
       </div>
+      <ObraPrintDialog
+        open={isPrintDialogOpen}
+        obras={obras}
+        onClose={() => setIsPrintDialogOpen(false)}
+        onSelect={(index) => {
+          openObraPrintWindow(reportHtml, index);
+        }}
+      />
       <iframe
         title={t("projects.publicReport.title")}
         data-testid="public-obras-report-frame"

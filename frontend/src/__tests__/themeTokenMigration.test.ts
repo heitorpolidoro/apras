@@ -170,7 +170,11 @@ const lineOf = (source: string, index: number): number =>
 export const matchesIn = (file: string, source: string): Match[] => {
   const found: Match[] = [];
   for (const match of source.matchAll(paletteGrammar())) {
-    found.push({ file, line: lineOf(source, match.index ?? 0), text: match[0] });
+    found.push({
+      file,
+      line: lineOf(source, match.index ?? 0),
+      text: match[0],
+    });
   }
   const spans = classContexts(source);
   for (const match of source.matchAll(hexGrammar())) {
@@ -701,17 +705,13 @@ describe("the guard", () => {
   // loaded runner cannot make it flake, narrow enough that a regression which
   // put the shape back to quadratic would still fail here rather than hang.
   // Whoever trips this limit should fix the shape, not raise the number.
-  it(
-    "fails when any single exception is removed",
-    () => {
-      for (let index = 0; index < EXCEPTIONS.length; index += 1) {
-        const without = EXCEPTIONS.filter((_, at) => at !== index);
+  it("fails when any single exception is removed", () => {
+    for (let index = 0; index < EXCEPTIONS.length; index += 1) {
+      const without = EXCEPTIONS.filter((_, at) => at !== index);
 
-        expect(violations(PINNED, without, LEDGER)).not.toEqual([]);
-      }
-    },
-    20_000,
-  );
+      expect(violations(PINNED, without, LEDGER)).not.toEqual([]);
+    }
+  }, 20_000);
 
   it("fails on an unknown code", () => {
     const corrupted = EXCEPTIONS.map((entry, index) =>
@@ -837,7 +837,8 @@ describe("APRAS-79's ledger arithmetic", () => {
   const rows = LEDGER.filter((row) =>
     toSrcRelative(row.file).startsWith(DIRECTORY),
   );
-  const count = (code: string) => rows.filter((row) => row.code === code).length;
+  const count = (code: string) =>
+    rows.filter((row) => row.code === code).length;
 
   it("logs 211 occurrences under six codes", () => {
     expect(rows).toHaveLength(211);
@@ -867,7 +868,9 @@ describe("APRAS-79's ledger arithmetic", () => {
     const entries = EXCEPTIONS.filter((entry) =>
       entry.file.startsWith(DIRECTORY),
     );
-    const pairs = new Set(rows.map((row) => `${toSrcRelative(row.file)} :: ${row.class}`));
+    const pairs = new Set(
+      rows.map((row) => `${toSrcRelative(row.file)} :: ${row.class}`),
+    );
 
     expect(entries).toHaveLength(148);
     expect(pairs.size).toBe(148);
@@ -908,9 +911,9 @@ describe("APRAS-79's ledger arithmetic", () => {
   });
 
   it("pins the directory's nine source files", () => {
-    expect(PINNED.filter((file) => file.file.startsWith(DIRECTORY))).toHaveLength(
-      9,
-    );
+    expect(
+      PINNED.filter((file) => file.file.startsWith(DIRECTORY)),
+    ).toHaveLength(9);
   });
 
   it("keeps every `why` under 120 characters and off the code", () => {
@@ -928,7 +931,8 @@ describe("APRAS-80's ledger arithmetic", () => {
   const rows = LEDGER.filter((row) =>
     toSrcRelative(row.file).startsWith(DIRECTORY),
   );
-  const count = (code: string) => rows.filter((row) => row.code === code).length;
+  const count = (code: string) =>
+    rows.filter((row) => row.code === code).length;
   const files = PINNED.filter((file) => file.file.startsWith(DIRECTORY));
   const matchesOn = (name: string, line: number): string[] => {
     const file = `${DIRECTORY}${name}`;
@@ -1087,7 +1091,9 @@ describe("APRAS-80's ledger arithmetic", () => {
     const tinted = new Set(
       rows
         .filter((row) => row.code === "GAP-TINT")
-        .map((row) => `${toSrcRelative(row.file)} :: ${row.line} :: ${row.class}`),
+        .map(
+          (row) => `${toSrcRelative(row.file)} :: ${row.line} :: ${row.class}`,
+        ),
     );
     const mixed: string[] = [];
 
@@ -1138,7 +1144,8 @@ describe("APRAS-82's ledger arithmetic", () => {
   const inDirectories = (file: string) =>
     DIRECTORIES.some((directory) => file.startsWith(directory));
   const rows = LEDGER.filter((row) => inDirectories(toSrcRelative(row.file)));
-  const count = (code: string) => rows.filter((row) => row.code === code).length;
+  const count = (code: string) =>
+    rows.filter((row) => row.code === code).length;
   const files = PINNED.filter((file) => inDirectories(file.file));
   const sourceOf = (name: string) =>
     files.find((file) => file.file.endsWith(`/${name}`))?.source ?? "";
@@ -1165,9 +1172,9 @@ describe("APRAS-82's ledger arithmetic", () => {
       .filter((token) => token.length > 0);
 
   it("pins the two directories' six and five source files", () => {
-    expect(PINNED.filter((file) => file.file.startsWith(DOCUMENTS))).toHaveLength(
-      6,
-    );
+    expect(
+      PINNED.filter((file) => file.file.startsWith(DOCUMENTS)),
+    ).toHaveLength(6);
     expect(
       PINNED.filter((file) => file.file.startsWith(OCCURRENCES)),
     ).toHaveLength(5);
@@ -1240,12 +1247,36 @@ describe("APRAS-82's ledger arithmetic", () => {
     // indigo branch of `getStatusBadgeClass` on its own, say — would break a
     // six-colour status scale, and fails here before the guard sees it.
     const sets: ReadonlyArray<readonly [string, number, readonly string[]]> = [
-      ["OccurrenceTable.tsx", 22, ["bg-amber-50", "text-amber-700", "border-amber-200"]],
-      ["OccurrenceTable.tsx", 24, ["bg-blue-50", "text-blue-700", "border-blue-200"]],
-      ["OccurrenceTable.tsx", 26, ["bg-indigo-50", "text-indigo-700", "border-indigo-200"]],
-      ["OccurrenceTable.tsx", 28, ["bg-emerald-50", "text-emerald-700", "border-emerald-200"]],
-      ["OccurrenceTable.tsx", 30, ["bg-rose-50", "text-rose-700", "border-rose-200"]],
-      ["OccurrenceTable.tsx", 32, ["bg-gray-50", "text-gray-700", "border-gray-200"]],
+      [
+        "OccurrenceTable.tsx",
+        22,
+        ["bg-amber-50", "text-amber-700", "border-amber-200"],
+      ],
+      [
+        "OccurrenceTable.tsx",
+        24,
+        ["bg-blue-50", "text-blue-700", "border-blue-200"],
+      ],
+      [
+        "OccurrenceTable.tsx",
+        26,
+        ["bg-indigo-50", "text-indigo-700", "border-indigo-200"],
+      ],
+      [
+        "OccurrenceTable.tsx",
+        28,
+        ["bg-emerald-50", "text-emerald-700", "border-emerald-200"],
+      ],
+      [
+        "OccurrenceTable.tsx",
+        30,
+        ["bg-rose-50", "text-rose-700", "border-rose-200"],
+      ],
+      [
+        "OccurrenceTable.tsx",
+        32,
+        ["bg-gray-50", "text-gray-700", "border-gray-200"],
+      ],
       ["OccurrenceTable.tsx", 39, ["bg-rose-100", "text-rose-800"]],
       ["OccurrenceTable.tsx", 41, ["bg-orange-100", "text-orange-800"]],
       ["OccurrenceTable.tsx", 43, ["bg-sky-100", "text-sky-800"]],
@@ -1253,26 +1284,54 @@ describe("APRAS-82's ledger arithmetic", () => {
       ["OccurrenceTable.tsx", 100, ["text-emerald-600"]],
       ["OccurrenceTable.tsx", 102, ["text-gray-400"]],
       ["NewOccurrenceModal.tsx", 158, ["text-emerald-600", "text-gray-500"]],
-      ["OccurrenceDetailsView.tsx", 71, ["text-emerald-700", "bg-emerald-50", "border-emerald-200"]],
-      ["OccurrenceDetailsView.tsx", 76, ["text-gray-600", "bg-gray-100", "border-gray-200"]],
-      ["OccurrenceDetailsView.tsx", 160, ["bg-emerald-50", "border-emerald-200"]],
+      [
+        "OccurrenceDetailsView.tsx",
+        71,
+        ["text-emerald-700", "bg-emerald-50", "border-emerald-200"],
+      ],
+      [
+        "OccurrenceDetailsView.tsx",
+        76,
+        ["text-gray-600", "bg-gray-100", "border-gray-200"],
+      ],
+      [
+        "OccurrenceDetailsView.tsx",
+        160,
+        ["bg-emerald-50", "border-emerald-200"],
+      ],
       ["OccurrenceDetailsView.tsx", 161, ["text-emerald-900"]],
       ["OccurrenceDetailsView.tsx", 162, ["text-emerald-600"]],
       ["OccurrenceDetailsView.tsx", 165, ["text-emerald-800"]],
-      ["DocumentGridTable.tsx", 143, [
-        "hover:text-emerald-600",
-        "hover:bg-emerald-50",
-        "dark:hover:bg-emerald-950/50",
-        "dark:hover:text-emerald-400",
-      ]],
-      ["OccurrenceTimelineLog.tsx", 67, ["text-amber-700", "bg-amber-50", "border-amber-200"]],
-      ["DocumentGridTable.tsx", 166, [
-        "hover:text-rose-600",
-        "hover:bg-rose-50",
-        "dark:hover:bg-rose-950/50",
-        "dark:hover:text-rose-400",
-      ]],
-      ["FolderTreeSidebar.tsx", 121, ["hover:text-rose-600", "dark:hover:text-rose-400"]],
+      [
+        "DocumentGridTable.tsx",
+        143,
+        [
+          "hover:text-emerald-600",
+          "hover:bg-emerald-50",
+          "dark:hover:bg-emerald-950/50",
+          "dark:hover:text-emerald-400",
+        ],
+      ],
+      [
+        "OccurrenceTimelineLog.tsx",
+        67,
+        ["text-amber-700", "bg-amber-50", "border-amber-200"],
+      ],
+      [
+        "DocumentGridTable.tsx",
+        166,
+        [
+          "hover:text-rose-600",
+          "hover:bg-rose-50",
+          "dark:hover:bg-rose-950/50",
+          "dark:hover:text-rose-400",
+        ],
+      ],
+      [
+        "FolderTreeSidebar.tsx",
+        121,
+        ["hover:text-rose-600", "dark:hover:text-rose-400"],
+      ],
     ];
     const ledgered = new Set(
       rows.map((row) => `${row.class} in ${toSrcRelative(row.file)}`),
@@ -1457,8 +1516,9 @@ describe("APRAS-82's ledger arithmetic", () => {
     // No red occurs in either directory, so no destructive token appears.
     for (const file of files) {
       expect(file.source).not.toContain("text-destructive");
-      expect(matchesIn(file.file, file.source).map((match) => match.text)).not.
-        toContainEqual(expect.stringContaining("red-"));
+      expect(
+        matchesIn(file.file, file.source).map((match) => match.text),
+      ).not.toContainEqual(expect.stringContaining("red-"));
     }
   });
 
@@ -1513,9 +1573,7 @@ describe("APRAS-82's ledger arithmetic", () => {
       expect(ledgered).not.toContain(deleted);
     }
     expect(surviving).toHaveLength(22);
-    expect(
-      surviving.every((match) => ledgered.has(match.text)),
-    ).toBe(true);
+    expect(surviving.every((match) => ledgered.has(match.text))).toBe(true);
 
     // `occurrence-management` had none before and has none now.
     expect(
@@ -1549,7 +1607,8 @@ describe("APRAS-81's ledger arithmetic", () => {
   const inDirectories = (file: string) =>
     DIRECTORIES.some((directory) => file.startsWith(directory));
   const rows = LEDGER.filter((row) => inDirectories(toSrcRelative(row.file)));
-  const count = (code: string) => rows.filter((row) => row.code === code).length;
+  const count = (code: string) =>
+    rows.filter((row) => row.code === code).length;
   const files = PINNED.filter((file) => inDirectories(file.file));
   const sourceOf = (name: string) =>
     files.find((file) => file.file.endsWith(`/${name}`))?.source ?? "";
@@ -1573,18 +1632,20 @@ describe("APRAS-81's ledger arithmetic", () => {
       .split(/[\s"'`{}()<>,;]+/)
       .filter((token) => token.length > 0);
 
-  it("pins the two directories' nine and six source files", () => {
-    // Nine, not APRAS-81's eight: APRAS-92 added
-    // `PublicObrasReportPage.tsx` to `project-management/components/`. The
-    // file is scanned like every other and carries **no** palette class and no
-    // brand token, so every count below it is unchanged -- this literal is the
-    // file census, not a migration figure, and it moves when a directory
-    // gains a file.
-    expect(PINNED.filter((file) => file.file.startsWith(PROJECTS))).toHaveLength(
-      9,
+  it("pins the two directories' ten and six source files", () => {
+    // Ten, not APRAS-81's eight: APRAS-92 added `PublicObrasReportPage.tsx`
+    // and APRAS-118 added `ObraPrintDialog.tsx` beside it, both in
+    // `project-management/components/`. Each is scanned like every other file
+    // and carries **no** palette class and no brand token, so every count
+    // below is unchanged -- this literal is the file census, not a migration
+    // figure, and it moves when a directory gains a file.
+    expect(
+      PINNED.filter((file) => file.file.startsWith(PROJECTS)),
+    ).toHaveLength(10);
+    expect(PINNED.filter((file) => file.file.startsWith(ASSETS))).toHaveLength(
+      6,
     );
-    expect(PINNED.filter((file) => file.file.startsWith(ASSETS))).toHaveLength(6);
-    expect(files).toHaveLength(15);
+    expect(files).toHaveLength(16);
   });
 
   it("logs 276 occurrences under seven codes", () => {
@@ -1652,14 +1713,42 @@ describe("APRAS-81's ledger arithmetic", () => {
     // four-colour status scale, and fails here before the guard sees it.
     const sets: ReadonlyArray<readonly [string, number, readonly string[]]> = [
       // 1 — MilestoneTimeline's three column badges.
-      ["MilestoneTimeline.tsx", 28, ["bg-emerald-100", "text-emerald-800", "border-emerald-200"]],
-      ["MilestoneTimeline.tsx", 35, ["bg-blue-100", "text-blue-800", "border-blue-200"]],
-      ["MilestoneTimeline.tsx", 42, ["bg-slate-100", "text-slate-800", "border-slate-200"]],
+      [
+        "MilestoneTimeline.tsx",
+        28,
+        ["bg-emerald-100", "text-emerald-800", "border-emerald-200"],
+      ],
+      [
+        "MilestoneTimeline.tsx",
+        35,
+        ["bg-blue-100", "text-blue-800", "border-blue-200"],
+      ],
+      [
+        "MilestoneTimeline.tsx",
+        42,
+        ["bg-slate-100", "text-slate-800", "border-slate-200"],
+      ],
       // 2 — ProjectSummaryCard's four STATUS_BADGES.
-      ["ProjectSummaryCard.tsx", 23, ["bg-slate-100", "text-slate-800", "border-slate-200"]],
-      ["ProjectSummaryCard.tsx", 28, ["bg-blue-100", "text-blue-800", "border-blue-200"]],
-      ["ProjectSummaryCard.tsx", 33, ["bg-amber-100", "text-amber-800", "border-amber-200"]],
-      ["ProjectSummaryCard.tsx", 38, ["bg-emerald-100", "text-emerald-800", "border-emerald-200"]],
+      [
+        "ProjectSummaryCard.tsx",
+        23,
+        ["bg-slate-100", "text-slate-800", "border-slate-200"],
+      ],
+      [
+        "ProjectSummaryCard.tsx",
+        28,
+        ["bg-blue-100", "text-blue-800", "border-blue-200"],
+      ],
+      [
+        "ProjectSummaryCard.tsx",
+        33,
+        ["bg-amber-100", "text-amber-800", "border-amber-200"],
+      ],
+      [
+        "ProjectSummaryCard.tsx",
+        38,
+        ["bg-emerald-100", "text-emerald-800", "border-emerald-200"],
+      ],
       // 3 — the budget-bar fill ternary.
       // +3 since APRAS-104: the cover `<img>` above these two gained a comment
       // explaining why it reads `cover_photo_display_url` rather than the
@@ -1673,13 +1762,33 @@ describe("APRAS-81's ledger arithmetic", () => {
       ["BudgetVsActualProgressBar.tsx", 25, ["bg-red-500"]],
       ["BudgetVsActualProgressBar.tsx", 27, ["bg-amber-500"]],
       // 5 — the executed-value ternary.
-      ["BudgetVsActualProgressBar.tsx", 79, ["text-red-600", "dark:text-red-400"]],
-      ["BudgetVsActualProgressBar.tsx", 80, ["text-slate-800", "dark:text-slate-200"]],
+      [
+        "BudgetVsActualProgressBar.tsx",
+        79,
+        ["text-red-600", "dark:text-red-400"],
+      ],
+      [
+        "BudgetVsActualProgressBar.tsx",
+        80,
+        ["text-slate-800", "dark:text-slate-200"],
+      ],
       // 6 — the remaining-value ternary.
-      ["BudgetVsActualProgressBar.tsx", 94, ["text-red-600", "dark:text-red-400"]],
-      ["BudgetVsActualProgressBar.tsx", 95, ["text-emerald-600", "dark:text-emerald-400"]],
+      [
+        "BudgetVsActualProgressBar.tsx",
+        94,
+        ["text-red-600", "dark:text-red-400"],
+      ],
+      [
+        "BudgetVsActualProgressBar.tsx",
+        95,
+        ["text-emerald-600", "dark:text-emerald-400"],
+      ],
       // 7 — the budget glyphs.
-      ["BudgetVsActualProgressBar.tsx", 34, ["text-emerald-600", "dark:text-emerald-400"]],
+      [
+        "BudgetVsActualProgressBar.tsx",
+        34,
+        ["text-emerald-600", "dark:text-emerald-400"],
+      ],
       ["BudgetVsActualProgressBar.tsx", 46, ["text-emerald-600"]],
       // 8, 9, 10 — the report alerts and the delete-project control.
       // +42 since APRAS-104: `handleSaveProject` grew the save-then-upload
@@ -1688,21 +1797,62 @@ describe("APRAS-81's ledger arithmetic", () => {
       // Save with a duplicate `POST /projects`). The three sets themselves are
       // untouched -- same file, same classes -- only the pinned line numbers
       // moved.
-      ["ConstructionTrackerPage.tsx", 313, ["border-emerald-200", "bg-emerald-50", "text-emerald-800"]],
-      ["ConstructionTrackerPage.tsx", 314, ["border-red-200", "bg-red-50", "text-red-800"]],
-      ["ConstructionTrackerPage.tsx", 359, ["text-red-600", "border-red-200", "hover:bg-red-50", "dark:hover:bg-red-950"]],
+      [
+        "ConstructionTrackerPage.tsx",
+        313,
+        ["border-emerald-200", "bg-emerald-50", "text-emerald-800"],
+      ],
+      [
+        "ConstructionTrackerPage.tsx",
+        314,
+        ["border-red-200", "bg-red-50", "text-red-800"],
+      ],
+      [
+        "ConstructionTrackerPage.tsx",
+        359,
+        [
+          "text-red-600",
+          "border-red-200",
+          "hover:bg-red-50",
+          "dark:hover:bg-red-950",
+        ],
+      ],
       // 11 — `getConditionBadgeClass`, six branches.
-      ["AssetTable.tsx", 32, ["bg-emerald-100", "text-emerald-800", "border-emerald-200"]],
-      ["AssetTable.tsx", 34, ["bg-blue-100", "text-blue-800", "border-blue-200"]],
-      ["AssetTable.tsx", 36, ["bg-amber-100", "text-amber-800", "border-amber-200"]],
-      ["AssetTable.tsx", 39, ["bg-orange-100", "text-orange-800", "border-orange-200"]],
+      [
+        "AssetTable.tsx",
+        32,
+        ["bg-emerald-100", "text-emerald-800", "border-emerald-200"],
+      ],
+      [
+        "AssetTable.tsx",
+        34,
+        ["bg-blue-100", "text-blue-800", "border-blue-200"],
+      ],
+      [
+        "AssetTable.tsx",
+        36,
+        ["bg-amber-100", "text-amber-800", "border-amber-200"],
+      ],
+      [
+        "AssetTable.tsx",
+        39,
+        ["bg-orange-100", "text-orange-800", "border-orange-200"],
+      ],
       ["AssetTable.tsx", 41, ["bg-red-100", "text-red-800", "border-red-200"]],
-      ["AssetTable.tsx", 43, ["bg-gray-100", "text-gray-800", "border-gray-200"]],
+      [
+        "AssetTable.tsx",
+        43,
+        ["bg-gray-100", "text-gray-800", "border-gray-200"],
+      ],
       // 12 — the low-stock badge.
       ["AssetTable.tsx", 162, ["bg-amber-100", "text-amber-800"]],
       ["AssetTable.tsx", 164, ["text-amber-600"]],
       // 13 — the four movement-type badges.
-      ["AssetMovementHistoryModal.tsx", 27, ["bg-emerald-100", "text-emerald-800"]],
+      [
+        "AssetMovementHistoryModal.tsx",
+        27,
+        ["bg-emerald-100", "text-emerald-800"],
+      ],
       ["AssetMovementHistoryModal.tsx", 28, ["text-emerald-600"]],
       ["AssetMovementHistoryModal.tsx", 34, ["bg-blue-100", "text-blue-800"]],
       ["AssetMovementHistoryModal.tsx", 35, ["text-blue-600"]],
@@ -1711,8 +1861,16 @@ describe("APRAS-81's ledger arithmetic", () => {
       ["AssetMovementHistoryModal.tsx", 48, ["bg-red-100", "text-red-800"]],
       ["AssetMovementHistoryModal.tsx", 49, ["text-red-600"]],
       // 14 — the two error alerts.
-      ["AssetFormModal.tsx", 152, ["bg-red-50", "text-red-700", "border-red-200"]],
-      ["StockMovementModal.tsx", 113, ["bg-red-50", "text-red-700", "border-red-200"]],
+      [
+        "AssetFormModal.tsx",
+        152,
+        ["bg-red-50", "text-red-700", "border-red-200"],
+      ],
+      [
+        "StockMovementModal.tsx",
+        113,
+        ["bg-red-50", "text-red-700", "border-red-200"],
+      ],
       // 15 — AssetSummaryCards' metric tiles.
       ["AssetSummaryCards.tsx", 37, ["bg-blue-50", "text-blue-600"]],
       ["AssetSummaryCards.tsx", 61, ["border-amber-300", "bg-amber-50/20"]],
@@ -1762,9 +1920,9 @@ describe("APRAS-81's ledger arithmetic", () => {
     expect(swatch).toContain("text-gray-700");
     expect(swatch).toContain("border-gray-200");
     expect(
-      rows.filter((row) => row.code === "GAP-SWATCH").every((row) =>
-        toSrcRelative(row.file).endsWith("/AssetTable.tsx"),
-      ),
+      rows
+        .filter((row) => row.code === "GAP-SWATCH")
+        .every((row) => toSrcRelative(row.file).endsWith("/AssetTable.tsx")),
     ).toBe(true);
   });
 
@@ -1897,7 +2055,9 @@ describe("APRAS-81's ledger arithmetic", () => {
       "min-h-screen bg-background",
     );
     for (const absent of ["bg-slate-50", "bg-muted", "dark:bg-slate-950"]) {
-      expect(matchesOn("ConstructionTrackerPage.tsx", 240)).not.toContain(absent);
+      expect(matchesOn("ConstructionTrackerPage.tsx", 240)).not.toContain(
+        absent,
+      );
     }
     // The inventory page declares no background class and is not the page, so
     // its root is untouched.
@@ -1944,7 +2104,9 @@ describe("APRAS-81's ledger arithmetic", () => {
       `${PROJECTS}MilestoneTimeline.tsx`,
       `${PROJECTS}ProjectUpdateFeed.tsx`,
     ]);
-    expect(remaining.filter((text) => text === "hover:text-red-600")).toEqual([]);
+    expect(remaining.filter((text) => text === "hover:text-red-600")).toEqual(
+      [],
+    );
   });
 
   it("deletes every dark: sibling of a migrated base and keeps exactly 57", () => {
@@ -2153,23 +2315,125 @@ describe("APRAS-83's ledger arithmetic", () => {
       ["AccessEventFeed.tsx", 27, ["text-emerald-500"]],
       ["AccessEventFeed.tsx", 29, ["text-red-500"]],
       // 2 — the granted/denied badge ternary.
-      ["AccessEventFeed.tsx", 47, ["bg-emerald-100", "text-emerald-700", "dark:bg-emerald-950/50", "dark:text-emerald-400"]],
-      ["AccessEventFeed.tsx", 48, ["bg-red-100", "text-red-700", "dark:bg-red-950/50", "dark:text-red-400"]],
+      [
+        "AccessEventFeed.tsx",
+        47,
+        [
+          "bg-emerald-100",
+          "text-emerald-700",
+          "dark:bg-emerald-950/50",
+          "dark:text-emerald-400",
+        ],
+      ],
+      [
+        "AccessEventFeed.tsx",
+        48,
+        [
+          "bg-red-100",
+          "text-red-700",
+          "dark:bg-red-950/50",
+          "dark:text-red-400",
+        ],
+      ],
       // 3 — `DeviceTable`'s `StatusBadge` config map, three branches.
-      ["DeviceTable.tsx", 18, ["bg-emerald-100", "text-emerald-700", "dark:bg-emerald-950/50", "dark:text-emerald-400"]],
-      ["DeviceTable.tsx", 22, ["bg-slate-100", "text-slate-600", "dark:bg-slate-800", "dark:text-slate-400"]],
-      ["DeviceTable.tsx", 26, ["bg-amber-100", "text-amber-700", "dark:bg-amber-950/50", "dark:text-amber-400"]],
+      [
+        "DeviceTable.tsx",
+        18,
+        [
+          "bg-emerald-100",
+          "text-emerald-700",
+          "dark:bg-emerald-950/50",
+          "dark:text-emerald-400",
+        ],
+      ],
+      [
+        "DeviceTable.tsx",
+        22,
+        [
+          "bg-slate-100",
+          "text-slate-600",
+          "dark:bg-slate-800",
+          "dark:text-slate-400",
+        ],
+      ],
+      [
+        "DeviceTable.tsx",
+        26,
+        [
+          "bg-amber-100",
+          "text-amber-700",
+          "dark:bg-amber-950/50",
+          "dark:text-amber-400",
+        ],
+      ],
       // 4 — the SYNCED / PENDING / FAILED map.
-      ["FacialTemplateSyncPanel.tsx", 8, ["bg-emerald-100", "text-emerald-700", "dark:bg-emerald-950/50", "dark:text-emerald-400"]],
-      ["FacialTemplateSyncPanel.tsx", 9, ["bg-amber-100", "text-amber-700", "dark:bg-amber-950/50", "dark:text-amber-400"]],
-      ["FacialTemplateSyncPanel.tsx", 10, ["bg-red-100", "text-red-700", "dark:bg-red-950/50", "dark:text-red-400"]],
+      [
+        "FacialTemplateSyncPanel.tsx",
+        8,
+        [
+          "bg-emerald-100",
+          "text-emerald-700",
+          "dark:bg-emerald-950/50",
+          "dark:text-emerald-400",
+        ],
+      ],
+      [
+        "FacialTemplateSyncPanel.tsx",
+        9,
+        [
+          "bg-amber-100",
+          "text-amber-700",
+          "dark:bg-amber-950/50",
+          "dark:text-amber-400",
+        ],
+      ],
+      [
+        "FacialTemplateSyncPanel.tsx",
+        10,
+        [
+          "bg-red-100",
+          "text-red-700",
+          "dark:bg-red-950/50",
+          "dark:text-red-400",
+        ],
+      ],
       // 5 and 6 — the two error alerts, the same six classes each.
-      ["FacialTemplateSyncPanel.tsx", 58, ["border-red-200", "bg-red-50", "text-red-700", "dark:border-red-900/50", "dark:bg-red-950/50", "dark:text-red-400"]],
-      ["RegisterDeviceModal.tsx", 68, ["border-red-200", "bg-red-50", "text-red-700", "dark:border-red-900/50", "dark:bg-red-950/50", "dark:text-red-400"]],
+      [
+        "FacialTemplateSyncPanel.tsx",
+        58,
+        [
+          "border-red-200",
+          "bg-red-50",
+          "text-red-700",
+          "dark:border-red-900/50",
+          "dark:bg-red-950/50",
+          "dark:text-red-400",
+        ],
+      ],
+      [
+        "RegisterDeviceModal.tsx",
+        68,
+        [
+          "border-red-200",
+          "bg-red-50",
+          "text-red-700",
+          "dark:border-red-900/50",
+          "dark:bg-red-950/50",
+          "dark:text-red-400",
+        ],
+      ],
       // 7 — the income card.
       ["CashBalanceCard.tsx", 40, ["bg-emerald-50", "dark:bg-emerald-950"]],
-      ["CashBalanceCard.tsx", 41, ["text-emerald-600", "dark:text-emerald-400"]],
-      ["CashBalanceCard.tsx", 47, ["text-emerald-600", "dark:text-emerald-400"]],
+      [
+        "CashBalanceCard.tsx",
+        41,
+        ["text-emerald-600", "dark:text-emerald-400"],
+      ],
+      [
+        "CashBalanceCard.tsx",
+        47,
+        ["text-emerald-600", "dark:text-emerald-400"],
+      ],
       // 8 — the expense card.
       ["CashBalanceCard.tsx", 54, ["bg-red-50", "dark:bg-red-950"]],
       ["CashBalanceCard.tsx", 55, ["text-red-600", "dark:text-red-400"]],
@@ -2183,22 +2447,50 @@ describe("APRAS-83's ledger arithmetic", () => {
       ["StatementChart.tsx", 53, ["bg-emerald-500"]],
       ["StatementChart.tsx", 59, ["bg-red-500"]],
       // 12 — the justification panel.
-      ["PurchaseRequestDetailModal.tsx", 136, ["bg-amber-50", "border-amber-200"]],
+      [
+        "PurchaseRequestDetailModal.tsx",
+        136,
+        ["bg-amber-50", "border-amber-200"],
+      ],
       ["PurchaseRequestDetailModal.tsx", 137, ["text-amber-800"]],
       ["PurchaseRequestDetailModal.tsx", 140, ["text-amber-900"]],
       // 13 — the approved panel.
-      ["PurchaseRequestDetailModal.tsx", 237, ["border-emerald-200", "bg-emerald-50"]],
+      [
+        "PurchaseRequestDetailModal.tsx",
+        237,
+        ["border-emerald-200", "bg-emerald-50"],
+      ],
       ["PurchaseRequestDetailModal.tsx", 239, ["text-emerald-600"]],
       ["PurchaseRequestDetailModal.tsx", 240, ["text-emerald-900"]],
       ["PurchaseRequestDetailModal.tsx", 248, ["text-emerald-900"]],
       ["PurchaseRequestDetailModal.tsx", 251, ["text-emerald-700"]],
       // 14, 17, 21, 22 — the four red error triples.
-      ["PurchaseRequestFormModal.tsx", 184, ["bg-red-50", "text-red-700", "border-red-200"]],
-      ["QuoteComparisonTable.tsx", 386, ["border-red-200", "bg-red-50", "text-red-700"]],
-      ["QuoteFormModal.tsx", 280, ["bg-red-50", "text-red-700", "border-red-200"]],
-      ["SelectQuoteModal.tsx", 88, ["bg-red-50", "text-red-700", "border-red-200"]],
+      [
+        "PurchaseRequestFormModal.tsx",
+        184,
+        ["bg-red-50", "text-red-700", "border-red-200"],
+      ],
+      [
+        "QuoteComparisonTable.tsx",
+        386,
+        ["border-red-200", "bg-red-50", "text-red-700"],
+      ],
+      [
+        "QuoteFormModal.tsx",
+        280,
+        ["bg-red-50", "text-red-700", "border-red-200"],
+      ],
+      [
+        "SelectQuoteModal.tsx",
+        88,
+        ["bg-red-50", "text-red-700", "border-red-200"],
+      ],
       // 15 — the amber warning triple.
-      ["PurchaseRequestFormModal.tsx", 281, ["border-amber-200", "bg-amber-50", "text-amber-800"]],
+      [
+        "PurchaseRequestFormModal.tsx",
+        281,
+        ["border-amber-200", "bg-amber-50", "text-amber-800"],
+      ],
       // 16 — the lowest-price total ternary, whose neutral half is kept with it.
       ["QuoteComparisonTable.tsx", 337, ["text-emerald-700", "text-gray-900"]],
       // 18 and 19 — the lowest-price head and cell tints.
@@ -2207,7 +2499,11 @@ describe("APRAS-83's ledger arithmetic", () => {
       ["QuoteComparisonTable.tsx", 466, ["bg-emerald-50/40"]],
       ["QuoteComparisonTable.tsx", 494, ["bg-emerald-50/40"]],
       // 20 — the lowest-price card ternary, neutral half kept with it.
-      ["QuoteComparisonTable.tsx", 527, ["border-emerald-300", "bg-emerald-50/40"]],
+      [
+        "QuoteComparisonTable.tsx",
+        527,
+        ["border-emerald-300", "bg-emerald-50/40"],
+      ],
       ["QuoteComparisonTable.tsx", 528, ["border-gray-200"]],
       // 23 and 24 — the two warning panels.
       ["SelectQuoteModal.tsx", 113, ["border-amber-200", "bg-amber-50"]],
@@ -2405,9 +2701,9 @@ describe("APRAS-83's ledger arithmetic", () => {
       ["PurchaseRequestsPage.tsx", '<div className="p-8 max-w-7xl mx-auto">'],
     ] as ReadonlyArray<readonly [string, string]>) {
       expect(sourceOf(name)).toContain(root);
-      expect(/^\s*<div className="[^"]*"/m.exec(sourceOf(name))?.[0]).not.toMatch(
-        /\bbg-/,
-      );
+      expect(
+        /^\s*<div className="[^"]*"/m.exec(sourceOf(name))?.[0],
+      ).not.toMatch(/\bbg-/);
     }
   });
 
@@ -2717,9 +3013,7 @@ describe("APRAS-84's ledger arithmetic", () => {
     for (const file of files) {
       expect(file.source).not.toMatch(/\bdark:/);
     }
-    expect(
-      rows.filter((row) => row.class.startsWith("dark:")),
-    ).toHaveLength(0);
+    expect(rows.filter((row) => row.class.startsWith("dark:"))).toHaveLength(0);
   });
 
   it("excepts the 80 distinct (file, class) pairs those 109 occupy", () => {
@@ -2789,25 +3083,70 @@ describe("APRAS-84's ledger arithmetic", () => {
     // non-interactive status glyph.
     const sets: ReadonlyArray<readonly [string, number, readonly string[]]> = [
       // 1 — `getStatusBadgeClass`, three branches, the third of them neutral.
-      ["FeedbackInboxTable.tsx", 15, ["bg-amber-50", "text-amber-700", "border-amber-200"]],
-      ["FeedbackInboxTable.tsx", 17, ["bg-emerald-50", "text-emerald-700", "border-emerald-200"]],
-      ["FeedbackInboxTable.tsx", 19, ["bg-gray-50", "text-gray-700", "border-gray-200"]],
+      [
+        "FeedbackInboxTable.tsx",
+        15,
+        ["bg-amber-50", "text-amber-700", "border-amber-200"],
+      ],
+      [
+        "FeedbackInboxTable.tsx",
+        17,
+        ["bg-emerald-50", "text-emerald-700", "border-emerald-200"],
+      ],
+      [
+        "FeedbackInboxTable.tsx",
+        19,
+        ["bg-gray-50", "text-gray-700", "border-gray-200"],
+      ],
       // 2 — the ANSWERED / PENDING ternary.
-      ["FeedbackHistoryList.tsx", 66, ["bg-emerald-50", "text-emerald-700", "border-emerald-200"]],
-      ["FeedbackHistoryList.tsx", 67, ["bg-amber-50", "text-amber-700", "border-amber-200"]],
+      [
+        "FeedbackHistoryList.tsx",
+        66,
+        ["bg-emerald-50", "text-emerald-700", "border-emerald-200"],
+      ],
+      [
+        "FeedbackHistoryList.tsx",
+        67,
+        ["bg-amber-50", "text-amber-700", "border-amber-200"],
+      ],
       // 3 — the board-response panel.
       ["FeedbackDetailsView.tsx", 75, ["bg-emerald-50", "border-emerald-200"]],
       ["FeedbackDetailsView.tsx", 76, ["text-emerald-900"]],
       ["FeedbackDetailsView.tsx", 77, ["text-emerald-600"]],
       ["FeedbackDetailsView.tsx", 80, ["text-emerald-800"]],
       // 4 — the reject button, a destructive *control* that nonetheless stays.
-      ["PhotoApprovalQueuePage.tsx", 106, ["text-red-700", "bg-red-50", "hover:bg-red-100", "border-red-200"]],
+      [
+        "PhotoApprovalQueuePage.tsx",
+        106,
+        ["text-red-700", "bg-red-50", "hover:bg-red-100", "border-red-200"],
+      ],
       // 5 — the "Tirar Outra" button.
-      ["WebcamCaptureDialog.tsx", 157, ["text-amber-700", "bg-amber-50", "border-amber-300", "hover:bg-amber-100"]],
+      [
+        "WebcamCaptureDialog.tsx",
+        157,
+        [
+          "text-amber-700",
+          "bg-amber-50",
+          "border-amber-300",
+          "hover:bg-amber-100",
+        ],
+      ],
       // 6, 7 and 8 — the three error alerts, the same three classes each.
-      ["PhotoApprovalQueuePage.tsx", 53, ["bg-red-50", "text-red-700", "border-red-200"]],
-      ["PhotoUploadModal.tsx", 87, ["bg-red-50", "text-red-700", "border-red-200"]],
-      ["WebcamCaptureDialog.tsx", 118, ["bg-red-50", "text-red-700", "border-red-200"]],
+      [
+        "PhotoApprovalQueuePage.tsx",
+        53,
+        ["bg-red-50", "text-red-700", "border-red-200"],
+      ],
+      [
+        "PhotoUploadModal.tsx",
+        87,
+        ["bg-red-50", "text-red-700", "border-red-200"],
+      ],
+      [
+        "WebcamCaptureDialog.tsx",
+        118,
+        ["bg-red-50", "text-red-700", "border-red-200"],
+      ],
       // 9 — the pending count chip.
       ["PhotoApprovalQueuePage.tsx", 44, ["bg-amber-100", "text-amber-800"]],
       // 10 — the "Em Aprovação" badge.
@@ -2930,7 +3269,10 @@ describe("APRAS-84's ledger arithmetic", () => {
     ]);
     for (const file of files) {
       const name = file.file.split("/").pop() ?? "";
-      if (name !== "PhotoUploadModal.tsx" && name !== "FeedbackInboxTable.tsx") {
+      if (
+        name !== "PhotoUploadModal.tsx" &&
+        name !== "FeedbackInboxTable.tsx"
+      ) {
         expect(characters(name)).toHaveLength(0);
       }
       // `-primary-text` never appears on a non-`text-` utility anywhere.
@@ -3052,19 +3394,20 @@ describe("APRAS-84's ledger arithmetic", () => {
       "PackageStatusPage.tsx",
       "PhotoApprovalQueuePage.tsx",
     ]) {
-      expect(/^\s*<div className="[^"]*"/m.exec(sourceOf(name))?.[0]).not.toMatch(
-        /\bbg-/,
-      );
+      expect(
+        /^\s*<div className="[^"]*"/m.exec(sourceOf(name))?.[0],
+      ).not.toMatch(/\bbg-/);
     }
   });
 
   it("splits emerald four to twelve and red five to thirteen", () => {
     // The two interactive emerald fills migrate, carrying their `hover:` with
     // them; the other twelve are status tints or glyphs and stay.
-    for (const name of ["PhotoApprovalQueuePage.tsx", "PackageStatusPage.tsx"]) {
-      expect(sourceOf(name)).toContain(
-        "bg-primary hover:bg-primary/90",
-      );
+    for (const name of [
+      "PhotoApprovalQueuePage.tsx",
+      "PackageStatusPage.tsx",
+    ]) {
+      expect(sourceOf(name)).toContain("bg-primary hover:bg-primary/90");
     }
     expect(occurrences("hover:bg-primary/90")).toHaveLength(12);
     // Five red occurrences migrate. The confirm-reject button at :150 is a
@@ -3087,9 +3430,7 @@ describe("APRAS-84's ledger arithmetic", () => {
       matchesIn(file.file, file.source).map((match) => match.text),
     );
 
-    expect(
-      remaining.filter((text) => /-emerald-/.test(text)),
-    ).toHaveLength(12);
+    expect(remaining.filter((text) => /-emerald-/.test(text))).toHaveLength(12);
     expect(remaining.filter((text) => /-red-/.test(text))).toHaveLength(13);
   });
 
@@ -3350,8 +3691,13 @@ describe("SCANNED_ROOTS — the repo-wide deny", () => {
         if (entry.name !== "__tests__") {
           found.push(...walk(full));
         }
-      } else if (/\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name)) {
-        found.push(path.relative(FRONTEND_ROOT, full).split(path.sep).join("/"));
+      } else if (
+        /\.tsx?$/.test(entry.name) &&
+        !/\.test\.tsx?$/.test(entry.name)
+      ) {
+        found.push(
+          path.relative(FRONTEND_ROOT, full).split(path.sep).join("/"),
+        );
       }
     }
     return found;
@@ -3483,16 +3829,21 @@ describe("the closed guard", () => {
     "text-gray-500",
     "bg-white",
     "text-black",
-  ])("fails on %s reintroduced into a file no child migrated", (reintroduced) => {
-    const found = violations(withSuffix(reintroduced), EXCEPTIONS, LEDGER);
+  ])(
+    "fails on %s reintroduced into a file no child migrated",
+    (reintroduced) => {
+      const found = violations(withSuffix(reintroduced), EXCEPTIONS, LEDGER);
 
-    expect(found.join("\n")).toContain(reintroduced);
-    expect(found.some((problem) => problem.startsWith(UNMIGRATED))).toBe(true);
-    const whole = reintroduced.match(paletteGrammar());
-    expect(whole).not.toBeNull();
-    expect(whole).toHaveLength(1);
-    expect(whole?.[0]).toBe(reintroduced);
-  });
+      expect(found.join("\n")).toContain(reintroduced);
+      expect(found.some((problem) => problem.startsWith(UNMIGRATED))).toBe(
+        true,
+      );
+      const whole = reintroduced.match(paletteGrammar());
+      expect(whole).not.toBeNull();
+      expect(whole).toHaveLength(1);
+      expect(whole?.[0]).toBe(reintroduced);
+    },
+  );
 
   it("fails on a hex literal in a class context in that same file", () => {
     const injected = PINNED.map((file) =>
@@ -3526,7 +3877,14 @@ describe("APRAS-85's ledger arithmetic", () => {
   const DASHBOARD = "src/features/dashboard/";
   const SPACES = "src/features/space-reservation-management/";
   const ASSEMBLIES = "src/features/assembly-voting/";
-  const DIRECTORIES = [INFRACTIONS, USERS, TASKS, DASHBOARD, SPACES, ASSEMBLIES];
+  const DIRECTORIES = [
+    INFRACTIONS,
+    USERS,
+    TASKS,
+    DASHBOARD,
+    SPACES,
+    ASSEMBLIES,
+  ];
   const inDirectories = (file: string) =>
     DIRECTORIES.some((directory) => file.startsWith(directory));
   const rows = LEDGER.filter((row) => inDirectories(toSrcRelative(row.file)));
@@ -3734,9 +4092,11 @@ describe("APRAS-85's ledger arithmetic", () => {
     for (const [stripe, code] of STRIPES) {
       expect(source.split(stripe)).toHaveLength(2);
       expect(
-        rows.filter(
-          (row) => toSrcRelative(row.file) === board && row.class === stripe,
-        ).map((row) => row.code),
+        rows
+          .filter(
+            (row) => toSrcRelative(row.file) === board && row.class === stripe,
+          )
+          .map((row) => row.code),
       ).toEqual([code]);
       expect(
         EXCEPTIONS.filter(
@@ -3802,20 +4162,20 @@ describe("APRAS-85's ledger arithmetic", () => {
 
   it("leaves no indigo in infraction-management and three in dashboard", () => {
     expect(
-      remainingIn(INFRACTIONS).filter((match) =>
-        match.text.includes("indigo"),
-      ),
+      remainingIn(INFRACTIONS).filter((match) => match.text.includes("indigo")),
     ).toEqual([]);
     expect(
       remainingIn(DASHBOARD)
         .filter((match) => match.text.includes("indigo"))
         .map((match) => `${match.line}:${match.text}`),
-    ).toEqual(["54:text-indigo-500", "54:dark:text-indigo-400", "55:bg-indigo-500/10"]);
+    ).toEqual([
+      "54:text-indigo-500",
+      "54:dark:text-indigo-400",
+      "55:bg-indigo-500/10",
+    ]);
     // All three are module-identity swatches, not brand.
     expect(
-      rows
-        .filter((row) => row.class.includes("indigo"))
-        .map((row) => row.code),
+      rows.filter((row) => row.class.includes("indigo")).map((row) => row.code),
     ).toEqual(["GAP-SWATCH", "GAP-SWATCH", "GAP-SWATCH"]);
   });
 
@@ -3826,7 +4186,10 @@ describe("APRAS-85's ledger arithmetic", () => {
     // scale and a triple migrates as a unit or not at all.
     expect(tokensEverywhere()).not.toContain("bg-emerald-700");
     expect(tokensEverywhere()).not.toContain("text-white");
-    for (const name of ["InviteAdministratorDialog.tsx", "TenantsAdminPage.tsx"]) {
+    for (const name of [
+      "InviteAdministratorDialog.tsx",
+      "TenantsAdminPage.tsx",
+    ]) {
       expect(tokensOf(name)).toContain("bg-primary");
       expect(tokensOf(name)).toContain("text-primary-foreground");
     }
@@ -3847,20 +4210,99 @@ describe("APRAS-85's ledger arithmetic", () => {
     // `git show HEAD:<file>`, which returns the same three spans.
     const I_ = INFRACTIONS;
     const INTRODUCED: ReadonlyArray<readonly [string, readonly string[]]> = [
-      [`${I_}components/AttachmentUploader.tsx`, ["text-muted-foreground", "text-primary-text"]],
-      [`${I_}components/ContestationForm.tsx`, ["border-border", "text-muted-foreground"]],
-      [`${I_}components/CycleCloseModal.tsx`, ["bg-card", "border-border", "text-foreground", "text-muted-foreground"]],
-      [`${I_}components/InfractionDetailsView.tsx`, ["bg-card", "border-border", "text-foreground", "text-muted-foreground", "text-primary-text"]],
-      [`${I_}components/InfractionStageTimeline.tsx`, ["text-foreground", "text-muted-foreground", "text-primary-text"]],
-      [`${I_}components/NewInfractionModal.tsx`, ["bg-card", "bg-muted", "border-border", "text-foreground", "text-muted-foreground", "text-primary-text"]],
-      [`${I_}components/NextStepPanel.tsx`, ["bg-card", "border-border", "text-destructive", "text-foreground", "text-muted-foreground"]],
-      [`${I_}pages/InfractionRulesPage.tsx`, ["bg-card", "bg-muted", "border-border", "text-foreground", "text-muted-foreground"]],
-      [`${I_}pages/InfractionsPage.tsx`, ["bg-card", "bg-muted", "border-border", "hover:bg-accent", "text-foreground", "text-muted-foreground"]],
-      [`${I_}pages/MyInfractionsPage.tsx`, ["bg-card", "bg-muted", "border-border", "text-foreground", "text-muted-foreground"]],
-      [`${USERS}components/InviteAdministratorDialog.tsx`, ["bg-primary", "text-primary-foreground"]],
+      [
+        `${I_}components/AttachmentUploader.tsx`,
+        ["text-muted-foreground", "text-primary-text"],
+      ],
+      [
+        `${I_}components/ContestationForm.tsx`,
+        ["border-border", "text-muted-foreground"],
+      ],
+      [
+        `${I_}components/CycleCloseModal.tsx`,
+        [
+          "bg-card",
+          "border-border",
+          "text-foreground",
+          "text-muted-foreground",
+        ],
+      ],
+      [
+        `${I_}components/InfractionDetailsView.tsx`,
+        [
+          "bg-card",
+          "border-border",
+          "text-foreground",
+          "text-muted-foreground",
+          "text-primary-text",
+        ],
+      ],
+      [
+        `${I_}components/InfractionStageTimeline.tsx`,
+        ["text-foreground", "text-muted-foreground", "text-primary-text"],
+      ],
+      [
+        `${I_}components/NewInfractionModal.tsx`,
+        [
+          "bg-card",
+          "bg-muted",
+          "border-border",
+          "text-foreground",
+          "text-muted-foreground",
+          "text-primary-text",
+        ],
+      ],
+      [
+        `${I_}components/NextStepPanel.tsx`,
+        [
+          "bg-card",
+          "border-border",
+          "text-destructive",
+          "text-foreground",
+          "text-muted-foreground",
+        ],
+      ],
+      [
+        `${I_}pages/InfractionRulesPage.tsx`,
+        [
+          "bg-card",
+          "bg-muted",
+          "border-border",
+          "text-foreground",
+          "text-muted-foreground",
+        ],
+      ],
+      [
+        `${I_}pages/InfractionsPage.tsx`,
+        [
+          "bg-card",
+          "bg-muted",
+          "border-border",
+          "hover:bg-accent",
+          "text-foreground",
+          "text-muted-foreground",
+        ],
+      ],
+      [
+        `${I_}pages/MyInfractionsPage.tsx`,
+        [
+          "bg-card",
+          "bg-muted",
+          "border-border",
+          "text-foreground",
+          "text-muted-foreground",
+        ],
+      ],
+      [
+        `${USERS}components/InviteAdministratorDialog.tsx`,
+        ["bg-primary", "text-primary-foreground"],
+      ],
       [`${USERS}components/PermissionMatrix.tsx`, ["border-input"]],
       [`${USERS}pages/AdminUserDashboard.tsx`, ["border-input"]],
-      [`${USERS}pages/TenantsAdminPage.tsx`, ["bg-primary", "text-primary-foreground"]],
+      [
+        `${USERS}pages/TenantsAdminPage.tsx`,
+        ["bg-primary", "text-primary-foreground"],
+      ],
       [`${ASSEMBLIES}components/AssemblyMinutesView.tsx`, ["bg-card"]],
     ];
     const codeOf = new Map(
