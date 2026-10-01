@@ -1,9 +1,9 @@
 """Database models for Visitor, VisitorAuthorization, and AccessLog."""
 
-from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
+from pydantic import NaiveDatetime
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.core import clock
@@ -32,8 +32,8 @@ class Visitor(SQLModel, table=True):
     vehicle_plate: str | None = Field(default=None, index=True)
     vehicle_model: str | None = Field(default=None)
     notes: str | None = Field(default=None)
-    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
-    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    created_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
 
     # Relationships
     authorizations: list["VisitorAuthorization"] = Relationship(
@@ -68,14 +68,14 @@ class VisitorAuthorization(SQLModel, table=True):
     allowed_shifts_json: str = Field(
         default='["MORNING","AFTERNOON","NIGHT","FULL_DAY"]', nullable=False
     )
-    valid_from: datetime | None = Field(default=None)
-    valid_until: datetime | None = Field(default=None)
+    valid_from: NaiveDatetime | None = Field(default=None)
+    valid_until: NaiveDatetime | None = Field(default=None)
     status: AuthorizationStatus = Field(
         default=AuthorizationStatus.ACTIVE, nullable=False, index=True
     )
     notes: str | None = Field(default=None)
-    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
-    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    created_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
 
     # Relationships
     visitor: Optional["Visitor"] = Relationship(back_populates="authorizations")
@@ -105,10 +105,10 @@ class AccessLog(SQLModel, table=True):
     lot_id: UUID = Field(
         foreign_key="lot.id", ondelete="CASCADE", nullable=False, index=True
     )
-    entry_time: datetime = Field(
+    entry_time: NaiveDatetime = Field(
         default_factory=clock.db_now, nullable=False, index=True
     )
-    exit_time: datetime | None = Field(default=None, index=True)
+    exit_time: NaiveDatetime | None = Field(default=None, index=True)
     gatekeeper_user_id: UUID | None = Field(
         default=None, foreign_key="user.id", nullable=True, index=True
     )

@@ -1,10 +1,12 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
+
+from app.schemas.base import ApiModel
 
 
-class DocumentFolderCreate(BaseModel):
+class DocumentFolderCreate(ApiModel):
     name: str = Field(..., min_length=1)
     description: str | None = None
     parent_id: UUID | None = None
@@ -13,14 +15,14 @@ class DocumentFolderCreate(BaseModel):
     allowed_role_ids: list[str] = Field(...)
 
 
-class DocumentFolderUpdate(BaseModel):
+class DocumentFolderUpdate(ApiModel):
     name: str | None = None
     description: str | None = None
     parent_id: UUID | None = None
     allowed_role_ids: list[str] | None = None
 
 
-class DocumentFolderRead(BaseModel):
+class DocumentFolderRead(ApiModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
@@ -37,7 +39,7 @@ class DocumentFolderTreeRead(DocumentFolderRead):
     children: list["DocumentFolderTreeRead"] = []
 
 
-class AssociationDocumentCreate(BaseModel):
+class AssociationDocumentCreate(ApiModel):
     folder_id: UUID
     title: str = Field(..., min_length=1)
     description: str | None = None
@@ -49,7 +51,7 @@ class AssociationDocumentCreate(BaseModel):
     tags: list[str] | None = None
 
 
-class AssociationDocumentVersionCreate(BaseModel):
+class AssociationDocumentVersionCreate(ApiModel):
     title: str | None = None
     description: str | None = None
     file_url: str = Field(..., min_length=1)
@@ -58,7 +60,7 @@ class AssociationDocumentVersionCreate(BaseModel):
     tags: list[str] | None = None
 
 
-class AssociationDocumentRead(BaseModel):
+class AssociationDocumentRead(ApiModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
@@ -80,7 +82,7 @@ class AssociationDocumentRead(BaseModel):
     updated_at: datetime
 
 
-class DocumentDownloadLogRead(BaseModel):
+class DocumentDownloadLogRead(ApiModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
@@ -90,7 +92,7 @@ class DocumentDownloadLogRead(BaseModel):
     downloaded_at: datetime
 
 
-class PaginatedDocumentRead(BaseModel):
+class PaginatedDocumentRead(ApiModel):
     items: list[AssociationDocumentRead]
     total: int
     skip: int

@@ -1,31 +1,32 @@
 """Token schemas for authentication."""
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import Field, field_validator
 
 from app.core.password_policy import BCRYPT_MAX_PASSWORD_BYTES
+from app.schemas.base import ApiModel
 from app.schemas.user import PASSWORD_MIN_LENGTH, validate_password_strength
 
 
-class Token(BaseModel):
+class Token(ApiModel):
     """Schema for OAuth2 access token response."""
 
     access_token: str
     token_type: str
 
 
-class TokenPayload(BaseModel):
+class TokenPayload(ApiModel):
     """Schema for JWT token payload content."""
 
     sub: str | None = None
 
 
-class ForgotPasswordRequest(BaseModel):
+class ForgotPasswordRequest(ApiModel):
     """Schema for requesting a password reset link."""
 
     email: str
 
 
-class ResetPasswordRequest(BaseModel):
+class ResetPasswordRequest(ApiModel):
     """Schema for resetting password using a token.
 
     `new_password` is held to `UserCreate`'s rule, not to a copy of it and no

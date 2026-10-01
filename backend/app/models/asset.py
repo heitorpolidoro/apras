@@ -1,8 +1,9 @@
 """Models for assets and inventory management."""
 
-from datetime import date, datetime
+from datetime import date
 from uuid import UUID, uuid4
 
+from pydantic import NaiveDatetime
 from sqlalchemy import Index
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -41,8 +42,8 @@ class Asset(SQLModel, table=True):
     min_quantity: int | None = Field(default=None, nullable=True)
     unit_of_measure: str | None = Field(default="un", nullable=True)
     notes: str | None = Field(default=None, nullable=True)
-    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
-    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    created_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
 
     # Relationships
     movements: list["InventoryMovement"] = Relationship(
@@ -74,7 +75,7 @@ class InventoryMovement(SQLModel, table=True):
     performed_by_id: UUID = Field(foreign_key="user.id", nullable=False, index=True)
     reason: str = Field(nullable=False)
     document_number: str | None = Field(default=None, nullable=True)
-    created_at: datetime = Field(
+    created_at: NaiveDatetime = Field(
         default_factory=clock.db_now, nullable=False, index=True
     )
 

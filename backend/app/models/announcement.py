@@ -1,9 +1,9 @@
 """Database models for the Announcement Feed module."""
 
 import uuid
-from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
+from pydantic import NaiveDatetime
 from sqlmodel import Field, Relationship, SQLModel, UniqueConstraint
 
 from app.core import clock
@@ -28,8 +28,8 @@ class Announcement(SQLModel, table=True):
     content: str = Field(nullable=False)
     author_id: uuid.UUID = Field(foreign_key="user.id", nullable=False, index=True)
     is_deleted: bool = Field(default=False, nullable=False, index=True)
-    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
-    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    created_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
 
     author: Optional["User"] = Relationship(
         sa_relationship_kwargs={"foreign_keys": "[Announcement.author_id]"}
@@ -63,7 +63,7 @@ class AnnouncementMedia(SQLModel, table=True):
     mime_type: str = Field(nullable=False)
     file_size_bytes: int = Field(nullable=False)
     order_index: int = Field(default=0, nullable=False)
-    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    created_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
 
     announcement: Announcement = Relationship(back_populates="media")
 
@@ -81,7 +81,7 @@ class AnnouncementComment(SQLModel, table=True):
         foreign_key="user.id", ondelete="CASCADE", nullable=False, index=True
     )
     content: str = Field(nullable=False)
-    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    created_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
 
     announcement: Announcement = Relationship(back_populates="comments")
     user: Optional["User"] = Relationship(
@@ -106,7 +106,7 @@ class AnnouncementReadReceipt(SQLModel, table=True):
     user_id: uuid.UUID = Field(
         foreign_key="user.id", ondelete="CASCADE", nullable=False, index=True
     )
-    read_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    read_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
 
     announcement: Announcement = Relationship(back_populates="read_receipts")
     user: Optional["User"] = Relationship(

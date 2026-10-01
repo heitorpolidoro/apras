@@ -831,8 +831,8 @@ def test_create_reservation_endpoint_success(client: TestClient, session: Sessio
         headers={"Authorization": f"Bearer {token}"},
         json={
             "space_id": str(space.id),
-            "start_time": "2026-06-01T10:00:00",
-            "end_time": "2026-06-01T11:00:00",
+            "start_time": "2026-06-01T10:00:00Z",
+            "end_time": "2026-06-01T11:00:00Z",
         },
     )
     assert response.status_code == 201
@@ -851,8 +851,8 @@ def test_create_reservation_endpoint_guest_forbidden(
         headers={"Authorization": f"Bearer {token}"},
         json={
             "space_id": str(space.id),
-            "start_time": "2026-06-01T10:00:00",
-            "end_time": "2026-06-01T11:00:00",
+            "start_time": "2026-06-01T10:00:00Z",
+            "end_time": "2026-06-01T11:00:00Z",
         },
     )
     assert response.status_code == 403
@@ -867,8 +867,8 @@ def test_create_reservation_endpoint_conflict_returns_409(
 
     payload = {
         "space_id": str(space.id),
-        "start_time": "2026-06-01T10:00:00",
-        "end_time": "2026-06-01T11:00:00",
+        "start_time": "2026-06-01T10:00:00Z",
+        "end_time": "2026-06-01T11:00:00Z",
     }
     first = client.post(
         "/api/v1/space-reservations/",
@@ -895,8 +895,8 @@ def test_approve_endpoint_forbidden_for_non_staff(client: TestClient, session: S
         headers={"Authorization": f"Bearer {token}"},
         json={
             "space_id": str(space.id),
-            "start_time": "2026-06-01T10:00:00",
-            "end_time": "2026-06-01T11:00:00",
+            "start_time": "2026-06-01T10:00:00Z",
+            "end_time": "2026-06-01T11:00:00Z",
         },
     )
     reservation_id = create_resp.json()["id"]
@@ -920,8 +920,8 @@ def test_approve_endpoint_success_for_admin(
         headers={"Authorization": f"Bearer {resident_token}"},
         json={
             "space_id": str(space.id),
-            "start_time": "2026-06-01T10:00:00",
-            "end_time": "2026-06-01T11:00:00",
+            "start_time": "2026-06-01T10:00:00Z",
+            "end_time": "2026-06-01T11:00:00Z",
         },
     )
     reservation_id = create_resp.json()["id"]
@@ -947,8 +947,8 @@ def test_reject_endpoint_success_for_admin(
         headers={"Authorization": f"Bearer {resident_token}"},
         json={
             "space_id": str(space.id),
-            "start_time": "2026-06-01T10:00:00",
-            "end_time": "2026-06-01T11:00:00",
+            "start_time": "2026-06-01T10:00:00Z",
+            "end_time": "2026-06-01T11:00:00Z",
         },
     )
     reservation_id = create_resp.json()["id"]
@@ -1029,8 +1029,8 @@ def test_list_endpoint_masks_other_users_reservations(
         headers={"Authorization": f"Bearer {owner_token}"},
         json={
             "space_id": str(space.id),
-            "start_time": "2026-06-01T10:00:00",
-            "end_time": "2026-06-01T11:00:00",
+            "start_time": "2026-06-01T10:00:00Z",
+            "end_time": "2026-06-01T11:00:00Z",
         },
     )
 
@@ -1057,8 +1057,8 @@ def test_list_endpoint_staff_sees_full_detail(
         headers={"Authorization": f"Bearer {resident_token}"},
         json={
             "space_id": str(space.id),
-            "start_time": "2026-06-01T10:00:00",
-            "end_time": "2026-06-01T11:00:00",
+            "start_time": "2026-06-01T10:00:00Z",
+            "end_time": "2026-06-01T11:00:00Z",
         },
     )
 
@@ -1087,8 +1087,8 @@ def test_get_reservation_endpoint_not_found_for_stranger(
         headers={"Authorization": f"Bearer {owner_token}"},
         json={
             "space_id": str(space.id),
-            "start_time": "2026-06-01T10:00:00",
-            "end_time": "2026-06-01T11:00:00",
+            "start_time": "2026-06-01T10:00:00Z",
+            "end_time": "2026-06-01T11:00:00Z",
         },
     )
     reservation_id = create_resp.json()["id"]

@@ -3,12 +3,14 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import ConfigDict, Field, model_validator
 
+from app.core import clock
 from app.models.enums import ReservationStatus
+from app.schemas.base import ApiModel
 
 
-class ReservableSpaceBase(BaseModel):
+class ReservableSpaceBase(ApiModel):
     """Base fields shared by ReservableSpace create/read schemas."""
 
     name: str = Field(..., min_length=1, max_length=100)
@@ -21,7 +23,7 @@ class ReservableSpaceCreate(ReservableSpaceBase):
     """Schema for creating a new reservable space."""
 
 
-class ReservableSpaceUpdate(BaseModel):
+class ReservableSpaceUpdate(ApiModel):
     """Schema for updating an existing reservable space. All fields optional."""
 
     name: str | None = Field(None, min_length=1, max_length=100)
@@ -41,13 +43,13 @@ class ReservableSpaceRead(ReservableSpaceBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class SpaceReservationCreate(BaseModel):
+class SpaceReservationCreate(ApiModel):
     """Schema for creating a new space reservation."""
 
     space_id: UUID
     lot_id: UUID | None = None
-    start_time: datetime
-    end_time: datetime
+    start_time: clock.DbDatetime
+    end_time: clock.DbDatetime
     notes: str | None = None
 
     @model_validator(mode="after")
@@ -57,7 +59,7 @@ class SpaceReservationCreate(BaseModel):
         return self
 
 
-class SpaceReservationRead(BaseModel):
+class SpaceReservationRead(ApiModel):
     """Schema for reading a space reservation (subject to viewer masking)."""
 
     id: UUID
@@ -78,7 +80,7 @@ class SpaceReservationRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class SpaceReservationDecision(BaseModel):
+class SpaceReservationDecision(ApiModel):
     """Body for the approve/reject endpoint.
 
     No fields needed today (kept as an empty model, not a bare 204, so a

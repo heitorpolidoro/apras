@@ -3,12 +3,13 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
 
 from app.models.enums import OccurrenceCategory, OccurrencePriority, OccurrenceStatus
+from app.schemas.base import ApiModel
 
 
-class OccurrenceCreate(BaseModel):
+class OccurrenceCreate(ApiModel):
     """Schema for creating a new occurrence."""
 
     lot_id: UUID | None = None
@@ -20,7 +21,7 @@ class OccurrenceCreate(BaseModel):
     photo_urls: list[str] | None = None
 
 
-class OccurrenceStatusUpdate(BaseModel):
+class OccurrenceStatusUpdate(ApiModel):
     """Schema for updating occurrence status, priority, assignment, or resolution."""
 
     status: OccurrenceStatus | None = None
@@ -29,7 +30,7 @@ class OccurrenceStatusUpdate(BaseModel):
     resolution_notes: str | None = None
 
 
-class TimelineNoteCreate(BaseModel):
+class TimelineNoteCreate(ApiModel):
     """Schema for appending a timeline note or status transition log."""
 
     note: str = Field(min_length=1)
@@ -37,7 +38,7 @@ class TimelineNoteCreate(BaseModel):
     status_to: OccurrenceStatus | None = None
 
 
-class OccurrenceTimelineRead(BaseModel):
+class OccurrenceTimelineRead(ApiModel):
     """Schema for reading timeline log entries."""
 
     model_config = ConfigDict(from_attributes=True)
@@ -53,7 +54,7 @@ class OccurrenceTimelineRead(BaseModel):
     created_at: datetime
 
 
-class OccurrenceRead(BaseModel):
+class OccurrenceRead(ApiModel):
     """Schema for reading basic occurrence details."""
 
     model_config = ConfigDict(from_attributes=True)
@@ -91,7 +92,7 @@ class OccurrenceDetailRead(OccurrenceRead):
     infraction_ids: list[UUID] = Field(default_factory=list)
 
 
-class PaginatedOccurrenceRead(BaseModel):
+class PaginatedOccurrenceRead(ApiModel):
     """Schema for paginated occurrence listings."""
 
     items: list[OccurrenceRead]

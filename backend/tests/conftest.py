@@ -216,25 +216,40 @@ def session_fixture():
     SQLModel.metadata.create_all(engine)
     try:
         with Session(engine) as session:
+            # The default tenant is seeded here, immediately after
+            # `create_all`, rather than by an autouse fixture (APRAS-120 §5).
+            # Every tenant-scoped model defaults its `tenant_id` to
+            # `DEFAULT_TENANT_ID`, so without this row the foreign key has no
+            # target and joins are meaningless -- which makes "every test
+            # database contains the default tenant" a property of the
+            # database, not of fixture ordering.
+            session.add(Tenant(id=DEFAULT_TENANT_ID, name=DEFAULT_TENANT_NAME))
+            session.commit()
             yield session
         SQLModel.metadata.drop_all(engine)
     finally:
         engine.dispose()
 
 
-@pytest.fixture(name="default_tenant", autouse=True)
-def default_tenant_fixture(session: Session):
-    """Seed the well-known default tenant into every test database (APRAS-41).
+@pytest.fixture(name="default_tenant")
+def default_tenant_fixture(session: Session) -> Tenant:
+    """Look up the default tenant `session_fixture` seeded (APRAS-120 §5).
 
-    Autouse and depending only on `session`, so it runs before any other
-    fixture that inserts rows. Every tenant-scoped model defaults its
-    `tenant_id` to `DEFAULT_TENANT_ID`, so without this row the foreign key
-    would have no target and joins would be meaningless. No other existing
-    test module needs to know tenants exist.
+    This was `autouse=True` and did the seeding itself, which meant every
+    test in the suite built a SQLite engine and committed a row -- including
+    the 22 modules that mention neither `session` nor `client` and read
+    source files only. The cost was not merely wasted work: when sqlmodel
+    0.0.47 made a bare `datetime` annotation reject a naive bind parameter,
+    this one commit took down 22 database-free test modules in *setup*, so
+    `tests/test_lint_hygiene.py` could not run at all. Seeding inside
+    `session_fixture` means a test that needs no database builds none, and
+    `tests/test_suite_hygiene.py` keeps it that way.
     """
-    tenant = Tenant(id=DEFAULT_TENANT_ID, name=DEFAULT_TENANT_NAME)
-    session.add(tenant)
-    session.commit()
+    tenant = session.get(Tenant, DEFAULT_TENANT_ID)
+    assert tenant is not None, (
+        "session_fixture seeds the default tenant immediately after "
+        "create_all; a missing row means that seed was removed"
+    )
     return tenant
 
 

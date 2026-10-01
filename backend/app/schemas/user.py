@@ -4,7 +4,6 @@ import re
 from uuid import UUID
 
 from pydantic import (
-    BaseModel,
     ConfigDict,
     EmailStr,
     Field,
@@ -13,6 +12,7 @@ from pydantic import (
 )
 
 from app.core.password_policy import BCRYPT_MAX_PASSWORD_BYTES
+from app.schemas.base import ApiModel
 from app.schemas.role import RoleRead
 from app.schemas.tenant import TenantMembershipSummary
 
@@ -94,7 +94,7 @@ def validate_password_strength(value: str) -> str:
     return value
 
 
-class UserBase(BaseModel):
+class UserBase(ApiModel):
     email: EmailStr
     full_name: str
     phone: str | None = None
@@ -161,7 +161,7 @@ class UserMeRead(UserRead):
     tenants: list[TenantMembershipSummary] = []
 
 
-class UserContactInfoUpdate(BaseModel):
+class UserContactInfoUpdate(ApiModel):
     """Contact-info-only update schema, used by the Administrator/Manager
     contact-info endpoint. Deliberately has no role/is_active/role_ids/
     full_name/cpf fields so those cannot be set through this schema."""
@@ -170,7 +170,7 @@ class UserContactInfoUpdate(BaseModel):
     address: str | None = None
 
 
-class UserUpdate(BaseModel):
+class UserUpdate(ApiModel):
     """The admin update surface.
 
     It carries **no** `role` and **no** `is_superuser` (IAM F5, APRAS-49
@@ -194,7 +194,7 @@ class UserUpdate(BaseModel):
         return None if v is None else normalize_cpf(v)
 
 
-class SuperuserUpdate(BaseModel):
+class SuperuserUpdate(ApiModel):
     """Body of ``PATCH /api/v1/users/{user_id}/superuser`` (§8.4).
 
     One field, deliberately its own schema, so the global flag never rides on
@@ -204,7 +204,7 @@ class SuperuserUpdate(BaseModel):
     is_superuser: bool
 
 
-class SuperuserRead(BaseModel):
+class SuperuserRead(ApiModel):
     """Response of the superuser route -- deliberately **not** ``UserRead``.
 
     It confirms what the caller just wrote without making ``UserRead`` carry

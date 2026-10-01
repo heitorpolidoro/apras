@@ -1,9 +1,9 @@
 """Feedback SQLModel entity definition."""
 
-from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
+from pydantic import NaiveDatetime
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.core import clock
@@ -41,9 +41,9 @@ class Feedback(SQLModel, table=True):
     responded_by_id: UUID | None = Field(
         default=None, foreign_key="user.id", ondelete="SET NULL", nullable=True
     )
-    responded_at: datetime | None = Field(default=None, nullable=True)
+    responded_at: NaiveDatetime | None = Field(default=None, nullable=True)
     response_seen_by_reporter: bool = Field(default=False, nullable=False)
-    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    created_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
 
     # Relationships
     reporter: Optional["User"] = Relationship(

@@ -3,21 +3,22 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import ConfigDict
 
 from app.models.enums import AccessDeviceStatus, FacialTemplateSyncStatus
+from app.schemas.base import ApiModel
 
 
-class AccessDeviceCreate(BaseModel):
+class AccessDeviceCreate(ApiModel):
     name: str
     location: str | None = None
 
 
-class AccessDeviceStatusUpdate(BaseModel):
+class AccessDeviceStatusUpdate(ApiModel):
     status: AccessDeviceStatus
 
 
-class AccessDeviceRead(BaseModel):
+class AccessDeviceRead(ApiModel):
     id: UUID
     name: str
     location: str | None = None
@@ -38,12 +39,12 @@ class AccessDeviceKeyRead(AccessDeviceRead):
     device_key: str
 
 
-class PaginatedAccessDeviceRead(BaseModel):
+class PaginatedAccessDeviceRead(ApiModel):
     items: list[AccessDeviceRead]
     total: int
 
 
-class FacialTemplateRead(BaseModel):
+class FacialTemplateRead(ApiModel):
     id: UUID
     resident_id: UUID
     media_asset_id: UUID
@@ -56,12 +57,12 @@ class FacialTemplateRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class FacialVerificationWebhookIn(BaseModel):
+class FacialVerificationWebhookIn(ApiModel):
     resident_id: UUID | None = None
     confidence_score: float | None = None
 
 
-class FacialAccessEventRead(BaseModel):
+class FacialAccessEventRead(ApiModel):
     id: UUID
     device_id: UUID
     resident_id: UUID | None = None
@@ -74,7 +75,7 @@ class FacialAccessEventRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class PaginatedFacialAccessEventRead(BaseModel):
+class PaginatedFacialAccessEventRead(ApiModel):
     items: list[FacialAccessEventRead]
     total: int
     skip: int

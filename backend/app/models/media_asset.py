@@ -1,7 +1,7 @@
 import uuid
-from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
+from pydantic import NaiveDatetime
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.core import clock
@@ -46,9 +46,9 @@ class MediaAsset(SQLModel, table=True):
         foreign_key="user.id", ondelete="SET NULL", nullable=True
     )
 
-    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
-    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
-    approved_at: datetime | None = Field(default=None, nullable=True)
+    created_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
+    approved_at: NaiveDatetime | None = Field(default=None, nullable=True)
 
     uploaded_by: Optional["User"] = Relationship(
         sa_relationship_kwargs={"foreign_keys": "[MediaAsset.uploaded_by_id]"}

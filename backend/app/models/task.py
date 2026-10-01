@@ -1,9 +1,9 @@
 """Database models for Task, TaskComment and TaskHistory."""
 
-from datetime import datetime
 from typing import TYPE_CHECKING, ClassVar, Optional
 from uuid import UUID, uuid4
 
+from pydantic import NaiveDatetime
 from sqlalchemy import Column, ForeignKey
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -60,9 +60,9 @@ class Task(SQLModel, table=True):
     description: str | None = None
     status: TaskStatus = Field(default=TaskStatus.PENDING, index=True)
     priority: TaskPriority = Field(default=TaskPriority.MEDIUM, index=True)
-    due_date: datetime | None = None
-    created_at: datetime = Field(default_factory=clock.db_now)
-    updated_at: datetime = Field(default_factory=clock.db_now)
+    due_date: NaiveDatetime | None = None
+    created_at: NaiveDatetime = Field(default_factory=clock.db_now)
+    updated_at: NaiveDatetime = Field(default_factory=clock.db_now)
     is_deleted: bool = Field(default=False, index=True)
 
     USER_ID_FK: ClassVar[str] = "user.id"
@@ -120,8 +120,8 @@ class TaskComment(SQLModel, table=True):
     )
     created_by_id: UUID = Field(foreign_key=Task.USER_ID_FK, index=True)
     content: str
-    created_at: datetime = Field(default_factory=clock.db_now)
-    updated_at: datetime = Field(default_factory=clock.db_now)
+    created_at: NaiveDatetime = Field(default_factory=clock.db_now)
+    updated_at: NaiveDatetime = Field(default_factory=clock.db_now)
 
     # Relationships
     task: "Task" = Relationship(back_populates="comments")
@@ -152,7 +152,7 @@ class TaskHistory(SQLModel, table=True):
     field_name: str
     old_value: str | None = None
     new_value: str | None = None
-    timestamp: datetime = Field(default_factory=clock.db_now)
+    timestamp: NaiveDatetime = Field(default_factory=clock.db_now)
 
     # Relationships
     task: "Task" = Relationship(back_populates="history")

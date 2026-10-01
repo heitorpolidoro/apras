@@ -9,12 +9,13 @@ body.
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
+from pydantic import ConfigDict, EmailStr, field_validator
 
+from app.schemas.base import ApiModel
 from app.schemas.user import normalize_cpf, validate_password_strength
 
 
-class InvitationCreate(BaseModel):
+class InvitationCreate(ApiModel):
     """What a superuser posts to invite an administrator.
 
     `full_name` is the courtesy greeting of the mail only: it is not stored,
@@ -27,7 +28,7 @@ class InvitationCreate(BaseModel):
     full_name: str | None = None
 
 
-class InvitationRead(BaseModel):
+class InvitationRead(ApiModel):
     """One invitation as the superuser routes return it.
 
     Derived state, never a stored `status` column: `accepted_at` is the
@@ -46,7 +47,7 @@ class InvitationRead(BaseModel):
     created_at: datetime
 
 
-class InvitationPreviewRequest(BaseModel):
+class InvitationPreviewRequest(ApiModel):
     """The token, in a **body** and never in a URL (D5).
 
     A token in a path or a query string lands in access logs, in `Referer`
@@ -57,7 +58,7 @@ class InvitationPreviewRequest(BaseModel):
     token: str
 
 
-class InvitationPreview(BaseModel):
+class InvitationPreview(ApiModel):
     """What the invitee is shown before accepting, and the D8 accept answer.
 
     It carries **no credential of any kind**. `account_exists` lets the
@@ -73,7 +74,7 @@ class InvitationPreview(BaseModel):
     account_exists: bool
 
 
-class InvitationAcceptRequest(BaseModel):
+class InvitationAcceptRequest(ApiModel):
     """The acceptance body. Carries the same token, in the same place.
 
     When present, `cpf` and `password` are held to exactly the rules

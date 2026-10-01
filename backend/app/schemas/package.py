@@ -3,12 +3,13 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import ConfigDict
 
 from app.models.enums import PackageStatus
+from app.schemas.base import ApiModel
 
 
-class PackageCreate(BaseModel):
+class PackageCreate(ApiModel):
     """Schema for logging a new package's arrival."""
 
     lot_id: UUID
@@ -16,13 +17,13 @@ class PackageCreate(BaseModel):
     carrier: str | None = None
 
 
-class PackagePickup(BaseModel):
+class PackagePickup(ApiModel):
     """Schema for marking a package as picked up."""
 
     picked_up_by_notes: str | None = None
 
 
-class LotSummaryRead(BaseModel):
+class LotSummaryRead(ApiModel):
     """Minimal lot identification used to group/link packages by lot."""
 
     id: UUID
@@ -32,7 +33,7 @@ class LotSummaryRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class PackageRead(BaseModel):
+class PackageRead(ApiModel):
     """Schema for reading package details."""
 
     model_config = ConfigDict(from_attributes=True)
@@ -52,7 +53,7 @@ class PackageRead(BaseModel):
     picked_up_by_notes: str | None = None
 
 
-class PaginatedPackageRead(BaseModel):
+class PaginatedPackageRead(ApiModel):
     """Schema for paginated package listings."""
 
     items: list[PackageRead]

@@ -1,9 +1,9 @@
 """Database models for Lot and UserLotLink."""
 
-from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
+from pydantic import NaiveDatetime
 from sqlalchemy import UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -34,9 +34,9 @@ class UserLotLink(SQLModel, table=True):
         default=LotAssociationType.PROPRIETARIO, nullable=False
     )
     is_primary: bool = Field(default=False, nullable=False)
-    start_date: datetime | None = Field(default=None)
-    end_date: datetime | None = Field(default=None)
-    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    start_date: NaiveDatetime | None = Field(default=None)
+    end_date: NaiveDatetime | None = Field(default=None)
+    created_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
 
     # Relationships
     user: "User" = Relationship(back_populates="lot_links")
@@ -74,12 +74,12 @@ class Lot(SQLModel, table=True):
     # hand by ADMINISTRATOR/DIRECTOR: APRAS has no per-lot billing to derive
     # it from.
     is_delinquent: bool = Field(default=False, nullable=False, index=True)
-    delinquency_updated_at: datetime | None = Field(default=None, nullable=True)
+    delinquency_updated_at: NaiveDatetime | None = Field(default=None, nullable=True)
     delinquency_updated_by_id: UUID | None = Field(
         default=None, foreign_key="user.id", ondelete="SET NULL", nullable=True
     )
-    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
-    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    created_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
 
     # Relationships
     user_links: list[UserLotLink] = Relationship(

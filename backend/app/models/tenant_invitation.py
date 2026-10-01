@@ -21,9 +21,9 @@ pending. A stored third field can disagree with the two timestamps; the two
 timestamps cannot disagree with themselves.
 """
 
-from datetime import datetime
 from uuid import UUID, uuid4
 
+from pydantic import NaiveDatetime
 from sqlmodel import Field, SQLModel
 
 from app.core import clock
@@ -52,9 +52,9 @@ class TenantInvitation(SQLModel, table=True):
     #: 64 hex characters. Unique, because two invitations resolving to the
     #: same token would make "single use" ambiguous.
     token_hash: str = Field(max_length=64, unique=True, index=True, nullable=False)
-    expires_at: datetime = Field(nullable=False)
+    expires_at: NaiveDatetime = Field(nullable=False)
     #: **The single-use marker**: NULL means not yet consumed.
-    accepted_at: datetime | None = Field(default=None, nullable=True)
+    accepted_at: NaiveDatetime | None = Field(default=None, nullable=True)
     #: ``SET NULL``: an invitation is a historical record and must outlive
     #: the account it created being removed.
     accepted_user_id: UUID | None = Field(
@@ -63,5 +63,5 @@ class TenantInvitation(SQLModel, table=True):
     invited_by_user_id: UUID = Field(
         foreign_key="user.id", ondelete="RESTRICT", nullable=False
     )
-    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
-    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    created_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)

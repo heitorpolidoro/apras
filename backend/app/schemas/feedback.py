@@ -3,12 +3,13 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
 
 from app.models.enums import FeedbackCategory, FeedbackStatus
+from app.schemas.base import ApiModel
 
 
-class FeedbackCreate(BaseModel):
+class FeedbackCreate(ApiModel):
     """Schema for creating a new feedback submission."""
 
     category: FeedbackCategory
@@ -16,13 +17,13 @@ class FeedbackCreate(BaseModel):
     is_anonymous: bool = False
 
 
-class FeedbackRespond(BaseModel):
+class FeedbackRespond(ApiModel):
     """Schema for the board's response to a feedback submission."""
 
     board_response: str = Field(min_length=1)
 
 
-class FeedbackRead(BaseModel):
+class FeedbackRead(ApiModel):
     """Schema for reading feedback details."""
 
     model_config = ConfigDict(from_attributes=True)
@@ -42,7 +43,7 @@ class FeedbackRead(BaseModel):
     created_at: datetime
 
 
-class PaginatedFeedbackRead(BaseModel):
+class PaginatedFeedbackRead(ApiModel):
     """Schema for paginated feedback listings."""
 
     items: list[FeedbackRead]

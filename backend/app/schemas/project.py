@@ -4,13 +4,14 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
 
 from app.core.money import Money, MoneyIn, SignedMoney, SignedMoneyIn
 from app.models.enums import MilestoneStatus, ProjectStatus
+from app.schemas.base import ApiModel
 
 
-class ProjectBase(BaseModel):
+class ProjectBase(ApiModel):
     """Base schema for construction project fields."""
 
     title: str = Field(..., min_length=1, max_length=255)
@@ -30,7 +31,7 @@ class ProjectCreate(ProjectBase):
     """Schema for creating a new construction project."""
 
 
-class ProjectUpdateSchema(BaseModel):
+class ProjectUpdateSchema(ApiModel):
     """Schema for updating an existing construction project."""
 
     title: str | None = Field(None, min_length=1, max_length=255)
@@ -46,7 +47,7 @@ class ProjectUpdateSchema(BaseModel):
     cover_photo_url: str | None = None
 
 
-class MilestoneBase(BaseModel):
+class MilestoneBase(ApiModel):
     """Base schema for milestone properties."""
 
     title: str = Field(..., min_length=1, max_length=255)
@@ -61,7 +62,7 @@ class MilestoneCreate(MilestoneBase):
     """Schema for creating a project milestone."""
 
 
-class MilestoneUpdate(BaseModel):
+class MilestoneUpdate(ApiModel):
     """Schema for updating a project milestone."""
 
     title: str | None = Field(None, min_length=1, max_length=255)
@@ -83,7 +84,7 @@ class MilestoneRead(MilestoneBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class ProjectUpdateCreate(BaseModel):
+class ProjectUpdateCreate(ApiModel):
     """Schema for creating a progress update / photo log."""
 
     title: str = Field(..., min_length=1, max_length=255)
@@ -92,7 +93,7 @@ class ProjectUpdateCreate(BaseModel):
     cost_impact: SignedMoneyIn | None = Decimal("0.00")
 
 
-class AuthorSummary(BaseModel):
+class AuthorSummary(ApiModel):
     """Summary of author information."""
 
     id: uuid.UUID
@@ -102,7 +103,7 @@ class AuthorSummary(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class ProjectUpdateRead(BaseModel):
+class ProjectUpdateRead(ApiModel):
     """Schema for reading a progress update."""
 
     id: uuid.UUID
@@ -152,7 +153,7 @@ class ProjectDetailRead(ProjectRead):
     updates: list[ProjectUpdateRead] = Field(default_factory=list)
 
 
-class PaginatedProjects(BaseModel):
+class PaginatedProjects(ApiModel):
     """Paginated list of construction projects."""
 
     items: list[ProjectRead]

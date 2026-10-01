@@ -3,27 +3,28 @@
 import uuid
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
 
 from app.core.money import Money, MoneyIn, SignedMoney
 from app.models.enums import TransactionType
+from app.schemas.base import ApiModel
 
 
-class FinanceCategoryCreate(BaseModel):
+class FinanceCategoryCreate(ApiModel):
     """Schema for creating a finance category."""
 
     name: str = Field(..., min_length=1, max_length=255)
     type: TransactionType
 
 
-class FinanceCategoryUpdate(BaseModel):
+class FinanceCategoryUpdate(ApiModel):
     """Schema for renaming and/or toggling a finance category."""
 
     name: str | None = Field(None, min_length=1, max_length=255)
     is_active: bool | None = None
 
 
-class FinanceCategoryRead(BaseModel):
+class FinanceCategoryRead(ApiModel):
     """Schema for reading a finance category."""
 
     id: uuid.UUID
@@ -36,7 +37,7 @@ class FinanceCategoryRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class BudgetLineCreate(BaseModel):
+class BudgetLineCreate(ApiModel):
     """Schema for creating a budget line."""
 
     category_id: uuid.UUID
@@ -45,14 +46,14 @@ class BudgetLineCreate(BaseModel):
     notes: str | None = None
 
 
-class BudgetLineUpdate(BaseModel):
+class BudgetLineUpdate(ApiModel):
     """Schema for updating a budget line."""
 
     planned_amount: MoneyIn | None = Field(None, ge=0)
     notes: str | None = None
 
 
-class BudgetLineRead(BaseModel):
+class BudgetLineRead(ApiModel):
     """Schema for reading a budget line."""
 
     id: uuid.UUID
@@ -68,7 +69,7 @@ class BudgetLineRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class FinancialTransactionCreate(BaseModel):
+class FinancialTransactionCreate(ApiModel):
     """Schema for creating a financial transaction."""
 
     type: TransactionType
@@ -79,7 +80,7 @@ class FinancialTransactionCreate(BaseModel):
     payment_method: str | None = None
 
 
-class FinancialTransactionUpdate(BaseModel):
+class FinancialTransactionUpdate(ApiModel):
     """Schema for updating a financial transaction."""
 
     type: TransactionType | None = None
@@ -90,7 +91,7 @@ class FinancialTransactionUpdate(BaseModel):
     payment_method: str | None = None
 
 
-class FinancialTransactionRead(BaseModel):
+class FinancialTransactionRead(ApiModel):
     """Schema for reading a financial transaction.
 
     Note: `invoice_file_path` is intentionally excluded — it is the internal
@@ -117,7 +118,7 @@ class FinancialTransactionRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class PaginatedTransactions(BaseModel):
+class PaginatedTransactions(ApiModel):
     """Paginated list of financial transactions."""
 
     items: list[FinancialTransactionRead]
@@ -126,7 +127,7 @@ class PaginatedTransactions(BaseModel):
     limit: int
 
 
-class CashBalanceRead(BaseModel):
+class CashBalanceRead(ApiModel):
     """Schema for the cash balance summary."""
 
     as_of_date: date
@@ -135,7 +136,7 @@ class CashBalanceRead(BaseModel):
     balance: SignedMoney
 
 
-class MonthlyStatementEntry(BaseModel):
+class MonthlyStatementEntry(ApiModel):
     """One monthly entry in the inflows/outflows statement."""
 
     year: int
@@ -146,7 +147,7 @@ class MonthlyStatementEntry(BaseModel):
     running_balance: SignedMoney
 
 
-class FinancialStatementRead(BaseModel):
+class FinancialStatementRead(ApiModel):
     """Schema for the cash inflows/outflows statement over a date range."""
 
     start_date: date
@@ -156,7 +157,7 @@ class FinancialStatementRead(BaseModel):
     entries: list[MonthlyStatementEntry]
 
 
-class BudgetVsActualRow(BaseModel):
+class BudgetVsActualRow(ApiModel):
     """One row of the budget-vs-actual execution table."""
 
     category_id: uuid.UUID
@@ -169,7 +170,7 @@ class BudgetVsActualRow(BaseModel):
     transaction_count: int
 
 
-class BudgetVsActualRead(BaseModel):
+class BudgetVsActualRead(ApiModel):
     """Schema for the budget-vs-actual execution table."""
 
     fiscal_year: int

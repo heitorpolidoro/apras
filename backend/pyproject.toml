@@ -18,7 +18,7 @@ dependencies = [
     "pyjwt>=2.15.0",
     "python-multipart>=0.0.31",
     "slowapi>=0.1.10",
-    "sqlmodel>=0.0.38",
+    "sqlmodel>=0.0.47",
     "uvicorn>=0.54.0",
     "httpx>=0.28.1",
     "qrcode>=8.2",
@@ -119,7 +119,24 @@ ignore = [
 # line breaks either way.
 "app/services/project_report_service.py" = ["E501"]
 "app/models/**" = ["INP001"]
-"app/schemas/**" = ["INP001"]
+# RUF012 flags a mutable class-attribute default, and it exempts pydantic
+# models -- but only when it can *see* that the class is one. APRAS-120 moved
+# all 203 schema classes from `BaseModel` to `ApiModel`, the shared base that
+# makes every response datetime carry its UTC offset, and ruff resolves a base
+# class only within the file that names it: `class X(BaseModel)` is recognised,
+# `class X(ApiModel)` with `ApiModel` imported from `app/schemas/base.py` is
+# not. Verified on a two-file minimal case -- the direct subclass is clean and
+# the aliased one reports RUF012 on an identical `list[str] = []`.
+#
+# So all 22 findings under `app/schemas/` are false positives on *pydantic
+# field defaults*, which pydantic deep-copies per instance and which were
+# therefore never the shared-mutable-state bug the rule is about. The 22 did
+# not exist before the sweep and no mutable default was introduced by it. The
+# alternative was 22 per-line suppressions, which would have raised the cap
+# `tests/test_lint_hygiene.py` holds at 72 by 22 for a rule that is wrong here
+# in every instance -- and the APRAS-120 spec explicitly declines to raise it.
+# Scoped to this one directory so the rule keeps working everywhere else.
+"app/schemas/**" = ["INP001", "RUF012"]
 "app/main.py" = ["INP001"]
 "app/db.py" = ["INP001"]
 "app/seed.py" = ["INP001", "T201"]

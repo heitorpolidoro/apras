@@ -10,12 +10,13 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import ConfigDict
 
 from app.core.money import Money, SignedMoneyIn
+from app.schemas.base import ApiModel
 
 
-class PlanCreate(BaseModel):
+class PlanCreate(ApiModel):
     """A new plan. Every price field is INERT (§1.2)."""
 
     name: str
@@ -28,7 +29,7 @@ class PlanCreate(BaseModel):
     currency: str = "BRL"
 
 
-class PlanUpdate(BaseModel):
+class PlanUpdate(ApiModel):
     """A partial plan edit. Every field optional, including `is_active`.
 
     ``PATCH`` and not ``PUT``: unlike the module and courtesy sets, a plan is
@@ -45,7 +46,7 @@ class PlanUpdate(BaseModel):
     is_active: bool | None = None
 
 
-class PlanRead(BaseModel):
+class PlanRead(ApiModel):
     """One plan as the API returns it, and as `SubscriptionRead` embeds it."""
 
     model_config = ConfigDict(from_attributes=True)

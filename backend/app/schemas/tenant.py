@@ -4,10 +4,12 @@ from datetime import datetime
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
+
+from app.schemas.base import ApiModel
 
 
-class TenantBase(BaseModel):
+class TenantBase(ApiModel):
     """Base tenant schema with common fields."""
 
     name: str = Field(..., min_length=1, max_length=120)
@@ -19,7 +21,7 @@ class TenantCreate(TenantBase):
     is_active: bool = True
 
 
-class TenantUpdate(BaseModel):
+class TenantUpdate(ApiModel):
     """Schema for updating an existing tenant. All fields are optional.
 
     There is no ``DELETE /api/v1/tenants/{id}``: every tenant-scoped foreign
@@ -49,7 +51,7 @@ class TenantRead(TenantBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class SimpleBrandTheme(BaseModel):
+class SimpleBrandTheme(ApiModel):
     """Two colours; everything else, including ``.dark``, is derived (D-A).
 
     The hex values carry **no** ``pattern`` here, for the reason
@@ -68,7 +70,7 @@ class SimpleBrandTheme(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class AdvancedBrandTheme(BaseModel):
+class AdvancedBrandTheme(ApiModel):
     """The whole palette, authored (D-A).
 
     ``dark`` is optional: ``null`` -- the default the UI offers -- means the
@@ -93,7 +95,7 @@ BrandTheme = Annotated[
 ]
 
 
-class TenantProfileRead(BaseModel):
+class TenantProfileRead(ApiModel):
     """The acting condominium's own profile (APRAS-61).
 
     Deliberately **not** ``TenantRead``: the profile screen shows what an
@@ -120,7 +122,7 @@ class TenantProfileRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class PublicTenantBrandingRead(BaseModel):
+class PublicTenantBrandingRead(ApiModel):
     """A condominium's public identity, for an unauthenticated caller (APRAS-74).
 
     Four fields and **nothing else**. This is the one body in the product
@@ -148,7 +150,7 @@ class PublicTenantBrandingRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class TenantProfileUpdate(BaseModel):
+class TenantProfileUpdate(ApiModel):
     """The writable half of the profile: the name, and only the name.
 
     ``is_active`` is absent on purpose (APRAS-61): deactivating a condominium
@@ -173,7 +175,7 @@ class TenantProfileUpdate(BaseModel):
     brand_theme: BrandTheme | None = None
 
 
-class ModuleStateRead(BaseModel):
+class ModuleStateRead(ApiModel):
     """One module's state in one tenant (APRAS-39 §6.1)."""
 
     module: str  # "finance"
@@ -181,7 +183,7 @@ class ModuleStateRead(BaseModel):
     is_active: bool  # not in tenant.disabled_modules
 
 
-class TenantModulesRead(BaseModel):
+class TenantModulesRead(ApiModel):
     """Every module and its state in one tenant, sorted by ``module``.
 
     Storage is negative (``tenant.disabled_modules``, ``[]`` = everything on)
@@ -195,7 +197,7 @@ class TenantModulesRead(BaseModel):
     modules: list[ModuleStateRead]  # all 26, sorted by `module`
 
 
-class TenantModulesUpdate(BaseModel):
+class TenantModulesUpdate(ApiModel):
     """The complete desired state, declaratively (``PUT``, not ``PATCH``).
 
     This schema validates *shape* -- a list of strings. Vocabulary
@@ -207,7 +209,7 @@ class TenantModulesUpdate(BaseModel):
     disabled_modules: list[str]
 
 
-class TenantMemberCreate(BaseModel):
+class TenantMemberCreate(ApiModel):
     """Schema for linking an existing user to a tenant.
 
     ``is_tenant_admin`` is optional so a link and a grant can be one call
@@ -218,7 +220,7 @@ class TenantMemberCreate(BaseModel):
     is_tenant_admin: bool = False
 
 
-class TenantMemberUpdate(BaseModel):
+class TenantMemberUpdate(ApiModel):
     """Schema for granting/revoking the tenant_admin capability (APRAS-43).
 
     Exactly one field, on purpose: this route grants a capability and must
@@ -228,7 +230,7 @@ class TenantMemberUpdate(BaseModel):
     is_tenant_admin: bool
 
 
-class TenantMemberRead(BaseModel):
+class TenantMemberRead(ApiModel):
     """Schema for reading one membership, flattened with the user's details."""
 
     user_id: UUID
@@ -244,7 +246,7 @@ class TenantMemberRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class TenantMembershipSummary(BaseModel):
+class TenantMembershipSummary(ApiModel):
     """One membership of the *calling* user, for ``GET /api/v1/auth/me``.
 
     Distinct from :class:`TenantMemberRead`, which describes *another* user's

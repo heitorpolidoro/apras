@@ -1,9 +1,9 @@
 """Database models for AccessDevice, FacialTemplate, and FacialAccessEvent."""
 
-from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
+from pydantic import NaiveDatetime
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.core import clock
@@ -33,12 +33,12 @@ class AccessDevice(SQLModel, table=True):
     status: AccessDeviceStatus = Field(
         default=AccessDeviceStatus.OFFLINE, nullable=False, index=True
     )
-    last_seen_at: datetime | None = Field(default=None)
+    last_seen_at: NaiveDatetime | None = Field(default=None)
     created_by_id: UUID = Field(
         foreign_key="user.id", ondelete="CASCADE", nullable=False, index=True
     )
-    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
-    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    created_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
 
     # Relationships
     created_by: Optional["User"] = Relationship()
@@ -64,10 +64,10 @@ class FacialTemplate(SQLModel, table=True):
     sync_status: FacialTemplateSyncStatus = Field(
         default=FacialTemplateSyncStatus.PENDING, nullable=False, index=True
     )
-    synced_at: datetime | None = Field(default=None)
+    synced_at: NaiveDatetime | None = Field(default=None)
     failure_reason: str | None = Field(default=None)
-    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
-    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    created_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
 
     # Relationships
     resident: Optional["Resident"] = Relationship()
@@ -93,7 +93,7 @@ class FacialAccessEvent(SQLModel, table=True):
     matched: bool = Field(default=False, nullable=False)
     confidence_score: float | None = Field(default=None)
     access_granted: bool = Field(default=False, nullable=False)
-    event_time: datetime = Field(
+    event_time: NaiveDatetime = Field(
         default_factory=clock.db_now, nullable=False, index=True
     )
     raw_payload: str | None = Field(default=None)

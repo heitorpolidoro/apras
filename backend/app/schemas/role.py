@@ -2,9 +2,10 @@
 
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import ConfigDict, field_validator
 
 from app.core.permissions import PERMISSIONS
+from app.schemas.base import ApiModel
 
 
 def _validate_permissions(values: list[str] | None) -> list[str] | None:
@@ -22,7 +23,7 @@ def _validate_permissions(values: list[str] | None) -> list[str] | None:
     return values
 
 
-class RoleCreate(BaseModel):
+class RoleCreate(ApiModel):
     """Schema for creating a new role."""
 
     name: str
@@ -31,7 +32,7 @@ class RoleCreate(BaseModel):
     _check_permissions = field_validator("permissions")(_validate_permissions)
 
 
-class RoleRead(BaseModel):
+class RoleRead(ApiModel):
     """Schema for reading role data."""
 
     id: UUID
@@ -41,7 +42,7 @@ class RoleRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class RoleUpdate(BaseModel):
+class RoleUpdate(ApiModel):
     """Schema for updating an existing role."""
 
     name: str

@@ -48,14 +48,22 @@ import uuid
 from decimal import Decimal
 
 import pytest
+import sqlalchemy as sa
 from sqlalchemy import create_engine, text
-from sqlmodel import SQLModel
+from sqlmodel import Session, SQLModel
 
 # Imported for its side effect: registering every mapper, so
 # `SQLModel.metadata` is exhaustive when the schema is compared against it.
 import app.models  # noqa: F401  # every model must be imported before the metadata is compared
+from app.core import clock
 from app.core.tenant_context import TENANT_SCOPED_MODELS
 from app.services.tenant_service import LEGACY_ROLE_NAMES
+
+# The `AWARE_COLUMNS` ledger and the vacuity floor have one home, in the module
+# that states the naive-column contract for the metadata. Importing them rather
+# than restating them is what lets a future route-2 migration record a
+# deliberately aware column once and have both tests follow.
+from tests.test_clock import AWARE_COLUMNS, DATED_COLUMN_FLOOR
 
 TEST_POSTGRES_URL = os.environ.get("TEST_POSTGRES_URL")
 _BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -1377,6 +1385,161 @@ def test_the_downgrade_keeps_only_the_first_line_of_a_multi_line_quote(
     assert "backup" in docstring
 
     _reset_to(migrated_pg_engine, "head")
+
+
+# ---------------------------------------------------------------------------
+# The dated columns are naive in the live schema too (APRAS-120, T5)
+# ---------------------------------------------------------------------------
+
+
+def _live_dated_columns(engine) -> dict[str, bool]:
+    """``{"table.column": is_aware}`` for every dated column in ``public``.
+
+    ``information_schema`` spells the distinction in ``data_type``:
+    ``timestamp without time zone`` against ``timestamp with time zone``. Both
+    are collected rather than only the naive ones, so the comparison below is
+    an *agreement* between two sets and not a one-sided filter that would pass
+    by finding nothing.
+    """
+    with engine.connect() as conn:
+        rows = conn.execute(
+            text(
+                "SELECT table_name, column_name, data_type "
+                "FROM information_schema.columns "
+                "WHERE table_schema = 'public' "
+                "AND data_type LIKE 'timestamp%'"
+            )
+        ).all()
+    return {
+        f"{row.table_name}.{row.column_name}": row.data_type
+        == "timestamp with time zone"
+        for row in rows
+    }
+
+
+def _metadata_dated_columns() -> dict[str, bool]:
+    """``{"table.column": is_aware}`` from ``SQLModel.metadata``.
+
+    The ``impl_instance`` unwrapping is the same one ``tests/test_clock.py``
+    needs and for the same measured reason: sqlmodel's ``UTCDateTime`` is a
+    ``TypeDecorator``, so ``isinstance(column.type, sa.DateTime)`` is ``False``
+    for a column whose model field lost its ``NaiveDatetime`` annotation, and a
+    selector without the unwrap would silently drop exactly the column this
+    test exists to catch.
+    """
+    found: dict[str, bool] = {}
+    for table in SQLModel.metadata.sorted_tables:
+        for column in table.columns:
+            unwrapped = getattr(column.type, "impl_instance", None)
+            if isinstance(column.type, sa.DateTime):
+                found[f"{table.name}.{column.name}"] = bool(column.type.timezone)
+            elif isinstance(unwrapped, sa.DateTime):
+                found[f"{table.name}.{column.name}"] = bool(unwrapped.timezone)
+    return found
+
+
+def test_every_dated_column_in_the_live_schema_is_naive(isolated_pg_engine):
+    """The migrated schema agrees with the models, timezone flag included.
+
+    Three assertions, and the middle one is the point. The existing column
+    comparison in this module checks only *names* and *nullability*, so a model
+    field that stopped being ``NaiveDatetime`` -- and therefore started
+    describing ``TIMESTAMP WITH TIME ZONE`` -- would drift away from the 38
+    migrations without a single test here noticing.
+
+    This is also the only place the naive-column contract is checked against a
+    *real* PostgreSQL. SQLite has no distinct aware timestamp type, so the
+    SQLite suite cannot tell the two apart at the schema level at all.
+
+    ``AWARE_COLUMNS`` is imported from ``tests/test_clock.py`` rather than
+    restated, so the ledger has one home: a future migration that deliberately
+    makes a column aware records it once and both tests follow.
+    """
+    live = _live_dated_columns(isolated_pg_engine)
+    expected = _metadata_dated_columns()
+
+    assert len(live) >= DATED_COLUMN_FLOOR, (
+        f"only {len(live)} dated columns in the live schema, under the floor "
+        f"of {DATED_COLUMN_FLOOR}; the query matched almost nothing, so the "
+        "assertions below would be vacuous"
+    )
+
+    # 1. The live schema holds exactly the dated columns the models describe.
+    assert set(live) == set(expected), (
+        "the dated columns of the live schema and of SQLModel.metadata differ: "
+        f"only live={sorted(set(live) - set(expected))}, "
+        f"only metadata={sorted(set(expected) - set(live))}"
+    )
+
+    # 2. They agree on aware-versus-naive, column for column.
+    disagreements = {
+        name: expected[name] for name in live if live[name] != expected[name]
+    }
+    assert not disagreements, (
+        "these columns disagree with SQLModel.metadata on whether they carry a "
+        f"timezone (value shown is what the metadata says): {disagreements}. A "
+        "model field that lost its `NaiveDatetime` annotation describes "
+        "TIMESTAMP WITH TIME ZONE while the migration created TIMESTAMP "
+        "WITHOUT TIME ZONE."
+    )
+
+    # 3. Nothing is aware unless the ledger says it was migrated on purpose.
+    unexpectedly_aware = sorted(
+        name
+        for name, is_aware in live.items()
+        if is_aware and name not in AWARE_COLUMNS
+    )
+    assert not unexpectedly_aware, (
+        f"these live columns are `timestamp with time zone`: "
+        f"{unexpectedly_aware}. No migration in this repository creates one; "
+        "add the column to AWARE_COLUMNS in tests/test_clock.py only together "
+        "with the migration that deliberately converted it."
+    )
+    stale = sorted(name for name in AWARE_COLUMNS if not live.get(name, False))
+    assert not stale, (
+        f"AWARE_COLUMNS claims these columns were migrated to "
+        f"`timestamp with time zone`, but the live schema says otherwise: "
+        f"{stale}. Remove the stale entries rather than leaving a ledger of "
+        "excuses."
+    )
+
+
+def test_a_db_now_write_round_trips_naive_on_postgres(isolated_pg_engine):
+    """The write path works end to end against a real PostgreSQL.
+
+    Under sqlmodel 0.0.47 this additionally proves the bind parameter does not
+    raise: a bare `datetime` annotation resolves to `UTCDateTime`, whose bind
+    processor rejects a naive value outright, so the naive-column contract and
+    the ability to write at all are the same property here.
+
+    Postgres is also where the *other* half matters. It casts an aware value
+    into a naive column by converting through the session's `TimeZone` first,
+    so a value written aware would come back shifted rather than rejected.
+    `clock.db_now()` writes the UTC instant with no conversion left to the
+    connection.
+    """
+    from app.models.tenant import Tenant
+
+    written = clock.db_now()
+    with Session(isolated_pg_engine) as session:
+        tenant = Tenant(id=uuid.uuid4(), name="Fuso Horário", created_at=written)
+        session.add(tenant)
+        session.commit()
+        tenant_id = tenant.id
+
+        session.expire_all()
+        stored = session.get(Tenant, tenant_id)
+        assert stored is not None
+        assert stored.created_at.tzinfo is None, (
+            f"created_at came back as {stored.created_at!r}, tz-aware; the "
+            "column is TIMESTAMP WITHOUT TIME ZONE and every reader in the "
+            "codebase compares it against a naive value"
+        )
+        assert stored.created_at == written, (
+            f"wrote {written!r} and read back {stored.created_at!r}; the "
+            "instant moved, which is what happens when an aware value is cast "
+            "into a naive column through the session's TimeZone"
+        )
 
 
 def _module_docstring_of(module_name: str, function_name: str) -> str:

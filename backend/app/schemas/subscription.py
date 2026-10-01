@@ -8,14 +8,13 @@ response is the same body the ``GET`` returns (APRAS-39 §6.2's reasoning).
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel
-
 from app.core.money import Money
 from app.models.enums import SubscriptionChangeKind, SubscriptionStatus
+from app.schemas.base import ApiModel
 from app.schemas.plan import PlanRead
 
 
-class ModuleEntitlementRead(BaseModel):
+class ModuleEntitlementRead(ApiModel):
     """One catalogue module, seen from the subscription area (§4.7)."""
 
     module: str
@@ -40,7 +39,7 @@ class ModuleEntitlementRead(BaseModel):
     source: str | None
 
 
-class SubscriptionRead(BaseModel):
+class SubscriptionRead(ApiModel):
     """The tenant's whole commercial state, in one body (§4.7, §6.4)."""
 
     tenant_id: UUID
@@ -55,7 +54,7 @@ class SubscriptionRead(BaseModel):
     currency: str | None
 
 
-class SubscriptionModulesUpdate(BaseModel):
+class SubscriptionModulesUpdate(ApiModel):
     """The **contracted set**, not the whole active set (§4.4 a step 5).
 
     A module the tenant is not offered a checkbox for -- a courtesy grant or
@@ -66,7 +65,7 @@ class SubscriptionModulesUpdate(BaseModel):
     active_modules: list[str]
 
 
-class SubscriptionAdminUpdate(BaseModel):
+class SubscriptionAdminUpdate(ApiModel):
     """Assign or change the plan, from the superuser side (§4.4 b)."""
 
     plan_id: UUID
@@ -74,14 +73,14 @@ class SubscriptionAdminUpdate(BaseModel):
     notes: str | None = None
 
 
-class CourtesyUpdate(BaseModel):
+class CourtesyUpdate(ApiModel):
     """The complete desired courtesy set, from the superuser side (§4.4 c)."""
 
     courtesy_modules: list[str]
     reason: str | None = None
 
 
-class SubscriptionChangeRead(BaseModel):
+class SubscriptionChangeRead(ApiModel):
     """One append-only history row, with both plan names resolved."""
 
     id: UUID

@@ -1,9 +1,10 @@
 """Database model for Resident."""
 
-from datetime import date, datetime
+from datetime import date
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
+from pydantic import NaiveDatetime
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.core import clock
@@ -45,8 +46,8 @@ class Resident(SQLModel, table=True):
     )
     is_active: bool = Field(default=True, nullable=False)
     notes: str | None = Field(default=None)
-    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
-    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    created_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
 
     # Relationships
     lot: "Lot" = Relationship(back_populates="residents")

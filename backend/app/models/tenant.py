@@ -42,10 +42,10 @@ Hand-offs deliberately left open by this slice:
   modules that APRAS-46 and APRAS-49 have since converted to permissions.
 """
 
-from datetime import datetime
 from typing import Any
 from uuid import UUID, uuid4
 
+from pydantic import NaiveDatetime
 from sqlalchemy import JSON, Column, UniqueConstraint, text
 from sqlmodel import Field, SQLModel
 
@@ -165,8 +165,8 @@ class Tenant(SQLModel, table=True):
     brand_theme: dict[str, Any] | None = Field(
         default=None, sa_column=Column(JSON, nullable=True)
     )
-    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
-    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    created_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
 
     def __init__(self, **data: Any) -> None:
         """Fill an absent ``slug`` from the name, without touching the database.
@@ -205,7 +205,7 @@ class UserTenantLink(SQLModel, table=True):
     tenant_id: UUID = Field(
         foreign_key="tenant.id", ondelete="CASCADE", nullable=False, index=True
     )
-    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    created_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
     # Administrator-level permission restricted to this one tenant
     # (APRAS-43). The ``server_default`` mirrors what ``tenant_id_field()``
     # does and for the same reason: the SQLite schema built by

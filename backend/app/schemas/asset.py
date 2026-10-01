@@ -3,13 +3,14 @@
 from datetime import date, datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import ConfigDict, Field, model_validator
 
 from app.core.money import Money, MoneyIn
 from app.models.enums import AssetCategory, AssetCondition, MovementType
+from app.schemas.base import ApiModel
 
 
-class AssetBase(BaseModel):
+class AssetBase(ApiModel):
     """Base fields for an asset."""
 
     name: str = Field(..., min_length=1, max_length=255)
@@ -31,7 +32,7 @@ class AssetCreate(AssetBase):
     """Schema for creating a new asset."""
 
 
-class AssetUpdate(BaseModel):
+class AssetUpdate(ApiModel):
     """Schema for updating an existing asset. All fields optional."""
 
     name: str | None = Field(default=None, min_length=1, max_length=255)
@@ -71,7 +72,7 @@ class AssetRead(AssetBase):
         return self
 
 
-class InventoryMovementCreate(BaseModel):
+class InventoryMovementCreate(ApiModel):
     """Schema for recording a new inventory or asset movement."""
 
     movement_type: MovementType
@@ -92,7 +93,7 @@ class InventoryMovementCreate(BaseModel):
         return self
 
 
-class InventoryMovementRead(BaseModel):
+class InventoryMovementRead(ApiModel):
     """Schema for reading an inventory movement."""
 
     id: UUID
@@ -111,7 +112,7 @@ class InventoryMovementRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class PaginatedAssetRead(BaseModel):
+class PaginatedAssetRead(ApiModel):
     """Paginated list of assets."""
 
     items: list[AssetRead]
@@ -120,7 +121,7 @@ class PaginatedAssetRead(BaseModel):
     limit: int
 
 
-class PaginatedInventoryMovementRead(BaseModel):
+class PaginatedInventoryMovementRead(ApiModel):
     """Paginated list of inventory movements."""
 
     items: list[InventoryMovementRead]
@@ -135,7 +136,7 @@ class AssetDetailRead(AssetRead):
     movements: list[InventoryMovementRead] = []
 
 
-class AssetSummaryRead(BaseModel):
+class AssetSummaryRead(ApiModel):
     """Summary metrics for asset and inventory dashboard."""
 
     total_assets: int

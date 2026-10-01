@@ -31,8 +31,15 @@ from __future__ import annotations
 
 import ast
 import configparser
+import importlib
 import pathlib
 import re
+import typing
+from datetime import datetime
+
+from pydantic import BaseModel
+
+from app.schemas.base import ApiModel
 
 BACKEND = pathlib.Path(__file__).resolve().parent.parent
 TESTS = BACKEND / "tests"
@@ -202,4 +209,181 @@ def test_the_backend_job_still_carries_its_job_level_backstop() -> None:
         r"^\s*timeout-minutes:\s*\d+\s*$",
         CI_YML.read_text(encoding="utf-8"),
         re.MULTILINE,
+    )
+
+
+# ---------------------------------------------------------------------------
+# A test that needs no database must build none (APRAS-120 §5)
+# ---------------------------------------------------------------------------
+
+
+def _autouse_fixtures_requesting(conftest: pathlib.Path, dependency: str) -> list[str]:
+    """`autouse` fixtures in `conftest` that take `dependency` as a parameter.
+
+    An AST walk rather than a text scan, because the thing being asserted is a
+    *decorator argument* paired with a *parameter name*, and both have to be
+    read structurally to be read at all.
+    """
+    tree = ast.parse(conftest.read_text(encoding="utf-8"))
+    offenders: list[str] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+            continue
+        is_autouse = any(
+            isinstance(decorator, ast.Call)
+            and any(
+                kw.arg == "autouse"
+                and isinstance(kw.value, ast.Constant)
+                and kw.value.value is True
+                for kw in decorator.keywords
+            )
+            for decorator in node.decorator_list
+        )
+        if not is_autouse:
+            continue
+        params = [arg.arg for arg in node.args.args] + [
+            arg.arg for arg in node.args.kwonlyargs
+        ]
+        if dependency in params:
+            offenders.append(f"{node.name}:{node.lineno}")
+    return offenders
+
+
+def test_no_autouse_fixture_in_conftest_requests_the_session() -> None:
+    """An autouse fixture that takes `session` makes every test a database test.
+
+    `default_tenant_fixture` was exactly that, and the cost was not merely
+    wasted work. It seeded a row with a `commit()`, so when sqlmodel 0.0.47
+    made a bare `datetime` annotation reject a naive bind parameter, that one
+    commit failed in **setup** for every test in the suite -- including the 22
+    modules that read source files and touch no database at all.
+    `tests/test_lint_hygiene.py` could not run, and the failure named a
+    fixture rather than the column that caused it.
+
+    The seed now lives inside `session_fixture`, which makes "every test
+    database contains the default tenant" a property of the database instead
+    of of fixture ordering, and leaves a database-free module database-free.
+    This test is what keeps it that way: the next autouse fixture that reaches
+    for `session` has to justify itself here first.
+    """
+    offenders = _autouse_fixtures_requesting(TESTS / "conftest.py", "session")
+    assert not offenders, (
+        "these autouse fixtures in tests/conftest.py request `session`, so "
+        "every test in the suite -- including the modules that touch no "
+        f"database -- builds a SQLite engine: {offenders}. Move the work into "
+        "`session_fixture` if every database needs it, or drop `autouse` and "
+        "let the tests that need it ask."
+    )
+
+
+# ---------------------------------------------------------------------------
+# No read schema can opt out of the UTC offset by accident (APRAS-120 §6)
+# ---------------------------------------------------------------------------
+
+#: The vacuity floor for the schema scan below. 74 classes qualify on this
+#: tree, and the floor sits four under it **deliberately**: 74 is a census, not
+#: a target, and a test about *inheritance* must not redden because somebody
+#: legitimately deleted a dated field. 70 is still far above anything a broken
+#: scan produces -- one that fails to resolve inheritance finds 63, one that
+#: resolves nothing finds 0 -- so neither can pass here.
+#:
+#: If the real count ever drops below 70, re-measure the census and restate
+#: this floor with the new number and the reason. It is never to be lowered to
+#: whatever the run happened to produce.
+DATED_SCHEMA_FLOOR = 70
+
+
+def _mentions_datetime(annotation: object, seen: set[object] | None = None) -> bool:
+    """Whether `datetime` appears anywhere inside a resolved annotation.
+
+    Recurses through `Annotated` metadata, union members and `list`/`dict`
+    arguments, because `datetime | None`, `list[Something]` and
+    `Annotated[datetime, AfterValidator(...)]` are all ways a field is dated
+    without its annotation *being* `datetime`.
+    """
+    if seen is None:
+        seen = set()
+    if annotation is datetime:
+        return True
+    try:
+        if annotation in seen:
+            return False
+        seen.add(annotation)
+    except TypeError:  # unhashable annotation; recursion below still terminates
+        pass
+    if any(_mentions_datetime(arg, seen) for arg in typing.get_args(annotation)):
+        return True
+    metadata = getattr(annotation, "__metadata__", ())
+    return any(_mentions_datetime(item, seen) for item in metadata)
+
+
+def _schema_classes() -> list[type[BaseModel]]:
+    """Every pydantic class *defined* in a module of `app/schemas/`.
+
+    Import-based and not an AST walk, deliberately: only a real import
+    resolves `model_fields`, and `model_fields` is the only view that includes
+    fields a class **inherits**. Measured on this tree, the declaration-only
+    view finds 63 classes and this one finds 74 -- and the 11 it adds are all
+    response schemas that inherit a dated field from a sibling, i.e. exactly
+    the classes the offset must not miss and exactly the ones an AST scan
+    cannot see.
+
+    Filtering on `__module__` keeps each class attributed to the module that
+    defines it, so a class imported into a second module is counted once.
+    """
+    classes: list[type[BaseModel]] = []
+    for path in sorted((BACKEND / "app" / "schemas").glob("*.py")):
+        if path.stem == "__init__":
+            continue
+        module = importlib.import_module(f"app.schemas.{path.stem}")
+        classes.extend(
+            value
+            for value in vars(module).values()
+            if isinstance(value, type)
+            and issubclass(value, BaseModel)
+            and value.__module__ == module.__name__
+        )
+    return list(dict.fromkeys(classes))
+
+
+def test_every_dated_schema_class_inherits_api_model() -> None:
+    """A schema with a `datetime` field serialises it with its UTC offset.
+
+    This is the test that makes the display fix survive the next read schema
+    somebody adds. `ApiModel` carries the `"*"` json serialiser; a class that
+    goes back to `BaseModel` -- or a new one written against `BaseModel` out of
+    habit -- would silently ship offsetless datetimes again, and the only
+    symptom is a three-hour error in the browser that no other backend test
+    looks at.
+
+    The floor is asserted first so a scan that resolves nothing cannot pass by
+    finding no offenders.
+    """
+    dated = [
+        cls
+        for cls in _schema_classes()
+        if any(
+            _mentions_datetime(field.annotation) for field in cls.model_fields.values()
+        )
+    ]
+
+    assert len(dated) >= DATED_SCHEMA_FLOOR, (
+        f"the schema scan found only {len(dated)} dated classes, under the "
+        f"floor of {DATED_SCHEMA_FLOOR}. That is a broken scan, not a tidy "
+        "schema package: a scan that cannot resolve inherited fields finds 63 "
+        "and one that resolves nothing finds 0. Re-measure the census and "
+        "restate the floor in the spec that changes it."
+    )
+
+    offenders = sorted(
+        f"{cls.__module__.rsplit('.', 1)[-1]}.{cls.__name__}"
+        for cls in dated
+        if not issubclass(cls, ApiModel)
+    )
+    assert not offenders, (
+        "these schema classes have a `datetime` among their resolved fields "
+        "but do not inherit `app.schemas.base.ApiModel`, so their datetimes "
+        f"serialise without a UTC offset: {offenders}. The browser reads an "
+        "offsetless string as local time, which is a three-hour display error "
+        "on every one of them."
     )

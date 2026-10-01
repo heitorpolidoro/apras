@@ -1,9 +1,9 @@
 """Database model for Package (encomendas) tracking."""
 
-from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
+from pydantic import NaiveDatetime
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.core import clock
@@ -34,11 +34,11 @@ class Package(SQLModel, table=True):
     )
     description: str | None = Field(default=None)
     carrier: str | None = Field(default=None)
-    received_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    received_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
     status: PackageStatus = Field(
         default=PackageStatus.AWAITING_PICKUP, nullable=False, index=True
     )
-    picked_up_at: datetime | None = Field(default=None)
+    picked_up_at: NaiveDatetime | None = Field(default=None)
     picked_up_by_id: UUID | None = Field(
         default=None, foreign_key="user.id", ondelete="SET NULL", nullable=True
     )

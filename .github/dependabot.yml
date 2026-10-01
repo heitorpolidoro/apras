@@ -32,29 +32,6 @@ updates:
           # grouped version-update PR. Excluded from the group rather than
           # `ignore`d: `ignore` would suppress its security updates too.
           - "ruff"
-          # `sqlmodel` 0.0.47 replaced the plain datetime column type with
-          # `UTCDateTime`, which raises on any value carrying no tzinfo. Every
-          # datetime column here is naive on purpose: all 110 are `sa.DateTime()`,
-          # `timezone=True` appears in none of the 38 migrations, and
-          # `app/core/clock.db_now()` drops tzinfo so a value read back compares
-          # against one written (APRAS-54). The bump is a schema decision, tracked
-          # as APRAS-120, not a routine minor release.
-          #
-          # Excluded because the group succeeds or fails as a unit: held inside
-          # it, one design decision blocked the other 25 packages -- fastapi,
-          # alembic, psycopg2, pytest -- through PR #36 and again through PR #42.
-          # The reach was wider than it looked, too: `tests/conftest.py`'s
-          # `default_tenant_fixture` is autouse and commits, so the raise landed
-          # in setup for every test under `tests/` -- including
-          # `test_lint_hygiene.py`, which only reads source files and touches no
-          # database, and including `test_migrations_postgres.py`, which is why
-          # the Postgres job failed for this and not for the alembic bump beside
-          # it.
-          #
-          # Excluded rather than `ignore`d, for `ruff`'s reason: a security
-          # advisory against sqlmodel must still open its own PR. Remove this
-          # line once APRAS-120 lands.
-          - "sqlmodel"
       # Security fixes stay batched instead of arriving one per advisory,
       # which is how 57 alerts became unreadable.
       backend-security-updates:

@@ -4,9 +4,10 @@ import re
 from datetime import date, datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import ConfigDict, field_validator
 
 from app.models.enums import ResidentRelationship
+from app.schemas.base import ApiModel
 
 #: A CPF is 11 digits: 9 base digits plus the two check digits.
 CPF_DIGITS = 11
@@ -29,7 +30,7 @@ def _validate_cpf_digits(cpf_digits: str) -> bool:
     return d2 == int(cpf_digits[10])
 
 
-class ResidentBase(BaseModel):
+class ResidentBase(ApiModel):
     full_name: str
     cpf: str
     rg: str | None = None
@@ -54,7 +55,7 @@ class ResidentCreate(ResidentBase):
     pass
 
 
-class ResidentUpdate(BaseModel):
+class ResidentUpdate(ApiModel):
     full_name: str | None = None
     cpf: str | None = None
     rg: str | None = None
@@ -89,7 +90,7 @@ class ResidentRead(ResidentBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class ResidentUserSummary(BaseModel):
+class ResidentUserSummary(ApiModel):
     id: UUID
     full_name: str
     email: str
@@ -101,7 +102,7 @@ class ResidentUserSummary(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class ResidentLotSummary(BaseModel):
+class ResidentLotSummary(ApiModel):
     id: UUID
     block: str
     lot_number: str
@@ -114,11 +115,11 @@ class ResidentDetailRead(ResidentRead):
     lot: ResidentLotSummary | None = None
 
 
-class LinkUserPayload(BaseModel):
+class LinkUserPayload(ApiModel):
     user_id: UUID
 
 
-class PaginatedResidentRead(BaseModel):
+class PaginatedResidentRead(ApiModel):
     items: list[ResidentRead]
     total: int
     skip: int

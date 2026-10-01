@@ -1,12 +1,13 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import ConfigDict
 
 from app.models.enums import EntityType, PhotoApprovalStatus, StorageProvider
+from app.schemas.base import ApiModel
 
 
-class MediaAssetRead(BaseModel):
+class MediaAssetRead(ApiModel):
     """Schema for reading media asset metadata."""
 
     id: uuid.UUID
@@ -33,13 +34,13 @@ class MediaAssetRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class PhotoRejectRequest(BaseModel):
+class PhotoRejectRequest(ApiModel):
     """Request schema for rejecting a photo asset."""
 
     rejection_reason: str
 
 
-class MediaAssetListResponse(BaseModel):
+class MediaAssetListResponse(ApiModel):
     """Response schema for paginated/filtered media asset lists."""
 
     items: list[MediaAssetRead]

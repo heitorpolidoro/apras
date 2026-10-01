@@ -945,10 +945,23 @@ def test_infraction_lot_id_is_not_null_while_occurrence_lot_id_is():
     assert Occurrence.__table__.columns["lot_id"].nullable is True
 
 
-def test_created_at_is_a_naive_utc_datetime(
+def test_created_at_is_served_as_an_explicit_utc_instant(
     client: TestClient, staff: User, world: dict
 ):
-    """The house shape: `clock.db_now()`, naive, like every other table."""
+    """The house shape: `clock.db_now()` in the column, UTC on the wire.
+
+    This assertion was inverted until APRAS-120: it required the *response*
+    string to be offsetless, which is what the API really did and which is
+    exactly the defect that task fixes. The column is naive UTC and the browser
+    does `new Date(x).toLocaleString()`, so an offsetless string was read as
+    *local* time -- a three-hour error for every resident in BRT. The response
+    now carries `+00:00` and the browser renders the viewer's zone.
+
+    The naive-column half of the original intent did not move; it is simply
+    asserted where it lives rather than through a serialised string --
+    `tests/test_clock.py` checks it on `SQLModel.metadata` and
+    `tests/test_migrations_postgres.py` on the live PostgreSQL schema.
+    """
     body = create_infraction(
         client,
         staff,
@@ -957,7 +970,11 @@ def test_created_at_is_a_naive_utc_datetime(
         resident=world["resident"],
     )
     parsed = datetime.fromisoformat(body["created_at"])
-    assert parsed.tzinfo is None
+    assert parsed.tzinfo is not None, (
+        f"created_at came back as {body['created_at']!r}, with no offset; the "
+        "browser would read a UTC instant as local time"
+    )
+    assert parsed.utcoffset() == timedelta(0)
 
 
 # ---------------------------------------------------------------------------

@@ -6,10 +6,10 @@ The two read-only shapes the browser needs and cannot compute for itself:
 
 from uuid import UUID
 
-from pydantic import BaseModel
+from app.schemas.base import ApiModel
 
 
-class PermissionDescriptorRead(BaseModel):
+class PermissionDescriptorRead(ApiModel):
     """One catalogue entry, pre-split so the UI needs no string surgery.
 
     `module` and `action` are the two halves of the `<module>:<action>` key
@@ -27,7 +27,7 @@ class PermissionDescriptorRead(BaseModel):
     superuser_only: bool
 
 
-class MyPermissionsRead(BaseModel):
+class MyPermissionsRead(ApiModel):
     """The caller's effective permissions in the acting tenant.
 
     `tenant_id` echoes the tenant the answer was computed for, so a client

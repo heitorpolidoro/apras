@@ -4,14 +4,16 @@ import re
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import ConfigDict, Field, field_validator
 
+from app.core import clock
 from app.models.enums import (
     AuthorizationStatus,
     AuthorizationType,
     DayOfWeek,
     ShiftType,
 )
+from app.schemas.base import ApiModel
 
 #: A CPF is 11 digits: 9 base digits plus the two check digits.
 CPF_DIGITS = 11
@@ -34,7 +36,7 @@ def _validate_cpf_digits(cpf_digits: str) -> bool:
     return d2 == int(cpf_digits[10])
 
 
-class VisitorBase(BaseModel):
+class VisitorBase(ApiModel):
     full_name: str
     cpf: str | None = None
     rg: str | None = None
@@ -63,7 +65,7 @@ class VisitorCreate(VisitorBase):
     pass
 
 
-class VisitorUpdate(BaseModel):
+class VisitorUpdate(ApiModel):
     full_name: str | None = None
     cpf: str | None = None
     rg: str | None = None
@@ -96,14 +98,14 @@ class VisitorRead(VisitorBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class PaginatedVisitorRead(BaseModel):
+class PaginatedVisitorRead(ApiModel):
     items: list[VisitorRead]
     total: int
     skip: int
     limit: int
 
 
-class VisitorAuthorizationCreate(BaseModel):
+class VisitorAuthorizationCreate(ApiModel):
     visitor_id: UUID
     auth_type: AuthorizationType = AuthorizationType.SINGLE
     allowed_days: list[DayOfWeek] = Field(
@@ -125,12 +127,12 @@ class VisitorAuthorizationCreate(BaseModel):
             ShiftType.FULL_DAY,
         ]
     )
-    valid_from: datetime | None = None
-    valid_until: datetime | None = None
+    valid_from: clock.DbDatetime | None = None
+    valid_until: clock.DbDatetime | None = None
     notes: str | None = None
 
 
-class VisitorAuthorizationRead(BaseModel):
+class VisitorAuthorizationRead(ApiModel):
     id: UUID
     visitor_id: UUID
     lot_id: UUID
@@ -151,31 +153,31 @@ class VisitorAuthorizationRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class VisitorAuthorizationRevoke(BaseModel):
+class VisitorAuthorizationRevoke(ApiModel):
     reason: str | None = None
 
 
-class PaginatedAuthorizationRead(BaseModel):
+class PaginatedAuthorizationRead(ApiModel):
     items: list[VisitorAuthorizationRead]
     total: int
     skip: int
     limit: int
 
 
-class AccessLogCheckIn(BaseModel):
+class AccessLogCheckIn(ApiModel):
     visitor_id: UUID
     lot_id: UUID
     authorization_id: UUID | None = None
     entry_notes: str | None = None
 
 
-class AccessLogCheckOut(BaseModel):
+class AccessLogCheckOut(ApiModel):
     access_log_id: UUID | None = None
     visitor_id: UUID | None = None
     exit_notes: str | None = None
 
 
-class AccessLogRead(BaseModel):
+class AccessLogRead(ApiModel):
     id: UUID
     authorization_id: UUID | None = None
     visitor_id: UUID
@@ -190,7 +192,7 @@ class AccessLogRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class PaginatedAccessLogRead(BaseModel):
+class PaginatedAccessLogRead(ApiModel):
     items: list[AccessLogRead]
     total: int
     skip: int

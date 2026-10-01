@@ -1,10 +1,11 @@
 """Construction project models for APRAS (T007)."""
 
 import uuid
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
+from pydantic import NaiveDatetime
 from sqlalchemy import JSON, Column
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -50,8 +51,8 @@ class ConstructionProject(SQLModel, table=True):
     planned_progress_json: list[dict[str, Any]] | None = Field(
         default=None, sa_column=Column(JSON, nullable=True)
     )
-    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
-    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    created_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
 
     # Relationships
     milestones: list["ProjectMilestone"] = Relationship(
@@ -111,8 +112,8 @@ class ProjectMilestone(SQLModel, table=True):
     detail_json: dict[str, Any] | None = Field(
         default=None, sa_column=Column(JSON, nullable=True)
     )
-    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
-    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    created_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
 
     # Relationships
     project: ConstructionProject = Relationship(back_populates="milestones")
@@ -140,7 +141,7 @@ class ProjectUpdate(SQLModel, table=True):
     content: str = Field(nullable=False)
     photos_json: str | None = Field(default=None, nullable=True)  # JSON list of urls
     cost_impact: Money | None = Field(default=Decimal("0.00"), nullable=True)
-    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    created_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
 
     # Relationships
     project: ConstructionProject = Relationship(back_populates="updates")

@@ -1,9 +1,9 @@
 """Database models for ReservableSpace and SpaceReservation."""
 
-from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
+from pydantic import NaiveDatetime
 from sqlalchemy import Index
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -36,7 +36,7 @@ class ReservableSpace(SQLModel, table=True):
     capacity: int | None = Field(default=None)
     requires_approval: bool = Field(default=False, nullable=False)
     is_active: bool = Field(default=True, nullable=False)
-    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    created_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
 
     # Relationships
     reservations: list["SpaceReservation"] = Relationship(back_populates="space")
@@ -68,8 +68,8 @@ class SpaceReservation(SQLModel, table=True):
         nullable=True,
         index=True,
     )
-    start_time: datetime = Field(nullable=False, index=True)
-    end_time: datetime = Field(nullable=False)
+    start_time: NaiveDatetime = Field(nullable=False, index=True)
+    end_time: NaiveDatetime = Field(nullable=False)
     status: ReservationStatus = Field(
         default=ReservationStatus.PENDING, nullable=False, index=True
     )
@@ -77,9 +77,9 @@ class SpaceReservation(SQLModel, table=True):
     decided_by_id: UUID | None = Field(
         default=None, foreign_key="user.id", ondelete="SET NULL", nullable=True
     )
-    decided_at: datetime | None = Field(default=None)
-    cancelled_at: datetime | None = Field(default=None)
-    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    decided_at: NaiveDatetime | None = Field(default=None)
+    cancelled_at: NaiveDatetime | None = Field(default=None)
+    created_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
 
     # Relationships
     space: "ReservableSpace" = Relationship(back_populates="reservations")

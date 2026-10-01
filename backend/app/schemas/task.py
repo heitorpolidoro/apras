@@ -3,13 +3,14 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
 
 from app.models.enums import TaskPriority, TaskStatus
+from app.schemas.base import ApiModel
 from app.schemas.role import RoleRead
 
 
-class TaskBase(BaseModel):
+class TaskBase(ApiModel):
     """Base task schema with common fields."""
 
     title: str = Field(..., min_length=1, max_length=255)
@@ -27,7 +28,7 @@ class TaskCreate(TaskBase):
     visible_to_ids: list[UUID] = []
 
 
-class TaskUpdate(BaseModel):
+class TaskUpdate(ApiModel):
     """Schema for updating an existing task. All fields are optional."""
 
     title: str | None = Field(None, min_length=1, max_length=255)
@@ -56,19 +57,19 @@ class TaskRead(TaskBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class TaskCommentCreate(BaseModel):
+class TaskCommentCreate(ApiModel):
     """Schema for creating a task comment."""
 
     content: str = Field(..., min_length=1)
 
 
-class TaskCommentUpdate(BaseModel):
+class TaskCommentUpdate(ApiModel):
     """Schema for updating a task comment."""
 
     content: str = Field(..., min_length=1)
 
 
-class TaskCommentRead(BaseModel):
+class TaskCommentRead(ApiModel):
     """Schema for reading a task comment."""
 
     id: UUID
@@ -82,7 +83,7 @@ class TaskCommentRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class TaskHistoryRead(BaseModel):
+class TaskHistoryRead(ApiModel):
     """Schema for reading task audit history."""
 
     id: UUID

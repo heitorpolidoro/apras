@@ -6,10 +6,10 @@ Global, not per-tenant, is the SaaS norm and it is the thing that makes "which
 plan is this condominium on" a comparable answer across the install.
 """
 
-from datetime import datetime
 from decimal import Decimal
 from uuid import UUID, uuid4
 
+from pydantic import NaiveDatetime
 from sqlalchemy import JSON, Column
 from sqlmodel import Field, SQLModel
 
@@ -63,5 +63,5 @@ class Plan(SQLModel, table=True):
     #: tenant is subscribed to must not vanish, and
     #: `tenant_subscription.plan_id` is ON DELETE RESTRICT.
     is_active: bool = Field(default=True, nullable=False)
-    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
-    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    created_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)

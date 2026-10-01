@@ -3,8 +3,9 @@
 from datetime import date, datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import ConfigDict, Field, model_validator
 
+from app.core import clock
 from app.models.enums import (
     AssemblyStatus,
     AssemblyType,
@@ -12,20 +13,21 @@ from app.models.enums import (
     VoteStatus,
     VoteType,
 )
+from app.schemas.base import ApiModel
 
 # ---------------------------------------------------------------------------
 # Assembly
 # ---------------------------------------------------------------------------
 
 
-class AssemblyCreate(BaseModel):
+class AssemblyCreate(ApiModel):
     title: str = Field(..., min_length=1)
     type: AssemblyType
     held_on: date
     agenda: str | None = None
 
 
-class AssemblyUpdate(BaseModel):
+class AssemblyUpdate(ApiModel):
     title: str | None = Field(default=None, min_length=1)
     type: AssemblyType | None = None
     held_on: date | None = None
@@ -33,7 +35,7 @@ class AssemblyUpdate(BaseModel):
     status: AssemblyStatus | None = None
 
 
-class AssemblyRead(BaseModel):
+class AssemblyRead(ApiModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
@@ -53,12 +55,12 @@ class AssemblyRead(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class VoteOptionCreate(BaseModel):
+class VoteOptionCreate(ApiModel):
     label: str = Field(..., min_length=1)
     order_index: int = 0
 
 
-class VoteOptionRead(BaseModel):
+class VoteOptionRead(ApiModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
@@ -67,15 +69,15 @@ class VoteOptionRead(BaseModel):
     order_index: int
 
 
-class VoteCreate(BaseModel):
+class VoteCreate(ApiModel):
     assembly_id: UUID | None = None
     kind: VoteKind
     title: str = Field(..., min_length=1)
     description: str | None = None
     vote_type: VoteType
     is_anonymous: bool = False
-    opens_at: datetime | None = None
-    closes_at: datetime
+    opens_at: clock.DbDatetime | None = None
+    closes_at: clock.DbDatetime
     options: list[VoteOptionCreate] = Field(..., min_length=2)
 
     @model_validator(mode="after")
@@ -88,17 +90,17 @@ class VoteCreate(BaseModel):
         return self
 
 
-class VoteUpdate(BaseModel):
+class VoteUpdate(ApiModel):
     title: str | None = Field(default=None, min_length=1)
     description: str | None = None
     vote_type: VoteType | None = None
     is_anonymous: bool | None = None
-    opens_at: datetime | None = None
-    closes_at: datetime | None = None
+    opens_at: clock.DbDatetime | None = None
+    closes_at: clock.DbDatetime | None = None
     options: list[VoteOptionCreate] | None = Field(default=None, min_length=2)
 
 
-class VoteRead(BaseModel):
+class VoteRead(ApiModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
@@ -123,7 +125,7 @@ class VoteRead(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class EligibleLotRead(BaseModel):
+class EligibleLotRead(ApiModel):
     """A lot the caller may cast the assembly ballot for.
 
     Needed by the ballot UI: a RESIDENT cannot list lots, so the vote
@@ -134,11 +136,11 @@ class EligibleLotRead(BaseModel):
     label: str
 
 
-class LotVoterEligibilityCreate(BaseModel):
+class LotVoterEligibilityCreate(ApiModel):
     user_id: UUID
 
 
-class LotVoterEligibilityRead(BaseModel):
+class LotVoterEligibilityRead(ApiModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
@@ -154,12 +156,12 @@ class LotVoterEligibilityRead(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class BallotCreate(BaseModel):
+class BallotCreate(ApiModel):
     lot_id: UUID | None = None
     selected_option_ids: list[UUID] = Field(..., min_length=1)
 
 
-class BallotRetract(BaseModel):
+class BallotRetract(ApiModel):
     """Body of ``POST /votes/{id}/ballots/retract``.
 
     Carries the lot whose active ballot is being withdrawn: required in
@@ -170,7 +172,7 @@ class BallotRetract(BaseModel):
     lot_id: UUID | None = None
 
 
-class BallotRead(BaseModel):
+class BallotRead(ApiModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
@@ -199,13 +201,13 @@ class MyBallotRead(BallotRead):
 # ---------------------------------------------------------------------------
 
 
-class TallyResultRead(BaseModel):
+class TallyResultRead(ApiModel):
     option_id: UUID
     label: str
     count: int
 
 
-class TallyAttributionRead(BaseModel):
+class TallyAttributionRead(ApiModel):
     lot_id: UUID | None = None
     lot_label: str | None = None
     voter_user_id: UUID | None = None
@@ -214,7 +216,7 @@ class TallyAttributionRead(BaseModel):
     cast_at: datetime
 
 
-class TallyRead(BaseModel):
+class TallyRead(ApiModel):
     """Two-mode tally payload.
 
     While the vote is open only ``voters_count`` (plus ``total_lots`` in an

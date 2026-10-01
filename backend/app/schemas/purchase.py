@@ -4,10 +4,11 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import ConfigDict, Field, model_validator
 
 from app.core.money import ZERO, Money, MoneyIn, quantize_money
 from app.models.enums import PurchaseRequestStatus
+from app.schemas.base import ApiModel
 
 MAX_EXTRA_FIELDS = 20
 MIN_JUSTIFICATION_LENGTH = 10
@@ -26,7 +27,7 @@ _ITEM_DESCRIPTION_MAX_LENGTH = 255
 _ITEM_MODEL_MAX_LENGTH = 120
 
 
-class QuoteExtraField(BaseModel):
+class QuoteExtraField(ApiModel):
     """One caller-defined extra field on a quote."""
 
     # NOTE: deliberately no `min_length=1` on `label`. Field-level constraints run
@@ -60,7 +61,7 @@ def _validate_extra_fields(fields: list[QuoteExtraField]) -> None:
         seen.add(key)
 
 
-class PurchaseRequestItemIn(BaseModel):
+class PurchaseRequestItemIn(ApiModel):
     """One enumerated line on the way in (APRAS-73 D1).
 
     ``id`` is what makes an update a *rewrite by identity* rather than a
@@ -91,7 +92,7 @@ def _validate_request_items(items: list[PurchaseRequestItemIn]) -> None:
         raise ValueError(f"Um pedido aceita no máximo {MAX_REQUEST_ITEMS} itens.")
 
 
-class PurchaseRequestItemRead(BaseModel):
+class PurchaseRequestItemRead(ApiModel):
     """One enumerated line on the way out."""
 
     id: UUID
@@ -102,7 +103,7 @@ class PurchaseRequestItemRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class PurchaseRequestCreate(BaseModel):
+class PurchaseRequestCreate(ApiModel):
     """Schema for creating a purchase request."""
 
     title: str = Field(..., min_length=1, max_length=255)
@@ -119,7 +120,7 @@ class PurchaseRequestCreate(BaseModel):
         return self
 
 
-class PurchaseRequestUpdate(BaseModel):
+class PurchaseRequestUpdate(ApiModel):
     """Schema for updating a purchase request. All fields optional."""
 
     title: str | None = Field(default=None, min_length=1, max_length=255)
@@ -135,7 +136,7 @@ class PurchaseRequestUpdate(BaseModel):
         return self
 
 
-class PurchaseQuoteItemIn(BaseModel):
+class PurchaseQuoteItemIn(ApiModel):
     """One priced line on the way in (APRAS-73 D2, D3).
 
     ``request_item_id`` and the ``description``/``quantity`` pair are an
@@ -174,7 +175,7 @@ class PurchaseQuoteItemIn(BaseModel):
         return self
 
 
-class PurchaseQuoteItemRead(BaseModel):
+class PurchaseQuoteItemRead(ApiModel):
     """One priced line on the way out.
 
     ``description`` and ``quantity`` are **echoed** -- copied from the
@@ -214,7 +215,7 @@ def _validate_quote_items(items: list[PurchaseQuoteItemIn]) -> None:
         seen.add(item.request_item_id)
 
 
-class PurchaseQuoteCreate(BaseModel):
+class PurchaseQuoteCreate(ApiModel):
     """Schema for adding a supplier quote to a purchase request."""
 
     supplier_name: str = Field(..., min_length=1, max_length=255)
@@ -232,7 +233,7 @@ class PurchaseQuoteCreate(BaseModel):
         return self
 
 
-class PurchaseQuoteUpdate(BaseModel):
+class PurchaseQuoteUpdate(ApiModel):
     """Schema for updating a supplier quote. All fields optional."""
 
     supplier_name: str | None = Field(default=None, min_length=1, max_length=255)
@@ -252,7 +253,7 @@ class PurchaseQuoteUpdate(BaseModel):
         return self
 
 
-class PurchaseDecisionCreate(BaseModel):
+class PurchaseDecisionCreate(ApiModel):
     """Schema for recording the justified choice of one quote."""
 
     quote_id: UUID
@@ -270,7 +271,7 @@ class PurchaseDecisionCreate(BaseModel):
         return self
 
 
-class PurchaseQuoteRead(BaseModel):
+class PurchaseQuoteRead(ApiModel):
     """Schema for reading a supplier quote."""
 
     id: UUID
@@ -322,7 +323,7 @@ class PurchaseQuoteRead(BaseModel):
         return self
 
 
-class PurchaseDecisionRead(BaseModel):
+class PurchaseDecisionRead(ApiModel):
     """Schema for reading a recorded decision."""
 
     id: UUID
@@ -338,7 +339,7 @@ class PurchaseDecisionRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class PurchaseRequestRead(BaseModel):
+class PurchaseRequestRead(ApiModel):
     """Schema for reading a purchase request as a list row."""
 
     id: UUID
@@ -373,7 +374,7 @@ class PurchaseRequestDetailRead(PurchaseRequestRead):
     current_decision: PurchaseDecisionRead | None = None
 
 
-class PaginatedPurchaseRequestRead(BaseModel):
+class PaginatedPurchaseRequestRead(ApiModel):
     """Paginated list of purchase requests."""
 
     items: list[PurchaseRequestRead]
@@ -382,7 +383,7 @@ class PaginatedPurchaseRequestRead(BaseModel):
     limit: int
 
 
-class PurchaseSummaryRead(BaseModel):
+class PurchaseSummaryRead(ApiModel):
     """Summary metrics for the purchase quotation dashboard."""
 
     open_count: int

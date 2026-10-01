@@ -4,10 +4,11 @@ One module for the six models, following the `finance.py` precedent of
 grouping a bounded context's tables together.
 """
 
-from datetime import date, datetime
+from datetime import date
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
+from pydantic import NaiveDatetime
 from sqlalchemy import Index, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -46,9 +47,9 @@ class Assembly(SQLModel, table=True):
     created_by_id: UUID = Field(
         foreign_key="user.id", ondelete="RESTRICT", nullable=False, index=True
     )
-    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
-    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
-    closed_at: datetime | None = Field(default=None, nullable=True)
+    created_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
+    closed_at: NaiveDatetime | None = Field(default=None, nullable=True)
 
     votes: list["Vote"] = Relationship(back_populates="assembly")
     created_by: "User" = Relationship()
@@ -79,16 +80,16 @@ class Vote(SQLModel, table=True):
     # Só tem efeito quando kind == ENQUETE. Em ASSEMBLEIA é sempre False e o
     # service rejeita a criação com True.
     is_anonymous: bool = Field(default=False, nullable=False)
-    opens_at: datetime = Field(default_factory=clock.db_now, nullable=False)
-    closes_at: datetime = Field(nullable=False)
+    opens_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
+    closes_at: NaiveDatetime = Field(nullable=False)
     # Apuração congelada, materializada no fechamento. NULL enquanto aberta.
     tally_snapshot_json: str | None = Field(default=None, nullable=True)
     created_by_id: UUID = Field(
         foreign_key="user.id", ondelete="RESTRICT", nullable=False, index=True
     )
-    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
-    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
-    closed_at: datetime | None = Field(default=None, nullable=True)
+    created_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
+    closed_at: NaiveDatetime | None = Field(default=None, nullable=True)
 
     assembly: Assembly | None = Relationship(back_populates="votes")
     options: list["VoteOption"] = Relationship(
@@ -140,7 +141,7 @@ class LotVoterEligibility(SQLModel, table=True):
     added_by_id: UUID | None = Field(
         default=None, foreign_key="user.id", ondelete="SET NULL", nullable=True
     )
-    added_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    added_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
 
 
 class Ballot(SQLModel, table=True):
@@ -187,7 +188,7 @@ class Ballot(SQLModel, table=True):
     is_retraction: bool = Field(default=False, nullable=False)
     # Vazio/null quando is_retraction=True.
     selected_option_ids_json: str | None = Field(default=None, nullable=True)
-    cast_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    cast_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
 
     vote: Vote = Relationship(back_populates="ballots")
 
@@ -221,4 +222,4 @@ class BallotRejection(SQLModel, table=True):
         index=True,
     )
     reason: BallotRejectionReason = Field(nullable=False, index=True)
-    attempted_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    attempted_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)

@@ -66,7 +66,16 @@ MODULE_CLASSNAME = "tests.test_migrations_postgres"
 #: Measured after the change, against the index this commit carries and not
 #: against a worktree that also holds another task's in-flight revision:
 #: `uv run pytest tests/test_migrations_postgres.py --collect-only -q`.
-MIN_CASES = 36
+#:
+#: APRAS-120 raises it from 36 to 38 for the two cases it adds to that module:
+#: the live-schema agreement on `timestamp without time zone` -- which checks
+#: the dated columns against `SQLModel.metadata` column for column, including
+#: the timezone flag that the existing name-and-nullability comparison cannot
+#: see -- and the `clock.db_now()` round-trip that proves the bind parameter
+#: does not raise under sqlmodel 0.0.47. Both need a real PostgreSQL: SQLite
+#: has no distinct aware timestamp type, so neither property is observable in
+#: the rest of the suite. Re-measured with the same command above: 38.
+MIN_CASES = 38
 
 
 def _verdict(collected: int, skipped: list[str]) -> list[str]:

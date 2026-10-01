@@ -8,7 +8,15 @@ hand from a ~250-file diff:
 2. there are no more of them than the task landed with (a forward regression
    guard for the *next* task, not a target for this one);
 3. ``app/core/clock.py`` is the only module under ``app/`` that reads the
-   clock -- the rule that stops a second clock being reintroduced.
+   clock -- the rule that stops a second clock being reintroduced;
+4. ``app/core/clock.py`` is also the only module under ``app/`` that *adds or
+   drops* a timezone (APRAS-120). Rule 3 keeps one source of the instant;
+   this one keeps one source of the conversion between the aware values the
+   API speaks and the naive UTC values the columns hold. It is what makes
+   ``app/schemas/base.py`` call ``clock.to_api`` instead of converting
+   in place, and what stops the next service from "fixing" a comparison with
+   a local ``.replace(...)`` that silently moves an instant by the offset of
+   whatever machine it runs on.
 """
 
 from __future__ import annotations
@@ -61,12 +69,19 @@ NOQA_ANY = re.compile(r"#\s*noqa")
 #: flags none of them.
 CLOCK_LITERALS = ("datetime.utcnow", "date.today(", "datetime.now(")
 
+#: The two ways a module could add or drop a timezone. ``astimezone(`` carries
+#: its open parenthesis for the same reason ``datetime.now(`` does -- to catch
+#: every argument list. The bare attribute name ``tzinfo`` covers both halves
+#: of the pair that matters: reading it to branch, and passing it to
+#: ``replace`` to strip or stamp one. Neither is reported by ruff.
+TIMEZONE_LITERALS = ("tzinfo", "astimezone(")
+
 #: The single module allowed to contain them.
 THE_CLOCK = APP / "core" / "clock.py"
 
 #: This module states the rules, so it necessarily *spells* the things it
-#: forbids -- the word "noqa" and all three clock literals appear above as
-#: subject matter. It is excluded from its own scans; a rule cannot be its own
+#: forbids -- the word "noqa", all three clock literals and both timezone
+#: literals appear above as subject matter. It is excluded from its own scans; a rule cannot be its own
 #: counterexample.
 SELF = Path(__file__).resolve()
 
@@ -108,23 +123,54 @@ def test_noqa_count_is_within_the_cap() -> None:
 
 
 def test_clock_py_is_the_only_clock_in_app() -> None:
-    """``app/core/clock.py`` is the one place the current instant is read.
+    """``app/core/clock.py`` is the one place a timezone is read or changed.
 
-    A text scan, not an AST walk, and deliberately so: it also catches a
-    comment or a docstring that *names* one of the three spellings, which is
-    how the next reader learns the rule without finding the spec.
+    Two scans, because there are two ways to grow a second clock and the
+    advice for each is different. Rule 3 is about *reading* the instant; rule
+    4 (APRAS-120) is about *converting* between the aware UTC the API speaks
+    and the naive UTC the columns hold.
+
+    Rule 4 guards a specific, measured danger: a bare ``astimezone(UTC)``
+    applied to a *naive* value assumes the **process's local zone**, so the
+    same payload stores a different instant depending on where the server runs
+    -- and because CI and production are both UTC, a suite stays green either
+    way. ``clock.to_db`` guards that case explicitly; a
+    ``.replace(tzinfo=None)`` dropped into a service to silence a
+    ``TypeError`` would not, and would ship a defect no other test can see.
+
+    A text scan, not an AST walk, and deliberately so for both rules: it also
+    catches a comment or a docstring that *names* one of the spellings, which
+    is how the next reader learns the rule without finding the spec. That is
+    why ``app/schemas/base.py`` describes its conversion without spelling
+    either timezone literal, and why it calls ``clock.to_api`` rather than
+    converting in place.
     """
+    the_clock = THE_CLOCK.relative_to(BACKEND).as_posix()
+    sources = {path: path.read_text(encoding="utf-8") for path in _py_files(APP)}
+
     readers = {
         path.relative_to(BACKEND).as_posix()
-        for path in _py_files(APP)
-        if any(lit in path.read_text(encoding="utf-8") for lit in CLOCK_LITERALS)
+        for path, text in sources.items()
+        if any(lit in text for lit in CLOCK_LITERALS)
     }
-
-    assert readers == {THE_CLOCK.relative_to(BACKEND).as_posix()}, (
+    assert readers == {the_clock}, (
         "app/core/clock.py must be the only module under app/ containing any "
         f"of {CLOCK_LITERALS}; found: {sorted(readers)}. Use clock.db_now() "
         "for a value that reaches a column, clock.utc_now() for one that does "
         "not, and clock.today_utc() for a date."
+    )
+
+    converters = {
+        path.relative_to(BACKEND).as_posix()
+        for path, text in sources.items()
+        if any(lit in text for lit in TIMEZONE_LITERALS)
+    }
+    assert converters == {the_clock}, (
+        "app/core/clock.py must be the only module under app/ containing any "
+        f"of {TIMEZONE_LITERALS}; found: {sorted(converters)}. Use "
+        "clock.to_db() for a client-supplied instant on its way to a column, "
+        "clock.to_api() for a stored instant on its way to a response, and "
+        "clock.db_now() for a value the server stamps itself."
     )
 
 

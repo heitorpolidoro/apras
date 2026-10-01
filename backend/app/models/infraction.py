@@ -49,10 +49,11 @@ Nothing here imports, names or points at a finance table -- ER-5, proved
 mechanically by ``tests/test_infraction_isolation.py``.
 """
 
-from datetime import date, datetime
+from datetime import date
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
+from pydantic import NaiveDatetime
 from sqlalchemy import Index, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -103,8 +104,8 @@ class InfractionRule(SQLModel, table=True):
     description: str = Field(nullable=False)
     recidivism_window_days: int = Field(nullable=False)
     is_active: bool = Field(default=True, nullable=False, index=True)
-    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
-    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    created_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
 
     steps: list["InfractionPolicyStep"] = Relationship(
         back_populates="rule",
@@ -201,8 +202,8 @@ class Infraction(SQLModel, table=True):
     occurred_on: date = Field(nullable=False, index=True)
     description: str = Field(nullable=False)
     evidence_urls_json: str | None = Field(default=None, nullable=True)
-    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
-    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    created_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
 
     rule: "InfractionRule" = Relationship()
     lot: "Lot" = Relationship()
@@ -257,7 +258,7 @@ class InfractionStage(SQLModel, table=True):
     policy_step_order: int | None = Field(default=None, nullable=True)
     suggestion_followed: bool = Field(default=True, nullable=False)
     evidence_urls_json: str | None = Field(default=None, nullable=True)
-    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    created_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
 
     infraction: "Infraction" = Relationship(back_populates="stages")
     actor: "User" = Relationship()
@@ -297,7 +298,7 @@ class InfractionContestation(SQLModel, table=True):
     submitted_by_id: UUID = Field(
         foreign_key="user.id", ondelete="RESTRICT", nullable=False, index=True
     )
-    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    created_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
 
     infraction: "Infraction" = Relationship(back_populates="contestations")
     submitted_by: "User" = Relationship()
@@ -340,7 +341,7 @@ class InfractionCycleClose(SQLModel, table=True):
     closed_by_id: UUID = Field(
         foreign_key="user.id", ondelete="RESTRICT", nullable=False, index=True
     )
-    closed_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    closed_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
 
     rule: "InfractionRule" = Relationship()
     responsible: "Resident" = Relationship()
@@ -370,7 +371,7 @@ class InfractionSettings(SQLModel, table=True):
         nullable=True,
         index=True,
     )
-    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
-    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    created_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
 
     updated_by: Optional["User"] = Relationship()

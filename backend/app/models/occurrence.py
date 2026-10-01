@@ -1,9 +1,9 @@
 """Occurrence and OccurrenceTimeline SQLModel entity definitions."""
 
-from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
+from pydantic import NaiveDatetime
 from sqlalchemy import Index
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -68,9 +68,9 @@ class Occurrence(SQLModel, table=True):
         index=True,
     )
     resolution_notes: str | None = Field(default=None, nullable=True)
-    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
-    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
-    resolved_at: datetime | None = Field(default=None, nullable=True)
+    created_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
+    resolved_at: NaiveDatetime | None = Field(default=None, nullable=True)
 
     # Relationships
     lot: Optional["Lot"] = Relationship()
@@ -100,7 +100,7 @@ class OccurrenceTimeline(SQLModel, table=True):
     status_to: OccurrenceStatus | None = Field(default=None, nullable=True)
     note: str = Field(nullable=False)
     is_internal_only: bool = Field(default=False, nullable=False)
-    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    created_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
 
     # Relationships
     occurrence: "Occurrence" = Relationship(back_populates="timeline_entries")

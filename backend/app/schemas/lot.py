@@ -3,12 +3,13 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
 
 from app.models.enums import LotAssociationType, LotStatus
+from app.schemas.base import ApiModel
 
 
-class UserSummaryRead(BaseModel):
+class UserSummaryRead(ApiModel):
     id: UUID
     full_name: str
     email: str
@@ -20,7 +21,7 @@ class UserSummaryRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class LotBase(BaseModel):
+class LotBase(ApiModel):
     block: str = Field(..., min_length=1)
     lot_number: str = Field(..., min_length=1)
     address: str | None = None
@@ -35,7 +36,7 @@ class LotCreate(LotBase):
     pass
 
 
-class LotUpdate(BaseModel):
+class LotUpdate(ApiModel):
     block: str | None = None
     lot_number: str | None = None
     address: str | None = None
@@ -58,7 +59,7 @@ class LotRead(LotBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class LotDelinquencyUpdate(BaseModel):
+class LotDelinquencyUpdate(ApiModel):
     """Body of ``PATCH /lots/{id}/delinquency``.
 
     Dedicated endpoint rather than a field on the generic lot update: this
@@ -68,7 +69,7 @@ class LotDelinquencyUpdate(BaseModel):
     is_delinquent: bool
 
 
-class UserLotLinkCreate(BaseModel):
+class UserLotLinkCreate(ApiModel):
     user_id: UUID
     association_type: LotAssociationType = LotAssociationType.PROPRIETARIO
     is_primary: bool = False
@@ -76,7 +77,7 @@ class UserLotLinkCreate(BaseModel):
     end_date: datetime | None = None
 
 
-class UserLotLinkRead(BaseModel):
+class UserLotLinkRead(ApiModel):
     id: UUID
     user_id: UUID
     lot_id: UUID
@@ -94,7 +95,7 @@ class LotDetailRead(LotRead):
     users: list[UserLotLinkRead] = []
 
 
-class PaginatedLotRead(BaseModel):
+class PaginatedLotRead(ApiModel):
     items: list[LotRead]
     total: int
     skip: int

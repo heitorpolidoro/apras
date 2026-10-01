@@ -2,10 +2,12 @@
 
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
+
+from app.schemas.base import ApiModel
 
 
-class CategoryBase(BaseModel):
+class CategoryBase(ApiModel):
     """Base category schema with common fields."""
 
     name: str = Field(..., min_length=1, max_length=50)
@@ -16,7 +18,7 @@ class CategoryCreate(CategoryBase):
     """Schema for creating a new category."""
 
 
-class CategoryUpdate(BaseModel):
+class CategoryUpdate(ApiModel):
     """Schema for updating an existing category. All fields are optional."""
 
     name: str | None = Field(None, min_length=1, max_length=50)

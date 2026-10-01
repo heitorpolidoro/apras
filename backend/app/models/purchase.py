@@ -1,8 +1,8 @@
 """Models for purchase requests, supplier quotes and the justified choice (APRAS-37)."""
 
-from datetime import datetime
 from uuid import UUID, uuid4
 
+from pydantic import NaiveDatetime
 from sqlalchemy import JSON, Column, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -32,10 +32,10 @@ class PurchaseRequest(SQLModel, table=True):
         default=PurchaseRequestStatus.OPEN, nullable=False, index=True
     )
     requested_by_id: UUID = Field(foreign_key="user.id", nullable=False, index=True)
-    created_at: datetime = Field(
+    created_at: NaiveDatetime = Field(
         default_factory=clock.db_now, nullable=False, index=True
     )
-    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
 
     quotes: list["PurchaseQuote"] = Relationship(
         back_populates="purchase_request",
@@ -127,8 +127,8 @@ class PurchaseQuote(SQLModel, table=True):
     #: `orcamento-acme.pdf` rather than a uuid.
     attachment_filename: str | None = Field(default=None, nullable=True)
     created_by_id: UUID = Field(foreign_key="user.id", nullable=False, index=True)
-    created_at: datetime = Field(default_factory=clock.db_now, nullable=False)
-    updated_at: datetime = Field(default_factory=clock.db_now, nullable=False)
+    created_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
+    updated_at: NaiveDatetime = Field(default_factory=clock.db_now, nullable=False)
 
     purchase_request: PurchaseRequest = Relationship(back_populates="quotes")
     items: list["PurchaseQuoteItem"] = Relationship(
@@ -217,7 +217,7 @@ class PurchaseQuoteDecision(SQLModel, table=True):
     )
     justification: str = Field(nullable=False)
     decided_by_id: UUID = Field(foreign_key="user.id", nullable=False, index=True)
-    decided_at: datetime = Field(
+    decided_at: NaiveDatetime = Field(
         default_factory=clock.db_now, nullable=False, index=True
     )
 

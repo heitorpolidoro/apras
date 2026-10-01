@@ -18,7 +18,7 @@ Three shapes are worth reading before the rest:
 from datetime import date, datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
 
 from app.core.money import Money, MoneyIn, Ratio, RatioIn
 from app.models.enums import (
@@ -27,6 +27,7 @@ from app.models.enums import (
     InfractionStepAction,
     NextStepReason,
 )
+from app.schemas.base import ApiModel
 from app.schemas.package import LotSummaryRead
 
 # ---------------------------------------------------------------------------
@@ -34,7 +35,7 @@ from app.schemas.package import LotSummaryRead
 # ---------------------------------------------------------------------------
 
 
-class InfractionActorRead(BaseModel):
+class InfractionActorRead(ApiModel):
     """Who wrote one row: the id and the display name, nothing else.
 
     Deliberately **not** ``app.schemas.lot.UserSummaryRead``: that shape's
@@ -49,7 +50,7 @@ class InfractionActorRead(BaseModel):
     full_name: str
 
 
-class ResidentSummaryRead(BaseModel):
+class ResidentSummaryRead(ApiModel):
     """The responsible person, as the infraction views need them."""
 
     model_config = ConfigDict(from_attributes=True)
@@ -64,7 +65,7 @@ class ResidentSummaryRead(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class InfractionRuleBase(BaseModel):
+class InfractionRuleBase(ApiModel):
     """The catalogue fields. ``steps`` is deliberately absent (§6.5).
 
     A rule is created without a ladder and the ladder is written by
@@ -84,7 +85,7 @@ class InfractionRuleCreate(InfractionRuleBase):
     """Body of ``POST /api/v1/infraction-rules``."""
 
 
-class InfractionRuleUpdate(BaseModel):
+class InfractionRuleUpdate(ApiModel):
     """Body of ``PUT /api/v1/infraction-rules/{rule_id}``; every field optional."""
 
     article: str | None = Field(default=None, min_length=1, max_length=255)
@@ -94,7 +95,7 @@ class InfractionRuleUpdate(BaseModel):
     is_active: bool | None = None
 
 
-class InfractionPolicyStepWrite(BaseModel):
+class InfractionPolicyStepWrite(ApiModel):
     """One rung, as written. Coherence is validated by the service (§12.1).
 
     The four conditional requirements -- a deadline iff ``NOTIFICACAO``, a
@@ -113,7 +114,7 @@ class InfractionPolicyStepWrite(BaseModel):
     note: str | None = None
 
 
-class InfractionPolicyWrite(BaseModel):
+class InfractionPolicyWrite(ApiModel):
     """Body of ``PUT .../policy``. Replaces the ladder whole, never patches it."""
 
     steps: list[InfractionPolicyStepWrite] = Field(min_length=1, max_length=20)
@@ -144,7 +145,7 @@ class InfractionRuleRead(InfractionRuleBase):
     updated_at: datetime
 
 
-class InfractionRuleSummaryRead(BaseModel):
+class InfractionRuleSummaryRead(ApiModel):
     """The rule as an infraction refers to it."""
 
     model_config = ConfigDict(from_attributes=True)
@@ -160,7 +161,7 @@ class InfractionRuleSummaryRead(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class InfractionSettingsRead(BaseModel):
+class InfractionSettingsRead(ApiModel):
     """``GET /api/v1/infraction-settings``. Never 404s: an absent row is nulls."""
 
     condo_fee_amount: Money | None = None
@@ -168,7 +169,7 @@ class InfractionSettingsRead(BaseModel):
     updated_by: InfractionActorRead | None = None
 
 
-class InfractionSettingsWrite(BaseModel):
+class InfractionSettingsWrite(ApiModel):
     """``PUT /api/v1/infraction-settings``. ``None`` clears the reference."""
 
     condo_fee_amount: MoneyIn | None = Field(default=None, ge=0)
@@ -179,7 +180,7 @@ class InfractionSettingsWrite(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class InfractionCreate(BaseModel):
+class InfractionCreate(ApiModel):
     """Body of ``POST /api/v1/infractions``.
 
     ``source_occurrence_id`` is **absent on purpose**. The spec's draft carried
@@ -199,7 +200,7 @@ class InfractionCreate(BaseModel):
     evidence_urls: list[str] = Field(default_factory=list)
 
 
-class InfractionPromote(BaseModel):
+class InfractionPromote(ApiModel):
     """Body of ``POST /api/v1/infractions/from-occurrence/{occurrence_id}``.
 
     ``lot_id`` is optional because ``Occurrence.lot_id`` is nullable while
@@ -215,7 +216,7 @@ class InfractionPromote(BaseModel):
     occurred_on: date | None = None
 
 
-class InfractionStageCreate(BaseModel):
+class InfractionStageCreate(ApiModel):
     """Body of ``POST /api/v1/infractions/{id}/stages``.
 
     ``action = null`` means *apply the suggestion*; an explicit ``action`` is
@@ -230,14 +231,14 @@ class InfractionStageCreate(BaseModel):
     evidence_urls: list[str] = Field(default_factory=list)
 
 
-class ContestationCreate(BaseModel):
+class ContestationCreate(ApiModel):
     """Body of ``POST /api/v1/infractions/{id}/contestation``."""
 
     body: str = Field(min_length=1)
     attachment_urls: list[str] = Field(default_factory=list)
 
 
-class CycleCloseCreate(BaseModel):
+class CycleCloseCreate(ApiModel):
     """Body of ``POST /api/v1/infractions/cycles/close``.
 
     ``lot_id`` is optional **audit context** and is never part of the
@@ -251,7 +252,7 @@ class CycleCloseCreate(BaseModel):
     justification: str = Field(min_length=1)
 
 
-class CycleCloseRead(BaseModel):
+class CycleCloseRead(ApiModel):
     """One recorded cycle close, as ``GET /api/v1/infractions/cycles`` lists it."""
 
     model_config = ConfigDict(from_attributes=True)
@@ -265,7 +266,7 @@ class CycleCloseRead(BaseModel):
     closed_at: datetime
 
 
-class NextStepRead(BaseModel):
+class NextStepRead(ApiModel):
     """``GET /api/v1/infractions/{id}/next-step`` -- the whole of §6, as data.
 
     ``reason`` and ``is_saturated`` are **not** the same predicate and neither
@@ -288,7 +289,7 @@ class NextStepRead(BaseModel):
     is_saturated: bool
 
 
-class InfractionTimelineEntryRead(BaseModel):
+class InfractionTimelineEntryRead(ApiModel):
     """One row of the merged history: a stage or a contestation.
 
     Flat and discriminated by ``kind`` rather than a union of two models, so
@@ -310,7 +311,7 @@ class InfractionTimelineEntryRead(BaseModel):
     attachment_urls: list[str] = Field(default_factory=list)
 
 
-class InfractionRead(BaseModel):
+class InfractionRead(ApiModel):
     """One infraction. ``current_stage`` and friends are derived, never stored."""
 
     model_config = ConfigDict(from_attributes=True)
@@ -331,7 +332,7 @@ class InfractionRead(BaseModel):
     created_at: datetime
 
 
-class PaginatedInfractionRead(BaseModel):
+class PaginatedInfractionRead(ApiModel):
     """``GET /api/v1/infractions``, shaped exactly like ``PaginatedPackageRead``.
 
     ``GET /api/v1/infractions/my-lots`` is deliberately a **bare list**: it is
