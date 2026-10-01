@@ -56,7 +56,6 @@ import re
 from pathlib import Path
 
 import pytest
-from fastapi.routing import APIRoute
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine, select
 
@@ -69,7 +68,6 @@ from app.core.permissions import (
     UNGUARDED_ROUTES,
     filter_by_modules,
 )
-from app.main import app
 from app.models.tenant import Tenant
 from app.models.user import User
 from tests import matrix_world
@@ -86,6 +84,7 @@ from tests.matrix_world import (
     run_cell,
     seed_once,
 )
+from tests.route_introspection import api_routes
 from tests.test_permission_alignment import APRAS_51_ROUTES
 from tests.tools import record_parity_baseline
 
@@ -759,9 +758,7 @@ def test_request_bodies_covers_exactly_the_write_routes():
 def test_every_required_query_parameter_has_a_binding():
     """A required query parameter the matrix does not send answers 422."""
     missing = []
-    for route in app.routes:
-        if not isinstance(route, APIRoute):
-            continue
+    for route in api_routes():
         for method in route.methods:
             key = (method, route.path)
             if key not in ROUTE_PERMISSIONS:

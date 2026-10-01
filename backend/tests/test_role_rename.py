@@ -9,15 +9,13 @@ route table, the registry keys and the catalogue shape.
 
 import re
 
-from fastapi.routing import APIRoute
-
 from app.core.permissions import (
     PERMISSIONS,
     ROUTE_PERMISSIONS,
     TIER_PERMISSIONS,
     module_of,
 )
-from app.main import app
+from tests.route_introspection import api_routes
 
 #: The four routes the rename moved, and nothing else.
 ROLE_ROUTES: frozenset[tuple[str, str]] = frozenset(
@@ -33,8 +31,7 @@ ROLE_ROUTES: frozenset[tuple[str, str]] = frozenset(
 def _route_keys() -> set[tuple[str, str]]:
     return {
         (method, route.path)
-        for route in app.routes
-        if isinstance(route, APIRoute)
+        for route in api_routes()
         for method in route.methods - {"HEAD", "OPTIONS"}
     }
 

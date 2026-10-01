@@ -14,13 +14,12 @@ the operation, exactly as for `Tenant`.
 import uuid
 
 import pytest
-from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from app.core.permissions import CORE_MODULES, ROUTE_PERMISSIONS, UNGUARDED_ROUTES
-from app.main import app
 from app.models.plan import Plan
+from tests.route_introspection import api_routes
 from tests.subscription_helpers import (
     TENANT_A,
     auth,
@@ -187,12 +186,7 @@ def test_patch_deactivates_a_plan_and_there_is_no_delete_route(
         for plan in tenant_client.get(PLANS, headers=auth(superuser)).json()
     ] == ["Plano Antigo"]
 
-    live = {
-        (method, route.path)
-        for route in app.routes
-        if isinstance(route, APIRoute)
-        for method in route.methods
-    }
+    live = {(method, route.path) for route in api_routes() for method in route.methods}
     assert ("DELETE", "/api/v1/plans/{plan_id}") not in live
     assert ("DELETE", "/api/v1/plans/{plan_id}") not in ROUTE_PERMISSIONS
 

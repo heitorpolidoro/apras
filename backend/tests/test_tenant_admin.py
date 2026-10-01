@@ -16,7 +16,6 @@ import uuid
 import pytest
 from fastapi import HTTPException
 from fastapi.dependencies.models import Dependant
-from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
@@ -24,7 +23,6 @@ from app.api import deps
 from app.core.permissions import PERMISSIONS
 from app.core.security import create_access_token, get_password_hash
 from app.core.tenant_context import acting_tenant_scope
-from app.main import app
 from app.models.lot import Lot
 from app.models.role import Role
 from app.models.task import Task
@@ -32,6 +30,8 @@ from app.models.tenant import DEFAULT_TENANT_ID, Tenant, UserTenantLink
 from app.models.user import User
 from app.services.tenant_service import LEGACY_ROLE_NAMES, TenantService
 from tests.conftest import make_user
+from tests.route_introspection import RouteView
+from tests.route_introspection import api_routes as _api_routes
 
 TENANT_A = DEFAULT_TENANT_ID
 
@@ -766,12 +766,8 @@ def _depends_on(dependant: Dependant, target) -> bool:
     return any(_depends_on(sub, target) for sub in dependant.dependencies)
 
 
-def _route_keys(route: APIRoute) -> list[tuple[str, str]]:
+def _route_keys(route: RouteView) -> list[tuple[str, str]]:
     return [(method, route.path) for method in sorted(route.methods)]
-
-
-def _api_routes() -> list[APIRoute]:
-    return [route for route in app.routes if isinstance(route, APIRoute)]
 
 
 #: The one tenant-scoped route that is nevertheless superuser-guarded (IAM

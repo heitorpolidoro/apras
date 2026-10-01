@@ -39,6 +39,7 @@ from app.models.enums import MilestoneStatus
 from app.models.project import ConstructionProject, ProjectMilestone, ProjectUpdate
 from app.models.tenant import DEFAULT_TENANT_ID, Tenant, UserTenantLink
 from tests.conftest import make_user
+from tests.route_introspection import api_routes
 
 if TYPE_CHECKING:  # pragma: no cover
     from fastapi.testclient import TestClient
@@ -428,10 +429,13 @@ def test_the_route_is_mounted_globally_scoped():
     refuse every request and the fail-closed guard would fire."""
     from app.api.v1 import api as api_module
 
+    # Walked through the shared helper, which descends the nested routers the
+    # api_router holds. Paths are relative to that router, so there is no
+    # `/api/v1` prefix here.
     mounted = [
         route
-        for route in api_module.api_router.routes
-        if getattr(route, "path", None) == "/public/tenants/{slug}/projects/report"
+        for route in api_routes(api_module.api_router.routes)
+        if route.path == "/public/tenants/{slug}/projects/report"
     ]
     assert len(mounted) == 1
     assert "public" in mounted[0].tags

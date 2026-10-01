@@ -14,13 +14,11 @@ from datetime import date, datetime, timedelta
 from typing import TYPE_CHECKING
 
 import pytest
-from fastapi.routing import APIRoute
 from sqlalchemy import event, func
 from sqlmodel import select
 
 from app.core import clock
 from app.core.permissions import ROUTE_PERMISSIONS
-from app.main import app
 from app.models.enums import OccurrenceCategory
 from app.models.infraction import Infraction, InfractionContestation, InfractionStage
 from app.models.occurrence import Occurrence, OccurrenceTimeline
@@ -33,6 +31,7 @@ from tests.infraction_helpers import (
     make_member,
     make_resident,
 )
+from tests.route_introspection import api_routes
 
 if TYPE_CHECKING:  # pragma: no cover
     from fastapi.testclient import TestClient
@@ -1192,10 +1191,8 @@ def test_the_lots_route_ceiling_matches_the_lot_selects_limit():
     """
     route = next(
         candidate
-        for candidate in app.routes
-        if isinstance(candidate, APIRoute)
-        and candidate.path == "/api/v1/lots/"
-        and "GET" in candidate.methods
+        for candidate in api_routes()
+        if candidate.path == "/api/v1/lots/" and "GET" in candidate.methods
     )
     limit = next(
         param for param in route.dependant.query_params if param.name == "limit"

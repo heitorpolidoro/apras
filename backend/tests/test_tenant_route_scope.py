@@ -1,10 +1,16 @@
 """Static proof that every route is classified (APRAS-42 §5.2).
 
 The isolation mechanism is only as good as its coverage of the route table.
-This module walks ``app.routes`` and asserts that every ``APIRoute`` either
-depends (transitively) on ``deps.get_current_tenant`` or is one of the
-deliberately allowlisted global routes below. A route added without either
-fails here, in CI, before it can ever leak at runtime.
+This module walks the whole live route table -- via
+``tests.route_introspection.api_routes``, which flattens it the same way on
+every supported fastapi -- and asserts that every ``APIRoute`` either depends
+(transitively) on ``deps.get_current_tenant`` or is one of the deliberately
+allowlisted global routes below. A route added without either fails here, in
+CI, before it can ever leak at runtime.
+
+The traversal is shared on purpose: a walk that silently stops descending
+would leave this audit passing over a fraction of the routes, which is the
+one way it can fail without anyone noticing.
 
 ``GLOBAL_ROUTES`` is literally "the routes that do not depend on
 ``get_current_tenant``". Three of them are not *unscoped* in the data sense —
@@ -16,10 +22,10 @@ somewhere other than the header dependency.
 """
 
 from fastapi.dependencies.models import Dependant
-from fastapi.routing import APIRoute
 
 from app.api import deps
-from app.main import app
+from tests.route_introspection import RouteView
+from tests.route_introspection import api_routes as _api_routes
 
 #: (method, path) pairs that deliberately do not depend on get_current_tenant.
 GLOBAL_ROUTES: frozenset[tuple[str, str]] = frozenset(
@@ -131,12 +137,8 @@ def _depends_on(dependant: Dependant, target) -> bool:
     return any(_depends_on(sub, target) for sub in dependant.dependencies)
 
 
-def _route_keys(route: APIRoute) -> list[tuple[str, str]]:
+def _route_keys(route: RouteView) -> list[tuple[str, str]]:
     return [(method, route.path) for method in sorted(route.methods)]
-
-
-def _api_routes() -> list[APIRoute]:
-    return [route for route in app.routes if isinstance(route, APIRoute)]
 
 
 def test_every_route_is_either_tenant_scoped_or_allowlisted():

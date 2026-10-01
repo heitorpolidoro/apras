@@ -29,6 +29,7 @@ from app.core.permissions import UNGUARDED_ROUTES
 from app.main import app
 from app.models.tenant import Tenant
 from app.services.tenant_service import TenantService
+from tests.route_introspection import api_routes
 
 #: The route, spelled exactly as FastAPI mounts it.
 ROUTE = ("GET", "/api/v1/public/tenants/{slug}/branding")
@@ -249,12 +250,7 @@ def test_the_route_is_unguarded_and_carries_the_public_tag():
     """ER-6: mapped to no catalogue permission, and visible as public."""
     assert ROUTE in UNGUARDED_ROUTES
 
-    route = next(
-        r
-        for r in app.routes
-        if getattr(r, "path", None) == ROUTE[1]
-        and "GET" in getattr(r, "methods", set())
-    )
+    route = next(r for r in api_routes() if r.path == ROUTE[1] and "GET" in r.methods)
     assert route.tags == ["public"]
 
 

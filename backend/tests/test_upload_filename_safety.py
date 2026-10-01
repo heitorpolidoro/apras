@@ -39,6 +39,7 @@ from app.services.storage_service import (
     generated_storage_provider,
 )
 from app.services.tenant_service import TenantService
+from tests.route_introspection import route_names
 
 #: Every ``content_type`` any caller can hand ``save_file``: the four service
 #: allowlists plus the ``text/html`` the two generators pass. Read from the
@@ -282,11 +283,7 @@ def test_html_on_the_generated_mount_is_served_inline_with_nosniff(
 
 
 def test_both_mounts_are_present_under_their_names() -> None:
-    from app.main import app as main_app
-
-    names = {getattr(route, "name", None) for route in main_app.routes}
-
-    assert {"uploads", "generated"} <= names
+    assert {"uploads", "generated"} <= route_names()
 
 
 # --------------------------------------------------------------------------- #
