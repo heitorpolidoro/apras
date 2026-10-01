@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -146,6 +146,34 @@ describe("Sidebar component", () => {
 
     const categoriesLink = screen.getByRole("link", { name: "Categorias" });
     expect(categoriesLink.className).not.toContain("bg-primary/10");
+  });
+
+  // APRAS-91: moved here from `Navbar.test.tsx`, where they resolved to this
+  // component's label `<span>` through `<Navbar />` — the confusion APRAS-87
+  // diagnosed. Both the active anchor and the label span inside it are asserted,
+  // so nothing the old `getByText` lookups covered is lost.
+  it("highlights Categorias and its label with the brand text token on /categories", async () => {
+    renderSidebar(["categories:read"], "/categories");
+
+    const link = await screen.findByRole("link", { name: "Categorias" });
+    expect(classTokens(link)).toContain("text-primary-text");
+    expect(classTokens(link)).not.toContain("text-primary");
+
+    const label = within(link).getByText("Categorias");
+    expect(classTokens(label)).toContain("text-primary-text");
+    expect(classTokens(label)).not.toContain("text-primary");
+  });
+
+  it("highlights Administração and its label with the brand text token on /admin/users", async () => {
+    renderSidebar(["users:update"], "/admin/users");
+
+    const link = await screen.findByRole("link", { name: "Administração" });
+    expect(classTokens(link)).toContain("text-primary-text");
+    expect(classTokens(link)).not.toContain("text-primary");
+
+    const label = within(link).getByText("Administração");
+    expect(classTokens(label)).toContain("text-primary-text");
+    expect(classTokens(label)).not.toContain("text-primary");
   });
 
   it("renders Início link and highlights when on /", async () => {

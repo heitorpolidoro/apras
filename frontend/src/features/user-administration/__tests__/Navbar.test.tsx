@@ -1,6 +1,7 @@
-import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent, within } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { MemoryRouter } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import Navbar from "../components/Navbar";
 import { SidebarProvider } from "../context/SidebarContext";
 import { useSimulation } from "../context/SimulationContext";
@@ -48,7 +49,83 @@ vi.mock("../../../hooks/usePermissionQueries", () => ({
   usePermissionCatalogue: vi.fn(() => ({ data: [], isPending: false })),
 }));
 
+// APRAS-91. `vitest.config.ts` sets neither `restoreMocks` nor `clearMocks`, so
+// a per-test override of either module mock below would leak into every later
+// case in this file. Capture both implementations once, here, and restore them
+// in `afterEach`.
+//
+// The `useTranslation` implementation captured here is the repository-wide one
+// from `src/test/setup.ts`; every per-test stub spreads it so that `t` keeps
+// working. The real `Sidebar` is in the tree (deliberately not mocked) and
+// calls `useTranslation().t`, so a stub that returned only `i18n` would crash
+// the render rather than assert anything.
+const setupUseTranslation = vi.mocked(useTranslation).getMockImplementation();
+const setupUseSimulation = vi.mocked(useSimulation).getMockImplementation();
+
+/**
+ * Override `useTranslation`'s `i18n` for one test, keeping setup's `t`.
+ *
+ * Setup's factory builds a **fresh** `changeLanguage` spy on every call, so a
+ * call-count assertion is only possible against a stub that owns its own spy.
+ */
+const stubI18n = (i18nOverrides: {
+  language: string;
+  resolvedLanguage?: string;
+  changeLanguage?: (code: string) => unknown;
+}) => {
+  const base = setupUseTranslation?.();
+  vi.mocked(useTranslation).mockImplementation(
+    () =>
+      ({
+        ...base,
+        i18n: { ...base?.i18n, ...i18nOverrides },
+      }) as unknown as ReturnType<typeof useTranslation>,
+  );
+};
+
+/**
+ * Render `<Navbar />` for a user fixture and return a `within` scope bound to
+ * the tree's only `banner` — `Navbar.tsx`'s own `<header>`.
+ *
+ * Scoping every new assertion this way is what makes it structurally incapable
+ * of the APRAS-87 failure: an element rendered by `Sidebar` cannot satisfy a
+ * `within(header)` query, whatever its text.
+ */
+const renderBanner = (user: User, route = "/dashboard") => {
+  vi.spyOn(AuthHook, "useAuth").mockReturnValue({
+    isAuthenticated: true,
+    isLoading: false,
+    user,
+    login: vi.fn() as never,
+    logout: vi.fn(),
+  });
+
+  render(
+    <MemoryRouter initialEntries={[route]}>
+      <SidebarProvider>
+        <Navbar />
+      </SidebarProvider>
+    </MemoryRouter>,
+  );
+
+  return within(screen.getByRole("banner"));
+};
+
+const directorUser = (): User =>
+  ({
+    id: "1",
+    email: "director@example.com",
+    full_name: "Director User",
+    is_superuser: false,
+    roles: [{ id: "profile-director", name: "DIRECTOR" }],
+    is_active: true,
+  }) as unknown as User;
+
 beforeEach(() => {
+  // `SidebarProvider` seeds `isCollapsed` from `apras_sidebar_collapsed`, and
+  // other cases in this file click `Recolher menu`, which writes `"true"`.
+  // Without this clear the header-margin case would pass or fail by test order.
+  localStorage.clear();
   vi.mocked(useMyPermissions).mockImplementation(
     () =>
       settledPermissions(
@@ -57,6 +134,15 @@ beforeEach(() => {
         ),
       ) as never,
   );
+});
+
+afterEach(() => {
+  if (setupUseTranslation) {
+    vi.mocked(useTranslation).mockImplementation(setupUseTranslation);
+  }
+  if (setupUseSimulation) {
+    vi.mocked(useSimulation).mockImplementation(setupUseSimulation);
+  }
 });
 
 describe("Navbar", () => {
@@ -134,65 +220,12 @@ describe("Navbar", () => {
     expect(screen.getByText("Administração")).toBeDefined();
   });
 
-  // The three assertions below resolve, through `<Navbar />`, to the label
-  // `<span>` of the **Sidebar** nav item that `Navbar.tsx:64` renders — Navbar's
-  // own markup carries no nav links at all. They are named for what they
-  // actually assert (APRAS-87 code review); coverage of Navbar's own active
-  // markup is a separate, separately tracked gap.
-  it("renders the Sidebar Tarefas label with the brand text token on /tasks", () => {
-    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
-      isAuthenticated: true,
-      isLoading: false,
-      user: {
-        id: "1",
-        email: "test@example.com",
-        full_name: "Test User",
-        is_superuser: false,
-        roles: [{ id: "profile-director", name: "DIRECTOR" }, { id: "type-1", name: "Test Type" }],
-        is_active: true,
-      } as any,
-      login: vi.fn() as any,
-      logout: vi.fn(),
-    });
-
-    render(
-      <MemoryRouter initialEntries={["/tasks"]}>
-        <Navbar />
-      </MemoryRouter>,
-    );
-
-    const tarefasLink = screen.getByText("Tarefas");
-    expect(classTokens(tarefasLink)).toContain("text-primary-text");
-    expect(classTokens(tarefasLink)).not.toContain("text-primary");
-  });
-
-  it("renders the Sidebar Administração label with the brand text token on /admin/users", () => {
-    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
-      isAuthenticated: true,
-      isLoading: false,
-      user: {
-        id: "1",
-
-        email: "admin@example.com",
-        full_name: "Admin User",
-        is_superuser: true,
-        roles: [{ id: "profile-administrator", name: "ADMINISTRATOR" }],
-        is_active: true,
-      },
-      login: vi.fn() as any,
-      logout: vi.fn(),
-    });
-
-    render(
-      <MemoryRouter initialEntries={["/admin/users"]}>
-        <Navbar />
-      </MemoryRouter>,
-    );
-
-    const adminLink = screen.getByText("Administração");
-    expect(classTokens(adminLink)).toContain("text-primary-text");
-    expect(classTokens(adminLink)).not.toContain("text-primary");
-  });
+  // APRAS-91: the three Sidebar active-highlight assertions that used to sit
+  // here are gone. The `/tasks` one duplicated `Sidebar.test.tsx`'s
+  // "highlights the active link with text-primary-text"; the `/categories` and
+  // `/admin/users` ones moved to `Sidebar.test.tsx`, which is where a reader
+  // looks for Sidebar's active highlight. Navbar's own active markup is
+  // covered by the banner-scoped cases at the end of this file.
 
   it("calls logout when Sair button is clicked", () => {
     const mockLogout = vi.fn();
@@ -220,34 +253,6 @@ describe("Navbar", () => {
 
     fireEvent.click(screen.getByText("Sair"));
     expect(mockLogout).toHaveBeenCalledOnce();
-  });
-
-  it("renders the Sidebar Categorias label with the brand text token on /categories", () => {
-    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
-      isAuthenticated: true,
-      isLoading: false,
-      user: {
-        id: "1",
-
-        email: "test@example.com",
-        full_name: "Test User",
-        is_superuser: false,
-        roles: [{ id: "profile-director", name: "DIRECTOR" }, { id: "type-1", name: "Test Type" }],
-        is_active: true,
-      } as any,
-      login: vi.fn() as any,
-      logout: vi.fn(),
-    });
-
-    render(
-      <MemoryRouter initialEntries={["/categories"]}>
-        <Navbar />
-      </MemoryRouter>,
-    );
-
-    const link = screen.getByText("Categorias");
-    expect(classTokens(link)).toContain("text-primary-text");
-    expect(classTokens(link)).not.toContain("text-primary");
   });
 
   it("renders role name when user has a role label", () => {
@@ -503,33 +508,6 @@ describe("Navbar", () => {
     expect(screen.queryByText("Informações de Contato")).toBeNull();
   });
 
-  it("fires language change when a language button is clicked", () => {
-    vi.spyOn(AuthHook, "useAuth").mockReturnValue({
-      isAuthenticated: true,
-      isLoading: false,
-      user: {
-        id: "1",
-
-        email: "test@example.com",
-        full_name: "Test User",
-        is_superuser: false,
-        roles: [{ id: "profile-director", name: "DIRECTOR" }, { id: "type-1", name: "Test Type" }],
-        is_active: true,
-      } as any,
-      login: vi.fn() as any,
-      logout: vi.fn(),
-    });
-
-    render(
-      <MemoryRouter>
-        <Navbar />
-      </MemoryRouter>,
-    );
-
-    fireEvent.click(screen.getByText("PT"));
-    expect(screen.getByText("Tarefas")).toBeInTheDocument();
-  });
-
   // ── Role-gated Tarefas/Categorias links (APRAS-8) ───────────────────
 
   it("shows Tarefas and Categorias to a DIRECTOR, gate or no gate (§4.2)", () => {
@@ -783,5 +761,161 @@ describe("Navbar", () => {
 
     expect(screen.getByText("Admin User")).toBeInTheDocument();
     expect(screen.getByText("Admin global como Porteiro")).toBeInTheDocument();
+  });
+
+  // ── Navbar's own state-driven markup (APRAS-91) ──────────────────────────
+  //
+  // Everything below resolves its element from `within(screen.getByRole(
+  // "banner"))` — `Navbar.tsx`'s `<header>` is the only `banner` in the tree,
+  // because `Sidebar` renders an `<aside>` and a plain `<div>` drawer. `Sidebar`
+  // is deliberately left unmocked: the header's `md:ml-*` margin only exists
+  // because the real `Sidebar` and the real `SidebarProvider` are both present.
+  describe("own markup, scoped to the banner", () => {
+    it("marks PT active and EN inactive with the default fixture", () => {
+      // `src/test/setup.ts` supplies `language: "pt"` and **no**
+      // `resolvedLanguage`, so this case also exercises the `??` fallback.
+      const banner = renderBanner(directorUser());
+
+      const pt = banner.getByRole("button", { name: "PT" });
+      const en = banner.getByRole("button", { name: "EN" });
+
+      expect(classTokens(pt)).toContain("bg-primary");
+      expect(classTokens(pt)).toContain("text-primary-foreground");
+      expect(classTokens(en)).toContain("text-muted-foreground");
+      expect(classTokens(en)).not.toContain("bg-primary");
+      expect(classTokens(en)).not.toContain("text-primary-foreground");
+    });
+
+    it("marks EN active from resolvedLanguage even while language is still pt", () => {
+      // Pins `resolvedLanguage`'s precedence over `language`: the two disagree
+      // here, and the markup must follow `resolvedLanguage`.
+      stubI18n({ language: "pt", resolvedLanguage: "en" });
+
+      const banner = renderBanner(directorUser());
+
+      const pt = banner.getByRole("button", { name: "PT" });
+      const en = banner.getByRole("button", { name: "EN" });
+
+      expect(classTokens(en)).toContain("bg-primary");
+      expect(classTokens(en)).toContain("text-primary-foreground");
+      expect(classTokens(pt)).toContain("text-muted-foreground");
+      expect(classTokens(pt)).not.toContain("bg-primary");
+      expect(classTokens(pt)).not.toContain("text-primary-foreground");
+    });
+
+    it("treats the regional tag pt-BR as PT active", () => {
+      stubI18n({ language: "pt", resolvedLanguage: "pt-BR" });
+
+      const banner = renderBanner(directorUser());
+
+      expect(classTokens(banner.getByRole("button", { name: "PT" }))).toContain(
+        "bg-primary",
+      );
+      expect(
+        classTokens(banner.getByRole("button", { name: "EN" })),
+      ).toContain("text-muted-foreground");
+    });
+
+    it("calls changeLanguage exactly once with 'en' when EN is clicked", () => {
+      const changeLanguage = vi.fn();
+      stubI18n({ language: "pt", changeLanguage });
+
+      const banner = renderBanner(directorUser());
+
+      fireEvent.click(banner.getByRole("button", { name: "EN" }));
+
+      expect(changeLanguage).toHaveBeenCalledTimes(1);
+      expect(changeLanguage).toHaveBeenCalledWith("en");
+    });
+
+    it("paints a superuser's role subtitle with the brand text token", () => {
+      // Navbar's only brand-text call site. `text-primary-text`, never the bare
+      // surface token and never the brand tint.
+      const banner = renderBanner({
+        id: "1",
+        email: "admin@example.com",
+        full_name: "Admin User",
+        is_superuser: true,
+        roles: [{ id: "role-resident", name: "Morador (papel)" }],
+        is_active: true,
+      } as unknown as User);
+
+      const subtitle = banner.getByText("Administrador global (Morador)");
+      expect(subtitle.tagName).toBe("SPAN");
+      expect(classTokens(subtitle)).toContain("text-primary-text");
+      expect(classTokens(subtitle)).not.toContain("text-primary");
+      expect(classTokens(subtitle)).not.toContain("text-primary/90");
+    });
+
+    it("paints the role subtitle amber while simulating", () => {
+      vi.mocked(useSimulation).mockReturnValue({
+        simulatedRoleIds: ["role-porteiro"],
+        isSimulating: true,
+        setSimulatedRoleIds: vi.fn(),
+        stopSimulation: vi.fn(),
+      });
+      vi.mocked(useRoles).mockReturnValue({
+        data: [{ id: "role-porteiro", name: "Porteiro" }],
+      } as unknown as ReturnType<typeof useRoles>);
+
+      const banner = renderBanner({
+        id: "1",
+        email: "admin@example.com",
+        full_name: "Admin User",
+        is_superuser: true,
+        roles: [{ id: "profile-administrator", name: "ADMINISTRATOR" }],
+        is_active: true,
+      } as unknown as User);
+
+      const subtitle = banner.getByText("Admin global como Porteiro");
+      expect(classTokens(subtitle)).toContain("text-amber-600");
+      expect(classTokens(subtitle)).not.toContain("text-primary-text");
+      expect(classTokens(subtitle)).not.toContain("text-primary");
+    });
+
+    it("paints a plain user's role subtitle muted and with no brand token", () => {
+      // `user.roles` must be non-empty: `roleSubtitle` is `null` for a
+      // non-superuser with no roles and the span is then never rendered, which
+      // would make this case fail for the wrong reason.
+      const banner = renderBanner({
+        id: "1",
+        email: "guest@example.com",
+        full_name: "Guest User",
+        is_superuser: false,
+        roles: [{ id: "profile-guest", name: "GUEST" }],
+        is_active: true,
+      } as unknown as User);
+
+      const subtitle = banner.getByText("GUEST");
+      expect(classTokens(subtitle)).toContain("text-muted-foreground");
+      expect(classTokens(subtitle)).not.toContain("text-amber-600");
+      expect(classTokens(subtitle)).not.toContain("text-primary-text");
+      expect(classTokens(subtitle)).not.toContain("text-primary");
+    });
+
+    it("tracks the sidebar width in the header's desktop margin", () => {
+      // `beforeEach` clears `apras_sidebar_collapsed`, so the provider starts
+      // expanded whatever a previous case left behind.
+      renderBanner(directorUser());
+
+      expect(classTokens(screen.getByRole("banner"))).toContain("md:ml-64");
+
+      // The real Sidebar's collapse control, not a mock: this is the only way
+      // the header's margin changes.
+      fireEvent.click(screen.getByRole("button", { name: "Recolher menu" }));
+
+      const collapsed = classTokens(screen.getByRole("banner"));
+      expect(collapsed).toContain("md:ml-20");
+      expect(collapsed).not.toContain("md:ml-64");
+    });
+
+    it("exposes exactly one link in the banner, the appName logo pointing at /", () => {
+      const banner = renderBanner(directorUser());
+
+      const links = banner.getAllByRole("link");
+      expect(links).toHaveLength(1);
+      expect(links[0]).toHaveAttribute("href", "/");
+      expect(banner.getByRole("link", { name: "APRAS" })).toBe(links[0]);
+    });
   });
 });
