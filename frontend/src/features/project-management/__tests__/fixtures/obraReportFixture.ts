@@ -126,6 +126,19 @@ export const NO_KIND_REPORT = wrap(
   ),
 );
 
+/**
+ * A hero carrying no `.kicker` element at all, as distinct from
+ * `NO_KIND_REPORT`, whose kicker is present and merely lacks the `•`.
+ *
+ * The two reach the same `kind: ""` by different routes, and only this one
+ * reaches the branch where the selector finds nothing: `text(null)`. Without the
+ * optional chain in `text`, this fixture is a `TypeError` rather than an empty
+ * string.
+ */
+export const NO_KICKER_REPORT = wrap(
+  replaceOnce(PAGE_ONE, '<span class="kicker">Obra 01 • Edificação</span>', ""),
+);
+
 export const OBRA_ONE_TITLE = "Sede Social — Reforma";
 export const OBRA_TWO_TITLE = "Portarias — Ampliação";
 export const OBRA_ONE_KIND = "Edificação";

@@ -157,4 +157,64 @@ describe("ObraPrintDialog", () => {
 
     await waitFor(() => expect(document.activeElement).toBe(opener));
   });
+
+  it("restores nothing when what had focus was not an HTML element", async () => {
+    // The component captures the opener as
+    // `activeElement instanceof HTMLElement ? activeElement : null`, and every
+    // case above opens from a `<button>`, so the `null` side has never run. An
+    // SVG element is focusable and is **not** an `HTMLElement`, which is the
+    // ordinary way to reach it: an icon-only control drawn as inline SVG.
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("tabindex", "0");
+    document.body.append(svg);
+
+    try {
+      const onClose = vi.fn();
+      const { rerender } = render(
+        <ObraPrintDialog
+          open={false}
+          obras={OBRAS}
+          onClose={onClose}
+          onSelect={vi.fn()}
+        />,
+      );
+
+      // The premise, asserted rather than assumed: this really is focused, and
+      // really is not an `HTMLElement`. Without both, the expectation at the end
+      // would hold for reasons that have nothing to do with the branch.
+      (svg as unknown as { focus: () => void }).focus();
+      expect(document.activeElement).toBe(svg);
+      expect(svg instanceof HTMLElement).toBe(false);
+
+      rerender(
+        <ObraPrintDialog
+          open
+          obras={OBRAS}
+          onClose={onClose}
+          onSelect={vi.fn()}
+        />,
+      );
+
+      // The dialog took focus, so the opener was captured by now -- as `null`.
+      const panel = await screen.findByTestId("obra-print-panel");
+      await waitFor(() =>
+        expect(panel.contains(document.activeElement)).toBe(true),
+      );
+
+      rerender(
+        <ObraPrintDialog
+          open={false}
+          obras={OBRAS}
+          onClose={onClose}
+          onSelect={vi.fn()}
+        />,
+      );
+
+      // Nothing to restore to. Widening the guard to `Element` would send focus
+      // back to the SVG here, which is what makes this assertion bite.
+      expect(document.activeElement).not.toBe(svg);
+    } finally {
+      svg.remove();
+    }
+  });
 });

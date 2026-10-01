@@ -10,6 +10,7 @@ import {
   ONE_OBRA_REPORT,
   NO_OBRA_REPORT,
   NO_KIND_REPORT,
+  NO_KICKER_REPORT,
   OBRA_ONE_TITLE,
   OBRA_TWO_TITLE,
   OBRA_ONE_KIND,
@@ -58,6 +59,21 @@ describe("listObrasFromReport", () => {
     // `Obra 01` with no `•`: the ordinal is already the row's position, so there
     // is nothing to show beside the title.
     expect(listObrasFromReport(NO_KIND_REPORT)).toEqual([
+      { index: 0, title: OBRA_ONE_TITLE, kind: "" },
+    ]);
+  });
+
+  it("reads a hero that carries no kicker element at all", () => {
+    // The companion to the case above, and not a duplicate of it:
+    // `NO_KIND_REPORT` has a kicker without the `•`, so the selector finds a
+    // node and only the separator is missing. Here the element is absent, so the
+    // selector returns null -- the one route to `text`'s own null branch, which
+    // every other case in this file reaches with a real node.
+    //
+    // The title is asserted alongside the empty kind on purpose: it proves the
+    // page was parsed and matched, so the `""` is a kind that was looked for and
+    // not found, rather than the silence of a page nothing read.
+    expect(listObrasFromReport(NO_KICKER_REPORT)).toEqual([
       { index: 0, title: OBRA_ONE_TITLE, kind: "" },
     ]);
   });
