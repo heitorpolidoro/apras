@@ -10,10 +10,8 @@ anyio==4.14.2
     # via
     #   httpx
     #   starlette
-bcrypt==4.0.1
-    # via
-    #   backend
-    #   passlib
+bcrypt==5.0.0
+    # via backend
 certifi==2026.2.25
     # via
     #   httpcore
@@ -62,8 +60,6 @@ packaging==26.1
     # via
     #   limits
     #   pytest
-passlib==1.7.4
-    # via backend
 pillow==12.3.0
     # via backend
 pluggy==1.6.0
@@ -86,8 +82,11 @@ pygments==2.20.0
 pyjwt==2.15.0
     # via backend
 pytest==9.0.3
-    # via pytest-cov
+    # via
+    #   pytest-cov
+    #   pytest-timeout
 pytest-cov==7.1.0
+pytest-timeout==2.4.0
 python-dotenv==1.2.2
     # via pydantic-settings
 python-multipart==0.0.32

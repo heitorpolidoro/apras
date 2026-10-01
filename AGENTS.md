@@ -1,6 +1,6 @@
 # Project Context & Purpose
 
-**APRAS** — *Aplicativo de Planejamento e Resoluções para Associações e Síndicos* — is a web application for managing the administrative workload of homeowner associations (HOAs) and building managers ("síndicos" in Brazil).
+**APRAS** — _Aplicativo de Planejamento e Resoluções para Associações e Síndicos_ — is a web application for managing the administrative workload of homeowner associations (HOAs) and building managers ("síndicos" in Brazil).
 
 ## Problem Statement
 
@@ -8,12 +8,12 @@ Building administrators and HOA boards juggle dozens of operational tasks — ma
 
 ## Target Users
 
-| Role            | Description                                                                                      |
-|-----------------|--------------------------------------------------------------------------------------------------|
-| **Administrador** (Administrator) | Full system access: manages users, categories, all tasks, and visibility settings.            |
-| **Diretor** (Director)            | Can create, view, and edit any task; cannot manage users.                                      |
+| Role                              | Description                                                                                                                                         |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Administrador** (Administrator) | Full system access: manages users, categories, all tasks, and visibility settings.                                                                  |
+| **Diretor** (Director)            | Can create, view, and edit any task; cannot manage users.                                                                                           |
 | **Gerente** (Manager)             | Sees tasks with no visibility targets, or at least one target matching one of the Manager's roles; can edit only unassigned or self-assigned tasks. |
-| **Convidado** (Guest)             | Read-only role (effectively blocked from task interaction).                                    |
+| **Convidado** (Guest)             | Read-only role (effectively blocked from task interaction).                                                                                         |
 
 ## Key Capabilities
 
@@ -28,10 +28,10 @@ Building administrators and HOA boards juggle dozens of operational tasks — ma
 
 ## Production URLs
 
-| Surface  | URL                                  |
-|----------|--------------------------------------|
-| Frontend | https://apras-front.vercel.app       |
-| Backend  | https://apras-back.vercel.app        |
+| Surface  | URL                            |
+| -------- | ------------------------------ |
+| Frontend | https://apras-front.vercel.app |
+| Backend  | https://apras-back.vercel.app  |
 
 ---
 
@@ -71,21 +71,21 @@ Building administrators and HOA boards juggle dozens of operational tasks — ma
 
 ### Route Map
 
-| Route              | Component              | Access                  |
-|--------------------|------------------------|-------------------------|
-| `/`                | `RootRedirect`         | Public — `LandingPage` for an anonymous visitor, `GeneralDashboardPage` for an authenticated one |
-| `/c/:slug`         | `BrandedEntryPage`     | Public — the condominium's branded login; a signed-in member is switched into it, a non-member and an unknown slug get the same no-access panel |
-| `/login`           | `LoginPage`            | Public                  |
-| `/signup`          | `SignupPage`           | Public                  |
-| `/dashboard`       | `TaskDashboard`        | `{module:"tasks"}`      |
-| `/categories`      | `CategoriesPage`       | `{module:"categories"}` |
-| `/admin/users`     | `AdminUserDashboard`   | `users:update`          |
-| `/admin/roles`     | `RolesAdminPage`       | any of `roles:create/update/delete` |
-| `/admin/roles/:roleId` | `RoleDetailPage`   | the same rule           |
-| `/admin/modules`   | `TenantModulesPage`    | `{superuser:true}`      |
-| `/infractions`     | `InfractionsPage`      | any of `infractions:read` |
-| `/infraction-rules`| `InfractionRulesPage`  | any of `infractions:rule_create/rule_update/rule_deactivate` |
-| `/my-infractions`  | `MyInfractionsPage`    | any of `infractions:my_lots_read` |
+| Route                  | Component             | Access                                                                                                                                          |
+| ---------------------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`                    | `RootRedirect`        | Public — `LandingPage` for an anonymous visitor, `GeneralDashboardPage` for an authenticated one                                                |
+| `/c/:slug`             | `BrandedEntryPage`    | Public — the condominium's branded login; a signed-in member is switched into it, a non-member and an unknown slug get the same no-access panel |
+| `/login`               | `LoginPage`           | Public                                                                                                                                          |
+| `/signup`              | `SignupPage`          | Public                                                                                                                                          |
+| `/dashboard`           | `TaskDashboard`       | `{module:"tasks"}`                                                                                                                              |
+| `/categories`          | `CategoriesPage`      | `{module:"categories"}`                                                                                                                         |
+| `/admin/users`         | `AdminUserDashboard`  | `users:update`                                                                                                                                  |
+| `/admin/roles`         | `RolesAdminPage`      | any of `roles:create/update/delete`                                                                                                             |
+| `/admin/roles/:roleId` | `RoleDetailPage`      | the same rule                                                                                                                                   |
+| `/admin/modules`       | `TenantModulesPage`   | `{superuser:true}`                                                                                                                              |
+| `/infractions`         | `InfractionsPage`     | any of `infractions:read`                                                                                                                       |
+| `/infraction-rules`    | `InfractionRulesPage` | any of `infractions:rule_create/rule_update/rule_deactivate`                                                                                    |
+| `/my-infractions`      | `MyInfractionsPage`   | any of `infractions:my_lots_read`                                                                                                               |
 
 Since APRAS-48 every protected route's rule is one entry of
 `ROUTE_ACCESS` (`frontend/src/features/user-administration/access/routeAccess.ts`),
@@ -93,7 +93,7 @@ passed as `ProtectedRoute`'s single `requiredAccess` prop and reused verbatim
 by the matching `NAV_ITEMS` entry, so a menu and its route can never state
 different rules. APRAS-39 added a third rule shape, `{superuser:true}`, for
 `/admin/modules`: it is the first frontend surface for a superuser-only
-*backend* route, and such routes carry no catalogue permission, so no
+_backend_ route, and such routes carry no catalogue permission, so no
 `{anyOf}` rule could express it. The flag is read from the **real** auth user
 and is never simulated, so "view-as" cannot open an operator screen.
 
@@ -120,25 +120,25 @@ what makes "denial is in place" true without exception.
 
 ### API Endpoints (v1)
 
-| Prefix           | Resource        | File                                     |
-|------------------|-----------------|------------------------------------------|
-| `/api/v1/auth`   | Authentication  | `backend/app/api/v1/endpoints/auth.py`   |
-| `/api/v1/tasks`  | Tasks           | `backend/app/api/v1/endpoints/tasks.py`  |
-| `/api/v1/users`  | Users           | `backend/app/api/v1/endpoints/users.py`  |
-| `/api/v1/categories` | Categories  | `backend/app/api/v1/endpoints/categories.py` |
-| `/api/v1/roles`  | Roles           | `backend/app/api/v1/endpoints/roles.py`  |
-| `/api/v1/tenants` | Tenants & membership | `backend/app/api/v1/endpoints/tenants.py` |
-| `/api/v1/permissions` | Permission catalogue & effective set | `backend/app/api/v1/endpoints/permissions.py` |
-| `/api/v1/tenants/{id}/modules` | Per-tenant module switch (`GET`/`PUT`, superuser only) | `backend/app/api/v1/endpoints/tenants.py` |
-| `/api/v1/subscription` | Tenant-side subscription area (`GET`, `PUT /modules`, `GET /history`) | `backend/app/api/v1/endpoints/subscription.py` |
-| `/api/v1/tenant-profile` | Tenant-side condominium profile (`GET`, `PATCH`, `PUT /logo`, `DELETE /logo`) | `backend/app/api/v1/endpoints/tenant_profile.py` |
-| `/api/v1/plans` | Install-wide plan catalogue (`GET`/`POST`/`GET {id}`/`PATCH {id}`, superuser only) | `backend/app/api/v1/endpoints/plans.py` |
-| `/api/v1/tenants/{id}/subscription` | Per-tenant subscription read and plan assignment (`GET`/`PUT`, plus `GET /history`, superuser only) | `backend/app/api/v1/endpoints/tenants.py` |
-| `/api/v1/tenants/{id}/subscription/courtesy` | Courtesy grants outside the plan (`PUT`, superuser only) | `backend/app/api/v1/endpoints/tenants.py` |
-| `/api/v1/infraction-rules` | Infraction rule catalogue and its escalation policy (`GET`/`POST`/`GET {id}`/`PUT {id}`/`DELETE {id}` soft-deactivates/`PUT {id}/policy`), plus `/api/v1/infraction-settings` (`GET`/`PUT`) | `backend/app/api/v1/endpoints/infractions.py` |
-| `/api/v1/infractions` | The infraction process: list, detail, next-step suggestion, promotion from an occurrence, stage append, contestation and recidivism-cycle closes | `backend/app/api/v1/endpoints/infractions.py` |
-| `/api/v1/public` | Unauthenticated reads. Today exactly one: `GET /public/tenants/{slug}/branding`, the four-field public identity (`slug`, `name`, `logo_url`, `theme`) behind `/c/:slug`, mounted `GLOBAL_SCOPED`, unguarded and rate-limited per IP | `backend/app/api/v1/endpoints/public_branding.py` |
-| `/api/v1/health` | Health check    | `backend/app/api/v1/api.py`              |
+| Prefix                                       | Resource                                                                                                                                                                                                                            | File                                              |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| `/api/v1/auth`                               | Authentication                                                                                                                                                                                                                      | `backend/app/api/v1/endpoints/auth.py`            |
+| `/api/v1/tasks`                              | Tasks                                                                                                                                                                                                                               | `backend/app/api/v1/endpoints/tasks.py`           |
+| `/api/v1/users`                              | Users                                                                                                                                                                                                                               | `backend/app/api/v1/endpoints/users.py`           |
+| `/api/v1/categories`                         | Categories                                                                                                                                                                                                                          | `backend/app/api/v1/endpoints/categories.py`      |
+| `/api/v1/roles`                              | Roles                                                                                                                                                                                                                               | `backend/app/api/v1/endpoints/roles.py`           |
+| `/api/v1/tenants`                            | Tenants & membership                                                                                                                                                                                                                | `backend/app/api/v1/endpoints/tenants.py`         |
+| `/api/v1/permissions`                        | Permission catalogue & effective set                                                                                                                                                                                                | `backend/app/api/v1/endpoints/permissions.py`     |
+| `/api/v1/tenants/{id}/modules`               | Per-tenant module switch (`GET`/`PUT`, superuser only)                                                                                                                                                                              | `backend/app/api/v1/endpoints/tenants.py`         |
+| `/api/v1/subscription`                       | Tenant-side subscription area (`GET`, `PUT /modules`, `GET /history`)                                                                                                                                                               | `backend/app/api/v1/endpoints/subscription.py`    |
+| `/api/v1/tenant-profile`                     | Tenant-side condominium profile (`GET`, `PATCH`, `PUT /logo`, `DELETE /logo`)                                                                                                                                                       | `backend/app/api/v1/endpoints/tenant_profile.py`  |
+| `/api/v1/plans`                              | Install-wide plan catalogue (`GET`/`POST`/`GET {id}`/`PATCH {id}`, superuser only)                                                                                                                                                  | `backend/app/api/v1/endpoints/plans.py`           |
+| `/api/v1/tenants/{id}/subscription`          | Per-tenant subscription read and plan assignment (`GET`/`PUT`, plus `GET /history`, superuser only)                                                                                                                                 | `backend/app/api/v1/endpoints/tenants.py`         |
+| `/api/v1/tenants/{id}/subscription/courtesy` | Courtesy grants outside the plan (`PUT`, superuser only)                                                                                                                                                                            | `backend/app/api/v1/endpoints/tenants.py`         |
+| `/api/v1/infraction-rules`                   | Infraction rule catalogue and its escalation policy (`GET`/`POST`/`GET {id}`/`PUT {id}`/`DELETE {id}` soft-deactivates/`PUT {id}/policy`), plus `/api/v1/infraction-settings` (`GET`/`PUT`)                                         | `backend/app/api/v1/endpoints/infractions.py`     |
+| `/api/v1/infractions`                        | The infraction process: list, detail, next-step suggestion, promotion from an occurrence, stage append, contestation and recidivism-cycle closes                                                                                    | `backend/app/api/v1/endpoints/infractions.py`     |
+| `/api/v1/public`                             | Unauthenticated reads. Today exactly one: `GET /public/tenants/{slug}/branding`, the four-field public identity (`slug`, `name`, `logo_url`, `theme`) behind `/c/:slug`, mounted `GLOBAL_SCOPED`, unguarded and rate-limited per IP | `backend/app/api/v1/endpoints/public_branding.py` |
+| `/api/v1/health`                             | Health check                                                                                                                                                                                                                        | `backend/app/api/v1/api.py`                       |
 
 ## Data Layer
 
@@ -164,18 +164,14 @@ cd backend && uv run ruff format . && uv run ruff check . --fix
    under `backend/app/` + `backend/tests/` is capped by `NOQA_CAP` in
    `backend/tests/test_lint_hygiene.py`, which also asserts the spelling. The
    cap may fall freely; raising it belongs in a task's spec, not in a diff.
-2. **`alembic/versions/**` is never reformatted and its migrations are never
-   edited.** They are frozen history that `alembic upgrade` replays verbatim
-   against production. The formatter is excluded from them by
-   `[tool.ruff.format] exclude`, and a narrow `per-file-ignores` entry covers
-   the cosmetic rules — the linter still reads them, so a genuinely new
-   problem still fails the gate. "Frozen" is also why a revision **imports
-   nothing from `app/`**: a live import silently rewrites what a replay
-   produces the day the imported code changes. `0001` re-declares
-   `DEFAULT_TENANT_ID` and `LEGACY_ROLE_NAMES` as local literals and
-   `0002_tenant_slug` carries its own copy of `app/core/slug.py`'s
-   derivation, both deliberately — `tests/test_migrations_postgres.py`
-   asserts the absence of an `app` import by `ast`.
+2. **`alembic/versions/**`is never reformatted and its migrations are never
+edited.** They are frozen history that`alembic upgrade`replays verbatim
+against production. The formatter is excluded from them by`[tool.ruff.format] exclude`, and a narrow `per-file-ignores`entry covers
+the cosmetic rules — the linter still reads them, so a genuinely new
+problem still fails the gate. "Frozen" is also why a revision **imports
+nothing from`app/`**: a live import silently rewrites what a replay
+produces the day the imported code changes. `0001`re-declares`DEFAULT_TENANT_ID`and`LEGACY_ROLE_NAMES`as local literals and`0002_tenant_slug`carries its own copy of`app/core/slug.py`'s
+derivation, both deliberately — `tests/test_migrations_postgres.py`asserts the absence of an`app`import by`ast`.
 3. **`app/core/clock.py` is the only clock.** `utc_now()` for a value that
    never reaches a column (JWT `iat`/`exp`), `db_now()` for one that does, and
    `today_utc()` for a date. Every dated column in this database is naive
@@ -183,7 +179,7 @@ cd backend && uv run ruff format . && uv run ruff check . --fix
    naive too or every `loaded < now` comparison becomes a `TypeError`.
    `test_lint_hygiene.py` asserts by text scan that no other module under
    `app/` contains `datetime.utcnow`, `date.today(` or `datetime.now(` — the
-   last with *any* argument, `datetime.now(UTC)` included.
+   last with _any_ argument, `datetime.now(UTC)` included.
 4. **`ruff --select RUF100 --fix` is never run on its own.** With only
    `RUF100` selected, every `# noqa` for an unselected rule looks unused and
    is deleted. Let the full `ruff check . --fix` report it.
@@ -253,7 +249,7 @@ as the source of truth.
   cancelled job** — which is why `Backend Tests` being cancelled at 55m0s
   twice in a row (on a commit whose backend tree was byte-identical to one
   that had just passed in 10m57s) could not be diagnosed from CI at all.
-  `timeout-minutes` is therefore the *last* backstop, and three guards sit in
+  `timeout-minutes` is therefore the _last_ backstop, and three guards sit in
   front of it:
   1. **`timeout` wraps every backend `uv run pytest`** in `ci.yml`
      (`--signal=INT --kill-after=60s`, 30m for `backend` and 15m for
@@ -266,19 +262,19 @@ as the source of truth.
      pool worker produces. The thread method dumps every stack on the way out.
   3. **Every `subprocess.run` in `backend/tests/` passes a `timeout`.** With
      `capture_output=True` and none, the parent blocks until the child exits
-     *and* its pipes close, so one wedged child is a pytest that finishes its
+     _and_ its pipes close, so one wedged child is a pytest that finishes its
      tests and never exits.
-  `conftest.py`'s `pytest_sessionfinish` additionally **names any non-daemon
-  thread still alive** when the last test ends — the interpreter joins those
-  on the way out, so one of them is the difference between a summary line and
-  an exit. It prints and never fails: there is no test left for a failure to
-  attach to, and a run whose only problem is a leaked thread must still
-  publish its coverage artefact. `backend/tests/test_suite_hygiene.py` pins
-  all four rules, plus "every engine the test tree builds is disposed" —
-  `StaticPool` holds the one connection that *is* an in-memory SQLite
-  database, and the per-test engine used not to be disposed, so ~4000 of them
-  were closed whenever the garbage collector reached them (the
-  `ResourceWarning: unclosed database` flood).
+     `conftest.py`'s `pytest_sessionfinish` additionally **names any non-daemon
+     thread still alive** when the last test ends — the interpreter joins those
+     on the way out, so one of them is the difference between a summary line and
+     an exit. It prints and never fails: there is no test left for a failure to
+     attach to, and a run whose only problem is a leaked thread must still
+     publish its coverage artefact. `backend/tests/test_suite_hygiene.py` pins
+     all four rules, plus "every engine the test tree builds is disposed" —
+     `StaticPool` holds the one connection that _is_ an in-memory SQLite
+     database, and the per-test engine used not to be disposed, so ~4000 of them
+     were closed whenever the garbage collector reached them (the
+     `ResourceWarning: unclosed database` flood).
 - **Migrate** — `migrate.yml` runs Alembic migrations on push to `master`.
 - **Release** — `release.yml` handles semantic versioning and releases.
 - **Static Analysis** — SonarCloud and DeepSource are integrated for code quality and security scanning.
@@ -290,50 +286,50 @@ as the source of truth.
 
 ## Backend
 
-| Category              | Technology                                         |
-|-----------------------|----------------------------------------------------|
-| Language              | Python 3.13                                        |
-| Framework             | FastAPI ≥ 0.136                                    |
-| ORM                   | SQLModel ≥ 0.0.38 (SQLAlchemy under the hood)      |
-| Database              | PostgreSQL 16                                      |
-| DB Driver             | psycopg2-binary                                    |
-| Migrations            | Alembic ≥ 1.18                                     |
-| Authentication        | PyJWT (HS256), passlib + bcrypt                    |
-| Settings              | pydantic-settings (`.env` driven)                  |
-| Validation            | email-validator, python-multipart                  |
-| Rate Limiting         | slowapi                                            |
-| ASGI Server           | Uvicorn                                            |
-| Package Manager       | uv                                                 |
-| Linting               | Ruff 0.16.5 (all rules selected; line-length 88; **CI gate**) |
-| Testing               | pytest + pytest-cov, httpx (async test client)     |
+| Category        | Technology                                                    |
+| --------------- | ------------------------------------------------------------- |
+| Language        | Python 3.13                                                   |
+| Framework       | FastAPI ≥ 0.136                                               |
+| ORM             | SQLModel ≥ 0.0.38 (SQLAlchemy under the hood)                 |
+| Database        | PostgreSQL 16                                                 |
+| DB Driver       | psycopg2-binary                                               |
+| Migrations      | Alembic ≥ 1.18                                                |
+| Authentication  | PyJWT (HS256), bcrypt ≥ 5 (no passlib)                        |
+| Settings        | pydantic-settings (`.env` driven)                             |
+| Validation      | email-validator, python-multipart                             |
+| Rate Limiting   | slowapi                                                       |
+| ASGI Server     | Uvicorn                                                       |
+| Package Manager | uv                                                            |
+| Linting         | Ruff 0.16.5 (all rules selected; line-length 88; **CI gate**) |
+| Testing         | pytest + pytest-cov, httpx (async test client)                |
 
 ## Frontend
 
-| Category              | Technology                                         |
-|-----------------------|----------------------------------------------------|
-| Language              | TypeScript ~6.0                                    |
-| UI Framework          | React 19                                           |
-| Build Tool            | Vite 8                                             |
-| Styling               | Tailwind CSS 4 + `@tailwindcss/vite` plugin        |
-| Component Primitives  | Radix UI (label, select, slot)                     |
-| Variant Utility       | class-variance-authority, clsx, tailwind-merge     |
-| Icons                 | Lucide React                                       |
-| HTTP Client           | Axios                                              |
-| Server-state          | TanStack Query 5                                   |
-| Routing               | react-router-dom 7                                 |
-| i18n                  | i18next + react-i18next + browser language detector |
-| Testing               | Vitest 4 + @testing-library/react + jsdom          |
-| Linting               | ESLint 9 + typescript-eslint                       |
+| Category             | Technology                                          |
+| -------------------- | --------------------------------------------------- |
+| Language             | TypeScript ~6.0                                     |
+| UI Framework         | React 19                                            |
+| Build Tool           | Vite 8                                              |
+| Styling              | Tailwind CSS 4 + `@tailwindcss/vite` plugin         |
+| Component Primitives | Radix UI (label, select, slot)                      |
+| Variant Utility      | class-variance-authority, clsx, tailwind-merge      |
+| Icons                | Lucide React                                        |
+| HTTP Client          | Axios                                               |
+| Server-state         | TanStack Query 5                                    |
+| Routing              | react-router-dom 7                                  |
+| i18n                 | i18next + react-i18next + browser language detector |
+| Testing              | Vitest 4 + @testing-library/react + jsdom           |
+| Linting              | ESLint 9 + typescript-eslint                        |
 
 ## Infrastructure & DevOps
 
-| Category              | Technology                                         |
-|-----------------------|----------------------------------------------------|
-| Hosting               | Vercel (both frontend and backend)                 |
-| Containerisation      | Docker + Docker Compose                            |
-| CI/CD                 | GitHub Actions                                     |
-| Code Quality          | SonarCloud, DeepSource                             |
-| Source Control         | Git (GitHub)                                       |
+| Category         | Technology                         |
+| ---------------- | ---------------------------------- |
+| Hosting          | Vercel (both frontend and backend) |
+| Containerisation | Docker + Docker Compose            |
+| CI/CD            | GitHub Actions                     |
+| Code Quality     | SonarCloud, DeepSource             |
+| Source Control   | Git (GitHub)                       |
 
 ---
 
@@ -459,7 +455,7 @@ every other entity (APRAS-41). A `Tenant` has a globally unique `name` and an
 `is_active` soft-deactivation flag; there is deliberately no delete endpoint,
 because every tenant-scoped foreign key is `ON DELETE RESTRICT`.
 
-**Membership.** A `User` is a *global* identity — `user.email` and `user.cpf`
+**Membership.** A `User` is a _global_ identity — `user.email` and `user.cpf`
 stay unique across the whole install — and belongs to zero or more tenants
 through the `user_tenant_link` join table. Multi-membership is first class:
 only the same `(user, tenant)` pair twice is a conflict.
@@ -510,21 +506,21 @@ row because a user is one global identity in many tenants — a síndico who
 administers condominium A and merely lives in B needs a different answer per
 tenant.
 
-* Read through `deps.is_acting_tenant_admin`, which resolves the acting
+- Read through `deps.is_acting_tenant_admin`, which resolves the acting
   tenant from `session.info`. **No acting tenant grants nothing**: on a
   global route (every `/api/v1/tenants` route), in `app/seed.py`, in Alembic
   or in a unit-test `Session`, the capability is structurally absent.
-* The seven tenant-scoped admin routes it reaches (users list/patch/contact-info,
+- The seven tenant-scoped admin routes it reaches (users list/patch/contact-info,
   role create/patch/delete, task delete, lot delete) are gated by
   `deps.require_permission(...)` against the route's entry in
   `ROUTE_PERMISSIONS` (APRAS-46), not by a role guard.
-* It grants the domain-service permissions (announcements, finance,
+- It grants the domain-service permissions (announcements, finance,
   occurrences, voting, …) inside the granting tenant. It does **not** grant
   per-lot `UserLotLink` access, or any tenant/membership management: granting
   and revoking it is
   `PATCH /api/v1/tenants/{tenant_id}/members/{user_id}`, **superuser only**
   (`deps.get_current_superuser`).
-* Privilege escalation is closed on `PATCH /api/v1/users/{id}` for every
+- Privilege escalation is closed on `PATCH /api/v1/users/{id}` for every
   caller that is not a superuser: they may not modify a superuser, or modify
   a user who holds a membership in another tenant. Since APRAS-49 there is no
   third rule to state — `UserUpdate` carries neither `role` nor
@@ -541,21 +537,21 @@ known by and the **logo** every document the system renders puts in its
 masthead. Before it, `tenant.logo_url` was a column an operator wrote with
 SQL.
 
-* **Tenant-side, with no `{tenant_id}` in any path** (D1), exactly like
+- **Tenant-side, with no `{tenant_id}` in any path** (D1), exactly like
   `/api/v1/subscription` and for the same reason: `/api/v1/tenants/{id}` is
   mounted `GLOBAL_SCOPED`, so it resolves no acting tenant, and with no
   acting tenant `get_effective_role_ids` is empty and the `is_tenant_admin`
   short-circuit is structurally absent — a `require_permission` guard there
-  would refuse every tenant role *and* every tenant admin. The subject is
+  would refuse every tenant role _and_ every tenant admin. The subject is
   whatever `X-Tenant-Id` resolved to, so there is nothing to forge.
-* **`tenants:profile_update`** guards the three writes (D7). It is an
+- **`tenants:profile_update`** guards the three writes (D7). It is an
   ordinary, grantable string — **not** in `SUPERUSER_ONLY_PERMISSIONS` — so a
   tenant admin can tick it for a role in the role editor, and holds it
   themselves through APRAS-47's whole-catalogue short-circuit with no special
-  case in any handler. `tenants:update`, the operator's lever over *any*
+  case in any handler. `tenants:update`, the operator's lever over _any_
   tenant, is untouched. The `GET` is unguarded and self-scoped, under the
   `/permissions/me` precedent (D6).
-* **`image/png`, `image/jpeg`, `image/webp`, up to 2 MiB** (D2, D3), stored
+- **`image/png`, `image/jpeg`, `image/webp`, up to 2 MiB** (D2, D3), stored
   through the existing `LocalStorageProvider`. `image/svg+xml` is refused:
   an SVG is active content served same-origin from `/static/uploads/` and
   embedded in a printable report a browser renders, so accepting it without a
@@ -564,10 +560,10 @@ SQL.
   accepted. Every refusal is a **422** (`TenantLogoTooLargeError`,
   `TenantLogoInvalidFormatError`) and writes neither a file nor the column;
   the media pipeline's 400-mapped `Photo*` pair is left alone.
-* Replacing or removing a logo deletes the previous file, best-effort, and
+- Replacing or removing a logo deletes the previous file, best-effort, and
   **only** when its URL starts with `/static/uploads/`: an externally hosted
   or hand-written value is somebody else's file.
-* **The Sidebar/Navbar do not display the logo** (D4). Every sidebar render
+- **The Sidebar/Navbar do not display the logo** (D4). Every sidebar render
   would need a new per-page fetch or `logo_url` on `GET /api/v1/auth/me`,
   which is a global route and deliberately answers nothing tenant-relative
   beyond the membership summary. It is a deliverable of its own.
@@ -575,7 +571,7 @@ SQL.
 ### Módulos por tenant
 
 A per-tenant **feature switch** (APRAS-39) that composes with the permission
-model by *stripping*, never by replacing. The 28 modules are exactly the
+model by _stripping_, never by replacing. The 28 modules are exactly the
 `<module>` segments of the catalogue (`permissions.MODULES`, derived and never
 hand-listed, so a module a future task adds is toggleable the day its first
 permission exists — `infractions` in `APRAS-44` is the first to arrive that
@@ -586,22 +582,22 @@ the surface it contracts modules from could not administer itself back into
 existence. The other **24** are the billable features.
 
 **Storage is negative.** `tenant.disabled_modules` (portable `JSON`,
-`NOT NULL DEFAULT '[]'`) lists what is *off*, so `[]` means
+`NOT NULL DEFAULT '[]'`) lists what is _off_, so `[]` means
 "everything on": the column's `server_default` is the all-on backfill for
 every existing tenant, a new tenant is all-on with no seeding, and a module a
 future task adds is active everywhere with no data step. What it gives up,
 stated so it is not rediscovered: no efficient "which tenants have `finance`
 on" query. (The missing audit row is no longer missing: `APRAS-40` records
 every write to this column, including the raw superuser one, as a
-`subscription_change` — see *Assinatura e planos*.)
+`subscription_change` — see _Assinatura e planos_.)
 
 **Three writers, one column, one reader.** The superuser `PUT` below is now
-one of **three** routes that write `disabled_modules`: it is the *raw lever*,
+one of **three** routes that write `disabled_modules`: it is the _raw lever_,
 deliberately unbounded by the subscription so it stays the operator's repair
 tool, beside `APRAS-40`'s ceiling-constrained tenant-side contracting `PUT`
 and its entitlement-expanding courtesy `PUT`. The **reader** is still exactly
 `deps.get_effective_permissions`, and `APRAS-40` adds no line to it. See
-*Assinatura e planos*.
+_Assinatura e planos_.
 
 **One enforcement point.** `deps.get_effective_permissions` returns the user's
 authority **minus** every string whose module the acting tenant turned off.
@@ -611,30 +607,30 @@ Route guards, the in-handler `has_permission` checks, the object-level
 — all follow from that one function. There is no registry mapping routes to
 modules that a new endpoint could forget to join, and no second mechanism.
 
-* **The single exception is the grant surface.** `role_service.assert_can_grant`
+- **The single exception is the grant surface.** `role_service.assert_can_grant`
   (and `assert_can_assign_roles`, which delegates to it) compares against
   `deps.get_grantable_permissions` — the same authority, **unstripped**. The
-  guard validates the *whole resulting bundle*, and four of the six seeded
+  guard validates the _whole resulting bundle_, and four of the six seeded
   roles carry `finance:read`, so a stripped comparison would 403 a pure
-  *rename* of any of them in a tenant with `finance` off: role and membership
+  _rename_ of any of them in a tenant with `finance` off: role and membership
   administration in that tenant would freeze. Nothing escalates, because a
   grant can never exceed what the author holds with every module on — which is
   exactly what they will hold when the operator re-enables it — and the
   grantee's copy is inert meanwhile. `get_grantable_permissions` has exactly
   one definition and is referenced only in that guard module, pinned by
   `tests/test_module_gating_grants.py`.
-* **A superuser is deliberately not filtered.** The global operator *sets* the
+- **A superuser is deliberately not filtered.** The global operator _sets_ the
   switch and must be able to inspect and repair a tenant whose module they
   just turned off. The flag is answered before any tenant is resolved, and the
   switch is commercial packaging over a tenant's users, not a data boundary.
-* **The refusal is byte-identical to any other 403.** No error-path code is
+- **The refusal is byte-identical to any other 403.** No error-path code is
   touched. A client that needs to distinguish reads `disabled_modules` from
   `/permissions/me`; an operator reads `GET /api/v1/tenants/{id}/modules`.
-* **Toggling is non-destructive.** No `role.permissions` row is ever edited, so
+- **Toggling is non-destructive.** No `role.permissions` row is ever edited, so
   re-enabling a module restores exactly the previous access with no data
   migration and no re-authoring. "Inert, not deleted" is what the strip
   produces.
-* `GET /api/v1/permissions/` is **not** stripped, by construction: it is the
+- `GET /api/v1/permissions/` is **not** stripped, by construction: it is the
   static catalogue, identical for every caller, and the role editor needs it
   to render a permission the author does not hold as a disabled checkbox.
 
@@ -689,17 +685,17 @@ dependency was added to `backend/pyproject.toml` or `frontend/package.json`.
 
 **Three tables**, seeding nothing:
 
-* `plan` — the install-wide, superuser-managed catalogue. **Global**: it
+- `plan` — the install-wide, superuser-managed catalogue. **Global**: it
   carries no `tenant_id`, because a per-tenant catalogue would make "which
   plan is this condominium on" incomparable across the install. `name` is
   globally unique for the same reason `tenant.name` is. There is deliberately
   **no `DELETE`**: `tenant_subscription.plan_id` is `ON DELETE RESTRICT` and a
   plan a tenant is on must not vanish, so `PATCH {"is_active": false}` is the
   removal operation, exactly as for `Tenant`.
-* `tenant_subscription` — at most one per tenant
+- `tenant_subscription` — at most one per tenant
   (`uq_tenant_subscription_tenant`), directly scoped, carrying the plan, the
   status, the courtesy set, a start date and notes.
-* `subscription_change` — append-only history, inheriting its tenant through
+- `subscription_change` — append-only history, inheriting its tenant through
   the NOT NULL FK to its parent. No `PATCH`, no `DELETE`, no update route:
   `SubscriptionService.record` only ever `session.add()`s one.
 
@@ -708,7 +704,7 @@ dependency was added to `backend/pyproject.toml` or `frontend/package.json`.
 > `tenant.disabled_modules` remains the only input to permission resolution.
 > `APRAS-40` changes no line of `deps.get_effective_permissions`,
 > `deps.disabled_modules` or `permissions.filter_by_modules`. What `APRAS-40`
-> adds is a constraint on *who may write that column and to what value*.
+> adds is a constraint on _who may write that column and to what value_.
 
 The ceiling is `SubscriptionService.entitlement(session, tenant)`, which has
 **exactly one definition** and is the only place that loads a subscription and
@@ -720,12 +716,12 @@ returns from that result and touches the session not at all.
 
 **The four levers on one column:**
 
-| Lever | Actor | Bounded by the ceiling? | History row |
-|---|---|---|---|
-| `PUT /api/v1/subscription/modules` | `billing:manage` (⊇ tenant_admin, superuser), acting in own tenant | **yes** — 400 outside the entitlement | `CONTRACTED` |
-| `PUT /api/v1/tenants/{id}/subscription` | superuser | **applies** it, shrink-only | `PLAN_CHANGE` |
-| `PUT /api/v1/tenants/{id}/subscription/courtesy` | superuser | **expands** it, and activates | `COURTESY_GRANT` / `COURTESY_REVOKE` |
-| `PUT /api/v1/tenants/{id}/modules` (`APRAS-39`, unchanged) | superuser | **no** — the raw lever | `OVERRIDE` |
+| Lever                                                      | Actor                                                              | Bounded by the ceiling?               | History row                          |
+| ---------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------- | ------------------------------------ |
+| `PUT /api/v1/subscription/modules`                         | `billing:manage` (⊇ tenant_admin, superuser), acting in own tenant | **yes** — 400 outside the entitlement | `CONTRACTED`                         |
+| `PUT /api/v1/tenants/{id}/subscription`                    | superuser                                                          | **applies** it, shrink-only           | `PLAN_CHANGE`                        |
+| `PUT /api/v1/tenants/{id}/subscription/courtesy`           | superuser                                                          | **expands** it, and activates         | `COURTESY_GRANT` / `COURTESY_REVOKE` |
+| `PUT /api/v1/tenants/{id}/modules` (`APRAS-39`, unchanged) | superuser                                                          | **no** — the raw lever                | `OVERRIDE`                           |
 
 The raw lever stays unconstrained on purpose: it is the operator's repair
 tool, and a tenant whose subscription data is wrong must still be fixable.
@@ -733,7 +729,7 @@ When it puts a module outside the entitlement, the subscription area reports
 that module as `source: "OVERRIDE"` — visible, named and distinguishable from
 both a contracted and a courtesy activation.
 
-*Why courtesy activates while a plan change does not:* courtesy names one or
+_Why courtesy activates while a plan change does not:_ courtesy names one or
 more specific modules as a deliberate per-module operator act — "turn this on
 for them" — whereas a plan names a bundle and says nothing about what the
 condominium wants switched on. Contracting a newly covered module is the
@@ -825,26 +821,26 @@ global counterpart of `is_tenant_admin`: every permission in **every** tenant
 and with no acting tenant at all — `deps.get_effective_permissions` answers it
 before any tenant is resolved. It is a column, not a role and not a group, so:
 
-* it is **not grantable through the roles API** — the four permissions naming
+- it is **not grantable through the roles API** — the four permissions naming
   the superuser-gated routes are `SUPERUSER_ONLY_PERMISSIONS`
   (`tenants:create`, `tenants:update`, `tenants:members_manage`,
   `tenants:members_set_admin`), and `role_service.assert_can_grant` refuses
   them to every author, superuser included;
-* it is **not settable through `UserUpdate`** — the schema has no
+- it is **not settable through `UserUpdate`** — the schema has no
   `is_superuser` field, so a body carrying one is inert;
-* it gates the five global `/api/v1/tenants` writes via
+- it gates the five global `/api/v1/tenants` writes via
   `deps.get_current_superuser`, which reads the column and no role;
-* it has exactly **one** API surface of its own,
+- it has exactly **one** API surface of its own,
   `PATCH /api/v1/users/{user_id}/superuser` (APRAS-49). See
-  *is_superuser* below.
+  _is_superuser_ below.
 
 **The user directory is tenant-scoped.** `GET /api/v1/users/`,
 `PATCH /api/v1/users/{id}` and `PATCH /api/v1/users/{id}/contact-info` target
 the users visible in the acting tenant — linked to it, or link-less when it
 is the default tenant (`app/services/user_service.py`). The filter is uniform
 for **every** role: acting in tenant A, an `ADMINISTRATOR` gets 404 for a
-B-only user exactly as a tenant_admin of A does, and reaches that user by
-sending `X-Tenant-Id: B`. Global vision is a property of *sending the header*,
+B-only user exactly as a tenant*admin of A does, and reaches that user by
+sending `X-Tenant-Id: B`. Global vision is a property of \_sending the header*,
 not of the role.
 
 **The two permission reads.** `GET /api/v1/permissions/` returns the whole
@@ -856,7 +852,7 @@ already stripped of the tenant's disabled modules (APRAS-39). The router is moun
 so `/me` resolves its tenant through the same `get_current_tenant` ladder as
 `/user-types/`; `/auth/me` is deliberately **not** the carrier, because it is
 global (`GLOBAL_ROUTES`), so computing permissions there would answer the
-*default* tenant's groups to a user acting in another one. Both routes are on
+_default_ tenant's groups to a user acting in another one. Both routes are on
 `UNGUARDED_ROUTES` — authenticated, self-scoped or data-free — which is what
 keeps `ROUTE_PERMISSIONS` at 180 and
 `backend/tests/data/parity_matrix_baseline.json` byte-identical. The frontend
@@ -918,7 +914,7 @@ declared enforcement form — 56 route-level `Depends(require_permission(P))`,
 5 `get_current_superuser`, 3 membership-gated, 5 service-enforced, 141
 in-handler — with the exception allowlist `UNENFORCED` **empty**, and sweeps
 the other 202 with a real request from a caller holding the whole catalogue
-except the route's own permission, pinning the *shape* of the refusal. Two
+except the route's own permission, pinning the _shape_ of the refusal. Two
 forms are deliberate and are proven per route rather than excused: **five
 routes are enforced in a service** — the two ballot routes, whose
 `voting_service._assert_can_cast` writes a `BallotRejection(ROLE_FORBIDDEN)`
@@ -930,7 +926,7 @@ and **the three global tenant reads** (`GET /tenants`,
 not by `tenants:read`/`tenants:members_read`, because they are global-scoped
 and a permission gate there would refuse a user their own tenant list.
 
-*Production impact of that alignment, stated once:* since IAM F5 nothing is
+_Production impact of that alignment, stated once:_ since IAM F5 nothing is
 seeded, so **every role that does not hold the mapped permission lost access to
 those routes** on deploy — including roles that reached those screens before,
 because the map claimed a gate the code did not have. That removal is the
@@ -1006,43 +1002,43 @@ Not every authorization question is "may this actor call this route". These
 are the in-code, object-dimension predicates, and they are catalogue
 permissions like any other — grantable, revocable, visible in the role editor:
 
-| Permission | What it decides |
-|---|---|
-| `tasks:read_all` | see every task regardless of its `visible_to` targets, and author a task without the targets defaulting |
-| `tasks:update_any` | edit a task assigned to someone else |
-| `occurrences:read_assigned` | see occurrences assigned to me even without `occurrences:manage_all` |
-| `occurrences:manage_all` | see every occurrence, see internal-only timeline entries, unmask anonymous reporters, update status without being assigned |
-| `gate:checkin` | operate the gatehouse |
-| `visitors:manage_any_lot` | act on visitors of any lot, not only linked ones |
-| `residents:read_any_lot` | read residents of any lot |
-| `packages:my_lots_read` | the resident-side package view; refused to every holder of `packages:queue_read` |
+| Permission                  | What it decides                                                                                                            |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `tasks:read_all`            | see every task regardless of its `visible_to` targets, and author a task without the targets defaulting                    |
+| `tasks:update_any`          | edit a task assigned to someone else                                                                                       |
+| `occurrences:read_assigned` | see occurrences assigned to me even without `occurrences:manage_all`                                                       |
+| `occurrences:manage_all`    | see every occurrence, see internal-only timeline entries, unmask anonymous reporters, update status without being assigned |
+| `gate:checkin`              | operate the gatehouse                                                                                                      |
+| `visitors:manage_any_lot`   | act on visitors of any lot, not only linked ones                                                                           |
+| `residents:read_any_lot`    | read residents of any lot                                                                                                  |
+| `packages:my_lots_read`     | the resident-side package view; refused to every holder of `packages:queue_read`                                           |
 
 Plus the two things that were never roles: **`UserLotLink` per-lot narrowing**
 and **per-object ownership** (a comment's author, a photo's uploader, a
 transaction's creator).
 
 One message is legacy wording and is kept verbatim on purpose:
-`assert_can_edit_task` still raises *"Managers can only edit unassigned or
-self-assigned tasks"*. It is now keyed on `tasks:update_any`, not on a role.
+`assert_can_edit_task` still raises _"Managers can only edit unassigned or
+self-assigned tasks"_. It is now keyed on `tasks:update_any`, not on a role.
 
 ### What is gone
 
 Retired by APRAS-49 (IAM F5), listed here so a reader of old code knows what
 they are looking at:
 
-* **`UserRole`** — the four-tier enum and the `user.role` column. A user's
+- **`UserRole`** — the four-tier enum and the `user.role` column. A user's
   power is their role memberships.
-* **`allowed_menus`** and the **menu gate** — `deps.assert_menu_access` and
+- **`allowed_menus`** and the **menu gate** — `deps.assert_menu_access` and
   its 12 call sites. Removing it widened access for one population: a user
   who holds `tasks:read` or `categories:read` but belongs to no role carrying
   the corresponding menu key. That is deliberate — the gate's job is now done,
   and done finer, by `tasks:read` in a role, and keeping both would be two
   sources of truth for one question. **The operator's replacement lever is to
   remove `tasks:*` from the role.**
-* **`LEGACY_ROLE_PERMISSIONS`** — the F1 bridge that let `get_effective_permissions`
+- **`LEGACY_ROLE_PERMISSIONS`** — the F1 bridge that let `get_effective_permissions`
   answer for users who held no role rows. Its last recording survives as
   `backend/tests/data/legacy_role_bundles.json`.
-* **the doctrine of "role-linked types that cannot be deleted or renamed"** —
+- **the doctrine of "role-linked types that cannot be deleted or renamed"** —
   the `role` column that identified them is gone.
 
 The words "user type" and "group" no longer name anything: the entity is a
@@ -1089,7 +1085,7 @@ detail.**
    `FinancialTransaction`, touches no finance table and imports no finance
    module. `backend/tests/test_infraction_isolation.py` proves it by AST over
    the module's five files and by row count over the whole flow, so connecting
-   the two later has to be a *decision* rather than a drift.
+   the two later has to be a _decision_ rather than a drift.
 2. **An occurrence can be promoted, and an infraction can be born direct.**
    `POST /api/v1/infractions/from-occurrence/{id}` sets `source_occurrence_id`
    and writes an `OccurrenceTimeline` note; `OccurrenceDetailRead.infraction_ids`
@@ -1111,7 +1107,7 @@ detail.**
    not.
 4. **Recidivism is personal, not `propter rem`.** The count is per
    **(rule, responsible person)**, never per lot — CC art. 1337's
-   *reiteradamente* is a property of a person, unlike the quotas of art. 1345.
+   _reiteradamente_ is a property of a person, unlike the quotas of art. 1345.
    A sale or a tenant change therefore resets the ladder **by construction**,
    with no reset button and no reset code path, while
    `GET /api/v1/infractions?lot_id=…` still returns the lot's whole history.
@@ -1124,7 +1120,7 @@ detail.**
 5. **The current stage is derived, never stored.** `infraction` carries no
    `status` and no `current_stage` column; the current stage is the last row of
    the append-only `infraction_stage`, ordered by `(applied_on, created_at,
-   id)`. Even `GET /api/v1/infractions?stage=` reads it as a correlated
+id)`. Even `GET /api/v1/infractions?stage=` reads it as a correlated
    subquery rather than a column, and `?stage=NONE` is "no stage applied yet".
    A column-set assertion pins the absence, because a convenience column added
    later is exactly how an append-only history stops being the truth.
@@ -1147,7 +1143,7 @@ A rule with **zero** steps is a normal state, not an error: `next-step`
 answers 200 with `reason = "NO_POLICY"`, `action = null` is a 409
 (`"Rule has no escalation policy"`), and an explicit action still works.
 `reason == "CLAMPED"` and `is_saturated` disagree at exactly the last rung,
-where the step *is* the suggestion but nothing was truncated.
+where the step _is_ the suggestion but nothing was truncated.
 
 **The condominium fee is an explicit parameter**, because there is none to
 read: this codebase has no per-lot billing anywhere. A `MULTIPLE` fine
@@ -1162,22 +1158,22 @@ rewrites history.
 **Recommended permission bundle.** Nothing is seeded (the post-F5 doctrine), so
 these are the grants an operator makes, not rows any migration writes:
 
-| Permission | ADMINISTRATOR | DIRECTOR | MANAGER | RESIDENT | PORTEIRO | GUEST |
-|---|:-:|:-:|:-:|:-:|:-:|:-:|
-| `infractions:read` | ✓ | ✓ | ✓ | | | |
-| `infractions:create` | ✓ | ✓ | ✓ | | | |
-| `infractions:advance` | ✓ | ✓ | ✓ | | | |
-| `infractions:promote` | ✓ | ✓ | ✓ | | | |
-| `infractions:cycle_close` | ✓ | ✓ | ✓ | | | |
-| `infractions:contest` | ✓ | ✓ | ✓ | ✓ | | |
-| `infractions:my_lots_read` | ✓ | ✓ | ✓ | ✓ | | |
-| `infractions:rule_read` | ✓ | ✓ | ✓ | | | |
-| `infractions:rule_create` | ✓ | ✓ | | | | |
-| `infractions:rule_update` | ✓ | ✓ | | | | |
-| `infractions:rule_deactivate` | ✓ | ✓ | | | | |
-| `infractions:policy_update` | ✓ | ✓ | | | | |
-| `infractions:settings_update` | ✓ | ✓ | | | | |
-| `uploads:photo_create` | ✓ | ✓ | ✓ | ✓ | | |
+| Permission                    | ADMINISTRATOR | DIRECTOR | MANAGER | RESIDENT | PORTEIRO | GUEST |
+| ----------------------------- | :-----------: | :------: | :-----: | :------: | :------: | :---: |
+| `infractions:read`            |       ✓       |    ✓     |    ✓    |          |          |       |
+| `infractions:create`          |       ✓       |    ✓     |    ✓    |          |          |       |
+| `infractions:advance`         |       ✓       |    ✓     |    ✓    |          |          |       |
+| `infractions:promote`         |       ✓       |    ✓     |    ✓    |          |          |       |
+| `infractions:cycle_close`     |       ✓       |    ✓     |    ✓    |          |          |       |
+| `infractions:contest`         |       ✓       |    ✓     |    ✓    |    ✓     |          |       |
+| `infractions:my_lots_read`    |       ✓       |    ✓     |    ✓    |    ✓     |          |       |
+| `infractions:rule_read`       |       ✓       |    ✓     |    ✓    |          |          |       |
+| `infractions:rule_create`     |       ✓       |    ✓     |         |          |          |       |
+| `infractions:rule_update`     |       ✓       |    ✓     |         |          |          |       |
+| `infractions:rule_deactivate` |       ✓       |    ✓     |         |          |          |       |
+| `infractions:policy_update`   |       ✓       |    ✓     |         |          |          |       |
+| `infractions:settings_update` |       ✓       |    ✓     |         |          |          |       |
+| `uploads:photo_create`        |       ✓       |    ✓     |    ✓    |    ✓     |          |       |
 
 `uploads:photo_create` is not an `infractions` permission, but it belongs in
 this bundle because since APRAS-51 `POST /api/v1/uploads/photo` demands it: a
@@ -1206,7 +1202,7 @@ refuses nobody, so a staff member with no linked lot gets `[]` — which is why
 still the only member. `rule_deactivate`, not `rule_delete`: `DELETE
 /api/v1/infraction-rules/{id}` soft-deactivates, because infractions reference
 rules and the lot's history has to stay whole and navigable. A deactivated
-rule refuses to start a *new* infraction (422) while every existing process
+rule refuses to start a _new_ infraction (422) while every existing process
 still advances along its very same ladder.
 
 ### Relatório de obras
@@ -1225,7 +1221,7 @@ Four decisions carry it:
 
 1. **Three scoping mechanisms, one per entity.** `ConstructionProject` carries
    its own `tenant_id` and is narrowed by the ambient `with_loader_criteria`.
-   `ProjectMilestone` and `ProjectUpdate` carry none — they are *inherited*
+   `ProjectMilestone` and `ProjectUpdate` carry none — they are _inherited_
    tables — so the renderer reaches them **only** through
    `project.milestones` / `project.updates`, and a test walks the module's AST
    to prove no `select()` over either exists. The acting tenant's own row is
@@ -1234,7 +1230,7 @@ Four decisions carry it:
    and never `select(Tenant).first()`, which would print another
    condominium's logo and name.
 2. **The save route's permission set is exactly `projects:read` +
-   `documents:create`**, and `documents:folder_create` is deliberately *not*
+   `documents:create`**, and `documents:folder_create` is deliberately _not_
    required. `document_service.create_folder` demands it, so going through it
    would answer 403 on a tenant's first save and 201 on the second — a
    state-dependent authorization answer and a button that fails exactly once.
@@ -1263,7 +1259,7 @@ baselines stay byte-identical.
 ### Cotações de compra
 
 `/api/v1/purchase-requests` is one request to buy something, the supplier
-quotes (*orçamentos*) collected against it, and the justified choice of one of
+quotes (_orçamentos_) collected against it, and the justified choice of one of
 them. APRAS-63 finished the screen at the point where somebody decides: the
 quotes are read as one comparison table with supplier columns and aligned
 `extra_fields` labels, the decision modal states what a non-lowest choice
@@ -1274,11 +1270,11 @@ document.
 (D1): `attachment_url` — the public `/static/uploads/…` URL
 `LocalStorageProvider.save_file` mints — and `attachment_filename`, the
 original name used as the link text so the reader sees `orcamento-acme.pdf`
-rather than a uuid. The on-disk path is *derived* from the URL and only when
+rather than a uuid. The on-disk path is _derived_ from the URL and only when
 it starts with `/static/uploads/`, exactly as APRAS-61 treats the tenant logo:
 an externally hosted or hand-written value is somebody else's file.
 
-* **`application/pdf`, `image/png`, `image/jpeg`, up to 5 MiB** (D2), the cap
+- **`application/pdf`, `image/png`, `image/jpeg`, up to 5 MiB** (D2), the cap
   imported from `media_service.MAX_FILE_SIZE` rather than re-typed. WebP is
   excluded because no supplier sends one, and `image/svg+xml` for the same
   active-content reason as APRAS-61 D2. Validation runs size → declared MIME →
@@ -1287,20 +1283,20 @@ an externally hosted or hand-written value is somebody else's file.
   refusal is a **422** (`QuoteAttachmentTooLargeError`,
   `QuoteAttachmentInvalidFormatError`) and writes neither a file nor a column;
   the media pipeline's 400-mapped `Photo*` pair is left alone.
-* **No new permission string** (D4). Both routes —
+- **No new permission string** (D4). Both routes —
   `PUT`/`DELETE /api/v1/purchase-requests/{request_id}/quotes/{quote_id}/attachment`
-  — carry `purchases:quote_update`, because uploading a supplier's PDF *is*
+  — carry `purchases:quote_update`, because uploading a supplier's PDF _is_
   editing that quote. Enforcement stays inside `PurchaseService`
   (`_assert_can_view` → `_assert_can_write_quote` → `_assert_quotes_unfrozen`),
   so a Manager may only touch quotes they registered. `PERMISSIONS` stays
   **175** and `ROUTE_PERMISSIONS` goes 206 → **208**, with the 12 new cells in
   the additive `backend/tests/data/parity_matrix_baseline_63.json`.
-* **Frozen means frozen** (D5). A request whose status is not `OPEN` answers
+- **Frozen means frozen** (D5). A request whose status is not `OPEN` answers
   the existing `PurchaseQuoteFrozenError` (**409**) on both the upload and the
   removal, and the already-stored file stays readable forever — which is the
   whole point of the accountability trail. A decision therefore never deletes
   a file.
-* **Deleting deletes the bytes** (D6). `delete_quote` removes the quote's file
+- **Deleting deletes the bytes** (D6). `delete_quote` removes the quote's file
   before `session.delete`, `delete_request` removes every quote's file before
   deleting the request, and a replacement upload removes the previous one. All
   three are best-effort (`LocalStorageProvider.delete_file` already swallows)
@@ -1318,18 +1314,8 @@ All user-facing strings are externalised into JSON locale files (`en.json`, `pt.
 
 The backend issues HS256-signed JWTs on login. Tokens encode the user's UUID as the `sub` claim and include `iat` (issued at) and `exp` (expiration) claims. The system supports **key rotation** by accepting tokens signed with any key in the `SECRET_KEYS` list (tried in order). The "remember me" option extends token life from the default 30 minutes to 7 days.
 
-
-
-
-
-
-
-
-
-
-
-
 <!-- MERIDIAN_INSTRUCTIONS_START -->
+
 # Meridian Instructions
 
 > **AI Task Management**: If an AI agent needs to create, update, or read project tasks, it MUST go through the Meridian server first — the server owns the timestamps, so it is the only write path that keeps them consistent. Read the board with `GET http://localhost:3333/api/status?project=<absolute project path>` — this no longer carries `expected_results`. Read one task's `expected_results` with `GET http://localhost:3333/api/projects/tasks/<task id>?project=<absolute project path>`. Create with `POST http://localhost:3333/api/projects/tasks`, update with `PUT http://localhost:3333/api/projects/tasks/<task id>` (both writes take `projectPath` in the JSON body, and both accept `expected_results`). Only when the server is not running — the request fails to connect and `node cli.js start` is not an option — may an agent fall back to hand-editing `.meridian/tasks.jsonl` (and `.meridian/tasks/<task id>.json` for `expected_results`) directly, writing the detail file before the line and applying the timestamp rules below by hand.
@@ -1339,14 +1325,15 @@ The backend issues HS256-signed JWTs on login. Tokens encode the user's UUID as 
 > **Active Execution (`running`)**: boolean flag (`true`/`false`). Set to `true` when an agent starts actively working on a task, and set to `false` when finished or handed off.
 > **Dependencies (`blockedBy`)**: optional array of task IDs that must reach `done` before this task can proceed. A task with a non-empty `blockedBy` whose dependencies aren't all `done` yet should have status `blocked` — that dependency is sufficient justification on its own (e.g. `justification: "Blocked on <task-id>"`). When every task in `blockedBy` reaches `done`, move this task back to `backlog`.
 > **Allowed Statuses**: When assigning a status to a task, you MUST use EXACTLY one of the following lowercase strings. They carry no spaces and no slashes. DO NOT invent new statuses or use synonyms like 'pending', 'todo', 'completed', 'in progress' or 'qa/review'.
-  - `backlog`: Task is planned but not ready to be worked on yet.
-  - `spec_review`: Task needs specification or design review.
-  - `ready_todo`: Task is fully specified and ready to be picked up.
-  - `in_progress`: Task is currently being worked on by developer.
-  - `code_review`: Task code is being reviewed for architecture, security, and test quality.
-  - `qa_review`: Task is being verified independently by QA against expected results.
-  - `blocked`: Task cannot proceed due to external dependencies.
-  - `done`: Task is fully completed.
-  - `nope`: Task was cancelled or won't be done.
-> **Implementation Rule**: Before starting any implementation work, ask the user if they want to create a task for it in the Meridian system.
-<!-- MERIDIAN_INSTRUCTIONS_END -->
+
+- `backlog`: Task is planned but not ready to be worked on yet.
+- `spec_review`: Task needs specification or design review.
+- `ready_todo`: Task is fully specified and ready to be picked up.
+- `in_progress`: Task is currently being worked on by developer.
+- `code_review`: Task code is being reviewed for architecture, security, and test quality.
+- `qa_review`: Task is being verified independently by QA against expected results.
+- `blocked`: Task cannot proceed due to external dependencies.
+- `done`: Task is fully completed.
+- `nope`: Task was cancelled or won't be done.
+  > **Implementation Rule**: Before starting any implementation work, ask the user if they want to create a task for it in the Meridian system.
+  <!-- MERIDIAN_INSTRUCTIONS_END -->
