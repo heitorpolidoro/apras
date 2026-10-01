@@ -93,7 +93,7 @@ python-multipart==0.0.32
     # via backend
 qrcode==8.2
     # via backend
-ruff==0.16.5
+ruff==0.16.9
 slowapi==0.1.9
     # via backend
 sqlalchemy==2.0.49
