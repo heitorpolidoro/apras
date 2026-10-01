@@ -4,7 +4,6 @@ import uuid
 import pytest
 from fastapi import status
 from fastapi.dependencies.models import Dependant
-from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 from PIL import Image
 from sqlmodel import Session
@@ -12,12 +11,12 @@ from sqlmodel import Session
 from app.api import deps
 from app.core.permissions import ROUTE_PERMISSIONS
 from app.core.security import create_access_token, get_password_hash
-from app.main import app
 from app.models.enums import EntityType
 from app.models.user import User
 from app.services import media_service as media_service_module
 from app.services.storage_service import LocalStorageProvider
 from tests.conftest import make_user
+from tests.route_introspection import RouteView, api_routes
 
 
 def create_test_image_bytes(
@@ -232,14 +231,10 @@ def _permission_guards(dependant: Dependant) -> list[deps.PermissionRequired]:
     return found
 
 
-def _upload_photo_route() -> APIRoute:
+def _upload_photo_route() -> RouteView:
     """The live `POST /api/v1/uploads/photo`, read off `app.main.app`."""
-    for route in app.routes:
-        if (
-            isinstance(route, APIRoute)
-            and route.path == "/api/v1/uploads/photo"
-            and "POST" in route.methods
-        ):
+    for route in api_routes():
+        if route.path == "/api/v1/uploads/photo" and "POST" in route.methods:
             return route
     pytest.fail(
         "POST /api/v1/uploads/photo is not mounted on app.main.app. "

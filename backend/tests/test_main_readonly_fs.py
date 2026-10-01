@@ -33,15 +33,21 @@ def _import_app_main_from(cwd: Path) -> subprocess.CompletedProcess[str]:
     env = {**os.environ, "PYTHONPATH": str(BACKEND_ROOT)}
     env.setdefault("SECRET_KEY", "test-secret")
     env.setdefault("POSTGRES_URL", "postgresql://apras:apras@127.0.0.1:1/never")
+    # The child reads the mount names through `tests.route_introspection`, the
+    # suite's one route traversal, rather than walking `m.app.routes` itself:
+    # fastapi 0.141 stopped flattening `include_router`, and although the two
+    # `Mount`s this case cares about are still top-level nodes there, nothing
+    # about that is guaranteed. Importing the helper still imports `app.main`,
+    # which is the thing under test, so the probe is unweakened.
     return subprocess.run(
         [
             sys.executable,
             "-c",
             (
                 "import app.main as m; "
-                "print(','.join(sorted(n for n in ("
-                "getattr(r, 'name', None) for r in m.app.routes"
-                ") if n in ('uploads', 'generated'))) or 'unmounted')"
+                "from tests.route_introspection import route_names; "
+                "print(','.join(sorted(n for n in route_names() "
+                "if n in ('uploads', 'generated'))) or 'unmounted')"
             ),
         ],
         cwd=cwd,

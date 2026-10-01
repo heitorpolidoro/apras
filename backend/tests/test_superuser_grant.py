@@ -23,10 +23,10 @@ from sqlmodel import Session
 from app.api import deps
 from app.core.permissions import ROUTE_PERMISSIONS, UNGUARDED_ROUTES
 from app.core.security import create_access_token, get_password_hash
-from app.main import app
 from app.models.tenant import DEFAULT_TENANT_ID, UserTenantLink
 from app.models.user import User
 from tests.conftest import make_user
+from tests.route_introspection import api_routes
 from tests.test_tenant_route_scope import GLOBAL_ROUTES
 
 SUPERUSER_ROUTE = ("PATCH", "/api/v1/users/{user_id}/superuser")
@@ -301,9 +301,8 @@ def test_the_route_is_unguarded_by_permission_and_superuser_guarded():
 
     route = next(
         r
-        for r in app.routes
-        if getattr(r, "path", None) == SUPERUSER_ROUTE[1]
-        and SUPERUSER_ROUTE[0] in getattr(r, "methods", set())
+        for r in api_routes()
+        if r.path == SUPERUSER_ROUTE[1] and SUPERUSER_ROUTE[0] in r.methods
     )
 
     def _depends_on(dependant, target) -> bool:
@@ -337,9 +336,8 @@ def test_the_superuser_route_is_tenant_scoped_like_the_rest_of_the_users_router(
 
     route = next(
         r
-        for r in app.routes
-        if getattr(r, "path", None) == SUPERUSER_ROUTE[1]
-        and SUPERUSER_ROUTE[0] in getattr(r, "methods", set())
+        for r in api_routes()
+        if r.path == SUPERUSER_ROUTE[1] and SUPERUSER_ROUTE[0] in r.methods
     )
 
     def _depends_on(dependant, target) -> bool:

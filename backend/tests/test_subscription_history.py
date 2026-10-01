@@ -16,13 +16,12 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 import pytest
-from fastapi.routing import APIRoute
 
 from app.core.permissions import ROUTE_PERMISSIONS, TOGGLEABLE_MODULES, UNGUARDED_ROUTES
-from app.main import app
 from app.models.subscription import SubscriptionChange
 from app.models.tenant import Tenant
 from app.services.subscription_service import SubscriptionService
+from tests.route_introspection import api_routes
 from tests.subscription_helpers import (
     TENANT_A,
     auth,
@@ -207,12 +206,7 @@ def test_a_tenant_only_sees_its_own_history(
 def test_the_history_is_never_updated_or_deleted():
     """No route mutates a `subscription_change` row, and no service function
     assigns to an attribute of one or passes one to `session.delete`."""
-    live = {
-        (method, route.path)
-        for route in app.routes
-        if isinstance(route, APIRoute)
-        for method in route.methods
-    }
+    live = {(method, route.path) for route in api_routes() for method in route.methods}
     assert not [
         key
         for key in live

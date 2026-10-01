@@ -51,11 +51,11 @@ import ast
 import pathlib
 
 from fastapi.dependencies.models import Dependant
-from fastapi.routing import APIRoute
 
 from app.api import deps
 from app.core.permissions import ROUTE_PERMISSIONS
-from app.main import app
+from tests.route_introspection import RouteView
+from tests.route_introspection import api_routes as _api_routes
 from tests.test_permission_alignment import APRAS_51_ROUTES
 
 APP_ROOT = pathlib.Path(deps.__file__).resolve().parent.parent
@@ -299,11 +299,7 @@ def walk_role_reads() -> tuple[dict[str, int], dict[str, int]]:
     return _walk_role_reads_over(_in_scope())
 
 
-def _api_routes() -> list[APIRoute]:
-    return [route for route in app.routes if isinstance(route, APIRoute)]
-
-
-def _route_keys(route: APIRoute) -> list[tuple[str, str]]:
+def _route_keys(route: RouteView) -> list[tuple[str, str]]:
     return [
         (method, route.path) for method in sorted(route.methods - {"HEAD", "OPTIONS"})
     ]

@@ -51,7 +51,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
-from fastapi.routing import APIRoute
 from sqlmodel import Session, select
 
 from app.api import deps
@@ -78,6 +77,8 @@ from tests.matrix_world import (
     run_cell,
     seed_once,
 )
+from tests.route_introspection import RouteView
+from tests.route_introspection import api_routes as _api_routes
 
 if TYPE_CHECKING:  # pragma: no cover
     from fastapi.dependencies.models import Dependant
@@ -389,11 +390,7 @@ FLAG_HOLDER_SECOND_GATE: dict[tuple[str, str], tuple[int, str]] = {
 # ---------------------------------------------------------------------------
 
 
-def _api_routes() -> list[APIRoute]:
-    return [route for route in app.routes if isinstance(route, APIRoute)]
-
-
-def _route_keys(route: APIRoute) -> list[tuple[str, str]]:
+def _route_keys(route: RouteView) -> list[tuple[str, str]]:
     return [
         (method, route.path) for method in sorted(route.methods - {"HEAD", "OPTIONS"})
     ]

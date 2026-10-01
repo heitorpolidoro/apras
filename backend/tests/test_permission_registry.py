@@ -15,8 +15,6 @@ schemas now carry `permissions` (§9.1).
 
 import re
 
-from fastapi.routing import APIRoute
-
 from app.core.permissions import (
     ADMIN_GAP_PERMISSIONS,
     PERMISSIONS,
@@ -27,8 +25,9 @@ from app.core.permissions import (
     module_of,
     permission_for_route,
 )
-from app.main import app
 from app.schemas.role import RoleCreate, RoleRead, RoleUpdate
+from tests.route_introspection import RouteView
+from tests.route_introspection import api_routes as _api_routes
 
 #: §3 — `<module>:<action>`, exactly one colon, snake_case on both sides.
 PERMISSION_RE = re.compile(r"^[a-z][a-z0-9_]*:[a-z][a-z0-9_]*$")
@@ -53,11 +52,7 @@ FULLY_UNGUARDED_TAGS = frozenset(
 )
 
 
-def _api_routes() -> list[APIRoute]:
-    return [route for route in app.routes if isinstance(route, APIRoute)]
-
-
-def _route_keys(route: APIRoute) -> list[tuple[str, str]]:
+def _route_keys(route: RouteView) -> list[tuple[str, str]]:
     """Every (METHOD, path) key of a route, ignoring the automatic verbs."""
     return [
         (method, route.path) for method in sorted(route.methods - {"HEAD", "OPTIONS"})
@@ -68,7 +63,7 @@ def _all_route_keys() -> set[tuple[str, str]]:
     return {key for route in _api_routes() for key in _route_keys(route)}
 
 
-def _tag_of(route: APIRoute) -> str:
+def _tag_of(route: RouteView) -> str:
     return route.tags[0] if route.tags else "<root>"
 
 

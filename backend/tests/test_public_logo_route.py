@@ -47,6 +47,7 @@ from app.services.storage_service import (
     VercelBlobStorageProvider,
 )
 from app.services.tenant_service import TenantService
+from tests.route_introspection import route_paths
 
 #: The route, spelled exactly as FastAPI mounts it.
 ROUTE = ("GET", "/api/v1/public/tenants/{slug}/logo")
@@ -392,6 +393,6 @@ def test_the_route_is_unguarded_and_maps_to_no_permission():
 def test_the_builders_prefix_is_the_one_the_application_mounts():
     """``app/core/urls.py`` restates ``/api/v1`` rather than importing
     ``app.main``; the two are pinned against each other here."""
-    live = {route.path for route in app.routes if hasattr(route, "path")}
+    live = route_paths()
 
     assert f"{urls.API_V1_PREFIX}{urls.PUBLIC_PREFIX}/tenants/{{slug}}/logo" in live
