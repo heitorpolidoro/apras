@@ -68,9 +68,34 @@ export interface ProjectUpdate {
   created_at: string;
 }
 
+/**
+ * One point of the contractor's planned physical-progress curve (APRAS-102).
+ *
+ * The shape the `planned_progress_json` column stores: `month` is a plain
+ * `"YYYY-MM"` string with no offset and no instant in it, and `pct` is the
+ * planned physical progress by the end of that month.
+ */
+export interface PlannedProgressPoint {
+  month: string;
+  pct: number;
+}
+
 export interface ProjectDetail extends ConstructionProject {
   milestones: ProjectMilestone[];
   updates: ProjectUpdate[];
+  /**
+   * The planned-progress curve, on the **detail** payload only (APRAS-102).
+   *
+   * Deliberately absent from `ConstructionProject`: `GET /api/v1/projects`
+   * items carry no such key, because a list of fifty obras must not ship
+   * fifty schedules. `null` means the contractor gave no schedule, and the
+   * planned-vs-actual bar then draws its realized segment alone.
+   *
+   * Typed `unknown`-tolerant at the consumer rather than here: the column is
+   * SQL/seed-written and may hold a malformed payload, which
+   * `plannedProgress` is the single place that judges.
+   */
+  planned_progress_json?: PlannedProgressPoint[] | null;
 }
 
 export interface PaginatedProjects {

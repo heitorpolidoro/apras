@@ -191,8 +191,16 @@ class ProjectService:
                 )
             }
         )
+        # `planned_progress_json` is filled here for the same reason, and the
+        # reason is structural rather than incidental (APRAS-102): the field is
+        # declared on `ProjectDetailRead` and `base_read` above is a
+        # `ProjectRead`, so `model_dump()` cannot carry it. Left to the default
+        # it would answer `null` from this route forever, for every obra, and
+        # the internal tracker's planned-vs-actual bar would silently draw its
+        # no-curve branch.
         return ProjectDetailRead(
             **base_read.model_dump(),
+            planned_progress_json=project.planned_progress_json,
             milestones=milestone_reads,
             updates=update_reads,
         )

@@ -821,6 +821,27 @@
       "overBudget": "Orçamento Estourado",
       "executionPct": "Executado"
     },
+    "cylinder": {
+      "title": "Orçamento da obra",
+      "total": "orçamento previsto",
+      "executed": "executado",
+      "balance": "saldo",
+      "executedPct": "% executado",
+      "remaining": "Saldo restante",
+      "remainingNote": "{{amount}} ainda disponíveis do orçamento previsto.",
+      "ariaLabel": "Saldo restante {{percent}}"
+    },
+    "plannedBar": {
+      "title": "Avanço físico · previsto até hoje × realizado",
+      "planned": "previsto",
+      "realized": "realizado",
+      "behind": "abaixo do previsto",
+      "start": "Início",
+      "finish": "Conclusão",
+      "ariaLabel": "Avanço físico: previsto {{planned}}, realizado {{realized}}",
+      "ariaLabelBehind": "Avanço físico: previsto {{planned}}, realizado {{realized}}, abaixo do previsto",
+      "ariaLabelNoCurve": "Avanço físico: sem curva prevista, realizado {{realized}}"
+    },
     "milestones": {
       "title": "Marcos e Etapas da Obra",
       "add": "Novo Marco",

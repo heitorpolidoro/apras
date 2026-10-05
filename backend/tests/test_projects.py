@@ -1103,3 +1103,117 @@ def test_undecodable_bytes_are_refused_even_with_an_accepted_mime_type(
     assert session.get(ConstructionProject, project.id).cover_photo_url == original
     assert original_file.exists()
     assert _stored_files(cover_storage) == [original_file]
+
+
+# -----------------------------------------------------------------------------
+# `planned_progress_json` on the detail payload (APRAS-102)
+#
+# The internal construction tracker draws the report's planned-vs-actual bar,
+# and the contractor's curve is the one input the API did not return. It is
+# exposed on the **detail** payload only and stays unwritable: the column is
+# SQL/seed-written, as `models/project.py` records.
+# -----------------------------------------------------------------------------
+
+APRAS_102_CURVE = [
+    {"month": "2020-01", "pct": 10.0},
+    {"month": "2020-02", "pct": 31.5},
+    {"month": "2020-03", "pct": 64.0},
+]
+
+
+def test_project_detail_returns_the_stored_planned_curve(
+    client: TestClient, admin_token: str, session: Session
+):
+    """The detail route answers the stored curve, verbatim.
+
+    `get_project_detail` builds its payload as
+    `ProjectDetailRead(**base_read.model_dump(), ...)`, so a field declared on
+    the schema but not passed answers `null` forever -- the trap the
+    `cover_photo_display_url` comment in that method already records. This case
+    is what makes the explicit pass load-bearing.
+    """
+    project = ConstructionProject(
+        title="Fachada", planned_progress_json=APRAS_102_CURVE
+    )
+    session.add(project)
+    session.commit()
+    session.refresh(project)
+
+    resp = client.get(
+        f"/api/v1/projects/{project.id}", headers=_auth_headers(admin_token)
+    )
+
+    assert resp.status_code == status.HTTP_200_OK
+    assert resp.json()["planned_progress_json"] == APRAS_102_CURVE
+
+
+def test_project_detail_returns_null_for_a_project_without_a_curve(
+    client: TestClient, admin_token: str, session: Session
+):
+    project = ConstructionProject(title="Sem cronograma")
+    session.add(project)
+    session.commit()
+    session.refresh(project)
+
+    resp = client.get(
+        f"/api/v1/projects/{project.id}", headers=_auth_headers(admin_token)
+    )
+
+    assert resp.status_code == status.HTTP_200_OK
+    assert "planned_progress_json" in resp.json()
+    assert resp.json()["planned_progress_json"] is None
+
+
+def test_project_list_items_carry_no_planned_curve(
+    client: TestClient, admin_token: str, session: Session
+):
+    """The list route must not start shipping a curve per row.
+
+    The field is declared on `ProjectDetailRead` only, not on `ProjectRead`, so
+    a list of fifty obras does not carry fifty schedules.
+    """
+    project = ConstructionProject(
+        title="Fachada", planned_progress_json=APRAS_102_CURVE
+    )
+    session.add(project)
+    session.commit()
+
+    resp = client.get("/api/v1/projects", headers=_auth_headers(admin_token))
+
+    assert resp.status_code == status.HTTP_200_OK
+    items = resp.json()["items"]
+    assert len(items) == 1
+    assert "planned_progress_json" not in items[0]
+
+
+def test_put_ignores_a_planned_curve_body_and_leaves_the_column_unchanged(
+    client: TestClient, admin_token: str, session: Session
+):
+    """`200`, not `422`: the unknown key is ignored, not rejected.
+
+    A `422` would mean the write schema had grown the field. The re-read is the
+    other half of the claim -- the stored curve is still the seeded one.
+    """
+    project = ConstructionProject(
+        title="Fachada", planned_progress_json=APRAS_102_CURVE
+    )
+    session.add(project)
+    session.commit()
+    session.refresh(project)
+    project_id = project.id
+
+    resp = client.put(
+        f"/api/v1/projects/{project_id}",
+        headers=_auth_headers(admin_token),
+        json={"planned_progress_json": [{"month": "2099-01", "pct": 100.0}]},
+    )
+
+    assert resp.status_code == status.HTTP_200_OK
+    session.expire_all()
+    stored = session.get(ConstructionProject, project_id)
+    assert stored is not None
+    assert stored.planned_progress_json == APRAS_102_CURVE
+    reread = client.get(
+        f"/api/v1/projects/{project_id}", headers=_auth_headers(admin_token)
+    )
+    assert reread.json()["planned_progress_json"] == APRAS_102_CURVE

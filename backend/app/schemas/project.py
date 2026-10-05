@@ -3,6 +3,7 @@
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Any
 
 from pydantic import ConfigDict, Field
 
@@ -151,6 +152,20 @@ class ProjectDetailRead(ProjectRead):
 
     milestones: list[MilestoneRead] = Field(default_factory=list)
     updates: list[ProjectUpdateRead] = Field(default_factory=list)
+
+    #: The contractor's planned physical-progress curve (APRAS-102).
+    #:
+    #: Declared **here and not on `ProjectBase`/`ProjectRead`**, for two
+    #: reasons. Read: a list of fifty obras must not start carrying fifty
+    #: schedules, so the curve belongs to the detail payload only. Write: the
+    #: column is SQL/seed-written (`models/project.py` says so), so neither
+    #: `ProjectCreate` nor `ProjectUpdateSchema` may grow the field -- a `PUT`
+    #: carrying it is an unknown key, ignored rather than rejected.
+    #:
+    #: `get_project_detail` must pass it **explicitly**: that method builds its
+    #: payload as `ProjectDetailRead(**base_read.model_dump(), ...)`, and
+    #: `base_read` is a `ProjectRead`, which does not have the field.
+    planned_progress_json: list[dict[str, Any]] | None = None
 
 
 class PaginatedProjects(ApiModel):

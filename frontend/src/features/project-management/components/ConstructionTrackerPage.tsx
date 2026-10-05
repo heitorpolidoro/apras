@@ -21,7 +21,10 @@ import {
   saveProjectsReport,
 } from '../../../api/projects';
 import { ProjectSummaryCard } from './ProjectSummaryCard';
-import { BudgetVsActualProgressBar } from './BudgetVsActualProgressBar';
+// APRAS-102: the public report's two figures, replacing the financial
+// execution bar that stated the same money less well.
+import { ProjectBudgetCylinder } from './ProjectBudgetCylinder';
+import { PhysicalProgressPlannedVsActualBar } from './PhysicalProgressPlannedVsActualBar';
 import { MilestoneTimeline } from './MilestoneTimeline';
 import { ProjectUpdateFeed } from './ProjectUpdateFeed';
 import { ProjectFormModal, type CoverPhotoIntent } from './ProjectFormModal';
@@ -413,10 +416,20 @@ export const ConstructionTrackerPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Financial Bar */}
-          <BudgetVsActualProgressBar
+          {/* The report's balance cylinder (APRAS-102). It replaces the former
+              financial execution bar: both showed the same money, and the
+              budget is now stated once on this screen. */}
+          <ProjectBudgetCylinder
             totalBudget={selectedProjectDetail.total_budget}
             executedBudget={selectedProjectDetail.executed_budget}
+          />
+
+          {/* The report's planned-vs-actual physical-progress bar (APRAS-102).
+              The gauge above shows the measurement; this shows it against the
+              contractor's own schedule, which is what makes it readable. */}
+          <PhysicalProgressPlannedVsActualBar
+            physicalProgressPct={selectedProjectDetail.physical_progress_pct}
+            plannedProgressJson={selectedProjectDetail.planned_progress_json}
           />
 
           {/* Milestones Workflow Board */}

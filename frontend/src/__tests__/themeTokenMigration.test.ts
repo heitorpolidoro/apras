@@ -1639,13 +1639,18 @@ describe("APRAS-81's ledger arithmetic", () => {
     // and carries **no** palette class and no brand token, so every count
     // below is unchanged -- this literal is the file census, not a migration
     // figure, and it moves when a directory gains a file.
+    //
+    // Twelve since APRAS-102, which added `ProjectBudgetCylinder.tsx` and
+    // `PhysicalProgressPlannedVsActualBar.tsx` to the same directory. Both are
+    // written in semantic tokens only and carry no palette class and no brand
+    // text token, so this census is the only count either of them moves.
     expect(
       PINNED.filter((file) => file.file.startsWith(PROJECTS)),
-    ).toHaveLength(10);
+    ).toHaveLength(12);
     expect(PINNED.filter((file) => file.file.startsWith(ASSETS))).toHaveLength(
       6,
     );
-    expect(files).toHaveLength(16);
+    expect(files).toHaveLength(18);
   });
 
   it("logs 276 occurrences under seven codes", () => {
@@ -1797,19 +1802,25 @@ describe("APRAS-81's ledger arithmetic", () => {
       // Save with a duplicate `POST /projects`). The three sets themselves are
       // untouched -- same file, same classes -- only the pinned line numbers
       // moved.
+      //
+      // +3 more since APRAS-102: the two report figures were imported at the
+      // top of the file, with the comment stating why they replace the former
+      // financial execution bar, and the import they replaced was one line.
+      // Bookkeeping only -- the three sets are still the same classes in the
+      // same file, three lines further down.
       [
         "ConstructionTrackerPage.tsx",
-        313,
+        316,
         ["border-emerald-200", "bg-emerald-50", "text-emerald-800"],
       ],
       [
         "ConstructionTrackerPage.tsx",
-        314,
+        317,
         ["border-red-200", "bg-red-50", "text-red-800"],
       ],
       [
         "ConstructionTrackerPage.tsx",
-        359,
+        362,
         [
           "text-red-600",
           "border-red-200",
@@ -2055,7 +2066,8 @@ describe("APRAS-81's ledger arithmetic", () => {
       "min-h-screen bg-background",
     );
     for (const absent of ["bg-slate-50", "bg-muted", "dark:bg-slate-950"]) {
-      expect(matchesOn("ConstructionTrackerPage.tsx", 240)).not.toContain(
+      // 243 since APRAS-102: three import lines above it, same root element.
+      expect(matchesOn("ConstructionTrackerPage.tsx", 243)).not.toContain(
         absent,
       );
     }

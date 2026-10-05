@@ -821,6 +821,27 @@
       "overBudget": "Budget Overrun",
       "executionPct": "Executed"
     },
+    "cylinder": {
+      "title": "Project budget",
+      "total": "planned budget",
+      "executed": "executed",
+      "balance": "balance",
+      "executedPct": "% executed",
+      "remaining": "Remaining balance",
+      "remainingNote": "{{amount}} still available from the planned budget.",
+      "ariaLabel": "Remaining balance {{percent}}"
+    },
+    "plannedBar": {
+      "title": "Physical progress · planned to date × actual",
+      "planned": "planned",
+      "realized": "actual",
+      "behind": "below plan",
+      "start": "Start",
+      "finish": "Completion",
+      "ariaLabel": "Physical progress: planned {{planned}}, actual {{realized}}",
+      "ariaLabelBehind": "Physical progress: planned {{planned}}, actual {{realized}}, below plan",
+      "ariaLabelNoCurve": "Physical progress: no planned curve, actual {{realized}}"
+    },
     "milestones": {
       "title": "Project Milestones",
       "add": "New Milestone",
