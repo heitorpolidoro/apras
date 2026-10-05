@@ -24,12 +24,22 @@ jobs:
     # timeout all along.
     #
     # It is the *last* backstop, not the first one, and deliberately so: a job
-    # this cancels publishes **no logs at all**, which is why the two recorded
-    # hangs (jobs 109644454563 and 109661776896, on a commit whose backend
-    # tree was byte-identical to one that had just passed in 10m57s) could not
-    # be diagnosed from CI. The `timeout` wrapper on the pytest step below,
-    # and `pytest-timeout` inside pytest, are what turn the next hang into a
-    # failing step with a readable log.
+    # this cancels usually publishes **no logs at all**, which is why 11 of the
+    # 15 occurrences APRAS-119's census found could not be diagnosed from CI.
+    #
+    # The `timeout` wrapper on the pytest step below turns *some* hangs into a
+    # failing step with a readable log, and it is important not to overstate
+    # which: it worked on job 110381880180 (step failed at 30m08s, exit code
+    # 124, log published) and it did **not** work on jobs 110014916546 and
+    # 110405490008, where output stopped at the 30m mark and the step then
+    # never completed at all -- the job sat until this `timeout-minutes`
+    # cancelled it. See `docs/tasks/APRAS-119-findings.md`.
+    #
+    # Note what the job span means here. GitHub adds a fixed grace window after
+    # a `timeout-minutes` cancellation, so a job cancelled at 45m records a
+    # ~55m span. That is platform behaviour, not this backstop overshooting:
+    # every one of those jobs carries the annotation "The job has exceeded the
+    # maximum execution time of 45m0s".
     timeout-minutes: 45
     env:
       SECRET_KEY: "test-secret-key-for-ci"
@@ -66,6 +76,15 @@ jobs:
     # short enough that a hang costs a third of what it used to. `--signal=INT`
     # first so pytest can still print its own summary and coverage report, and
     # SIGKILL 60s later for a process too wedged to answer.
+    #
+    # `timeout` signals its direct child, and that child is `uv`, not pytest.
+    # Probed on darwin (APRAS-119 §4a), `uv` does forward SIGINT and the pytest
+    # grandchild dies, so the wrapper is not left signalling into a void -- but
+    # that probe does not settle the ubuntu runner, where job 109628456192's log
+    # ends with `Terminate orphan process: pid (2355) (uv)` and
+    # `pid (2359) (pytest)`. The backstop that cannot be defeated this way is
+    # `tests/conftest.py`'s `faulthandler` shutdown watchdog, which acts from
+    # inside the pytest process.
     - name: Run tests with coverage
       run: |
         cd backend
@@ -179,6 +198,12 @@ jobs:
   backend-lint:
     name: Backend Lint (ruff)
     runs-on: ubuntu-latest
+    # Without this the job inherits GitHub's six-hour default, and a wedged
+    # `uv sync` would hold a runner for a quarter of a day over a job whose
+    # steady state is ten seconds. Measured over the 41 successful `ci.yml`
+    # runs since 2026-08-01: median 0.17m, p90 0.28m, worst 1.85m. 10m is 5x
+    # the worst observed, so only a genuine wedge reaches it.
+    timeout-minutes: 10
 
     steps:
     - name: Checkout code
@@ -217,7 +242,11 @@ jobs:
   frontend:
     name: Frontend Tests
     runs-on: ubuntu-latest
-    
+    # Same reason as `backend-lint`, against this job's own steady state:
+    # median 2.55m, p90 2.80m, worst 3.37m over the same 41 runs. 15m is 4.5x
+    # the worst observed and leaves room for `npm ci` on a cold cache.
+    timeout-minutes: 15
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v6
@@ -254,6 +283,11 @@ jobs:
     name: SonarCloud Scan
     needs: [backend, frontend]
     runs-on: ubuntu-latest
+    # Same reason again: median 1.17m, p90 2.03m, worst 2.32m over the same 41
+    # runs. 15m rather than 10m because this is the one job that waits on a
+    # third party -- the scanner uploads to SonarCloud and retries -- so its
+    # tail is not governed by this repository.
+    timeout-minutes: 15
     steps:
     - name: Checkout code
       uses: actions/checkout@v6

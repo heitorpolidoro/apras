@@ -616,6 +616,20 @@ def test_a_null_logo_url_renders_the_no_logo_masthead(
         ("logo.bin", PNG_BYTES),
         ("logo.png", b"x" * (TenantService.LOGO_MAX_FILE_SIZE + 1)),
     ],
+    # `ids=` is load-bearing here, not cosmetic, and APRAS-119 is why. Without
+    # it pytest builds the case's node id out of the parameters themselves, so
+    # the third case's id carried the whole 2 MiB payload: 2,097,259 characters
+    # on one line. Any output that names the case then emits that line -- a
+    # warnings-summary entry, a failure header, `-v` -- and on the GitHub
+    # Actions runner a single 2 MiB line took ~68.8 minutes to get through the
+    # log pipeline (measured on job 108767062588, five consecutive gaps of
+    # 68.76-68.80 min). That is the "hangs after the tests have already passed"
+    # signature: tests green in 17m26s, then the warnings summary, then 365
+    # minutes of runner time for three lines.
+    #
+    # `tests/test_suite_hygiene.py::test_no_collected_node_id_can_carry_a_payload`
+    # is what keeps the next one from being written.
+    ids=["an-svgs-active-content", "an-untyped-suffix", "past-the-size-ceiling"],
 )
 def test_a_logo_the_product_would_not_accept_is_never_served(
     session: Session, uploads: Path, name: str, payload: bytes

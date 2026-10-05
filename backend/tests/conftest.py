@@ -1,5 +1,8 @@
+import atexit
+import faulthandler
 import json
 import threading
+import time
 import uuid
 from pathlib import Path
 
@@ -81,6 +84,107 @@ PROFILE_ROLE_NAMES: dict[str, str] = {
     "RESIDENT": "Morador",
     "PORTEIRO": "Porteiro",
 }
+
+
+# ---------------------------------------------------------------------------
+# A stack for the one window nothing else could reach (APRAS-119 §6)
+# ---------------------------------------------------------------------------
+
+#: How long the process may spend between the end of the test loop and its own
+#: exit before every thread's stack is dumped and the process is killed.
+#:
+#: 150 s, and the number is measured rather than picked. The rule APRAS-119 §6
+#: fixes is: 120 s unless the *armed-window latency* -- the time from the
+#: arming point below to process exit -- exceeds 12 s, in which case the grace
+#: period becomes `10 x latency` rounded up to the next 30 s. A full local run
+#: under the CI invocation measured that latency at **12.95 s**, which is over
+#: the 12 s threshold, so the rule bites: 10 x 12.95 = 129.5 s, rounded up to
+#: the next multiple of 30 s = **150**. It is not 120.
+#:
+#: `[APRAS-119] armed-window latency:` below prints the figure on every run, so
+#: the next person re-measures it for free rather than trusting this comment.
+#: 150 s is ~8% of `ci.yml`'s 30-minute step budget and 11.6x the measured
+#: latency, and the CI runner is roughly 2x slower than the laptop -- so
+#: nothing healthy comes near it.
+SHUTDOWN_GRACE_SECONDS = 150
+
+
+def _report_armed_window_latency(armed_at: float) -> None:
+    """Print how long the armed window actually took, at interpreter exit.
+
+    Registered with `atexit` from the arming hook, so both readings come from
+    `time.monotonic()` inside the same process. That is the point: the two
+    numbers are on one clock, and nothing outside has to correlate a monotonic
+    reading with a wall clock whose epoch is unrelated (APRAS-119 §5).
+
+    `atexit` callbacks run after `pytest_unconfigure`, which is what makes this
+    the latest reading available from inside Python -- it still excludes the
+    very last of interpreter teardown, which no in-process hook can see.
+    """
+    print(
+        f"[APRAS-119] armed-window latency: "
+        f"{time.monotonic() - armed_at:.2f}s "
+        f"(grace period {SHUTDOWN_GRACE_SECONDS}s)"
+    )
+
+
+@pytest.hookimpl(wrapper=True, trylast=True)
+def pytest_runtestloop(session):
+    """Arm a `faulthandler` watchdog over everything that follows the last test.
+
+    The recorded hang is a process that runs its tests, passes them, and then
+    never exits -- and none of the other guards can produce a stack for it.
+    `pytest-timeout` caps *one test*, so it is already over when this window
+    opens; `ci.yml`'s `timeout` wrapper fails the *step* with whatever was
+    printed, which is not a stack and, on jobs 110014916546 and 110405490008,
+    did not even end the step. `faulthandler.dump_traceback_later(exit=True)`
+    acts from *inside* the process, so it is the only backstop that does not
+    depend on a signal reaching pytest through `uv`.
+
+    **Why `pytest_runtestloop` and why `trylast`.** `pytest-cov` writes
+    `coverage.xml` and evaluates `--cov-fail-under` inside its *own*
+    `pytest_runtestloop` wrapper, after the yield -- its source says why: "we
+    need to wrap pytest_runtestloop. by the time pytest_sessionfinish runs,
+    it's too late to set testsfailed". Arming at `pytest_sessionfinish` would
+    therefore leave the coverage write *outside* the window. pytest calls
+    later-registered hookimpls first, so a plain conftest wrapper would be the
+    outer one; `trylast=True` moves it last in the call order, i.e. innermost,
+    so its post-yield code runs *first* -- after the last test and before the
+    coverage write. The armed window is then exactly everything after the last
+    test: the `coverage.xml` write, `--cov-fail-under=90`, the terminal and
+    warnings summaries, `sessionfinish`, `unconfigure` and interpreter
+    shutdown.
+
+    **One known limit, recorded rather than hidden.** `faulthandler` resolves
+    `sys.stderr` to a file descriptor, and pytest's default capture is
+    fd-level, so a dump that fires *before* capture is torn down lands in the
+    capture buffer and dies with the process. A dump that fires at or after
+    interpreter shutdown -- the recorded signature, and the shape
+    `docs/tasks/APRAS-119-findings.md` demonstrates -- reaches the real stderr
+    and therefore the step log.
+
+    `wrapper=True` is new-style, so this must `return` the value it received
+    from `yield`: a new-style wrapper that falls off the end makes the hook
+    result `None`.
+    """
+    result = yield
+    armed_at = time.monotonic()
+    atexit.register(_report_armed_window_latency, armed_at)
+    faulthandler.dump_traceback_later(SHUTDOWN_GRACE_SECONDS, exit=True)
+    # Printed, not inferred: `docs/tasks/APRAS-119-findings.md` checks this
+    # epoch reading against `coverage.xml`'s mtime to show the coverage write
+    # really is inside the window.
+    message = (
+        f"[APRAS-119] shutdown watchdog armed at {time.time():.3f} epoch s, "
+        f"grace {SHUTDOWN_GRACE_SECONDS}s; "
+        f"coverage.xml present={Path('coverage.xml').exists()}"
+    )
+    reporter = session.config.pluginmanager.get_plugin("terminalreporter")
+    if reporter is None:  # pragma: no cover - `-p no:terminal`
+        print(message)
+    else:
+        reporter.write_line(message)
+    return result
 
 
 # ---------------------------------------------------------------------------

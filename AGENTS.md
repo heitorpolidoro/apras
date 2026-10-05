@@ -245,16 +245,27 @@ as the source of truth.
   `workflow_dispatch`, so any branch can be run manually with
   `gh workflow run ci.yml --ref <branch>`.
 - **A hung run must not be a silent one.** A job killed by GitHub's
-  `timeout-minutes` is **cancelled**, and GitHub publishes **no logs for a
-  cancelled job** — which is why `Backend Tests` being cancelled at 55m0s
-  twice in a row (on a commit whose backend tree was byte-identical to one
-  that had just passed in 10m57s) could not be diagnosed from CI at all.
-  `timeout-minutes` is therefore the _last_ backstop, and three guards sit in
+  `timeout-minutes` is **cancelled**, and a cancelled job _usually_ publishes
+  **no logs at all** — 11 of the 15 occurrences APRAS-119's census found
+  published none, which is why `Backend Tests` hanging after its tests had
+  already passed went undiagnosed for weeks. But the absolute is false and
+  worth not repeating: 4 of the 15 did publish, including the 8 MB log the root
+  cause was eventually read out of. Always check the logs API before concluding
+  there is nothing to read.
+  The cause is known and fixed (`docs/tasks/APRAS-119-findings.md`): a
+  `parametrize` without `ids=` built a 2 097 259-character node id out of a
+  2 MiB payload, and one line that long costs ~68.8 minutes in the runner's log
+  pipeline, so a green suite could sit for six hours printing three of them.
+  `timeout-minutes` is therefore the _last_ backstop, and four guards sit in
   front of it:
   1. **`timeout` wraps every backend `uv run pytest`** in `ci.yml`
      (`--signal=INT --kill-after=60s`, 30m for `backend` and 15m for
-     `backend-migrations`). It fails a **step**, and a failed step keeps its
-     log.
+     `backend-migrations`). It turns _some_ hangs into a failing step, which
+     keeps its log — do not state that unconditionally. `timeout` signals its
+     direct child, which is `uv` rather than pytest; it worked on job
+     110381880180 (step failed at 30m08s, exit 124) and did not work on jobs
+     110014916546 and 110405490008, where output stopped at the 30m mark and
+     the step then never completed at all.
   2. **`pytest-timeout` caps one test** — `pytest.ini`'s `timeout = 300` with
      `timeout_method = thread`. `thread`, never the default `signal`: SIGALRM
      reaches the main thread only, so it cannot interrupt a wait inside a
@@ -275,6 +286,19 @@ as the source of truth.
      database, and the per-test engine used not to be disposed, so ~4000 of them
      were closed whenever the garbage collector reached them (the
      `ResourceWarning: unclosed database` flood).
+  4. **A `faulthandler` shutdown watchdog acts from inside pytest**, where no
+     signal to `uv` can be swallowed. `conftest.py` arms
+     `faulthandler.dump_traceback_later(SHUTDOWN_GRACE_SECONDS, exit=True)`
+     after the test loop returns, so a wedge between the last test and
+     interpreter exit — the coverage write, the warnings summary, a non-joining
+     thread — becomes a bounded failing step instead of a cancellation hours
+     later. Known limit, written down in `conftest.py`: a dump firing before
+     pytest tears its fd-level capture down lands in the capture buffer and is
+     lost, so the _stack_ is only guaranteed for the shutdown shape; the
+     bounded-failure backstop works either way.
+     `test_suite_hygiene.py::test_no_collected_node_id_can_carry_a_payload`
+     guards the original cause directly, failing if any collected node id
+     exceeds 1024 characters.
 - **Migrate** — `migrate.yml` runs Alembic migrations on push to `master`.
 - **Release** — `release.yml` handles semantic versioning and releases.
 - **Static Analysis** — SonarCloud and DeepSource are integrated for code quality and security scanning.
