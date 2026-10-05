@@ -1,5 +1,4 @@
 import React from "react";
-import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import { usePermissionSet } from "../access/useCanAccess";
@@ -10,6 +9,7 @@ import { useRoles } from "../../../hooks/useRoles";
 import { cn } from "../../../lib/utils";
 import SimulationControls from "./SimulationControls";
 import Sidebar from "./Sidebar";
+import TenantHeaderLogo from "./TenantHeaderLogo";
 import { Menu } from "lucide-react";
 
 const LANGUAGES = [
@@ -80,16 +80,10 @@ const Navbar: React.FC = () => {
             <Menu className="size-5" />
           </button>
 
-          {/* Logo on mobile */}
-          <Link
-            to="/"
-            aria-label={t("common.appName")}
-            className="md:hidden flex items-center gap-2 hover:opacity-80 transition-opacity"
-          >
-            <div className="size-7 rounded-lg bg-primary/10 flex items-center justify-center">
-              <div className="size-3.5 rounded-full bg-primary" />
-            </div>
-          </Link>
+          {/* The acting condominium's logo, with today's generic mark as its
+              fallback. The whole slot, link included, lives in
+              `TenantHeaderLogo` (APRAS-110). */}
+          <TenantHeaderLogo />
         </div>
 
         <div className="flex items-center gap-3 sm:gap-5">

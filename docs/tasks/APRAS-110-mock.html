@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>APRAS-110 — Condominium logo in the header (mock)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+      :root {
+        --background: oklch(0.99 0.005 160);
+        --foreground: oklch(0.2 0.02 160);
+        --card: oklch(1 0 0);
+        --primary: oklch(0.62 0.15 160);
+        --primary-foreground: oklch(0.15 0.02 160);
+        --primary-text: oklch(0.52 0.11 160);
+        --muted: oklch(0.96 0.01 160);
+        --muted-foreground: oklch(0.53 0.02 160);
+        --border: oklch(0.92 0.01 160);
+      }
+      .dark {
+        --background: oklch(0.14 0.01 160);
+        --foreground: oklch(0.98 0.01 160);
+        --card: oklch(0.16 0.01 160);
+        --primary: oklch(0.65 0.15 160);
+        --primary-foreground: oklch(0.1 0.02 160);
+        --primary-text: oklch(0.65 0.15 160);
+        --muted: oklch(0.22 0.02 160);
+        --muted-foreground: oklch(0.65 0.02 160);
+        --border: oklch(0.25 0.02 160);
+      }
+      .surface {
+        background: var(--background);
+        color: var(--foreground);
+      }
+      .hdr {
+        background: color-mix(in oklab, var(--background) 80%, transparent);
+        border-bottom: 1px solid color-mix(in oklab, var(--border) 40%, transparent);
+      }
+      .tint {
+        background: color-mix(in oklab, var(--primary) 10%, transparent);
+      }
+      .dot {
+        background: var(--primary);
+      }
+      .muted-text {
+        color: var(--muted-foreground);
+      }
+      .brand-text {
+        color: var(--primary-text);
+      }
+      /* The card the operator chose (question 2 = B). It paints the theme's own
+         `--foreground`, which is the near-white of the dark scheme — the shipped
+         component spells it `dark:bg-foreground`, so nothing paints in the light
+         scheme. Drawn here with the variable rather than a literal, for the same
+         reason the component uses a token rather than `bg-white`. */
+      .plate {
+        background: var(--foreground);
+      }
+      /* The app's own constraint, written as CSS because the Tailwind CDN build
+         here is v3 and `max-w-32` is v4 spelling. The shipped component uses the
+         utility classes the spec names. */
+      .logoimg {
+        height: 1.75rem;
+        width: auto;
+        max-width: 8rem;
+        object-fit: contain;
+      }
+    </style>
+  </head>
+  <body class="bg-slate-100 text-slate-900 font-sans">
+    <div class="mx-auto max-w-5xl px-6 py-10 space-y-10">
+      <header class="space-y-2">
+        <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">
+          APRAS-110 · mock
+        </p>
+        <h1 class="text-2xl font-bold">The acting condominium's logo in the header</h1>
+        <p class="text-sm text-slate-600 max-w-3xl">
+          Every state the spec defines, rendered on the real header strip. The logo
+          slot sits in the header's left group, where today's generic APRAS dot
+          lives. Nothing below is a real tenant asset — the sample logos are inline
+          SVG stand-ins for a square emblem, a wide banner and a dark-ink mark.
+        </p>
+      </header>
+
+      <!-- ============ the six states ============ -->
+      <section class="space-y-4">
+        <h2 class="text-lg font-bold">1. The six states</h2>
+        <p class="text-sm text-slate-600 max-w-3xl">
+          Six states, <strong>five cards</strong>: &ldquo;no logo configured&rdquo;,
+          &ldquo;still loading&rdquo; and &ldquo;the profile read failed&rdquo; all
+          render the same thing, so they share one card rather than being drawn
+          three times.
+        </p>
+        <div id="states" class="space-y-6"></div>
+      </section>
+
+      <!-- ============ question 1 ============ -->
+      <section class="space-y-4 rounded-xl border-2 border-amber-400 bg-amber-50 p-5">
+        <div class="flex items-start gap-3">
+          <i data-lucide="help-circle" class="mt-0.5 size-5 text-amber-700"></i>
+          <div>
+            <h2 class="text-lg font-bold text-amber-900">
+              Question 1 — Does the logo show on a desktop screen, or only on the
+              phone? <span class="text-amber-700">Answered: A</span>
+            </h2>
+            <p class="mt-1 text-sm text-amber-900/80 max-w-3xl">
+              On a phone the header already shows a little APRAS dot. On a desktop
+              screen that dot is hidden, because the left menu already shows
+              “APRAS”. Option A puts the condominium's logo in the header on every
+              screen size; option B keeps it a phone-only thing.
+              <strong>The operator chose A</strong>, which is what the spec
+              recommended: on a desktop screen nothing at all tells you which
+              condominium you are in when you belong to only one.
+            </p>
+          </div>
+        </div>
+        <div id="q1" class="space-y-6"></div>
+      </section>
+
+      <!-- ============ question 2 ============ -->
+      <section class="space-y-4 rounded-xl border-2 border-amber-400 bg-amber-50 p-5">
+        <div class="flex items-start gap-3">
+          <i data-lucide="help-circle" class="mt-0.5 size-5 text-amber-700"></i>
+          <div>
+            <h2 class="text-lg font-bold text-amber-900">
+              Question 2 — In the dark colour scheme, does a dark logo get a white
+              card behind it? <span class="text-amber-700">Answered: B</span>
+            </h2>
+            <p class="mt-1 text-sm text-amber-900/80 max-w-3xl">
+              Many condominium logos are drawn in black ink for printing. On the
+              dark scheme they nearly disappear. Option A shows the logo plainly,
+              exactly as the condominium drew it. Option B puts a small white card
+              behind it so it is always readable — at the cost of a white patch in
+              an otherwise dark bar, for every logo, including the ones that did
+              not need it. <strong>The operator chose B</strong>, so the card
+              ships: in the dark scheme a logo sits on a small light card, and in
+              the light scheme nothing paints behind it. Both options stay drawn
+              below as the record of the choice; the dark-scheme card in section 1
+              now shows what was chosen.
+            </p>
+          </div>
+        </div>
+        <div id="q2" class="space-y-6"></div>
+      </section>
+
+      <footer class="pt-4 text-xs text-slate-500">
+        Spec: <code>docs/tasks/APRAS-110-spec.md</code>
+      </footer>
+    </div>
+
+    <script>
+      // ---- sample assets (inline SVG data URIs, not real tenant logos) ----
+      const SQUARE =
+        "data:image/svg+xml," +
+        encodeURIComponent(
+          "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='#047857'/><path d='M14 46V27l18-11 18 11v19H37V34h-10v12z' fill='#ffffff'/></svg>",
+        );
+      const BANNER =
+        "data:image/svg+xml," +
+        encodeURIComponent(
+          "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 40'><rect width='400' height='40' fill='#0f766e'/><text x='14' y='27' font-family='Georgia,serif' font-size='20' fill='#ffffff' letter-spacing='3'>RESIDENCIAL VILA NOVA</text></svg>",
+        );
+      const DARKINK =
+        "data:image/svg+xml," +
+        encodeURIComponent(
+          "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 40'><path d='M8 32V14l12-8 12 8v18H24V21h-8v11z' fill='#111111'/><text x='40' y='27' font-family='Georgia,serif' font-size='17' fill='#111111'>VILA NOVA</text></svg>",
+        );
+      const BROKEN = "./APRAS-110-this-asset-does-not-exist.png";
+
+      const NAME = "Residencial Vila Nova";
+
+      // ---- the pieces of the header ----
+      const fallbackMark = (desktop) => `
+        <a href="#" aria-label="APRAS"
+           class="${desktop ? "" : "hidden "}flex items-center gap-2 hover:opacity-80">
+          <div class="size-7 rounded-lg tint flex items-center justify-center">
+            <div class="size-3.5 rounded-full dot"></div>
+          </div>
+        </a>`;
+
+      // The card wrapper is always rendered on the logo branch and carries the
+      // five tokens the spec fixes: `inline-flex items-center px-1 rounded-md
+      // dark:bg-foreground`. Here the `dark:` paint is stood in for by `.plate`,
+      // because the CDN build in this file has no access to the app's theme
+      // variant — `plate: true` is what the component gets for free from the
+      // `dark:` prefix. No vertical padding, so the card is exactly 1.75rem tall
+      // and the header's height does not move between the two schemes.
+      const logoLink = (src, { plate = false, onerror = false } = {}) => `
+        <a href="#" class="flex items-center hover:opacity-80">
+          <span data-testid="tenant-header-logo-plate"
+                class="inline-flex items-center px-1 rounded-md${plate ? " plate" : ""}">
+            <img src="${src}" alt="${NAME}"
+                 class="logoimg h-7 w-auto max-w-32 object-contain"
+                 ${onerror ? 'data-fallback="1"' : ""} />
+          </span>
+        </a>`;
+
+      /** One header strip. `left` is the markup of the logo slot. */
+      const strip = (left, { dark = false, width = "100%" } = {}) => `
+        <div class="${dark ? "dark " : ""}rounded-xl overflow-hidden border border-slate-300"
+             style="width:${width}">
+          <div class="surface">
+            <div class="hdr flex items-center justify-between px-4 py-3">
+              <div class="flex items-center gap-3">
+                <button class="muted-text p-2 rounded-md md:hidden" aria-label="Abrir menu">
+                  <i data-lucide="menu" class="size-5"></i>
+                </button>
+                ${left}
+              </div>
+              <div class="flex items-center gap-4">
+                <div class="flex items-center rounded-md overflow-hidden"
+                     style="border:1px solid color-mix(in oklab, var(--border) 50%, transparent)">
+                  <span class="px-2.5 py-1 text-xs font-semibold"
+                        style="background:var(--primary);color:var(--primary-foreground)">PT</span>
+                  <span class="px-2.5 py-1 text-xs font-semibold muted-text">EN</span>
+                </div>
+                <div class="flex flex-col items-end">
+                  <span class="text-sm font-semibold leading-tight">Marta Ribeiro</span>
+                  <span class="text-xs font-semibold leading-tight brand-text">Síndica</span>
+                </div>
+                <div class="h-8 w-px" style="background:var(--border)"></div>
+                <span class="text-sm font-semibold muted-text">Sair</span>
+              </div>
+            </div>
+            <div class="px-4 py-10 text-xs muted-text">… page content …</div>
+          </div>
+        </div>`;
+
+      const labelled = (title, note, markup) => `
+        <div class="rounded-xl bg-white p-4 shadow-sm space-y-2">
+          <div class="flex items-baseline gap-3">
+            <h3 class="text-sm font-bold">${title}</h3>
+            <p class="text-xs text-slate-500">${note}</p>
+          </div>
+          ${markup}
+        </div>`;
+
+      document.getElementById("states").innerHTML = [
+        labelled(
+          "Logo configured — square emblem",
+          "<code>logo_url</code> non-null; <code>alt</code> is the condominium's name.",
+          strip(logoLink(SQUARE, {})),
+        ),
+        labelled(
+          "Logo configured — extreme aspect ratio (10:1 banner)",
+          "Capped by <code>max-w-32</code> and scaled by <code>object-contain</code>: the header height does not move.",
+          strip(logoLink(BANNER, {})),
+        ),
+        labelled(
+          "No logo configured, and loading, and profile read failed",
+          "All three render today's generic mark, shown here as it appears on a phone. On a desktop screen the slot is simply empty — see Question 1, option B.",
+          strip(fallbackMark(true)),
+        ),
+        labelled(
+          "Logo bytes unavailable — 404, <strong>429 from the route's 30/minute per-IP limit</strong>, dropped connection, cold store read",
+          "A real broken <code>&lt;img&gt;</code>, driven and not drawn: the latch swaps in the generic mark — shown here <em>without</em> <code>md:hidden</code>, so a desktop header is not left blank where a logo was promised — and then <strong>retries once by itself</strong> and recovers. The retry is 60&nbsp;s in the app (wider than the rate-limit window); it is shortened to 3&nbsp;s here so you can watch it. A second failure keeps the mark for the rest of the page's life, so the recovery can never become a request loop.",
+          strip('<span id="brokenSlot">' + logoLink(BROKEN, { onerror: true }) + "</span>"),
+        ),
+        labelled(
+          "Dark scheme — with the light card the operator chose",
+          "Surround is tokens only. The image itself carries no <code>dark:</code> utility and no filter: the card is a wrapper <code>&lt;span&gt;</code> around it, <code>dark:bg-foreground</code>, so it paints here and nowhere in the light scheme. A black-ink logo is shown second, because it is the case the card exists for.",
+          strip(logoLink(SQUARE, { plate: true }), { dark: true }) +
+            '<div class="mt-3"></div>' +
+            strip(logoLink(DARKINK, { plate: true }), { dark: true }),
+        ),
+      ].join("");
+
+      document.getElementById("q1").innerHTML = [
+        labelled(
+          "A — logo on every screen size (chosen by the operator)",
+          "Desktop header shows the condominium's logo.",
+          strip(logoLink(SQUARE, {})),
+        ),
+        labelled(
+          "B — phone only, as the APRAS dot is today",
+          "Desktop header's left side stays empty; the left menu carries the brand.",
+          strip(fallbackMark(false)),
+        ),
+      ].join("");
+
+      document.getElementById("q2").innerHTML = [
+        labelled(
+          "A — no card, logo as drawn (not chosen)",
+          "A black-ink logo on the dark bar: nearly invisible, which is what decided this.",
+          strip(logoLink(DARKINK, {}), { dark: true }),
+        ),
+        labelled(
+          "B — light card behind the logo in the dark scheme (chosen by the operator)",
+          "Always readable, at the cost of a light patch in the dark bar. This is what ships.",
+          strip(logoLink(DARKINK, { plate: true }), { dark: true }),
+        ),
+      ].join("");
+
+      // The broken-asset state and its recovery, driven for real rather than
+      // drawn. `fallbackMark(true)` carries no `hidden`, which is the spec's
+      // rule for this state only: the condominium has a logo, so the desktop
+      // slot shows the generic mark rather than nothing.
+      document.querySelectorAll("img[data-fallback]").forEach((img) => {
+        img.addEventListener("error", () => {
+          const slot = document.getElementById("brokenSlot");
+          slot.innerHTML = fallbackMark(true);
+          lucide.createIcons();
+          // The one bounded retry. 60 s in the app, 3 s here. It succeeds in
+          // this mock, which is the common case: the 429 window has passed.
+          window.setTimeout(() => {
+            slot.innerHTML = logoLink(SQUARE, {});
+            lucide.createIcons();
+          }, 3000);
+        });
+      });
+
+      lucide.createIcons();
+    </script>
+  </body>
+</html>

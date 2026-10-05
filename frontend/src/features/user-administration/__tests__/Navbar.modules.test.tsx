@@ -39,6 +39,33 @@ vi.mock("../context/useTenant", () => ({
   useActingTenantReady: vi.fn(() => true),
 }));
 
+// APRAS-110. `Navbar` renders `TenantHeaderLogo`, which reads
+// `useTenantProfile()`. Mocked here because this file renders `Navbar` with no
+// `QueryClientProvider` of its own, so an unmocked `useQuery` throws and every
+// case in the file fails.
+//
+// The default is the **no-logo** answer, so the banner keeps showing today's
+// generic appName mark and every existing case stands unchanged. The
+// implementation is passed to `vi.fn(impl)` rather than installed afterwards
+// with `mockReturnValue`: `vitest.config.ts` sets neither `restoreMocks` nor
+// `clearMocks`, a sibling file calls `vi.restoreAllMocks()` in `beforeEach`,
+// and only a factory implementation survives that.
+vi.mock("../../../hooks/useTenantProfile", () => ({
+  useTenantProfile: vi.fn(() => ({
+    data: {
+      id: "tenant-test",
+      name: "Condomínio Teste",
+      slug: "condominio-teste",
+      is_active: true,
+      logo_url: null,
+      brand_theme: null,
+      theme: null,
+    },
+    isPending: false,
+    isError: false,
+  })),
+}));
+
 const mockedGet = vi.mocked(apiClient.get);
 
 const NOT_SIMULATING = {
