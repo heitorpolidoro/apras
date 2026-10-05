@@ -321,6 +321,15 @@ as the source of truth.
 | Testing              | Vitest 4 + @testing-library/react + jsdom           |
 | Linting              | ESLint 9 + typescript-eslint                        |
 
+### Colour figures: one source, one page
+
+`docs/frontend/contrast-provenance.md` is the **only permitted source** for a
+hex or a contrast ratio quoted anywhere in this repository, and
+`frontend/src/lib/contrast.ts` the only code permitted to produce one. Never
+convert an `oklch()` by clipping sRGB channels: CSS Color 4 §13 gamut-maps, and
+a clip is a different colour. `frontend/src/__tests__/docsColourProvenance.test.ts`
+re-derives every figure under `docs/tasks/` and `docs/frontend/`.
+
 ## Infrastructure & DevOps
 
 | Category         | Technology                         |
