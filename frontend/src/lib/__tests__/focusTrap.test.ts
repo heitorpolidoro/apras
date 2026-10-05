@@ -17,7 +17,7 @@ import {
   FOCUSABLE_SELECTOR,
   cycleTabWithin,
   focusableWithin,
-} from "../lib/focusTrap";
+} from "../focusTrap";
 
 /** A panel with `count` real buttons, attached so `activeElement` works. */
 const panelWith = (count: number): HTMLDivElement => {

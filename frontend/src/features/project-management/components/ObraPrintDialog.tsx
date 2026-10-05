@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { HardHat, Printer, X } from "lucide-react";
 import { cn } from "../../../lib/utils";
 import type { ObraEntry } from "../lib/obraPrintDocument";
-import { cycleTabWithin, focusableWithin } from "../lib/focusTrap";
+import useDialogFocus from "../../../hooks/useDialogFocus";
 
 interface ObraPrintDialogProps {
   open: boolean;
@@ -17,12 +17,17 @@ interface ObraPrintDialogProps {
  * APRAS-118 — the obra selector behind the public report's print control.
  *
  * It follows `src/components/ui/alert-modal.tsx` for `role="dialog"`,
- * `aria-modal`, the backdrop and the Escape listener, and adds the two things
- * that component lacks and that this one is required to have: focus moves into
- * the dialog on open and `Tab`/`Shift+Tab` cycle within it, and on close focus
- * returns to whatever had it when the dialog opened. The restore runs from the
- * effect's cleanup, so every exit takes it — Escape, the backdrop, the close
- * button, and a completed print alike.
+ * `aria-modal` and the backdrop, and has the two things that component lacks
+ * and that this one is required to have: focus moves into the dialog on open
+ * and `Tab`/`Shift+Tab` cycle within it, and on close focus returns to whatever
+ * had it when the dialog opened, by every exit path alike — Escape, the
+ * backdrop, the close button, and a completed print.
+ *
+ * None of that keyboard behaviour is implemented here. The component delegates
+ * all of it — Escape, the `Tab` trap and the focus restore — to
+ * `src/hooks/useDialogFocus.ts` (APRAS-98), which is where to read how it works
+ * and what its `onClose` dependency contract is; this component only supplies
+ * the panel ref.
  *
  * With exactly **one** obra the dialog still opens and lists it rather than
  * printing straight away: the control's contract is "opens a modal listing the
@@ -38,36 +43,7 @@ const ObraPrintDialog: React.FC<ObraPrintDialogProps> = ({
   const { t } = useTranslation();
   const panelRef = React.useRef<HTMLDivElement>(null);
 
-  React.useEffect(() => {
-    // `undefined` and not a bare `return`: this callback's other exit hands back
-    // a cleanup function, and mixing an implicit and an explicit return is what
-    // DeepSource's JS-0045 objects to. `null` is not an option -- React types
-    // the callback as returning `void | Destructor`.
-    if (!open) return undefined;
-
-    const opener =
-      document.activeElement instanceof HTMLElement
-        ? document.activeElement
-        : null;
-
-    focusableWithin(panelRef.current)[0]?.focus();
-
-    // Escape closes, Tab cycles, everything else is the browser's. The cycling
-    // itself lives in `../lib/focusTrap` — see that module for why.
-    const handler = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      } else if (event.key === "Tab") {
-        cycleTabWithin(event, panelRef.current);
-      }
-    };
-
-    document.addEventListener("keydown", handler);
-    return () => {
-      document.removeEventListener("keydown", handler);
-      opener?.focus();
-    };
-  }, [open, onClose]);
+  useDialogFocus(open, onClose, panelRef);
 
   if (!open) return null;
 

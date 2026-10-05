@@ -575,3 +575,164 @@ describe("the /admin/tenant-profile gate", () => {
     });
   });
 });
+
+/**
+ * APRAS-98 — the slug confirmation's keyboard behaviour, driven through the
+ * real page rather than the hook.
+ *
+ * Every focus claim below names a node and asserts the **identity** of
+ * `document.activeElement` against it. "Focus is not inside the panel" is
+ * forbidden here and nowhere written: the panel is unmounted on every exit
+ * path, so that phrasing is vacuously true and would pass against a hook that
+ * restored nothing.
+ *
+ * Which paths prove what: **Escape and Cancel prove restoration** — the Save
+ * button is still enabled, so landing on it is a real outcome. The **Confirm**
+ * case does not prove it and is not credited with doing so; it pins a known
+ * outcome so a later implementer does not "fix" it. `submit` calls
+ * `setConfirming(false)` and `update.mutate` in one handler, so by the time the
+ * cleanup runs the Save button is `disabled` and `.focus()` on it is a no-op,
+ * leaving `<body>` as the document's fallback.
+ */
+describe("TenantProfilePage — the slug dialog's keyboard behaviour (APRAS-98)", () => {
+  /** Open the confirmation the way a person does: retype the slug, press Save. */
+  const openConfirm = async (next = "solar-da-serra") => {
+    const user = userEvent.setup();
+    const input = await screen.findByLabelText(t("tenantProfile.slugLabel"));
+    await user.clear(input);
+    await user.type(input, next);
+    const save = screen.getByRole("button", { name: t("tenantProfile.save") });
+    await user.click(save);
+    const panel = await screen.findByTestId("tenant-slug-confirm-panel");
+    return { user, save, panel };
+  };
+
+  const cancelButton = () =>
+    screen.getByRole("button", { name: t("tenantProfile.slugConfirmCancel") });
+  const confirmButton = () =>
+    screen.getByRole("button", { name: t("tenantProfile.slugConfirmCta") });
+
+  it("moves focus to the panel's first control when the dialog opens", async () => {
+    serve(null);
+    renderPage();
+
+    const { panel } = await openConfirm();
+
+    // By identity, and the expected node is read off the panel rather than
+    // named twice: the first focusable element inside it is Cancel.
+    const first = panel.querySelector("button");
+    expect(first).toBe(cancelButton());
+    expect(document.activeElement).toBe(first);
+  });
+
+  it("keeps Tab inside the panel when it walks past the last control", async () => {
+    serve(null);
+    renderPage();
+
+    const { user, panel } = await openConfirm();
+    const last = confirmButton();
+    last.focus();
+    expect(document.activeElement).toBe(last);
+
+    await user.tab();
+
+    expect(panel).toContainElement(document.activeElement as HTMLElement);
+    expect(document.activeElement).toBe(cancelButton());
+  });
+
+  it("cycles Shift+Tab from the first control to the last", async () => {
+    serve(null);
+    renderPage();
+
+    const { user, panel } = await openConfirm();
+    expect(document.activeElement).toBe(cancelButton());
+
+    await user.tab({ shift: true });
+
+    expect(panel).toContainElement(document.activeElement as HTMLElement);
+    expect(document.activeElement).toBe(confirmButton());
+  });
+
+  it("closes on Escape, sends nothing, and returns focus to the Save button", async () => {
+    serve(null);
+    renderPage();
+
+    const { user, save } = await openConfirm();
+
+    await user.keyboard("{Escape}");
+
+    await waitFor(() =>
+      expect(
+        screen.queryByTestId("tenant-slug-confirm-panel"),
+      ).not.toBeInTheDocument(),
+    );
+    expect(apiClient.patch).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(save);
+  });
+
+  it("returns focus to the Save button when Cancel closes the dialog", async () => {
+    serve(null);
+    renderPage();
+
+    const { user, save } = await openConfirm();
+
+    await user.click(cancelButton());
+
+    await waitFor(() =>
+      expect(
+        screen.queryByTestId("tenant-slug-confirm-panel"),
+      ).not.toBeInTheDocument(),
+    );
+    expect(apiClient.patch).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(save);
+  });
+
+  it("submits the changed slug on Confirm and leaves focus on document.body", async () => {
+    serve(null);
+    vi.mocked(apiClient.patch).mockResolvedValue({
+      data: { ...PROFILE, slug: "solar-da-serra" },
+    } as never);
+    renderPage();
+
+    const { user } = await openConfirm();
+
+    await user.click(confirmButton());
+
+    // Unchanged from before this task: the same slug, in the same body.
+    await waitFor(() =>
+      expect(apiClient.patch).toHaveBeenCalledWith("/tenant-profile", {
+        name: PROFILE.name,
+        slug: "solar-da-serra",
+      }),
+    );
+    // Pinned, not credited: see this describe's note. The Save button is
+    // `disabled` while the mutation is pending, so the restore is a no-op.
+    expect(document.activeElement).toBe(document.body);
+  });
+
+  it("gives both dialog controls the house focus ring, flush with no offset", async () => {
+    serve(null);
+    renderPage();
+
+    await openConfirm();
+
+    // Option A, the operator's answer: exactly the three classes
+    // `alert-modal.tsx:115` already uses, and no `ring-offset-*` — whose
+    // Tailwind v4 default colour would paint a white seam on the dark card.
+    //
+    // Asserted as the **whole** class attribute rather than as three
+    // `toContain` calls, so this also pins "no other class on either button
+    // changes": adding or dropping anything else reddens it.
+    const ring =
+      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+    expect(cancelButton().className).toBe(
+      `rounded-md border border-input px-4 py-2 text-sm font-medium text-foreground ${ring}`,
+    );
+    expect(confirmButton().className).toBe(
+      `rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground ${ring}`,
+    );
+    for (const control of [cancelButton(), confirmButton()]) {
+      expect(control.className).not.toMatch(/focus-visible:ring-offset/);
+    }
+  });
+});

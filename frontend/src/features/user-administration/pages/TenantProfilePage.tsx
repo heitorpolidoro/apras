@@ -24,6 +24,7 @@ import {
   useTenantProfile,
   useUpdateTenantProfile,
 } from "../../../hooks/useTenantProfile";
+import useDialogFocus from "../../../hooks/useDialogFocus";
 import { Spinner } from "../../../components/ui/spinner";
 import TenantBrandColors from "../components/TenantBrandColors";
 
@@ -103,6 +104,17 @@ const TenantProfilePage: React.FC = () => {
   // confirmation parameter, so this is state and not a request field.
   const [confirming, setConfirming] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  // The **panel**, not the scrim: the trap reads this subtree only, so a
+  // full-screen wrapper here would make every click target a tab stop.
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // APRAS-98 — Escape, the `Tab` trap and the focus restore, all three from
+  // the one shared hook (`src/hooks/useDialogFocus.ts`); this page adds no
+  // keydown handler of its own. Called unconditionally, above the early return
+  // below, so the hook order cannot change between renders. The inline arrow is
+  // safe by the hook's contract: it holds `onClose` in a ref and its keydown
+  // effect depends on `[open]` alone.
+  useDialogFocus(confirming, () => setConfirming(false), panelRef);
 
   if (isPending || !data) return <Spinner />;
 
@@ -422,7 +434,11 @@ const TenantProfilePage: React.FC = () => {
           aria-labelledby="tenant-slug-confirm-title"
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
         >
-          <div className="w-full max-w-md rounded-xl bg-card p-6 shadow-xl">
+          <div
+            ref={panelRef}
+            data-testid="tenant-slug-confirm-panel"
+            className="w-full max-w-md rounded-xl bg-card p-6 shadow-xl"
+          >
             <div className="flex items-start gap-3">
               <AlertTriangle
                 className="mt-0.5 h-6 w-6 shrink-0 text-destructive"
@@ -447,14 +463,14 @@ const TenantProfilePage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setConfirming(false)}
-                className="rounded-md border border-input px-4 py-2 text-sm font-medium text-foreground"
+                className="rounded-md border border-input px-4 py-2 text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {t("tenantProfile.slugConfirmCancel")}
               </button>
               <button
                 type="button"
                 onClick={submit}
-                className="rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground"
+                className="rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {t("tenantProfile.slugConfirmCta")}
               </button>
