@@ -828,6 +828,89 @@ describe("Navbar", () => {
       expect(changeLanguage).toHaveBeenCalledWith("en");
     });
 
+    // ── The language buttons' programmatic state (APRAS-97) ───────────────
+    //
+    // The colour pair above is one channel; `aria-pressed` is the second, and
+    // both must be fed by the single `currentLang.startsWith(lang.code)`
+    // evaluation inside the `LANGUAGES.map` callback. Each case below asserts
+    // the attribute on **both** buttons, because an `aria-pressed="true"`
+    // hard-coded on one or on both satisfies any single-button assertion.
+    // Three of them also re-assert the colour pair on the same two elements,
+    // so a divergence between the channels fails one case rather than going
+    // unnoticed.
+
+    it("gives both language buttons an explicit type of button", () => {
+      // Banner-scoped: the mobile hamburger already carries `type="button"`
+      // and would otherwise satisfy this without the language buttons.
+      const banner = renderBanner(directorUser());
+
+      expect(banner.getByRole("button", { name: "PT" })).toHaveAttribute(
+        "type",
+        "button",
+      );
+      expect(banner.getByRole("button", { name: "EN" })).toHaveAttribute(
+        "type",
+        "button",
+      );
+    });
+
+    it("announces PT pressed and EN not pressed with the default fixture", () => {
+      // `src/test/setup.ts` supplies `language: "pt"` and no
+      // `resolvedLanguage`, so this also pins the `??` fallback's result.
+      const banner = renderBanner(directorUser());
+
+      const pt = banner.getByRole("button", { name: "PT" });
+      const en = banner.getByRole("button", { name: "EN" });
+
+      expect(pt).toHaveAttribute("aria-pressed", "true");
+      expect(en).toHaveAttribute("aria-pressed", "false");
+
+      // Same two elements, other channel: colour and announcement agree.
+      expect(classTokens(pt)).toContain("bg-primary");
+      expect(classTokens(pt)).toContain("text-primary-foreground");
+      expect(classTokens(en)).toContain("text-muted-foreground");
+      expect(classTokens(en)).not.toContain("bg-primary");
+    });
+
+    it("swaps the pressed state when resolvedLanguage is en", () => {
+      // Kills an `aria-pressed` read off `i18n.language` (still "pt") instead
+      // of `currentLang`, and one hard-coded onto the first button.
+      stubI18n({ language: "pt", resolvedLanguage: "en" });
+
+      const banner = renderBanner(directorUser());
+
+      const pt = banner.getByRole("button", { name: "PT" });
+      const en = banner.getByRole("button", { name: "EN" });
+
+      expect(pt).toHaveAttribute("aria-pressed", "false");
+      expect(en).toHaveAttribute("aria-pressed", "true");
+
+      expect(classTokens(en)).toContain("bg-primary");
+      expect(classTokens(en)).toContain("text-primary-foreground");
+      expect(classTokens(pt)).toContain("text-muted-foreground");
+      expect(classTokens(pt)).not.toContain("bg-primary");
+    });
+
+    it("announces PT pressed for the regional tag pt-BR", () => {
+      // Kills an `aria-pressed` derived from `currentLang === lang.code`:
+      // "pt-BR" equals neither code, so both buttons would read "false" while
+      // the colours still mark PT active — which the class assertions below
+      // report as a disagreement between the two channels.
+      stubI18n({ language: "pt", resolvedLanguage: "pt-BR" });
+
+      const banner = renderBanner(directorUser());
+
+      const pt = banner.getByRole("button", { name: "PT" });
+      const en = banner.getByRole("button", { name: "EN" });
+
+      expect(pt).toHaveAttribute("aria-pressed", "true");
+      expect(en).toHaveAttribute("aria-pressed", "false");
+
+      expect(classTokens(pt)).toContain("bg-primary");
+      expect(classTokens(pt)).toContain("text-primary-foreground");
+      expect(classTokens(en)).toContain("text-muted-foreground");
+    });
+
     it("paints a superuser's role subtitle with the brand text token", () => {
       // Navbar's only brand-text call site. `text-primary-text`, never the bare
       // surface token and never the brand tint.

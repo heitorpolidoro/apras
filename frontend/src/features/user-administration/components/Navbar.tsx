@@ -126,20 +126,30 @@ const Navbar: React.FC = () => {
               be hidden by the simulation. */}
           {canSimulate && <SimulationControls />}
           <div className="flex items-center gap-1 border border-border/50 rounded-md overflow-hidden">
-            {LANGUAGES.map((lang) => (
-              <button
-                key={lang.code}
-                onClick={() => i18n.changeLanguage(lang.code)}
-                className={cn(
-                  "px-2.5 py-1 text-xs font-semibold transition-all",
-                  currentLang.startsWith(lang.code)
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {lang.label}
-              </button>
-            ))}
+            {LANGUAGES.map((lang) => {
+              // One evaluation, two channels. `aria-pressed` is the
+              // programmatic half of the state the colour pair below shows, so
+              // both read the same flag: a future change to the matching rule
+              // (`startsWith` is what makes "pt-BR" select PT) cannot move the
+              // colour without moving the announcement.
+              const isActive = currentLang.startsWith(lang.code);
+              return (
+                <button
+                  key={lang.code}
+                  type="button"
+                  aria-pressed={isActive}
+                  onClick={() => i18n.changeLanguage(lang.code)}
+                  className={cn(
+                    "px-2.5 py-1 text-xs font-semibold transition-all",
+                    isActive
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {lang.label}
+                </button>
+              );
+            })}
           </div>
           <div className="hidden sm:flex flex-col items-end">
             <span className="text-sm font-semibold text-foreground leading-tight">
