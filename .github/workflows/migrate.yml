@@ -16,8 +16,13 @@ jobs:
 
     - uses: astral-sh/setup-uv@v8.1.0
       with:
+        # See `ci.yml`'s note: the project-file input this step used to pass is
+        # not declared by this action, so uv floated here too.
+        # This job is the exposed one -- it holds POSTGRES_URL_NON_POOLING and
+        # runs `alembic upgrade head` against production -- so it must not be
+        # the one place uv floats.
+        version: "0.12.19"
         enable-cache: false
-        pyproject-file: backend/pyproject.toml
 
     - run: uv python install 3.13
 

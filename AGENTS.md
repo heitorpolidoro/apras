@@ -244,6 +244,31 @@ as the source of truth.
   cases, because a fully-skipped run exits 0. `ci.yml` also accepts
   `workflow_dispatch`, so any branch can be run manually with
   `gh workflow run ci.yml --ref <branch>`.
+- **The uv pin** — uv is pinned by a literal `version:` on every
+  `astral-sh/setup-uv` step in `.github/workflows/`. The pin reads as a literal
+  and not as a project file on purpose: `pyproject-file` is not an input of
+  `astral-sh/setup-uv`, and GitHub does not fail a step for an undeclared
+  input — it prints `##[warning]Unexpected input(s)` and carries on, which is
+  how all four steps spent months installing floating-latest uv (0.12.21 on run
+  `36924174723`, against the 0.12.19 the development machine runs).
+  One literal is shared by every step for two reasons: the agreement
+  assertion compares literals, so it only means anything if every step holds
+  the *same* string, and one uv version in CI is one thing to reason about
+  rather than two drifting groups.
+  `backend/tests/test_workflow_actions.py` is the guard: it fails if any step
+  drops its `version:`, if the literals disagree, if a step passes an input the
+  pinned `uses:` ref does not declare, or if the ref itself is one its
+  allow-list has never been told about.
+  The pin is bumped deliberately by the maintainer, in one commit that
+  edits every `version:` literal together — editing one alone is a red test, by
+  design. No bot does it: dependabot does not update a `version:` string input,
+  and `.github/dependabot.yml` declares no `github-actions` ecosystem, so the
+  action ref moves only by a human edit either. Instead the signal is the local `UV_PIN`
+  refusal — a developer who upgrades uv gets
+  `backend/scripts/export_requirements.sh` exiting non-zero and naming it, and
+  that is what prompts the bump commit. A stale pin is safe to sit on: uv is a
+  build tool, and what actually ships is pinned by `backend/uv.lock` and
+  `backend/requirements.txt`.
 - **A hung run must not be a silent one.** A job killed by GitHub's
   `timeout-minutes` is **cancelled**, and a cancelled job _usually_ publishes
   **no logs at all** — 11 of the 15 occurrences APRAS-119's census found

@@ -54,8 +54,14 @@ jobs:
     - name: Set up uv
       uses: astral-sh/setup-uv@v8.1.0
       with:
+        # A literal, and not the project-file input these steps used to pass:
+        # that one is not declared by this action, so it was ignored with a
+        # warning and every job floated to latest uv (0.12.21 on run
+        # 36924174723, against 0.12.19 locally). Every `setup-uv` step in this
+        # repository holds the same literal, and
+        # `backend/tests/test_workflow_actions.py` fails if they disagree.
+        version: "0.12.19"
         enable-cache: false
-        pyproject-file: backend/pyproject.toml
 
     - name: Set up Python 3.13
       run: uv python install 3.13
@@ -153,8 +159,10 @@ jobs:
     - name: Set up uv
       uses: astral-sh/setup-uv@v8.1.0
       with:
+        # The same literal as the `backend` job above, for the reason recorded
+        # there. Bump every one of them in one commit or the guard goes red.
+        version: "0.12.19"
         enable-cache: false
-        pyproject-file: backend/pyproject.toml
 
     - name: Set up Python 3.13
       run: uv python install 3.13
@@ -212,8 +220,10 @@ jobs:
     - name: Set up uv
       uses: astral-sh/setup-uv@v8.1.0
       with:
+        # The same literal as the `backend` job above, for the reason recorded
+        # there. Bump every one of them in one commit or the guard goes red.
+        version: "0.12.19"
         enable-cache: false
-        pyproject-file: backend/pyproject.toml
 
     - name: Set up Python 3.13
       run: uv python install 3.13
