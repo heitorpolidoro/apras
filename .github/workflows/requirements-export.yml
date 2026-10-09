@@ -1,0 +1,207 @@
+name: Requirements Export
+
+# Dependabot's `uv` ecosystem does **not** regenerate `backend/requirements.txt`
+# from `backend/uv.lock`. It treats the export as a hand-maintained pip
+# manifest and bumps each pin to that package's own latest release, line by
+# line, independently of the resolution it writes into the lock. `cd8de18`
+# (PR #47) is the shape: 25 single-line pin bumps in a file whose header still
+# claims uv generated it, leaving `pydantic==2.13.5` beside
+# `pydantic-core==2.49.0` -- a set no resolver would produce and no install
+# accepts. Regeneration is therefore this repository's own job, and this
+# workflow is where it happens.
+#
+# ## The security model, in one place
+#
+# This job holds a Contents:write push credential, and ruleset `16257354`
+# grants the admin repository role `bypass_mode: always` -- so the
+# maintainer-owned token here can push to `master` past all nine required
+# checks. Code execution in *any* step of this job is a `master` compromise,
+# not merely a tampered pull-request branch. Hence, without exception:
+#
+#   * **executed code comes from the base ref.** This workflow file is
+#     base-provided by GitHub under `pull_request_target`. The export script is
+#     not -- a pull request can edit it -- so the job fetches
+#     `backend/scripts/export_requirements.sh` from the *base sha* into
+#     `$RUNNER_TEMP` and runs that copy. The head's copy is never executed and
+#     never sourced.
+#   * **the toolchain is pinned by a literal here**, never by a project file.
+#     `pyproject.toml`, `uv.toml` and `.python-version` are all editable by the
+#     pull request, so any `setup-uv` input that reads the version out of a
+#     project file would let the head choose which uv binary runs. (As it
+#     happens the project-file input three steps in this repository used to
+#     pass is not even declared by `setup-uv@v8.1.0`, so it silently installed
+#     floating-latest uv -- see `backend/tests/test_workflow_actions.py`.)
+#   * **only head *data* enters the export.** The work tree is the head sha,
+#     because the commit being pushed must sit on its tree, and
+#     `backend/uv.lock` is read as data by the script's frozen export. Nothing
+#     in the head tree is executed.
+#   * **no lock-freshness assertion here.** Asserting the lock is fresh means
+#     reading `pyproject.toml`, and a head may declare `dynamic = ["dependencies"]`, a
+#     `[tool.uv.sources]` path entry or a `[build-system]` with an in-tree
+#     `backend-path` -- any of which makes uv obtain metadata through a PEP 517
+#     backend out of the head tree. That check lives in `Backend Tests`
+#     instead, which runs with a read-only token and no secrets. The
+#     consequence is deliberate: on a stale head lock this job produces and
+#     pushes the export matching that lock, and the stale lock is reported by
+#     `Backend Tests` on the same pull request.
+#   * **no cache, in either direction.** A `pull_request_target` run executes
+#     in base context, so anything it saved would land in the base-branch cache
+#     scope that `master`'s own runs restore, under a key influenced by the
+#     head's `uv.lock`. That is a write path from a pull-request branch into
+#     `master`'s CI inputs, which "executes no PR code" does not cover.
+#
+# The gate is the **branch name** plus same-repository, and deliberately not
+# the acting account: nothing in this file reads the actor, the pull request's
+# user or the triggering account, so a dependabot-*shaped* branch exercises the
+# identical path with nothing relaxed. That is what makes the demonstration in
+# APRAS-121 §4 worth anything. Creating such a branch in this repository
+# already requires push access.
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'backend/**'
+
+# Nothing else. The push does not use this token (see the push step), but a
+# narrower default is still the right one.
+permissions:
+  contents: write
+
+concurrency:
+  # Keyed on the pull request, so a superseded head sha does not race its
+  # successor into a push.
+  group: requirements-export-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  regenerate:
+    name: Regenerate the backend export from the lock
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: >-
+      startsWith(github.head_ref, 'dependabot/uv/')
+      && github.event.pull_request.head.repo.full_name == github.repository
+
+    steps:
+    # The head tree, because the commit this job pushes must sit on top of it.
+    # `persist-credentials: false` so no credential is left in `.git/config`
+    # for a later step -- the push step installs its own, from the secret.
+    #
+    # One checkout, and only one. `actions/checkout`'s `path:` is resolved
+    # relative to `$GITHUB_WORKSPACE` and the action refuses a value that
+    # escapes it, so there is no legal `path:` that lands outside the head work
+    # tree; and `actions/checkout` runs `git clean -ffdx` on its target, so a
+    # base checkout written first would be deleted by the head checkout that
+    # follows. The base copy of the script is fetched by sha below instead,
+    # which has neither hazard.
+    - name: Check out the pull request head
+      uses: actions/checkout@v6
+      with:
+        ref: ${{ github.event.pull_request.head.sha }}
+        persist-credentials: false
+        fetch-depth: 1
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v8.1.0
+      with:
+        # The literal, matching `UV_PIN` in
+        # `backend/scripts/export_requirements.sh` and the `backend` job of
+        # `ci.yml`. `backend/tests/test_requirements_export.py` fails if any
+        # one of the three is edited alone.
+        version: "0.12.19"
+        # `setup-uv@v8.1.0` validates its download against a caller-supplied
+        # checksum or its own baked table, and that table -- built when the
+        # action was tagged -- has no entry for a later uv, in which case
+        # validation returns silently. Every other `setup-uv` step in this
+        # repository lives with that; this is the one job holding a push
+        # credential, so it does not. sha256 of
+        # `uv-x86_64-unknown-linux-gnu.tar.gz` at tag `0.12.19`, from the
+        # release's own `.sha256` sidecar.
+        checksum: "23bf5552d220e0842b65c862097b2ebaeba0064b74eda5e565e77fd25969d8c8"
+        enable-cache: false
+
+    # `actions/checkout` at an explicit sha fetches the history *of that
+    # commit*, so `git show <base sha>:...` resolves only while the base sha is
+    # an ancestor of the head sha -- true on a freshly opened pull request,
+    # false as soon as `master` advances while it is open, including on the
+    # `synchronize` this workflow's own push fires. So the base object is
+    # fetched explicitly and nothing relies on the head checkout's history.
+    #
+    # The unauthenticated fetch-by-sha works because this repository is
+    # **public**. If it ever becomes private this step must be revisited; it
+    # will fail loudly rather than quietly doing nothing.
+    - name: Take the export script from the base sha
+      env:
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      run: |
+        set -euo pipefail
+        git fetch --no-tags --depth=1 origin "$BASE_SHA"
+        if ! git cat-file -e "$BASE_SHA":backend/scripts/export_requirements.sh 2>/dev/null; then
+          echo "::error::backend/scripts/export_requirements.sh does not exist at base sha $BASE_SHA, so the regeneration mechanism is not on the base branch yet. Merge APRAS-121 to master first; nothing was regenerated and nothing was pushed."
+          exit 1
+        fi
+        git show "$BASE_SHA":backend/scripts/export_requirements.sh > "$RUNNER_TEMP/export_requirements.sh"
+
+    # Invoked by absolute path through `bash`, so nothing resolves the script
+    # name through `PATH` or the work tree and nothing depends on an exec bit
+    # surviving `git show`. Its only uv call is the frozen export; it installs
+    # nothing, runs no tests and sees no secret.
+    - name: Regenerate the export from the head lock
+      run: |
+        set -euo pipefail
+        bash "$RUNNER_TEMP/export_requirements.sh"
+
+    # One step, so the secret is referenced in exactly one `env:` in this file
+    # and the summary line is written on every path this job can reach.
+    #
+    # `GITHUB_TOKEN` would be the wrong credential even with `contents: write`:
+    # a push made with it does not trigger workflows, and
+    # `strict_required_status_checks_policy` is `true`, so the pull request
+    # would be left permanently unmergeable with missing checks on the new head
+    # sha.
+    - name: Commit, push and record the outcome
+      env:
+        GIT_PUSH_TOKEN: ${{ secrets.REQUIREMENTS_EXPORT_TOKEN }}
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        HEAD_REF: ${{ github.head_ref }}
+      run: |
+        set -euo pipefail
+
+        # Verified, not assumed: this repository already learned from
+        # `SONAR_TOKEN` that a dependabot-context run reads a different secret
+        # list than the one the operator populated. A missing credential fails
+        # the job -- it must never be a silent skip, because the whole point of
+        # this workflow is that a run which did nothing is distinguishable from
+        # a run that never happened.
+        if [ -z "${GIT_PUSH_TOKEN:-}" ]; then
+          echo "::error::REQUIREMENTS_EXPORT_TOKEN is absent or empty in this run's Actions secrets. The export may have been regenerated but nothing was pushed. Mint the fine-grained PAT (Contents: Read and write, this repository only) and store it as a repository *Actions* secret."
+          exit 1
+        fi
+
+        if git diff --quiet -- backend/requirements.txt; then
+          echo "base $BASE_SHA: export already matches the lock; nothing to push" >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+        fi
+
+        # The commit carries only the export: `-- <path>` restricts it to that
+        # path whatever else the regeneration may have touched. Author *and*
+        # committer are the maintainer's GitHub identity, so the commit is
+        # attributed to a real account and
+        # `require_extra_approval_for_unattributed_changes` is not engaged --
+        # with one maintainer, a second approval is one nobody can give.
+        git -c user.name="Heitor Polidoro" \
+            -c user.email="heitor.polidoro@gmail.com" \
+            commit -m "chore: regenerate backend/requirements.txt from backend/uv.lock" \
+            -- backend/requirements.txt
+        pushed_sha="$(git rev-parse HEAD)"
+
+        # The head checkout carries no credential, so the remote gets one here
+        # and nowhere else. The refspec is written out because the work tree is
+        # a detached head and shallow: a bare `git push` has no upstream to
+        # resolve, and `git push origin HEAD` would target `refs/heads/HEAD`.
+        git remote set-url origin \
+          "https://x-access-token:${GIT_PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+        git push origin HEAD:refs/heads/"$HEAD_REF"
+
+        echo "base $BASE_SHA: export regenerated; pushed $pushed_sha" >> "$GITHUB_STEP_SUMMARY"

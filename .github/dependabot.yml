@@ -4,8 +4,25 @@ updates:
   # Backend. The ecosystem is `uv`, not `pip`: `pip` would drive only the
   # generated `backend/requirements.txt` and leave `backend/uv.lock` behind,
   # manufacturing exactly the two-files-disagree state that let 57 alerts
-  # accumulate (APRAS-116). `uv` updates `pyproject.toml`, `uv.lock` and the
-  # export together.
+  # accumulate (APRAS-116).
+  #
+  # What `uv` does *not* do is regenerate the export. It updates
+  # `pyproject.toml` and `uv.lock` from a real resolution, and then edits
+  # `backend/requirements.txt` as if it were a hand-maintained pip manifest --
+  # bumping each pin to that package's own latest release, line by line, with
+  # no resolver behind it. `cd8de18` (PR #47) is the shape: 25 single-line
+  # bumps that left `pydantic==2.13.5` beside `pydantic-core==2.49.0`, a set
+  # that is not merely stale but uninstallable. Do not expect a future
+  # dependabot release to start doing it.
+  #
+  # `.github/workflows/requirements-export.yml` is what regenerates the export
+  # on these pull requests, from `backend/uv.lock`, by running
+  # `backend/scripts/export_requirements.sh` and pushing one commit onto the
+  # pull request's branch. One side effect to expect: dependabot stops
+  # force-pushing a branch it sees as modified by another author, so after that
+  # push it will no longer rebase or re-drive the pull request. A pull request
+  # left open long enough to go stale must be closed and reopened by
+  # dependabot rather than waited on for a rebase that will not come.
   - package-ecosystem: "uv"
     directory: "/backend"
     schedule:

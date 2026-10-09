@@ -269,6 +269,16 @@ as the source of truth.
   that is what prompts the bump commit. A stale pin is safe to sit on: uv is a
   build tool, and what actually ships is pinned by `backend/uv.lock` and
   `backend/requirements.txt`.
+- **The backend export** — `backend/requirements.txt` is never hand-edited. It
+  is the install manifest for the Vercel backend deployment, generated from
+  `backend/uv.lock`, and `backend/scripts/export_requirements.sh` is the only
+  way to regenerate it — the only place the export command is written down, and
+  the only thing allowed to write the file. Dependabot's `uv` ecosystem does
+  not regenerate it; it bumps each pin line by line with no resolver behind it,
+  which is how `cd8de18` landed a set that could not be installed at all.
+  `.github/workflows/requirements-export.yml` regenerates it on those pull
+  requests, and `ci.yml`'s `Backend Tests` job re-runs the script and fails on
+  any diff, so a hand edit is a red required check rather than a bad deploy.
 - **A hung run must not be a silent one.** A job killed by GitHub's
   `timeout-minutes` is **cancelled**, and a cancelled job _usually_ publishes
   **no logs at all** — 11 of the 15 occurrences APRAS-119's census found

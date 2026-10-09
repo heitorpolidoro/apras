@@ -71,6 +71,70 @@ jobs:
         cd backend
         uv sync --all-groups
 
+    # --- APRAS-121: the committed export was generated, and installs --------
+    #
+    # `backend/requirements.txt` is the install manifest for the Vercel backend
+    # deployment and the one shipped artifact no other job here exercises.
+    # `tests/test_requirements_export.py` already asserts *pin-level* parity
+    # against `uv.lock`, offline; these three steps add what a pin comparison
+    # cannot see -- the generated header, the line ordering, the environment
+    # markers, the freshness of the lock itself, and installability. Neither
+    # the test nor these steps is redundant with the other.
+    #
+    # They sit ahead of the wrapped pytest step on purpose: they cost seconds
+    # to a minute, and placed first they still report a verdict when the known
+    # `Backend Tests` hang recurs. Whichever task touches this job next keeps
+    # them here rather than reordering them behind pytest.
+
+    # The freshness assertion that `requirements-export.yml` deliberately does
+    # *not* carry: it reads `pyproject.toml`, which on a pull request is
+    # head-controlled, and that job holds a push credential. Here the token is
+    # read-only and no secret is exposed, so reading it costs nothing.
+    - name: Assert the lock is fresh with respect to pyproject.toml
+      run: |
+        cd backend
+        uv lock --check
+
+    # The byte-level half. `export_requirements.sh` is the only definition of
+    # the command, and it refuses to run on a uv other than the `version:`
+    # literal above -- which is why the two must be bumped in one commit.
+    - name: Regenerate the export and assert it is byte-identical
+      run: |
+        bash backend/scripts/export_requirements.sh
+        git diff --exit-code -- backend/requirements.txt
+
+    # Installability, which no pin comparison establishes: at `cd8de18` the
+    # committed export pinned `pydantic==2.13.5` next to
+    # `pydantic-core==2.46.5`'s successor and could not be installed at all.
+    #
+    # The interpreter is created fresh under `$RUNNER_TEMP` and the isolation
+    # is the point: by now `uv sync --all-groups` has populated
+    # `backend/.venv` with the lock's full contents, and a dry run against
+    # *that* venv would be a materially weaker, differently-behaving check.
+    # `--python 3.13` is written out rather than inherited from
+    # `backend/.python-version`, so the interpreter this check uses is readable
+    # here and does not move when that file does.
+    #
+    # This is the one step in the job that resolves against PyPI, and that
+    # dependency is accepted -- installability cannot be checked offline. One
+    # retry keeps a registry blip from becoming a red required check with no
+    # cause in the code; a second consecutive failure is a real failure and is
+    # neither retried further nor made `continue-on-error`.
+    - name: Dry-run the committed export in a throwaway interpreter
+      run: |
+        set -euo pipefail
+        uv venv --python 3.13 "$RUNNER_TEMP/export-check"
+        dry_run() {
+          uv pip install --dry-run \
+            --python "$RUNNER_TEMP/export-check" \
+            -r backend/requirements.txt
+        }
+        if ! dry_run; then
+          echo "first attempt failed; retrying once in case the registry blipped"
+          sleep 20
+          dry_run
+        fi
+
     # `timeout` here, and not only `timeout-minutes` above, because the two
     # kill the run in opposite ways. `timeout-minutes` cancels the *job*, and a
     # cancelled job's logs are unavailable; `timeout` fails a *step*, so
