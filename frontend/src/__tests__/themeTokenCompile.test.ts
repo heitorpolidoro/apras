@@ -22,11 +22,7 @@
 // (identical numbers — `muted`, `accent` and `secondary` are byte-identical
 // in `:root`, which the last case below asserts); and emerald migrated as
 // brand where it meant success. All three stay a human review duty.
-import { readFileSync } from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { beforeAll, describe, expect, it } from "vitest";
-import { compile } from "tailwindcss";
 import {
   contrastRatio,
   hexToOklch,
@@ -34,10 +30,17 @@ import {
   parseOklch,
   type Oklch,
 } from "../lib/contrast";
-
-const HERE = path.dirname(fileURLToPath(import.meta.url));
-const SRC = path.resolve(HERE, "..");
-const FRONTEND_ROOT = path.resolve(SRC, "..");
+// APRAS-125 lifted the compile and the two stylesheet readers into a shared
+// helper. `rules` and `declarations` moved **unchanged**: §1i and the
+// last-unqualified-`:root` selection below depend on their exact depth-0
+// semantics, and the helper's `rulesDeep` / `declarationsDeep` are separate
+// new functions this suite does not use.
+import {
+  compileIndexCss,
+  declarations,
+  rules,
+  type Rule,
+} from "./helpers/tailwindSheet";
 
 /** The tolerance §4b fixes: the table publishes two decimals and is asserted
  *  to a tenth, so a rounding disagreement is not a failure and a wrong token
@@ -263,82 +266,6 @@ const ROWS: readonly Row[] = [
   { source: "bg-red-700", target: "bg-destructive", dL: 7.5, dE: 7.97 },
 ];
 
-// --- the stylesheet reader -------------------------------------------------
-
-interface Rule {
-  selector: string;
-  body: string;
-}
-
-/**
- * Every rule in `css`, with `@layer` wrappers flattened away.
- *
- * A brace scanner rather than a regular expression: `bg-primary/90` nests an
- * `@supports` block inside its own rule, and the theme layer nests hundreds
- * of declarations inside an at-rule.
- */
-const rules = (source: string): Rule[] => {
-  // Comments and statement at-rules (`@layer theme, base, …;`) are dropped
-  // first: left in, they end up glued to the front of the next selector and
-  // `:root, :host` stops being findable by name.
-  const css = source.replace(/\/\*[\s\S]*?\*\//g, "");
-  const found: Rule[] = [];
-  let selector = "";
-  for (let index = 0; index < css.length; index += 1) {
-    const character = css[index];
-    if (character === ";") {
-      selector = "";
-      continue;
-    }
-    if (character !== "{") {
-      selector += character;
-      continue;
-    }
-    let depth = 1;
-    let end = index + 1;
-    for (; end < css.length && depth > 0; end += 1) {
-      if (css[end] === "{") depth += 1;
-      if (css[end] === "}") depth -= 1;
-    }
-    const body = css.slice(index + 1, end - 1);
-    const name = selector.trim();
-    if (name.startsWith("@layer")) {
-      found.push(...rules(body));
-    } else {
-      found.push({ selector: name, body });
-    }
-    selector = "";
-    index = end - 1;
-  }
-  return found;
-};
-
-/** The `name: value` pairs declared directly in a rule body, nested blocks
- *  excluded. */
-const declarations = (body: string): Map<string, string> => {
-  const pairs = new Map<string, string>();
-  let depth = 0;
-  let buffer = "";
-  const flush = () => {
-    const colon = buffer.indexOf(":");
-    if (colon > 0) {
-      pairs.set(buffer.slice(0, colon).trim(), buffer.slice(colon + 1).trim());
-    }
-    buffer = "";
-  };
-  for (const character of body) {
-    if (character === "{") depth += 1;
-    if (character === "}") depth -= 1;
-    if (character === ";" && depth === 0) {
-      flush();
-      continue;
-    }
-    if (depth === 0) buffer += character;
-  }
-  flush();
-  return pairs;
-};
-
 const VAR_REFERENCE = /^var\((--[a-z0-9-]+)\)$/;
 const PERCENT_LIGHTNESS = /^oklch\(\s*([\d.]+)%/;
 const SHORT_HEX = /^#([0-9a-fA-F])([0-9a-fA-F])([0-9a-fA-F])$/;
@@ -407,24 +334,7 @@ const escapeClass = (className: string): string =>
   className.replace(/\//g, "\\/").replace(/\./g, "\\.");
 
 const build = async (candidates: readonly string[]): Promise<Sheet> => {
-  const loadStylesheet = async (id: string, base: string) => {
-    const file =
-      id === "tailwindcss"
-        ? path.join(FRONTEND_ROOT, "node_modules", "tailwindcss", "index.css")
-        : id.startsWith("tailwindcss/")
-          ? path.join(FRONTEND_ROOT, "node_modules", id)
-          : path.resolve(base, id);
-    return {
-      path: file,
-      base: path.dirname(file),
-      content: readFileSync(file, "utf8"),
-    };
-  };
-  const compiler = await compile(
-    readFileSync(path.join(SRC, "index.css"), "utf8"),
-    { base: SRC, loadStylesheet },
-  );
-  const css = compiler.build([...candidates]);
+  const css = await compileIndexCss(candidates);
   const parsed = rules(css);
 
   // Requirement 1: the `:root` block **`index.css` contributes** — the last
