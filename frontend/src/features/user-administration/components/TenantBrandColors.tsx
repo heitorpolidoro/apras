@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import {
   CheckCheck,
   ClipboardPaste,
-  OctagonX,
   Palette,
   RotateCcw,
   Save,
@@ -17,13 +16,11 @@ import {
   type BrandPalette,
   type BrandPaletteKey,
   type BrandTheme,
-  type BrandContrastFailure,
   type DerivedTheme,
   type TenantProfile,
 } from "../../../api/tenantProfile";
 import {
   auditHexPalette,
-  auditScheme,
   contrastRatio,
   hexPaletteToScheme,
   MEASURED_PAIRS,
@@ -157,17 +154,6 @@ const bodyFor = (draft: Draft): BrandTheme =>
         light: draft.light,
         dark: draft.deriveDark ? null : draft.dark,
       };
-
-/** The 422 body's `failures`, if this is one — `InsufficientContrastError`. */
-const failuresOf = (error: unknown): BrandContrastFailure[] => {
-  const response = (
-    error as { response?: { status?: number; data?: { failures?: unknown } } }
-  )?.response;
-  if (response?.status !== 422 || !Array.isArray(response.data?.failures)) {
-    return [];
-  }
-  return response.data.failures as BrandContrastFailure[];
-};
 
 interface PairReading {
   pair: string;
@@ -606,15 +592,15 @@ const BrandPasteDialog: React.FC<{
             </div>
 
             {failures.length > 0 && (
-              <div className="rounded-md border-2 border-destructive/40 bg-destructive/10 p-3">
-                <p className="text-xs font-semibold text-destructive">
-                  {t("tenantProfile.brand.refusalTitle")}
+              <div className="rounded-md border-2 border-[var(--status-pending-fg)]/40 bg-[var(--status-pending-bg)] p-3">
+                <p className="text-xs font-semibold text-[var(--status-pending-fg)]">
+                  {t("tenantProfile.brand.warningTitle")}
                 </p>
-                <p className="mt-1 text-[11px] text-destructive">
-                  {t("tenantProfile.brand.refusalBody", { count: failures.length })}
+                <p className="mt-1 text-[11px] text-[var(--status-pending-fg)]">
+                  {t("tenantProfile.brand.warningBody", { count: failures.length })}
                 </p>
-                <p className="mt-1 text-[11px] text-destructive">
-                  {t("tenantProfile.brand.paste.cannotSave")}
+                <p className="mt-1 text-[11px] text-[var(--status-pending-fg)]">
+                  {t("tenantProfile.brand.paste.saveableAnyway")}
                 </p>
               </div>
             )}
@@ -650,7 +636,6 @@ const TenantBrandColors: React.FC<{ profile: TenantProfile }> = ({ profile }) =>
   const { t } = useTranslation();
   const update = useUpdateTenantProfile();
   const [draft, setDraft] = useState<Draft | null>(null);
-  const [apiFailures, setApiFailures] = useState<BrandContrastFailure[]>([]);
   const [savedKey, setSavedKey] = useState<string | null>(null);
   const [pasting, setPasting] = useState(false);
   const [pasteText, setPasteText] = useState("");
@@ -671,7 +656,6 @@ const TenantBrandColors: React.FC<{ profile: TenantProfile }> = ({ profile }) =>
     draft !== null && draft.tenantId === profile.id ? draft : draftFor(profile);
 
   const edit = (patch: Partial<Draft>) => {
-    setApiFailures([]);
     setSavedKey(null);
     setDraft({ ...current, ...patch });
   };
@@ -702,7 +686,7 @@ const TenantBrandColors: React.FC<{ profile: TenantProfile }> = ({ profile }) =>
    *
    * A **grammar** refusal applies nothing. A **contrast** failure is not a
    * refusal to apply — the values land, the client then measures them, and the
-   * section's existing `blocked` disables Save with no new code path.
+   * section warns about them; Save stays enabled (APRAS-100).
    */
   const applyPaste = () => {
     const result = parseBrandPalettePaste(pasteText);
@@ -770,14 +754,34 @@ const TenantBrandColors: React.FC<{ profile: TenantProfile }> = ({ profile }) =>
   const derived: DerivedTheme | null = profile.theme ?? null;
   const lightReadings = derived ? readingsOf(derived.light) : [];
   const darkReadings = derived ? readingsOf(derived.dark) : [];
-  const derivedFailures = derived
-    ? [...auditScheme(derived.light), ...auditScheme(derived.dark)]
-    : [];
 
-  const blocked = anyMalformed || clientFailures.length > 0;
+  // Contrast is a warning, never a block (APRAS-100): only a malformed hex
+  // disables Save.
+  const blocked = anyMalformed;
+
+  // One list, one source. While the draft is clean the server measured what is
+  // stored; once the person has typed, the server has not seen those colours
+  // and the client's own reading is the only one. Never concatenated, so no
+  // reading renders twice. `BrandContrastFailure` is structurally assignable
+  // to `ContrastFailure`, so no cast is needed.
+  const draftIsClean = draft === null || draft.tenantId !== profile.id;
+  const shown: ContrastFailure[] = draftIsClean
+    ? (profile.contrast_warnings ?? [])
+    : clientFailures;
+
+  // The one live region's sentence: a malformed hex wins (the audit is skipped,
+  // so `shown` is empty and "all clear" would be false while Save is disabled),
+  // then failures, then all clear.
+  const liveSentence = anyMalformed
+    ? t("tenantProfile.brand.warningAnnouncementMalformed")
+    : shown.length > 0
+      ? t("tenantProfile.brand.warningAnnouncement", {
+          count: shown.length,
+          worst: Math.min(...shown.map((failure) => failure.ratio)).toFixed(2),
+        })
+      : t("tenantProfile.brand.allPass");
 
   const save = () => {
-    setApiFailures([]);
     update.mutate(
       { brand_theme: bodyFor(current) },
       {
@@ -785,16 +789,12 @@ const TenantBrandColors: React.FC<{ profile: TenantProfile }> = ({ profile }) =>
           setDraft(null);
           setSavedKey("tenantProfile.brand.saved");
         },
-        onError: (error) => {
-          setSavedKey(null);
-          setApiFailures(failuresOf(error));
-        },
+        onError: () => setSavedKey(null),
       },
     );
   };
 
   const reset = () => {
-    setApiFailures([]);
     update.mutate(
       { brand_theme: null },
       {
@@ -970,6 +970,9 @@ const TenantBrandColors: React.FC<{ profile: TenantProfile }> = ({ profile }) =>
               type="button"
               onClick={save}
               disabled={blocked || update.isPending}
+              aria-describedby={
+                current.mode === "advanced" ? "brand-contrast-live" : undefined
+              }
               className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Save className="h-4 w-4" aria-hidden="true" />
@@ -995,30 +998,40 @@ const TenantBrandColors: React.FC<{ profile: TenantProfile }> = ({ profile }) =>
         </div>
 
         <div className="space-y-4">
-          {(clientFailures.length > 0 || apiFailures.length > 0) && (
+          {current.mode === "advanced" && (
+            <p
+              id="brand-contrast-live"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              className="sr-only"
+            >
+              {liveSentence}
+            </p>
+          )}
+
+          {shown.length > 0 && (
             <div
-              role="alert"
-              className="rounded-lg border-2 border-destructive/40 bg-destructive/10 p-4"
+              data-testid="brand-contrast-warning"
+              className="rounded-lg border-2 border-[var(--status-pending-fg)]/40 bg-[var(--status-pending-bg)] p-4"
             >
               <div className="flex items-start gap-3">
-                <OctagonX
-                  className="mt-0.5 h-5 w-5 shrink-0 text-destructive"
+                <TriangleAlert
+                  className="mt-0.5 h-5 w-5 shrink-0 text-[var(--status-pending-fg)]"
                   aria-hidden="true"
                 />
                 <div className="space-y-1">
-                  <p className="text-sm font-semibold text-destructive">
-                    {t("tenantProfile.brand.refusalTitle")}
+                  <p className="text-sm font-semibold text-[var(--status-pending-fg)]">
+                    {t("tenantProfile.brand.warningTitle")}
                   </p>
-                  <p className="text-xs text-destructive">
-                    {t("tenantProfile.brand.refusalBody", {
-                      count: Math.max(clientFailures.length, apiFailures.length),
-                    })}
+                  <p className="text-xs text-[var(--status-pending-fg)]">
+                    {t("tenantProfile.brand.warningBody", { count: shown.length })}
                   </p>
                   <ul className="space-y-1 pt-1">
-                    {[...apiFailures, ...clientFailures].map((failure, index) => (
+                    {shown.map((failure, index) => (
                       <li
                         key={`${failure.pair}-${index}`}
-                        className="rounded bg-destructive/10 px-2 py-1 font-mono text-[11px] text-destructive"
+                        className="rounded bg-[var(--status-pending-fg)]/10 px-2 py-1 font-mono text-[11px] text-[var(--status-pending-fg)]"
                       >
                         {t("tenantProfile.brand.pairFail", {
                           pair: failure.pair,
@@ -1033,8 +1046,11 @@ const TenantBrandColors: React.FC<{ profile: TenantProfile }> = ({ profile }) =>
             </div>
           )}
 
-          {clientFailures.length === 0 && apiFailures.length === 0 && (
-            <p className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800">
+          {shown.length === 0 && (
+            <p
+              aria-hidden="true"
+              className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800"
+            >
               <CheckCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
               <span>{t("tenantProfile.brand.allPass")}</span>
             </p>
@@ -1087,9 +1103,6 @@ const TenantBrandColors: React.FC<{ profile: TenantProfile }> = ({ profile }) =>
                 title={t("tenantProfile.brand.pairsDark")}
                 readings={darkReadings}
               />
-              {derivedFailures.length === 0 && (
-                <p className="sr-only">{t("tenantProfile.brand.allPass")}</p>
-              )}
               <div>
                 <h3 className="mb-2 text-sm font-semibold text-foreground">
                   {t("tenantProfile.brand.previewTitle")}

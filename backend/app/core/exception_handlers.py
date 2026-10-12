@@ -41,7 +41,6 @@ from app.core.exceptions import (
     InfractionRuleNotFoundError,
     InfractionStateError,
     InfractionValidationError,
-    InsufficientContrastError,
     InsufficientStockError,
     InvalidAnnouncementMediaFormatError,
     InvalidBrandThemeError,
@@ -273,7 +272,6 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
             # API, not only on the screen, so a request that bypasses the UI
             # is refused all the same.
             InvalidBrandThemeError,
-            InsufficientContrastError,
             # APRAS-94 §3: a content type the configured provider may not
             # store. The backend is healthy; the request is the problem.
             UnsupportedStorageContentTypeError,
@@ -303,11 +301,5 @@ async def domain_exception_handler(_: Request, exc: DomainError) -> JSONResponse
         status_code = status.HTTP_400_BAD_REQUEST
 
     content: dict[str, object] = {"detail": exc.message}
-    if isinstance(exc, InsufficientContrastError):
-        # The only error that carries structured data beside its message
-        # (APRAS-68 D-B): every failing pair, its measured ratio and the 4.5
-        # minimum, so a caller outside the screen learns exactly what a
-        # person editing the palette would have seen.
-        content["failures"] = exc.failures
 
     return JSONResponse(status_code=status_code, content=content)

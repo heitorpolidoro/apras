@@ -105,6 +105,7 @@ const PROFILE: TenantProfile = {
   logo_url: null,
   brand_theme: { mode: "simple", primary: "#857046", accent: "#0ea5e9" },
   theme: THEME,
+  contrast_warnings: null,
 };
 
 const profile = vi.hoisted(() => ({ data: { theme: null } as { theme: DerivedTheme | null } }));

@@ -9,7 +9,7 @@
 // are both unavailable without new infrastructure — deliberately out of scope
 // for APRAS-78.
 //
-// What is available is Tailwind 4.2.4's own `compile()`. This suite compiles
+// What is available is Tailwind's own `compile()`, pinned by the lockfile. This suite compiles
 // `src/index.css` through it over a fixture holding **every class pair** in
 // §1b–1e of `docs/frontend/theme-token-mapping.md`, resolves both sides
 // through the `var()` chain to the value the browser would paint, and asserts

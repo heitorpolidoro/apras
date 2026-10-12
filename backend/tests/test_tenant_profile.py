@@ -470,8 +470,9 @@ def test_is_active_is_not_writable_here(tenant_client: TestClient, session: Sess
 
 
 # ---------------------------------------------------------------------------
-# The brand colours (APRAS-68): stored whole, derived on read, refused in the
-# API rather than only on the screen.
+# The brand colours (APRAS-68): stored whole, derived on read; a malformed
+# palette is refused in the API, a low-contrast one is stored and warned
+# (APRAS-100).
 # ---------------------------------------------------------------------------
 
 
@@ -576,14 +577,47 @@ def test_the_derived_theme_carries_eighteen_variables_per_scheme(
     assert theme["light"]["secondary"] == "oklch(0.68 0.14 237.32)"
 
 
-def test_advanced_palette_below_aa_is_refused_by_the_api(
+def test_advanced_palette_below_aa_is_saved_and_warned(
     tenant_client: TestClient, session: Session
 ):
-    """D-B, proven with no UI involved: the screen's check is a convenience,
-    the API's is the rule."""
+    """APRAS-100: the contrast verdict is a report, not a refusal. The palette
+    is stored exactly as submitted and the profile body names every failing
+    pair, on the PATCH that saved it and on every later GET."""
     caller = _member(session, permissions=[PERMISSION])
     headers = _auth(caller, DEFAULT_TENANT_ID)
-    tenant_client.patch(
+    submitted = _advanced_body(background="#2b2b2b", foreground="#4a4a4a")
+
+    response = tenant_client.patch(
+        PROFILE_URL, json={"brand_theme": submitted}, headers=headers
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["brand_theme"] == submitted
+    assert _branding_of(session) == submitted
+    warnings = body["contrast_warnings"]
+    assert "foreground/background" in {warning["pair"] for warning in warnings}
+    for warning in warnings:
+        assert warning["minimum"] == 4.5
+        assert warning["ratio"] < 4.5
+        assert warning["ratio"] == round(warning["ratio"], 2)
+        assert warning["scheme"] in {"light", "dark"}
+    later = tenant_client.get(PROFILE_URL, headers=headers).json()
+    assert later["contrast_warnings"] == warnings
+
+
+def test_contrast_warnings_are_null_empty_or_listed_by_mode(
+    tenant_client: TestClient, session: Session
+):
+    caller = _member(session, permissions=[PERMISSION])
+    headers = _auth(caller, DEFAULT_TENANT_ID)
+
+    assert (
+        tenant_client.get(PROFILE_URL, headers=headers).json()["contrast_warnings"]
+        is None
+    )
+
+    simple = tenant_client.patch(
         PROFILE_URL,
         json={
             "brand_theme": {
@@ -594,29 +628,27 @@ def test_advanced_palette_below_aa_is_refused_by_the_api(
         },
         headers=headers,
     )
+    assert simple.json()["contrast_warnings"] == []
 
+    clear = tenant_client.patch(
+        PROFILE_URL, json={"brand_theme": _advanced_body()}, headers=headers
+    )
+    assert clear.status_code == 200
+    assert clear.json()["contrast_warnings"] == []
+
+
+def test_a_422_body_never_carries_a_failures_key(
+    tenant_client: TestClient, session: Session
+):
+    caller = _member(session, permissions=[PERMISSION])
     response = tenant_client.patch(
         PROFILE_URL,
-        json={
-            "brand_theme": _advanced_body(background="#2b2b2b", foreground="#4a4a4a")
-        },
-        headers=headers,
+        json={"brand_theme": _advanced_body(background="not-a-hex")},
+        headers=_auth(caller, DEFAULT_TENANT_ID),
     )
 
     assert response.status_code == 422
-    body = response.json()
-    failing = {failure["pair"] for failure in body["failures"]}
-    assert "foreground/background" in failing
-    for failure in body["failures"]:
-        assert failure["minimum"] == 4.5
-        assert failure["ratio"] < 4.5
-        assert failure["scheme"] in {"light", "dark"}
-    # Nothing was persisted: the tenant keeps the branding it had.
-    assert _branding_of(session)["mode"] == "simple"
-    assert (
-        tenant_client.get(PROFILE_URL, headers=headers).json()["brand_theme"]["primary"]
-        == "#7c3aed"
-    )
+    assert "failures" not in response.json()
 
 
 def test_an_advanced_palette_with_a_null_dark_derives_the_simple_dark_scheme(

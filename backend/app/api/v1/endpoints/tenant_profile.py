@@ -24,11 +24,15 @@ from fastapi import APIRouter, Depends, File, UploadFile
 from sqlmodel import Session
 
 from app.api import deps as api_deps
-from app.core.branding import build_theme
+from app.core.branding import ADVANCED_MODE, audit_contrast, build_theme
 from app.db import get_session
 from app.models.tenant import Tenant
 from app.models.user import User
-from app.schemas.tenant import TenantProfileRead, TenantProfileUpdate
+from app.schemas.tenant import (
+    BrandContrastWarning,
+    TenantProfileRead,
+    TenantProfileUpdate,
+)
 from app.services.tenant_service import TenantService
 
 router = APIRouter()
@@ -42,9 +46,30 @@ def _profile_of(tenant: Tenant) -> TenantProfileRead:
     and a tenant with no colours gets ``null`` rather than an empty object, so
     the client injects no element at all.
     """
+    theme = build_theme(tenant.brand_theme)
     return TenantProfileRead.model_validate(tenant).model_copy(
-        update={"theme": build_theme(tenant.brand_theme)}
+        update={"theme": theme, "contrast_warnings": _contrast_warnings(tenant, theme)}
     )
+
+
+def _contrast_warnings(
+    tenant: Tenant, theme: dict[str, dict[str, str]] | None
+) -> list[BrandContrastWarning] | None:
+    """Every measured pair under 4.5:1, or ``None`` with no colours (APRAS-100).
+
+    Simple mode is never measured -- the derivation owns both sides of every
+    pair -- so it answers an empty list, as does an advanced palette that
+    clears. The measurement is ``audit_contrast``, untouched.
+    """
+    if theme is None or tenant.brand_theme is None:
+        return None
+    if tenant.brand_theme.get("mode") != ADVANCED_MODE:
+        return []
+    return [
+        BrandContrastWarning(**failure._asdict(), scheme=name)
+        for name, scheme in theme.items()
+        for failure in audit_contrast(scheme)
+    ]
 
 
 #: Bound once at import, like `endpoints/uploads.py`'s three guards: the

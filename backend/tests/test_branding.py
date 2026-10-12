@@ -34,6 +34,7 @@ from app.core.branding import (
     MEASURED_PAIRS,
     MINIMUM_CONTRAST_RATIO,
     TEXT_SURFACE_KEYS,
+    ContrastFailure,
     OklchColor,
     _simple_scheme,
     _walk_to_legible_text,
@@ -138,7 +139,7 @@ def test_the_shipped_muted_pair_measures_4_29_and_not_10_96():
     Under a second sRGB->linear transfer this reads **10.96**: the bug does
     not halve ratios, it inflates them for light-on-light pairs, which is
     exactly how it would neutralise both the repair loop and the advanced-mode
-    refusal without a single red test elsewhere.
+    warning without a single red test elsewhere.
     """
     ratio = contrast_ratio(OklchColor(0.55, 0.02, 160.0), OklchColor(0.96, 0.01, 160.0))
 
@@ -934,7 +935,7 @@ def test_the_authored_key_set_is_exactly_the_thirteen_documented_names():
 
 def test_the_eight_measured_pairs_are_the_documented_ones():
     # APRAS-88 adds `--primary-text` to the emitted scheme and deliberately
-    # **not** to this tuple: it is the 422 refusal contract, mirrored in
+    # **not** to this tuple: it is the contrast-warning contract, mirrored in
     # `frontend/src/lib/contrast.ts` and pinned by `contrast_fixtures.json`,
     # and four new pairs would start refusing palettes stored and working
     # today. The non-convergence rule is that token's guard instead.
@@ -983,3 +984,29 @@ def _fixture_colour(side: dict) -> OklchColor:
     if "hex" in side:
         return hex_to_oklch(side["hex"])
     return OklchColor(*side["oklch"])
+
+
+def test_the_spec_palette_has_exactly_one_failing_pair_in_the_light_scheme():
+    """APRAS-100: pins the measurement the warning reports. 3.93 is the
+    reading of the emitted 2dp oklch() strings; the raw hex reading is 3.86."""
+    palette = {
+        "background": "#fbfdfc",
+        "foreground": "#141a17",
+        "card": "#ffffff",
+        "card-foreground": "#141a17",
+        "primary": "#0b6b47",
+        "primary-foreground": "#fafafa",
+        "secondary": "#eaf5ef",
+        "secondary-foreground": "#1d2a23",
+        "accent": "#eaf5ef",
+        "accent-foreground": "#1d2a23",
+        "muted": "#e4e8e7",
+        "muted-foreground": "#6f746e",
+        "border": "#dfe8e3",
+    }
+    theme = build_theme({"mode": "advanced", "light": palette, "dark": None})
+
+    assert audit_contrast(theme["light"]) == [
+        ContrastFailure("muted-foreground/muted", 3.93, 4.5)
+    ]
+    assert audit_contrast(theme["dark"]) == []

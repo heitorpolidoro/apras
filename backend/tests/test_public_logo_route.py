@@ -7,7 +7,7 @@ configured with **private** access by operator decision: the object is not
 readable without our credential, so the backend reads it and serves the bytes.
 The store stays private; the *route* is public.
 
-Three properties carry it and each is asserted here:
+Four properties carry it and each is asserted here:
 
 * **It authenticates nobody**, so it is on ``UNGUARDED_ROUTES`` and maps to no
   catalogue permission.
@@ -15,6 +15,9 @@ Three properties carry it and each is asserted here:
   condominium, no logo, a suffix outside the three embeddable image types, an
   unreadable object and an oversized one all answer the same thing. A storage
   failure is never a 5xx.
+* **It is revalidated, never time-cached** (APRAS-124): a strong ``ETag``
+  derived from ``logo_url``, ``Cache-Control: no-cache`` and a bodiless ``304``
+  that performs no outbound read.
 * **The credential never leaves the backend.** It goes out on the read and
   appears in neither the response body nor the response headers.
 
@@ -25,6 +28,9 @@ it re-enabled the limiter around itself -- which the behavioural case below
 does, exactly as ``test_public_branding.py`` does.
 """
 
+import base64
+import hashlib
+import re
 import uuid
 from pathlib import Path
 from types import SimpleNamespace
@@ -39,7 +45,7 @@ from app.core import urls
 from app.core.limiter import limiter
 from app.core.permissions import UNGUARDED_ROUTES
 from app.main import app
-from app.models.tenant import Tenant
+from app.models.tenant import DEFAULT_TENANT_ID, Tenant
 from app.services import tenant_service as tenant_service_module
 from app.services.storage_service import (
     BLOB_HOST_SUFFIX,
@@ -131,18 +137,250 @@ def test_the_logo_is_served_with_no_credential_of_any_kind(
     assert "X-Tenant-Id" not in response.request.headers
 
 
-def test_the_route_sets_no_cache_control_and_no_etag(
+# ---------------------------------------------------------------------------
+# The validator (APRAS-124)
+# ---------------------------------------------------------------------------
+
+#: A plausible tag that is not the digest of anything stored.
+WRONG_TAG = '"' + "d8e8fca2" * 8 + '"'
+
+
+def _etag_of(client: TestClient, slug: str) -> str:
+    """The tag the route itself announces, read from a plain ``200``.
+
+    Deliberately not recomputed here: the derivation is pinned to a literal by
+    ``test_the_tag_is_the_literal_sha256_of_the_stored_url`` alone, so the
+    conditional cases do not also fail for a wrong recipe.
+    """
+    response = client.get(_url(slug))
+    assert response.status_code == 200
+    return response.headers["etag"]
+
+
+def _conditional(client: TestClient, slug: str, value: str):
+    return client.get(_url(slug), headers={"If-None-Match": value})
+
+
+def test_the_route_sets_no_cache_and_a_strong_etag(
     client: TestClient, session: Session, uploads: Path
 ):
-    """APRAS-92 D3, for the same reason it was taken there: a browser-held copy
-    cannot be invalidated, and a logo replaced on the admin screen must not
-    stay stale at a slug-stable URL."""
+    """The header policy: one token ``no-cache``, one strong quoted validator
+    and no second one. Digest-ness is pinned by the literal-digest case, not by
+    this shape check (a hex echo of the 32-character fixture URL also fits)."""
     tenant = _tenant(session, logo_url=_store(uploads, "logo.png", PNG_BYTES))
 
     headers = client.get(_url(tenant.slug)).headers
 
-    assert "cache-control" not in headers
-    assert "etag" not in headers
+    assert headers["cache-control"] == "no-cache"
+    etag = headers["etag"]
+    assert not etag.startswith("W/")
+    assert etag.startswith('"')
+    assert etag.endswith('"')
+    assert re.fullmatch(r"[0-9a-f]{64}", etag[1:-1])
+    for absent in ("last-modified", "expires", "vary"):
+        assert absent not in headers
+
+
+def test_a_matching_if_none_match_is_a_bodiless_304(
+    client: TestClient, session: Session, uploads: Path
+):
+    tenant = _tenant(session, logo_url=_store(uploads, "logo.png", PNG_BYTES))
+    first = client.get(_url(tenant.slug))
+
+    response = _conditional(client, tenant.slug, first.headers["etag"])
+
+    assert response.status_code == 304
+    assert response.content == b""
+    assert "content-type" not in response.headers
+    assert "content-length" not in response.headers
+    assert response.headers["etag"] == first.headers["etag"]
+    assert response.headers["cache-control"] == "no-cache"
+
+
+def test_a_non_matching_if_none_match_is_a_200_with_the_full_bytes(
+    client: TestClient, session: Session, uploads: Path
+):
+    tenant = _tenant(session, logo_url=_store(uploads, "logo.png", PNG_BYTES))
+
+    response = _conditional(client, tenant.slug, WRONG_TAG)
+
+    assert response.status_code == 200
+    assert response.content == PNG_BYTES
+
+
+@pytest.mark.parametrize(
+    "header",
+    [
+        pytest.param("*", id="star"),
+        pytest.param("{wrong}, {right}", id="list"),
+        pytest.param("W/{right}", id="weak-prefix"),
+    ],
+)
+def test_a_star_a_list_and_a_weak_prefix_all_match(
+    client: TestClient, session: Session, uploads: Path, header: str
+):
+    tenant = _tenant(session, logo_url=_store(uploads, "logo.png", PNG_BYTES))
+    right = _etag_of(client, tenant.slug)
+
+    response = _conditional(
+        client, tenant.slug, header.format(wrong=WRONG_TAG, right=right)
+    )
+
+    assert response.status_code == 304
+
+
+@pytest.mark.parametrize("header", ["*", WRONG_TAG + ", *"], ids=["star", "list-star"])
+@pytest.mark.parametrize(
+    "name",
+    [
+        pytest.param(None, id="no-logo"),
+        pytest.param("logo.svg", id="svg"),
+        pytest.param("logo.bin", id="bin"),
+    ],
+)
+def test_a_star_is_404_and_never_304_without_a_representation(
+    client: TestClient, session: Session, uploads: Path, name: str | None, header: str
+):
+    """``*`` means "any current representation"; there is none here."""
+    logo_url = None if name is None else _store(uploads, name, PNG_BYTES)
+    tenant = _tenant(session, logo_url=logo_url)
+
+    response = _conditional(client, tenant.slug, header)
+
+    assert response.status_code == 404
+
+
+def test_replacing_the_logo_changes_the_etag_and_serves_the_new_bytes(
+    tenant_client: TestClient, session: Session, uploads: Path
+):
+    """Drives the real upload route, so the stale window is measured rather
+    than assumed."""
+    from tests.test_tenant_profile import _member, _png, _upload
+
+    caller = _member(session, permissions=["tenants:profile_update"])
+    old_bytes = _png()
+    new_bytes = _png(size=(8, 8), colour="#9b7327")
+    assert _upload(tenant_client, caller, content=old_bytes).status_code == 200
+    slug = session.get(Tenant, DEFAULT_TENANT_ID).slug
+    first = tenant_client.get(_url(slug))
+    assert first.status_code == 200
+    assert first.content == old_bytes
+
+    assert _upload(tenant_client, caller, content=new_bytes).status_code == 200
+    response = _conditional(tenant_client, slug, first.headers["etag"])
+
+    assert response.status_code == 200
+    assert response.content == new_bytes
+    assert response.content != old_bytes
+    assert response.headers["etag"] != first.headers["etag"]
+
+
+def test_the_304_performs_no_outbound_read_and_the_200_performs_one(
+    client: TestClient,
+    session: Session,
+    uploads: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    provider = tenant_service_module._storage_provider
+    reads: list[str] = []
+    real_read = provider.read_file
+
+    def spy(url, *args, **kwargs):
+        reads.append(url)
+        return real_read(url, *args, **kwargs)
+
+    url = _store(uploads, "logo.png", PNG_BYTES)
+    tenant = _tenant(session, logo_url=url)
+    etag = _etag_of(client, tenant.slug)
+    monkeypatch.setattr(provider, "read_file", spy)
+
+    conditional = _conditional(client, tenant.slug, etag)
+    assert conditional.status_code == 304
+    assert reads == []
+
+    unconditional = client.get(_url(tenant.slug))
+    assert unconditional.status_code == 200
+    assert reads == [url]
+
+
+def test_the_tag_is_the_literal_sha256_of_the_stored_url(
+    client: TestClient, session: Session, uploads: Path
+):
+    url = _store(uploads, "logo.png", PNG_BYTES)
+    assert url == "/static/uploads/2026/09/logo.png"
+    tenant = _tenant(session, logo_url=url)
+
+    etag = client.get(_url(tenant.slug)).headers["etag"]
+
+    assert etag == '"' + hashlib.sha256(url.encode("utf-8")).hexdigest() + '"'
+
+
+def test_the_tag_is_the_same_for_two_tenants_sharing_a_logo_url(
+    client: TestClient, session: Session, uploads: Path
+):
+    url = _store(uploads, "logo.png", PNG_BYTES)
+    one = _tenant(session, slug="um-condominio", logo_url=url)
+    two = _tenant(session, slug="outro-condominio", logo_url=url)
+
+    assert (
+        client.get(_url(one.slug)).headers["etag"]
+        == client.get(_url(two.slug)).headers["etag"]
+    )
+
+
+def test_the_tag_differs_when_only_the_object_uuid_differs(
+    client: TestClient, session: Session, uploads: Path
+):
+    one = _tenant(session, logo_url=_store(uploads, f"{uuid.uuid4()}.png", PNG_BYTES))
+    two = _tenant(session, logo_url=_store(uploads, f"{uuid.uuid4()}.png", PNG_BYTES))
+
+    assert (
+        client.get(_url(one.slug)).headers["etag"]
+        != client.get(_url(two.slug)).headers["etag"]
+    )
+
+
+def test_the_tag_is_not_a_reversible_encoding_of_the_stored_url(
+    client: TestClient, session: Session, uploads: Path
+):
+    url = _store(uploads, "logo.png", PNG_BYTES)
+    tenant = _tenant(session, logo_url=url)
+
+    inner = client.get(_url(tenant.slug)).headers["etag"].strip('"')
+
+    raw = url.encode("utf-8")
+    forbidden = {
+        url,
+        raw.hex(),
+        base64.b64encode(raw).decode().rstrip("="),
+        base64.urlsafe_b64encode(raw).decode().rstrip("="),
+    }
+    assert inner not in forbidden
+
+
+def test_the_tag_derivation_refuses_only_the_two_pre_read_refusals(
+    session: Session, uploads: Path
+):
+    valid = _tenant(session, logo_url=_store(uploads, "logo.png", PNG_BYTES))
+    assert TenantService.logo_etag(valid) is not None
+
+    for logo_url in (
+        None,
+        _store(uploads, "logo.svg", PNG_BYTES),
+        _store(uploads, "logo.bin", PNG_BYTES),
+    ):
+        refused = _tenant(session, logo_url=logo_url)
+        assert TenantService.logo_etag(refused) is None
+        assert TenantService.logo_bytes(refused) is None
+
+    oversized = b"\x89PNG" + b"\x00" * TenantService.LOGO_MAX_FILE_SIZE
+    for post_read in (
+        "/static/uploads/2026/09/gone.png",
+        _store(uploads, "big.png", oversized),
+    ):
+        tenant = _tenant(session, logo_url=post_read)
+        assert TenantService.logo_bytes(tenant) is None
+        assert TenantService.logo_etag(tenant) is not None
 
 
 # ---------------------------------------------------------------------------

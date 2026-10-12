@@ -377,8 +377,8 @@ as the source of truth.
 | Server-state         | TanStack Query 5                                    |
 | Routing              | react-router-dom 7                                  |
 | i18n                 | i18next + react-i18next + browser language detector |
-| Testing              | Vitest 4 + @testing-library/react + jsdom           |
-| Linting              | ESLint 9 + typescript-eslint                        |
+| Testing              | Vitest 5 + @testing-library/react + jsdom           |
+| Linting              | ESLint 10 + typescript-eslint (370 errors / 2 warnings across 66 files on `4be622b`, re-derived via `npx eslint . -f json` only valid after `npm ci`; `jsdom` 30.1.1 logs an `EBADENGINE` warning on local Node v24.13.0 requiring `^22.22.2 || ^24.15.0 || >=26.0.0` while CI resolves a satisfying 24.x) |
 
 ### Colour figures: one source, one page
 

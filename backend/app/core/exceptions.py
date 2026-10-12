@@ -971,24 +971,6 @@ class InvalidBrandThemeError(DomainError):
         super().__init__(message)
 
 
-class InsufficientContrastError(DomainError):
-    """Raised when an advanced palette carries an illegible pair (APRAS-68).
-
-    A **422** whose body also lists ``failures`` -- every failing pair, its
-    measured ratio and the 4.5 minimum -- so a client that bypasses the screen
-    is refused with the same information the screen would have shown. Simple
-    mode never raises it: there the derivation owns both sides of every
-    measured pair, so the guarantee is by construction.
-    """
-
-    def __init__(self, failures: list[dict[str, object]]) -> None:
-        self.failures = failures
-        super().__init__(
-            "Estas cores não podem ser salvas: "
-            f"{len(failures)} combinação(ões) abaixo de 4.5:1."
-        )
-
-
 class TenantMembershipAlreadyExistsError(DomainError):
     """Raised when a user is already linked to the given tenant.
 

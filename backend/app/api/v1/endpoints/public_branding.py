@@ -20,7 +20,9 @@ APRAS-92 added ``endpoints/public_projects.py``, the obras report behind
 ``/c/<slug>/obras``, on this same ``/public`` mount. The two differ in one way
 worth knowing before reading either: that one carries **no** rate limit and
 sets no ``Cache-Control``, by an operator decision taken twice (APRAS-92 D3).
-The limiter below is this route's and is not shared.
+The limiter below is this route's and is not shared. The logo route has
+since gained a validator (APRAS-124, see its docstring); the branding route
+is deliberately unchanged.
 
 **Mounted ``GLOBAL_SCOPED``, never ``TENANT_SCOPED``.** The caller resolves no
 acting tenant -- there is no ``Authorization`` header to resolve one *for*,
@@ -59,6 +61,20 @@ from app.schemas.tenant import PublicTenantBrandingRead
 from app.services.tenant_service import TenantService
 
 router = APIRouter()
+
+
+def _if_none_match_matches(header: str | None, etag: str) -> bool:
+    """RFC 9110 weak comparison of an ``If-None-Match`` value against ``etag``.
+
+    Only called once a representation exists, so ``*`` matches.
+    """
+    if not header:
+        return False
+    for raw in header.split(","):
+        entry = raw.strip()
+        if entry == "*" or entry.removeprefix("W/") == etag:
+            return True
+    return False
 
 
 @router.get("/tenants/{slug}/branding")
@@ -102,7 +118,7 @@ def get_public_tenant_branding(
 )
 @limiter.limit("30/minute")
 def get_public_tenant_logo(
-    request: Request,  # noqa: ARG001  # slowapi's @limiter.limit requires this parameter by name
+    request: Request,
     slug: str,
     session: Annotated[Session, Depends(get_session)],
 ) -> Response:
@@ -120,24 +136,43 @@ def get_public_tenant_logo(
     explicitly **not** a 5xx: the storage layer logs the reason and the caller
     is told there is no image here.
 
-    **No ``Cache-Control`` and no ``ETag``**, consistent with APRAS-92 D3 and
-    for the reason stated there: a browser-held copy cannot be invalidated,
-    and a logo replaced on the admin screen must not stay stale at a
-    slug-stable URL.
+    **Revalidated on every use, never time-cached** (APRAS-124). The ``200``
+    carries a strong ``ETag`` -- the quoted SHA-256 hex digest of
+    ``tenant.logo_url``, which names one immutable object because every
+    replacement writes a new URL -- and ``Cache-Control: no-cache``. A request
+    whose ``If-None-Match`` matches (RFC 9110 weak comparison: a list, a ``W/``
+    prefix and ``*`` all count) gets a bodiless ``304`` **without the outbound
+    read**. No ``max-age`` of any kind: a logo replaced on the admin screen
+    must show immediately at a slug-stable URL (APRAS-92 D3, APRAS-93). The tag
+    is derived first, and a ``None`` tag is the ordinary ``404`` whatever
+    ``If-None-Match`` holds, ``*`` included. A ``404`` carries neither header.
+    The branding route beside this one is deliberately unchanged.
 
     30 requests per minute per IP, the same limit the branding route carries
     and the operator's decision for this one. It answers the amplification
     question ``project_report_service._logo_html`` raised: this route is
-    public, uncached and performs an outbound fetch buffering up to 2 MiB on
-    **every** hit, so one cheap inbound request buys one outbound request we
-    pay for. It does not reverse D3, which was about the obras report -- a
-    local render with a different cost profile entirely.
+    public and performs an outbound fetch buffering up to 2 MiB on every hit
+    that does not revalidate, so one cheap inbound request can buy one outbound
+    request we pay for. A ``304`` counts against the limit like a ``200``
+    (slowapi deducts before the handler runs). It does not reverse D3, which
+    was about the obras report -- a local render with a different cost profile
+    entirely.
     """
     tenant = TenantService.get_by_slug(session, slug)
     if tenant is None or not tenant.is_active:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Logo not found"
         )
+
+    etag = TenantService.logo_etag(tenant)
+    if etag is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Logo not found"
+        )
+
+    headers = {"ETag": etag, "Cache-Control": "no-cache"}
+    if _if_none_match_matches(request.headers.get("if-none-match"), etag):
+        return Response(status_code=status.HTTP_304_NOT_MODIFIED, headers=headers)
 
     logo = TenantService.logo_bytes(tenant)
     if logo is None:
@@ -146,4 +181,4 @@ def get_public_tenant_logo(
         )
 
     payload, content_type = logo
-    return Response(content=payload, media_type=content_type)
+    return Response(content=payload, media_type=content_type, headers=headers)

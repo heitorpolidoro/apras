@@ -1,5 +1,6 @@
 """Tenant service layer for business logic (APRAS-41)."""
 
+import hashlib
 import io
 import itertools
 from pathlib import PurePosixPath
@@ -13,7 +14,6 @@ from app.core import branding as branding_module
 from app.core import clock
 from app.core.exceptions import (
     CoreModuleCannotBeDisabledError,
-    InsufficientContrastError,
     InvalidSlugError,
     SlugAlreadyTakenError,
     TenantAlreadyExistsError,
@@ -609,11 +609,8 @@ class TenantService:
         here.
         """
         url = getattr(tenant, "logo_url", None)
-        if not url:
-            return None
-
-        content_type = image_content_type_for_suffix(PurePosixPath(url).suffix)
-        if content_type is None or content_type not in cls.LOGO_ALLOWED_MIME_TYPES:
+        content_type = cls._logo_content_type(url)
+        if url is None or content_type is None:
             return None
 
         payload = _storage_provider.read_file(url, max_bytes=cls.LOGO_MAX_FILE_SIZE)
@@ -621,6 +618,48 @@ class TenantService:
             return None
 
         return payload, content_type
+
+    @classmethod
+    def _logo_content_type(cls, url: str | None) -> str | None:
+        """The embeddable image type a stored ``logo_url`` names, or ``None``.
+
+        The single suffix rule shared by :meth:`logo_bytes` and
+        :meth:`logo_etag`, so the ``304`` gate cannot drift from the ``404``
+        gate.
+        """
+        if not url:
+            return None
+        content_type = image_content_type_for_suffix(PurePosixPath(url).suffix)
+        if content_type is None or content_type not in cls.LOGO_ALLOWED_MIME_TYPES:
+            return None
+        return content_type
+
+    @classmethod
+    def logo_etag(cls, tenant: Tenant | None) -> str | None:
+        """The strong ``ETag`` of the condominium's logo, or ``None`` (APRAS-124).
+
+        The value is the quoted SHA-256 hex digest of ``tenant.logo_url``, with
+        no ``W/`` prefix. A stored URL is a stable identity for the octets:
+        both providers mint the object name from ``uuid.uuid4()``, the Blob
+        provider never overwrites, and :meth:`set_logo` always writes a **new**
+        URL before deleting the old object. One URL therefore names one
+        immutable byte sequence, which is what makes the validator strong, and
+        it is computed without the outbound read a payload digest would need.
+
+        ``None`` for exactly the two refusals :meth:`logo_bytes` makes *before*
+        reading (no ``logo_url``; a suffix outside the allowlist). The two
+        post-read refusals are deliberately not mirrored.
+
+        The builtin ``hash()`` is forbidden here: it is salted per process, so
+        two serverless instances would answer different tags for one object.
+        The digest is also one-way, so the header leaks none of the store id,
+        tenant id or object name carried by the URL.
+        """
+        url = getattr(tenant, "logo_url", None)
+        if cls._logo_content_type(url) is None:
+            return None
+        digest = hashlib.sha256(url.encode("utf-8")).hexdigest()
+        return '"' + digest + '"'
 
     @classmethod
     def update_profile(
@@ -663,39 +702,20 @@ class TenantService:
 
     @staticmethod
     def validated_brand_theme(value: dict | None) -> dict | None:
-        """Normalise a submitted branding object, or refuse it (APRAS-68).
+        """Normalise a submitted branding object, or refuse a malformed one.
 
-        Two refusals, both 422 and both **before** anything is written:
+        The one refusal is a 422 ``InvalidBrandThemeError`` -- an unusable
+        shape (a malformed hex, a missing or unknown key, an unknown mode) --
+        from the single judge in ``app.core.branding``, before anything is
+        written.
 
-        * an unusable shape -- a malformed hex, a missing or unknown key, an
-          unknown mode -- is ``InvalidBrandThemeError``, from the single judge
-          in ``app.core.branding``;
-        * an **advanced** palette carrying a text/surface pair under 4.5:1 is
-          ``InsufficientContrastError``, listing every failing pair with its
-          measured ratio. Simple mode is never measured here because the
-          derivation owns both sides of every pair, so it cannot fail (D-A);
-          the guarantee is asserted in ``tests/test_branding.py``, not
-          re-checked per request.
-
-        The measurement runs on the **emitted** ``oklch(...)`` strings, so
-        what is refused is what a browser would have painted.
+        Contrast is **not** judged here (APRAS-100): a low-contrast advanced
+        palette is stored as submitted and reported back on the profile body
+        as ``contrast_warnings``.
         """
         if value is None:
             return None
-
-        branding = branding_module.normalize_brand_theme(value)
-        if branding["mode"] != branding_module.ADVANCED_MODE:
-            return branding
-
-        theme = branding_module.build_theme(branding)
-        failures = [
-            {**failure._asdict(), "scheme": name}
-            for name, scheme in theme.items()
-            for failure in branding_module.audit_contrast(scheme)
-        ]
-        if failures:
-            raise InsufficientContrastError(failures)
-        return branding
+        return branding_module.normalize_brand_theme(value)
 
     @staticmethod
     def _write_brand_theme(

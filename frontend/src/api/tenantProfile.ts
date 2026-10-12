@@ -79,7 +79,7 @@ export interface DerivedTheme {
   dark: ThemeScheme;
 }
 
-/** One pair the API refused, as `InsufficientContrastError` reports it. */
+/** One measured pair under 4.5:1, as `contrast_warnings` reports it. */
 export interface BrandContrastFailure {
   pair: string;
   ratio: number;
@@ -101,6 +101,9 @@ export interface TenantProfile {
   /** What `app/core/branding.build_theme` derived from it. `null` whenever
    *  `brand_theme` is, and then `TenantBrandTheme` injects no element at all. */
   theme: DerivedTheme | null;
+  /** Every measured pair under 4.5:1 (APRAS-100). `null` with no
+   *  `brand_theme`; `[]` in simple mode or when every pair clears. */
+  contrast_warnings: BrandContrastFailure[] | null;
 }
 
 /** The writable half of the profile. A field left out is a field left alone —

@@ -95,6 +95,18 @@ BrandTheme = Annotated[
 ]
 
 
+class BrandContrastWarning(ApiModel):
+    """One measured text/surface reading under 4.5:1 (APRAS-100).
+
+    Reported, never refused: the palette is stored as submitted.
+    """
+
+    pair: str
+    ratio: float
+    minimum: float
+    scheme: Literal["light", "dark"]
+
+
 class TenantProfileRead(ApiModel):
     """The acting condominium's own profile (APRAS-61).
 
@@ -118,6 +130,10 @@ class TenantProfileRead(ApiModel):
     logo_url: str | None = None
     brand_theme: BrandTheme | None = None
     theme: dict[str, dict[str, str]] | None = None
+    #: Every pair of an advanced palette measured under 4.5:1, derived on read
+    #: from ``theme`` (APRAS-100). ``null`` with no ``brand_theme``; ``[]`` in
+    #: simple mode (never measured) or when every pair clears.
+    contrast_warnings: list[BrandContrastWarning] | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

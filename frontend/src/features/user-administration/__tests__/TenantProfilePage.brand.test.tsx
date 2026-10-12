@@ -19,10 +19,9 @@ import {
  *
  * Three things are pinned here and nowhere else: the **mode switch** (two
  * inputs in simple, thirteen plus the derive-dark checkbox in advanced), the
- * **client-side refusal** — a pair below 4.5:1 disables the save, measured
- * with the same function the server uses — and the **server's 422**, which
- * must render even when the client check passed, because the server is the
- * judge and the two can disagree the day the derivation changes.
+ * **client-side warning** — a pair below 4.5:1 is named but never blocks the
+ * save (APRAS-100) — and the **server's contrast_warnings**, shown while the
+ * draft is clean, because the server measured what is stored.
  */
 
 vi.mock("../../../api/client", () => ({
@@ -116,6 +115,7 @@ const PROFILE: TenantProfile = {
   logo_url: null,
   brand_theme: null,
   theme: null,
+  contrast_warnings: null,
 };
 
 const serve = (profile: Partial<TenantProfile> = {}) => {
@@ -278,7 +278,7 @@ describe("the brand-colour section", () => {
 });
 
 describe("the live contrast panel", () => {
-  it("disables the save and names the failing pair while a pair is below 4.5:1", async () => {
+  it("keeps the save enabled and names the failing pair while a pair is below 4.5:1", async () => {
     serve();
     renderPage();
     const user = await switchTo("modeAdvanced");
@@ -289,17 +289,90 @@ describe("the live contrast panel", () => {
 
     const section = await brandSection();
     await waitFor(() =>
-      expect(
-        within(section).getByRole("button", {
-          name: t("tenantProfile.brand.save"),
-        }),
-      ).toBeDisabled(),
+      expect(within(section).getByTestId("brand-contrast-warning")).toBeInTheDocument(),
     );
-    // The pair's own name *and* its measured ratio, in the refusal panel.
+    expect(
+      within(section).getByRole("button", { name: t("tenantProfile.brand.save") }),
+    ).toBeEnabled();
+    // The pair's own name *and* its measured ratio, in the warning panel.
     // `foreground/background` is a substring of `muted-foreground/background`,
     // so the assertion reads the panel rather than matching a lone node.
-    const refusal = within(section).getByRole("alert");
-    expect(refusal.textContent).toMatch(/(^|[^-])foreground\/background — \d+\.\d\d:1/);
+    const panel = within(section).getByTestId("brand-contrast-warning");
+    expect(panel.textContent).toMatch(/(^|[^-])foreground\/background — \d+\.\d\d:1/);
+    // The panel is not a live region: the single sr-only paragraph is.
+    expect(panel).not.toHaveAttribute("role");
+    expect(panel).not.toHaveAttribute("aria-live");
+
+    // Positive anchor on the renamed keys: the three negatives re-pointed at
+    // `warningTitle` further down can only fail if this proves both resolve.
+    expect(
+      within(panel).getByText(t("tenantProfile.brand.warningTitle")),
+    ).toBeInTheDocument();
+    const template = t("tenantProfile.brand.warningBody");
+    expect(template).toContain("{{count}}");
+    const count = within(panel).getAllByRole("listitem").length;
+    expect(count).toBeGreaterThan(0);
+    expect(panel.textContent).toContain(template.replace("{{count}}", String(count)));
+  });
+
+  it("announces through one sr-only live paragraph in all three states", async () => {
+    serve();
+    renderPage();
+    const user = await switchTo("modeAdvanced");
+    const section = await brandSection();
+    const live = () =>
+      section.querySelector<HTMLElement>("#brand-contrast-live") as HTMLElement;
+    const save = () =>
+      within(section).getByRole("button", { name: t("tenantProfile.brand.save") });
+
+    // 1. failing: the default palette fails three light pairs.
+    expect(live()).toHaveAttribute("role", "status");
+    expect(live()).toHaveAttribute("aria-live", "polite");
+    expect(live()).toHaveAttribute("aria-atomic", "true");
+    expect(live()).toHaveClass("sr-only");
+    const failing = live().textContent;
+    expect(failing).toMatch(/\d+\.\d\d/);
+    expect(failing).not.toBe(t("tenantProfile.brand.allPass"));
+    expect(live().querySelector("ul, li")).toBeNull();
+    expect(save()).toHaveAttribute("aria-describedby", "brand-contrast-live");
+
+    // 2. every pair clears.
+    for (const key of BRAND_AUTHORED_KEYS) {
+      await typeHex(user, key, READABLE[key]);
+    }
+    await waitFor(() => expect(live().textContent).toBe(t("tenantProfile.brand.allPass")));
+    expect(live()).toHaveClass("sr-only");
+    expect(save()).toHaveAttribute("aria-describedby", "brand-contrast-live");
+
+    // 3. malformed: names the format fault, never the all-pass sentence.
+    await typeHexPerCharacter(user, "primary", "#GGG");
+    await waitFor(() =>
+      expect(live().textContent).toBe(t("tenantProfile.brand.warningAnnouncementMalformed")),
+    );
+    expect(save()).toBeDisabled();
+    expect(save()).toHaveAttribute("aria-describedby", "brand-contrast-live");
+    expect(
+      new Set([failing, t("tenantProfile.brand.allPass"), live().textContent]).size,
+    ).toBe(3);
+  });
+
+  it("carries allPass in exactly two nodes: the sr-only live one and an aria-hidden visible one", async () => {
+    serve();
+    renderPage();
+    const user = await switchTo("modeAdvanced");
+    for (const key of BRAND_AUTHORED_KEYS) {
+      await typeHex(user, key, READABLE[key]);
+    }
+    const section = await brandSection();
+
+    await waitFor(() =>
+      expect(within(section).getAllByText(t("tenantProfile.brand.allPass"))).toHaveLength(2),
+    );
+    const nodes = within(section).getAllByText(t("tenantProfile.brand.allPass"));
+    const live = nodes.find((node) => node.id === "brand-contrast-live");
+    const visible = nodes.find((node) => node.id !== "brand-contrast-live");
+    expect(live).toBeDefined();
+    expect(visible?.closest("[aria-hidden='true']")).not.toBeNull();
   });
 
   it("keeps the save enabled for a palette every pair of which clears AA", async () => {
@@ -367,42 +440,49 @@ describe("the writes", () => {
     expect(mockedPatch.mock.calls[0][1]).toEqual({ brand_theme: null });
   });
 
-  it("renders the API's 422 failures even though the client check passed", async () => {
-    // The two measurements can disagree — a client older than the server, a
-    // derivation that moved. The server is the judge, and its body is shown
-    // verbatim rather than replaced by a generic message.
-    serve();
-    mockedPatch.mockRejectedValue({
-      response: {
-        status: 422,
-        data: {
-          detail: "Estas cores não podem ser salvas: 1 combinação(ões) abaixo de 4.5:1.",
-          failures: [
-            {
-              pair: "muted-foreground/card",
-              ratio: 3.91,
-              minimum: 4.5,
-              scheme: "light",
-            },
-          ],
-        },
-      },
+  it("shows the server's contrast_warnings, once each, while the draft is clean", async () => {
+    // Only the server's list can produce this: the stored palette is READABLE,
+    // so the client's own reading of the prefilled draft is empty, and the
+    // warning names a pair the client could never report.
+    serve({
+      brand_theme: { mode: "advanced", light: READABLE, dark: null },
+      theme: THEME,
+      contrast_warnings: [
+        { pair: "muted-foreground/card", ratio: 3.91, minimum: 4.5, scheme: "light" },
+      ],
     });
     renderPage();
     const section = await brandSection();
-    const user = userEvent.setup({ delay: null });
 
-    await typeHex(user, "primary", "#7c3aed");
-    await user.click(
-      within(section).getByRole("button", { name: t("tenantProfile.brand.save") }),
+    const panel = await within(section).findByTestId("brand-contrast-warning");
+    expect(panel.textContent).toContain("muted-foreground/card");
+    expect(panel.textContent).toContain("3.91");
+    expect(within(panel).getAllByRole("listitem")).toHaveLength(1);
+    expect(section.querySelector("#brand-contrast-live")?.textContent).not.toBe(
+      t("tenantProfile.brand.allPass"),
     );
+    expect(within(section).queryAllByText(t("tenantProfile.brand.allPass"))).toHaveLength(0);
+  });
 
-    expect(
-      await within(section).findByText(/muted-foreground\/card/),
-    ).toBeInTheDocument();
-    expect(
-      within(section).getByText(/muted-foreground\/card/).textContent,
-    ).toContain("3.91");
+  it("switches to the client's own reading once the draft is dirty, never concatenating", async () => {
+    serve({
+      brand_theme: { mode: "advanced", light: READABLE, dark: null },
+      theme: THEME,
+      contrast_warnings: [
+        { pair: "muted-foreground/card", ratio: 3.91, minimum: 4.5, scheme: "light" },
+      ],
+    });
+    renderPage();
+    const user = userEvent.setup({ delay: null });
+    const section = await brandSection();
+    await within(section).findByTestId("brand-contrast-warning");
+
+    await typeHex(user, "background", "#121212");
+    await typeHex(user, "foreground", "#1a1a1a");
+
+    const panel = await within(section).findByTestId("brand-contrast-warning");
+    await waitFor(() => expect(panel.textContent).not.toContain("3.91"));
+    expect(panel.textContent).toMatch(/(^|[^-])foreground\/background — 1\.\d\d:1/);
   });
 
   it("refuses a malformed hex before sending anything", async () => {
@@ -638,7 +718,7 @@ describe("a theme the server sent that this client cannot read whole", () => {
 
     await waitFor(() => expect(mockedPatch).toHaveBeenCalledTimes(1));
     expect(
-      within(section).queryByText(t("tenantProfile.brand.refusalTitle")),
+      within(section).queryByText(t("tenantProfile.brand.warningTitle")),
     ).not.toBeInTheDocument();
     expect(
       within(section).queryByText(t("tenantProfile.brand.saved")),
@@ -663,7 +743,7 @@ describe("a theme the server sent that this client cannot read whole", () => {
 
     await waitFor(() => expect(mockedPatch).toHaveBeenCalledTimes(1));
     expect(
-      within(section).queryByText(t("tenantProfile.brand.refusalTitle")),
+      within(section).queryByText(t("tenantProfile.brand.warningTitle")),
     ).not.toBeInTheDocument();
   });
 });
@@ -837,7 +917,7 @@ describe("pasting an advanced palette", () => {
       "muted-foreground/muted — 5.07:1",
     );
     expect(
-      within(panel).queryByText(t("tenantProfile.brand.refusalTitle")),
+      within(panel).queryByText(t("tenantProfile.brand.warningTitle")),
     ).not.toBeInTheDocument();
 
     await user.click(
@@ -852,7 +932,7 @@ describe("pasting an advanced palette", () => {
     expect(mockedPatch).not.toHaveBeenCalled();
   });
 
-  it("applies a palette whose contrast fails, names both pairs and disables the save", async () => {
+  it("applies a palette whose contrast fails, names both pairs and keeps the save enabled", async () => {
     serve();
     renderPage();
     const user = await openPaste();
@@ -869,9 +949,9 @@ describe("pasting an advanced palette", () => {
       "muted-foreground/background — 4.30:1, abaixo do mínimo de 4.5:1",
     );
     expect(
-      within(panel).getByText(t("tenantProfile.brand.paste.cannotSave")),
+      within(panel).getByText(t("tenantProfile.brand.paste.saveableAnyway")),
     ).toBeInTheDocument();
-    expect(await saveButton()).toBeDisabled();
+    expect(await saveButton()).toBeEnabled();
 
     await user.click(
       within(panel).getByRole("button", { name: t("tenantProfile.brand.paste.close") }),
@@ -880,7 +960,7 @@ describe("pasting an advanced palette", () => {
     // Applied, not refused: the pasted values are what the fields hold.
     expect(valueOf("muted-foreground")).toBe("#6f746e");
     expect(valueOf("primary")).toBe("#174b40");
-    expect(await saveButton()).toBeDisabled();
+    expect(await saveButton()).toBeEnabled();
     expect(mockedPatch).not.toHaveBeenCalled();
   });
 

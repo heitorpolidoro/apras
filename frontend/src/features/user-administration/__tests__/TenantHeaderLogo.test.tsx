@@ -60,6 +60,7 @@ const profile = (slug: string, name: string): TenantProfile => ({
   logo_url: `/static/uploads/${slug}.png`,
   brand_theme: null,
   theme: null,
+  contrast_warnings: null,
 });
 
 const VILA_NOVA = profile("vila-nova", "Residencial Vila Nova");

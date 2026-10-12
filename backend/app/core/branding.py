@@ -7,7 +7,7 @@ This module owns every colour decision in the product:
   ``/c/<slug>`` endpoint both call it; the frontend ports the ratio function
   alone and cannot produce a theme.
 * ``audit_contrast`` -- the single WCAG 2.1 measurement, used both by the
-  simple-mode repair loop and by the advanced-mode refusal.
+  simple-mode repair loop and by the advanced-mode contrast warning.
 * ``is_valid_hex_color`` / ``normalize_hex_color`` -- the single judge of a
   typed colour, mirrored (never duplicated) by the frontend's
   ``HEX_COLOR_PATTERN``, exactly as ``app/core/slug.py`` is.
@@ -20,7 +20,7 @@ closes a defect whose failure mode is silent:
    again. A double transfer does not halve ratios -- it *inflates* them for
    light-on-light pairs (the shipped ``--muted-foreground``/``--muted`` pair
    reads 4.29 correctly and 10.96 under the bug), which would make illegible
-   palettes pass and neutralise both the repair loop and the 422.
+   palettes pass and neutralise both the repair loop and the warning.
 2. **Round to 2dp, then snap into the sRGB gamut, and only then measure.**
    CSS Color 4 §13 requires a browser to gamut-map an out-of-range ``oklch()``
    by chroma reduction at constant ``L``/``H``, never by per-channel clipping,
@@ -112,9 +112,9 @@ EMITTED_KEYS = (*AUTHORED_KEYS, *DERIVED_FROM, BRAND_TEXT_KEY)
 #: one token carries text over three surfaces, and none of the three can move.
 #:
 #: ``--primary-text`` is deliberately **absent** (APRAS-88). This tuple is the
-#: 422 refusal contract, mirrored in ``frontend/src/lib/contrast.ts`` and
+#: contrast-warning contract, mirrored in ``frontend/src/lib/contrast.ts`` and
 #: pinned by ``backend/tests/data/contrast_fixtures.json``; adding its four
-#: pairs would start refusing advanced palettes that are stored and working
+#: pairs would start warning on advanced palettes that are stored and working
 #: today. Its guard is :func:`derive_brand_text`'s non-convergence rule
 #: instead, which can never emit a value that is worse than what the product
 #: renders now.
