@@ -276,7 +276,15 @@ gh run view --job <job_id> --log \
   | grep -E "Successfully installed uv version|Falling back to latest|Unexpected input"
 ```
 
-What is already known about it: the step is byte-identical in shape to the
+**Recorded.** The push of `master` to `origin` fired `migrate.yml` run
+`38268256257` (head `99a3d2d`, the first push after the pin landed at `40d40a2`,
+which carried the pin plus the commits above it up to `4be622b`):
+
+| Job | id | `conclusion` | uv version logged | `Falling back` / `Unexpected input` lines |
+| --- | --- | --- | --- | --- |
+| Run DB Migrations | `114875844696` | `success` | `Successfully installed uv version 0.12.19` | 0 / 0 |
+
+What was known beforehand: the step is byte-identical in shape to the
 three observed above, on the same ref and the same literal, and the failure
 mode is fail-closed — a `uv sync` that will not complete on 0.12.19 fails the
 step before `alembic` runs, and an alembic failure leaves the schema at the last
