@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -35,6 +36,20 @@ import type {
   InfractionTimelineEntry,
   NextStep,
 } from "../../types/infraction";
+import { ResidentTable } from "../../features/lot-management/components/ResidentTable";
+import { AuthorizationQrModal } from "../../features/visitor-management/components/AuthorizationQrModal";
+import AuditTimeline from "../../features/task-management/components/AuditTimeline";
+import { GeneralDashboardPage } from "../../features/dashboard/components/GeneralDashboardPage";
+import PermissionMatrix from "../../features/user-administration/components/PermissionMatrix";
+import ReservableSpacesPage from "../../features/space-reservation-management/components/ReservableSpacesPage";
+import AssemblyMinutesView from "../../features/assembly-voting/components/AssemblyMinutesView";
+import type { ResidentDetail } from "../../types/resident";
+import type { VisitorAuthorization } from "../../types/visitor";
+import type { TaskHistoryRead } from "../../features/task-management/types";
+import type { PermissionDescriptor } from "../../types/permissions";
+import type { PermissionSet } from "../../features/user-administration/access/useCanAccess";
+import type { ReservableSpaceRead } from "../../types/reservation";
+import type { AssemblyRead } from "../../types/voting";
 
 /**
  * The brand-reach proof (APRAS-78 §4c).
@@ -155,6 +170,69 @@ vi.mock("../../features/package-management/hooks/usePackages", () => ({
 
 vi.mock("../../features/visitor-management/hooks/usePackages", () => ({
   useMarkPackagePickedUp: () => ({ mutateAsync: async () => {}, isPending: false }),
+}));
+
+/**
+ * APRAS-77's seven directories each reach for data through a different hook,
+ * so each hook gets one hoisted, mutable stand-in here. They are inert for
+ * every other block in this file: none of those components calls them.
+ */
+const umbrella = vi.hoisted(() => ({
+  history: [] as unknown[],
+  spaces: [] as unknown[],
+  minutes: "<p>Ata</p>" as string | undefined,
+  canWrite: true,
+}));
+
+vi.mock("../../features/task-management/hooks/useTasks", () => ({
+  useTaskHistory: () => ({
+    data: umbrella.history,
+    isLoading: false,
+    error: null,
+  }),
+}));
+
+vi.mock("../../features/space-reservation-management/hooks/useReservations", () => ({
+  useReservableSpaces: () => ({ data: umbrella.spaces, isLoading: false }),
+  useCreateReservableSpace: () => ({ mutate: () => {}, isPending: false }),
+  useUpdateReservableSpace: () => ({ mutate: () => {}, isPending: false }),
+  useDeactivateReservableSpace: () => ({ mutate: () => {}, isPending: false }),
+}));
+
+vi.mock("../../features/assembly-voting/hooks/useVoting", () => ({
+  useAssemblyMinutes: () => ({ data: umbrella.minutes, isLoading: false }),
+  useSaveAssemblyMinutes: () => ({ mutate: () => {}, isPending: false }),
+}));
+
+vi.mock("../../features/user-administration/context/useTenant", () => ({
+  useTenant: () => ({
+    actingTenant: {
+      id: "8f1c0f2e-5e5c-4a0f-9c1e-1c2a3b4d5e6f",
+      name: "Residencial Altos da Serra VI",
+      slug: "residencial-altos-da-serra-vi",
+      is_active: true,
+      created_at: "2026-01-01T00:00:00Z",
+    },
+  }),
+}));
+
+vi.mock("../../features/user-administration/access/useCanAccess", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("../../features/user-administration/access/useCanAccess")
+  >()),
+  useCanOpenPath: () => () => true,
+  useEffectivePermissionSet: () => ({
+    has: () => umbrella.canWrite,
+    hasModule: () => umbrella.canWrite,
+    isLoading: false,
+    all: new Set<string>(),
+  }),
+}));
+
+vi.mock("../../api/client", () => ({
+  default: {
+    get: () => new Promise(() => {}),
+  },
 }));
 
 /** `--primary` as the unbranded app declares it, read from the stylesheet
@@ -1108,5 +1186,175 @@ describe("the tenant's brand reaches APRAS-85's migrated components", () => {
     ]) {
       expect(tokens).not.toContain(absent);
     }
+  });
+});
+
+describe("the tenant's brand reaches APRAS-77's seven remaining directories", () => {
+  const RESIDENT: ResidentDetail = {
+    id: "a1b2c3d4-0000-4000-8000-000000000001",
+    lot_id: "a1b2c3d4-0000-4000-8000-000000000002",
+    user: null,
+    full_name: "Maria Souza",
+    cpf: "12345678901",
+    relationship_type: "TITULAR",
+    is_active: true,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+    lot: { id: "a1b2c3d4-0000-4000-8000-000000000002", block: "B", lot_number: "12" },
+  };
+
+  const AUTHORIZATION: VisitorAuthorization = {
+    id: "a1b2c3d4-0000-4000-8000-000000000003",
+    visitor_id: "a1b2c3d4-0000-4000-8000-000000000004",
+    lot_id: "a1b2c3d4-0000-4000-8000-000000000002",
+    authorizer_user_id: "a1b2c3d4-0000-4000-8000-000000000005",
+    auth_type: "SINGLE",
+    allowed_days_json: "[]",
+    allowed_shifts_json: "[]",
+    allowed_days: [],
+    allowed_shifts: [],
+    status: "ACTIVE",
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  };
+
+  const HISTORY: TaskHistoryRead = {
+    id: "a1b2c3d4-0000-4000-8000-000000000006",
+    task_id: "a1b2c3d4-0000-4000-8000-000000000007",
+    changed_by_id: "a1b2c3d4-0000-4000-8000-000000000005",
+    user_name: "Síndico",
+    field_name: "status",
+    old_value: "TODO",
+    new_value: "DONE",
+    timestamp: "2026-03-10T12:00:00Z",
+    resolved_old_value: null,
+    resolved_new_value: null,
+  };
+
+  const DESCRIPTOR: PermissionDescriptor = {
+    permission: "tasks:read",
+    module: "tasks",
+    action: "read",
+    superuser_only: false,
+  };
+
+  const MY_SET: PermissionSet = {
+    has: () => true,
+    hasModule: () => true,
+    isLoading: false,
+    all: new Set<string>(["tasks:read"]),
+  };
+
+  const SPACE: ReservableSpaceRead = {
+    id: "a1b2c3d4-0000-4000-8000-000000000008",
+    name: "Salão de festas",
+    description: null,
+    capacity: 40,
+    requires_approval: false,
+    is_active: true,
+    created_at: "2026-01-01T00:00:00Z",
+  };
+
+  const ASSEMBLY: AssemblyRead = {
+    id: "a1b2c3d4-0000-4000-8000-000000000009",
+    title: "AGO 2026",
+    type: "AGO",
+    held_on: "2026-03-01",
+    agenda: null,
+    status: "CLOSED",
+    created_by_id: "a1b2c3d4-0000-4000-8000-000000000005",
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-03-01T00:00:00Z",
+    closed_at: "2026-03-01T18:00:00Z",
+  };
+
+  const mount = async (node: React.ReactNode) => {
+    profile.data = { ...PROFILE, theme: THEME };
+    const { container } = render(
+      <>
+        <TenantBrandTheme />
+        {node}
+      </>,
+    );
+    await waitFor(() => expect(brandedPrimary()).toBe(THEME.light.primary));
+    return container;
+  };
+
+  it("lot-management: the resident table's link icon takes the brand token", async () => {
+    const container = await mount(
+      <ResidentTable
+        residents={[RESIDENT]}
+        canManage
+        onEdit={() => {}}
+        onLinkUser={() => {}}
+        onUnlinkUser={() => {}}
+        onDeactivate={() => {}}
+      />,
+    );
+    const tokens = classTokens(container);
+
+    expect(tokens).toContain("text-primary");
+    expect(tokens).not.toContain("text-primary-text");
+  });
+
+  it("visitor-management: the QR modal's icon takes the brand token", async () => {
+    const container = await mount(
+      <AuthorizationQrModal authorization={AUTHORIZATION} onClose={() => {}} />,
+    );
+
+    expect(classTokens(container)).toContain("text-primary");
+  });
+
+  it("task-management: the audit timeline's dot takes the brand fill", async () => {
+    umbrella.history = [HISTORY];
+    const container = await mount(<AuditTimeline taskId={HISTORY.task_id} />);
+    // The timeline is collapsed until its toggle is opened.
+    await userEvent.click(screen.getByRole("button", { expanded: false }));
+
+    expect(classTokens(container)).toContain("bg-primary");
+  });
+
+  it("dashboard: the page carries both the character and the graphical brand token", async () => {
+    const container = await mount(
+      <MemoryRouter>
+        <GeneralDashboardPage />
+      </MemoryRouter>,
+    );
+    const tokens = classTokens(container);
+
+    expect(tokens).toContain("text-primary-text");
+    expect(tokens).toContain("text-primary");
+  });
+
+  it("user-administration: the permission matrix's checkbox takes the brand token", async () => {
+    const container = await mount(
+      <PermissionMatrix
+        descriptors={[DESCRIPTOR]}
+        selected={[]}
+        onChange={() => {}}
+        mySet={MY_SET}
+      />,
+    );
+
+    expect(classTokens(container)).toContain("text-primary");
+  });
+
+  it("space-reservation-management: the new-space button takes the brand fill via Button", async () => {
+    umbrella.spaces = [SPACE];
+    umbrella.canWrite = true;
+    const container = await mount(<ReservableSpacesPage />);
+    const tokens = classTokens(container);
+
+    expect(tokens).toContain("bg-primary");
+    expect(tokens).toContain("text-primary-foreground");
+  });
+
+  it("assembly-voting: the minutes save button takes the brand fill via Button", async () => {
+    umbrella.minutes = "<p>Ata</p>";
+    const container = await mount(<AssemblyMinutesView assembly={ASSEMBLY} />);
+    const tokens = classTokens(container);
+
+    expect(tokens).toContain("bg-primary");
+    expect(tokens).toContain("text-primary-foreground");
   });
 });

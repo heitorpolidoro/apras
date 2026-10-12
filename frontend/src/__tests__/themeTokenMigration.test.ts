@@ -4385,3 +4385,41 @@ describe("APRAS-85's ledger arithmetic", () => {
     expect(total).toBe(195);
   });
 });
+
+describe("APRAS-77 umbrella", () => {
+  /** Derived, not hand-listed: a feature directory added tomorrow is covered
+   *  by this test the day it lands, and fails it until a source file in it is
+   *  pinned. */
+  const featureDirectories = (): string[] =>
+    readdirSync(path.join(FRONTEND_ROOT, "src", "features"), {
+      withFileTypes: true,
+    })
+      .filter((entry) => entry.isDirectory() && entry.name !== "__tests__")
+      .map((entry) => entry.name)
+      .sort();
+
+  const uncovered = (
+    directories: readonly string[],
+    pinned: readonly string[],
+  ): string[] =>
+    directories.filter(
+      (dir) => !pinned.some((file) => file.startsWith(`src/features/${dir}/`)),
+    );
+
+  it("pins at least one source file in every directory under src/features", () => {
+    const directories = featureDirectories();
+
+    // The premise: the directory list is real, not an empty set that would
+    // make the assertion below pass vacuously.
+    expect(directories.length).toBeGreaterThan(0);
+    expect(uncovered(directories, pinnedFiles())).toEqual([]);
+  });
+
+  it("would fail for a feature directory that contributes no pinned file", () => {
+    const pinned = pinnedFiles().filter(
+      (file) => !file.startsWith("src/features/dashboard/"),
+    );
+
+    expect(uncovered(featureDirectories(), pinned)).toEqual(["dashboard"]);
+  });
+});
