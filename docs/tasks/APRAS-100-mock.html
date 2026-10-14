@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>APRAS-100 — aviso de contraste (mock)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+      :root {
+        /* The product's own tokens, copied from frontend/src/index.css so the
+           mock paints the same colours the screen will. */
+        --background: oklch(0.99 0 0);
+        --foreground: oklch(0.14 0.01 160);
+        --card: oklch(1 0 0);
+        --muted: oklch(0.96 0.01 160);
+        --muted-foreground: oklch(0.53 0.02 160);
+        --primary: oklch(0.62 0.15 160);
+        --primary-foreground: oklch(0.15 0.02 160);
+        --destructive: oklch(0.58 0.24 27);
+        --border: oklch(0.92 0.01 160);
+        --status-pending-bg: oklch(0.96 0.05 85);
+        --status-pending-fg: oklch(0.5 0.12 85);
+        --radius: 0.6rem;
+      }
+      body {
+        background: var(--background);
+        color: var(--foreground);
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border-width: 0;
+      }
+    </style>
+  </head>
+  <body class="font-sans">
+    <div class="mx-auto max-w-6xl space-y-10 px-6 py-10">
+      <header class="space-y-2">
+        <p
+          class="inline-block rounded-full px-3 py-1 text-xs font-semibold"
+          style="background: var(--muted); color: var(--muted-foreground)"
+        >
+          APRAS-100 · mock
+        </p>
+        <h1 class="text-2xl font-bold">
+          Contraste abaixo de 4,5:1 deixa de bloquear o salvamento
+        </h1>
+        <p class="max-w-3xl text-sm" style="color: var(--muted-foreground)">
+          Hoje a paleta avançada com um par ilegível é recusada: a API responde 422 e
+          o botão <strong>Salvar</strong> fica desabilitado. Depois desta tarefa a
+          paleta é salva como foi enviada e o par ilegível volta no corpo da resposta,
+          em <code>contrast_warnings</code>, como <em>aviso</em>.
+        </p>
+      </header>
+
+      <!-- ============================================================= -->
+      <!-- A PERGUNTA                                                     -->
+      <!-- ============================================================= -->
+      <section class="space-y-4">
+        <div
+          class="rounded-lg border p-4"
+          style="background: var(--card); border-color: var(--border); color: var(--foreground)"
+        >
+          <h2 class="text-lg font-bold">
+            De que cor fica o painel de aviso: âmbar ou o vermelho de hoje?
+          </h2>
+          <p class="mt-1 text-sm">
+            Abaixo, o mesmo formulário duas vezes, com a mesma paleta ilegível digitada
+            e o <strong>Salvar</strong> habilitado nos dois. As duas opções têm o
+            <strong>mesmo título, as mesmas frases e o mesmo ícone de triângulo</strong>:
+            a única diferença é a cor do painel. Em <strong>A</strong> ele é âmbar — o
+            mesmo tom dos selos de “pendente” do produto. Em <strong>B</strong> ele
+            continua vermelho, como é hoje.
+          </p>
+          <p class="mt-2 text-sm">
+            Compare e responda com uma letra: <strong>A</strong> ou <strong>B</strong>.
+            A spec implementa <strong>A</strong> se nenhuma letra chegar, porque o
+            vermelho é a cor que as pessoas já leem como “bloqueado” e o botão deixou
+            de bloquear; voltar ao vermelho é um commit de uma linha.
+          </p>
+          <p
+            class="mt-3 rounded-md px-3 py-2 text-xs"
+            style="background: var(--muted); color: var(--muted-foreground)"
+          >
+            <strong>O que não está em jogo:</strong> a troca das frases de recusa
+            (“não pode ser salva”) por frases de aviso (“pode salvar assim mesmo”) e a
+            troca do ícone de octógono pelo de triângulo acontecem nos dois casos — um
+            painel vermelho dizendo “não pode ser salva” ao lado de um Salvar que
+            funciona não é opção. Por isso os dois cartões abaixo trazem exatamente o
+            mesmo texto e o mesmo ícone.
+            <br /><br />
+            <strong>Sobre o resto deste mock:</strong> só o par A/B logo abaixo mostra
+            as duas cores. Daqui para frente o mock pinta <strong>A</strong> (âmbar) no
+            formulário interativo, na caixa “DEPOIS” do <em>Colar paleta</em> e no
+            rótulo “DEPOIS” do corpo da API. Se a resposta for <strong>B</strong>,
+            esses três lugares ficam vermelhos (<code>--destructive</code>) com as
+            mesmas frases e o mesmo ícone: só a cor muda.
+          </p>
+        </div>
+      </section>
+
+      <!-- ============================================================= -->
+      <!-- OPÇÃO A e B lado a lado                                        -->
+      <!-- ============================================================= -->
+      <section class="grid gap-6 lg:grid-cols-2" id="options"></section>
+
+      <!-- ============================================================= -->
+      <!-- O formulário interativo                                        -->
+      <!-- ============================================================= -->
+      <section class="space-y-4">
+        <h2 class="text-lg font-bold">O formulário, interativo</h2>
+        <p class="max-w-3xl text-sm" style="color: var(--muted-foreground)">
+          Troque os valores e veja o painel e o botão reagirem. Um hex malformado
+          (ex.: <code>#GG0000</code>) continua bloqueando o Salvar — só o veredito de
+          contraste deixou de bloquear.
+        </p>
+
+        <div class="card p-6">
+          <div class="grid gap-8 lg:grid-cols-[minmax(0,340px)_1fr]">
+            <div class="space-y-4">
+              <h3
+                class="text-xs font-semibold uppercase tracking-wide"
+                style="color: var(--muted-foreground)"
+              >
+                Paleta clara (recorte de 4 dos 13 campos)
+              </h3>
+              <div id="fields" class="space-y-3"></div>
+
+              <div class="space-y-2 border-t pt-4" style="border-color: var(--border)">
+                <button
+                  id="save"
+                  type="button"
+                  aria-describedby="contrast-live"
+                  class="inline-flex w-full items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
+                  style="background: var(--primary); color: var(--primary-foreground)"
+                >
+                  <i data-lucide="save" class="h-4 w-4"></i>
+                  Salvar cores
+                </button>
+                <p id="save-note" class="text-center text-xs" style="color: var(--muted-foreground)"></p>
+              </div>
+            </div>
+
+            <div class="space-y-4">
+              <!-- A região viva: um parágrafo, sempre montado, com UMA frase.
+                   A lista de pares fica FORA dela, de propósito.
+                   NA TELA REAL ELE É `sr-only`: não aparece. Aqui ele é
+                   desenhado numa caixa tracejada só para o operador poder LER o
+                   que o leitor de tela ouve. A caixa tracejada e o rótulo
+                   "só para leitores de tela" não existem no produto. -->
+              <div
+                class="rounded-md border border-dashed px-3 py-2"
+                style="border-color: var(--muted-foreground)"
+              >
+                <p class="text-[10px] font-semibold uppercase tracking-wide"
+                   style="color: var(--muted-foreground)">
+                  invisível na tela real (<code>sr-only</code>) — mostrado aqui só para leitura
+                </p>
+                <p
+                  id="contrast-live"
+                  role="status"
+                  aria-live="polite"
+                  aria-atomic="true"
+                  class="mt-1 text-xs font-medium"
+                  style="color: var(--muted-foreground)"
+                ></p>
+              </div>
+              <p class="text-[11px]" style="color: var(--muted-foreground)">
+                ↑ este parágrafo é <code>sr-only</code> no produto — a tarefa não
+                acrescenta texto visível nenhum à tela; o painel abaixo já mostra a
+                contagem e os pares, e o parágrafo verde já mostra a frase de “tudo
+                passa”. É a única região <code>aria-live</code>. A frase traz a
+                contagem e o pior índice, então quase toda edição que muda a medição
+                muda o texto anunciado — e um texto igual não é reanunciado. Ela
+                nunca é desmontada, então passar de “falhando” para “tudo passa”
+                também é anunciado. O <code>Salvar</code> aponta para ela com
+                <code>aria-describedby</code>, e os testes a localizam pelo
+                <code>id</code> — não por <code>role="status"</code>, que a
+                confirmação de “salvo” já usa nesta mesma seção.
+              </p>
+
+              <div id="panel"></div>
+              <p class="text-[11px]" style="color: var(--muted-foreground)">
+                ↑ o painel de aviso <strong>não</strong> é região viva: hoje ele é
+                <code>role="alert"</code>, o que equivale a
+                <code>aria-live="assertive"</code>, e relia os treze itens da lista a
+                cada tecla. Ele perde o <code>role</code> e passa a ser localizado por
+                <code>data-testid="brand-contrast-warning"</code>.
+              </p>
+              <div id="preview"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================= -->
+      <!-- O painel do "Colar paleta"                                     -->
+      <!-- ============================================================= -->
+      <section class="space-y-3">
+        <h2 class="text-lg font-bold">A revisão do “Colar paleta”</h2>
+        <p class="max-w-3xl text-sm" style="color: var(--muted-foreground)">
+          O diálogo de colar tem um bloco de recusa próprio, com a frase “Esta paleta
+          não pode ser salva enquanto um par estiver abaixo de 4,5:1”. Ela deixa de ser
+          verdade, então o bloco vira aviso — caso contrário o diálogo contradiz o botão
+          que está a dois dedos dele.
+        </p>
+        <div class="grid gap-4 md:grid-cols-2">
+          <div class="card p-4 space-y-2">
+            <p class="text-xs font-semibold" style="color: var(--destructive)">ANTES</p>
+            <div class="rounded-md border-2 p-3"
+                 style="background: color-mix(in oklch, var(--destructive) 10%, white); color: var(--destructive); border-color: var(--destructive)">
+              <p class="text-xs font-semibold">Estas cores não podem ser salvas</p>
+              <p class="mt-1 text-[11px]">2 combinação(ões) abaixo do mínimo legível de 4,5:1 (WCAG 2.1 AA, texto normal).</p>
+              <p class="mt-1 text-[11px]">Esta paleta não pode ser salva enquanto um par estiver abaixo de 4,5:1. Desfaça, corrija o texto e aplique de novo, ou feche e ajuste o campo à mão.</p>
+            </div>
+          </div>
+          <div class="card p-4 space-y-2">
+            <p class="text-xs font-semibold" style="color: var(--status-pending-fg)">DEPOIS</p>
+            <div class="rounded-md border-2 p-3"
+                 style="background: var(--status-pending-bg); color: var(--status-pending-fg); border-color: var(--status-pending-fg)">
+              <p class="text-xs font-semibold">Estas cores são difíceis de ler</p>
+              <p class="mt-1 text-[11px]">2 combinação(ões) abaixo do mínimo legível de 4,5:1 (WCAG 2.1 AA, texto normal).</p>
+              <p class="mt-1 text-[11px]">Esta paleta pode ser salva como está — os pares abaixo de 4,5:1 são um aviso, não um impedimento.</p>
+            </div>
+          </div>
+        </div>
+        <p class="text-xs" style="color: var(--muted-foreground)">
+          A troca de frases acima acontece nas duas respostas da pergunta. A letra
+          escolhida decide só a cor da caixa “DEPOIS”: em <strong>B</strong> ela fica
+          vermelha, com estas mesmas frases.
+        </p>
+      </section>
+
+      <!-- ============================================================= -->
+      <!-- O corpo da resposta                                            -->
+      <!-- ============================================================= -->
+      <section class="space-y-3">
+        <h2 class="text-lg font-bold">O que a API passa a responder</h2>
+        <div class="grid gap-4 md:grid-cols-2">
+          <div class="card p-4">
+            <p class="mb-2 text-xs font-semibold" style="color: var(--destructive)">
+              ANTES — 422, nada é salvo
+            </p>
+            <pre class="overflow-auto rounded p-3 text-[11px]" style="background: var(--muted)">
+PATCH /api/v1/tenant-profile  →  422
+{
+  "detail": "Estas cores não podem ser
+             salvas: 1 combinação(ões)
+             abaixo de 4.5:1.",
+  "failures": [
+    { "pair": "muted-foreground/muted",
+      "ratio": 3.93, "minimum": 4.5,
+      "scheme": "light" }
+  ]
+}</pre>
+          </div>
+          <div class="card p-4">
+            <p class="mb-2 text-xs font-semibold" style="color: var(--status-pending-fg)">
+              DEPOIS — 200, salvo literalmente, com aviso
+            </p>
+            <pre class="overflow-auto rounded p-3 text-[11px]" style="background: var(--muted)">
+PATCH /api/v1/tenant-profile  →  200
+{
+  "id": "…", "name": "Vista Verde",
+  "brand_theme": { "mode": "advanced",
+    "light": { "muted": "#e4e8e7",
+               "muted-foreground": "#6f746e", … },
+    "dark": null },
+  "theme": { "light": {…}, "dark": {…} },
+  "contrast_warnings": [
+    { "pair": "muted-foreground/muted",
+      "ratio": 3.93, "minimum": 4.5,
+      "scheme": "light" }
+  ]
+}</pre>
+          </div>
+        </div>
+        <p class="text-xs" style="color: var(--muted-foreground)">
+          <code>contrast_warnings</code> é derivado na leitura, então o <code>GET</code>
+          seguinte traz o mesmo aviso: ao reabrir a tela a pessoa vê de novo o que
+          salvou. É <code>null</code> quando não há <code>brand_theme</code> e
+          <code>[]</code> no modo simples. A rota pública <code>/c/&lt;slug&gt;</code>
+          não ganha o campo.
+        </p>
+      </section>
+    </div>
+
+    <script>
+      // --- a paleta do mock (a mesma que a spec tabela: 3.93 no par muted) ---
+      const PALETTE = {
+        background: "#fbfdfc",
+        foreground: "#141a17",
+        muted: "#e4e8e7",
+        "muted-foreground": "#6f746e",
+      };
+      const LABELS = {
+        background: "Fundo (--background)",
+        foreground: "Texto (--foreground)",
+        muted: "Superfície discreta (--muted)",
+        "muted-foreground": "Texto discreto (--muted-foreground)",
+      };
+      const HEX = /^#[0-9a-fA-F]{6}$/;
+      const state = { ...PALETTE };
+
+      /**
+       * MOCK ONLY. The real screen never computes a ratio here: it reads the
+       * server's `contrast_warnings` or calls `frontend/src/lib/contrast.ts`.
+       * This simplified sRGB luminance exists so the prototype reacts while you
+       * type; expected result 6 forbids anything like it in production code.
+       */
+      const lum = (hex) => {
+        const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+        const lin = c.map((v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+        return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2];
+      };
+      const ratio = (a, b) => {
+        const [lo, hi] = [lum(a), lum(b)].sort((x, y) => x - y);
+        return (hi + 0.05) / (lo + 0.05);
+      };
+
+      const PAIRS = [
+        ["foreground", "background"],
+        ["muted-foreground", "muted"],
+        ["muted-foreground", "background"],
+      ];
+
+      const readings = () =>
+        PAIRS.filter(([f, b]) => HEX.test(state[f]) && HEX.test(state[b])).map(([f, b]) => {
+          const r = ratio(state[f], state[b]);
+          return { pair: `${f}/${b}`, ratio: Number(r.toFixed(2)), passes: r >= 4.5 };
+        });
+
+      // --- o painel, nas duas variantes --------------------------------
+      const panelHtml = (failures, variant) => {
+        if (failures.length === 0) {
+          // Visible, but aria-hidden: the `sr-only` live paragraph above is the
+          // only accessible carrier of this sentence, and the old `sr-only` copy
+          // is deleted, so it is seen once and heard once, never twice.
+          return `<p aria-hidden="true" class="flex items-start gap-2 rounded-lg border p-3 text-xs"
+                     style="background: var(--muted); border-color: var(--border); color: var(--muted-foreground)">
+                    <i data-lucide="check-check" class="mt-0.5 h-4 w-4 shrink-0"></i>
+                    <span>Todos os pares medidos passam de 4,5:1.</span>
+                  </p>`;
+        }
+        // The ONLY thing `variant` changes is the surface colour. Title, body,
+        // per-pair list and icon are identical in A and B, because expected
+        // results 11 and 8 make the copy and the icon unconditional — the
+        // operator is choosing a colour, nothing else.
+        const amber = variant === "A";
+        const shell = amber
+          ? 'style="background: var(--status-pending-bg); color: var(--status-pending-fg); border-color: var(--status-pending-fg)"'
+          : 'style="background: color-mix(in oklch, var(--destructive) 10%, white); color: var(--destructive); border-color: var(--destructive)"';
+        return `
+          <div class="rounded-lg border-2 p-4" ${shell}>
+            <div class="flex items-start gap-3">
+              <i data-lucide="triangle-alert" class="mt-0.5 h-5 w-5 shrink-0"></i>
+              <div class="space-y-1">
+                <p class="text-sm font-semibold">Estas cores são difíceis de ler</p>
+                <p class="text-xs">
+                  ${failures.length} combinação(ões) abaixo do mínimo legível de 4,5:1
+                  (WCAG 2.1 AA, texto normal). Você pode salvar assim mesmo.
+                </p>
+                <ul class="space-y-1 pt-1">
+                  ${failures
+                    .map(
+                      (f) =>
+                        `<li class="rounded px-2 py-1 font-mono text-[11px]" style="background: rgba(0,0,0,.06)">
+                           ${f.pair} — ${f.ratio.toFixed(2)}:1, abaixo do mínimo de 4.5:1
+                         </li>`,
+                    )
+                    .join("")}
+                </ul>
+              </div>
+            </div>
+          </div>`;
+      };
+
+      const previewHtml = () => `
+        <div>
+          <h3 class="mb-2 text-sm font-semibold">Pré-visualização do rascunho</h3>
+          <div class="rounded-lg border p-4" style="background:${state.background}; border-color: var(--border)">
+            <p class="text-sm font-semibold" style="color:${state.foreground}">Vista Verde</p>
+            <div class="mt-2 rounded p-3" style="background:${state.muted}">
+              <p class="text-xs" style="color:${state["muted-foreground"]}">
+                Última atualização em 01/10/2026 · 14 obras em andamento
+              </p>
+            </div>
+          </div>
+        </div>`;
+
+      // --- as duas opções, lado a lado, com a mesma paleta -------------
+      const renderOptions = () => {
+        const fixed = { ...PALETTE };
+        const save = { ...state };
+        Object.assign(state, fixed);
+        const failures = readings().filter((r) => !r.passes);
+        const card = (letter, title, note) => `
+          <div class="card p-5 space-y-3">
+            <div class="flex items-center gap-2">
+              <span class="flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold"
+                    style="background: var(--primary); color: var(--primary-foreground)">${letter}</span>
+              <h3 class="text-base font-semibold">${title}</h3>
+            </div>
+            ${panelHtml(failures, letter)}
+            <div class="flex items-center gap-3 border-t pt-3" style="border-color: var(--border)">
+              <button type="button"
+                class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium"
+                style="background: var(--primary); color: var(--primary-foreground)">
+                <i data-lucide="save" class="h-4 w-4"></i> Salvar cores
+              </button>
+              <span class="text-xs" style="color: var(--muted-foreground)">habilitado nas duas opções</span>
+            </div>
+            <p class="text-xs" style="color: var(--muted-foreground)">${note}</p>
+          </div>`;
+        document.getElementById("options").innerHTML =
+          card(
+            "A",
+            "Âmbar",
+            "Usa <code>--status-pending-bg</code> / <code>--status-pending-fg</code>, os tokens dos selos “pendente”. Nenhuma classe de paleta crua, nenhuma nova exceção no guard de tokens. Em troca, muda a cor de uma tela que ninguém pediu para redesenhar.",
+          ) +
+          card(
+            "B",
+            "Vermelho — a cor de hoje",
+            "Mantém <code>--destructive</code>, a cor atual do painel. Nenhuma mudança de cor, em troca de um painel na cor de bloqueio ao lado de um Salvar que funciona. O texto e o ícone são os mesmos de A: só a cor muda.",
+          );
+        Object.assign(state, save);
+        lucide.createIcons();
+      };
+
+      // --- o formulário interativo -------------------------------------
+      const renderFields = () => {
+        document.getElementById("fields").innerHTML = Object.keys(PALETTE)
+          .map(
+            (key) => `
+          <label class="block">
+            <span class="mb-1 block text-xs font-medium">${LABELS[key]}</span>
+            <span class="flex items-center gap-2">
+              <input data-key="${key}" value="${state[key]}"
+                class="w-32 rounded-md border px-2 py-1 font-mono text-xs"
+                style="border-color: var(--border)" />
+              <span data-swatch="${key}" class="h-7 w-7 rounded border"
+                    style="background:${state[key]}; border-color: var(--border)"></span>
+            </span>
+          </label>`,
+          )
+          .join("");
+        document.querySelectorAll("#fields input").forEach((input) =>
+          input.addEventListener("input", (event) => {
+            state[event.target.dataset.key] = event.target.value.trim();
+            render();
+          }),
+        );
+      };
+
+      const render = () => {
+        const rs = readings();
+        const failures = rs.filter((r) => !r.passes);
+        const malformed = Object.values(state).some((v) => !HEX.test(v));
+
+        document.querySelectorAll("[data-swatch]").forEach((node) => {
+          const value = state[node.dataset.swatch];
+          node.style.background = HEX.test(value) ? value : "transparent";
+        });
+
+        // A frase única da região viva: contagem + pior índice.
+        const live = document.getElementById("contrast-live");
+        if (malformed) {
+          live.textContent =
+            "Há cor em formato inválido — use #rrggbb. O salvamento está bloqueado.";
+        } else if (failures.length === 0) {
+          live.textContent =
+            "Todos os pares medidos passam de 4,5:1, medidos sobre a cor que o navegador pinta.";
+        } else {
+          const worst = Math.min(...failures.map((f) => f.ratio));
+          live.textContent = `${failures.length} par(es) abaixo de 4,5:1 — o pior em ${worst.toFixed(2)}:1. É possível salvar assim mesmo.`;
+        }
+
+        document.getElementById("panel").innerHTML = malformed
+          ? `<div class="rounded-lg border-2 p-4"
+                  style="background: color-mix(in oklch, var(--destructive) 10%, white); color: var(--destructive); border-color: var(--destructive)">
+               <p class="text-sm font-semibold">Cor em formato inválido</p>
+               <p class="text-xs">Continua sendo 422 na API. Só o veredito de contraste deixou de bloquear.</p>
+             </div>`
+          : panelHtml(failures, "A");
+
+        document.getElementById("preview").innerHTML = malformed ? "" : previewHtml();
+
+        const save = document.getElementById("save");
+        save.disabled = malformed;
+        document.getElementById("save-note").textContent = malformed
+          ? "Salvar desabilitado: hex malformado."
+          : failures.length > 0
+            ? "Salvar habilitado, com aviso."
+            : "Salvar habilitado.";
+
+        lucide.createIcons();
+      };
+
+      renderOptions();
+      renderFields();
+      render();
+    </script>
+  </body>
+</html>

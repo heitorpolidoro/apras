@@ -4470,3 +4470,11 @@ The comment at `darkVariantCompile.test.ts:362` credited APRAS-127 for a lesson 
 ## [APRAS-77] Migrate hard-coded palette classes to semantic theme tokens — 2026-10-12
 - (code review) ReservableSpacesPage and AssemblyMinutesView tests only prove the Button primitive carries the token, not that the page uses the default variant. Spec-sanctioned; a note in the test titles would help, optional.
 - (code review) Run eslint and tsc --noEmit on the two files before commit; not verified by the reviewer.
+
+## [APRAS-100] Turn the brand contrast failure into a warning instead of a hard block — 2026-10-14 (QA)
+- The work was swept into 2767f15 (titled APRAS-127), so `git log --grep APRAS-100` misses it; note it in the task record.
+- Expected result 8's "public_branding.py unchanged" is ambiguous now that APRAS-124 edited the file; scope it to the branding handler.
+- Expected result 2 depends on vitest actually writing to `frontend/.vitest/`. The spec's `git check-ignore frontend/.vitest/x` fallback covers this.
+
+## [APRAS-100] Turn the brand contrast failure into a warning instead of a hard block — 2026-10-14 (QA, round 2)
+- One frontend test failed on a run that overlapped with pytest and passed on rerun, which suggests a timing-sensitive test somewhere. Its identity is unknown.
