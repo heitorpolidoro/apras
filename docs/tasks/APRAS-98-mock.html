@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>APRAS-98 — slug-change dialog focus indicator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+      /* The 12 tokens this mock uses, copied verbatim from src/index.css's
+         :root block (lines 32-66). Every value present is exact — these are
+         the real oklch values, not approximations, because the whole point of
+         this mock is how visible the real --ring is. It is a selective copy:
+         the block's other tokens are simply not here, so do not reason from
+         this list about a token it does not list.
+
+         The hex next to each value is for the reader only; each one was
+         produced by importing frontend/src/lib/contrast.ts (oklchToHex), which
+         gamut-maps per CSS Color 4 §13. Both --ring values are out of gamut, so
+         a per-channel clip — the thing contrast.ts rule 2 forbids — would print
+         a different colour here. */
+      :root {
+        --background: oklch(0.99 0 0);     /* #fcfcfc */
+        --foreground: oklch(0.14 0.01 160); /* #060a08 */
+        --card: oklch(1 0 0);               /* #ffffff */
+        --muted: oklch(0.96 0.01 160);
+        --muted-foreground: oklch(0.53 0.02 160); /* #627068 */
+        --input: oklch(0.92 0.01 160);      /* #dfe7e2 */
+        --border: oklch(0.92 0.01 160);
+        --destructive: oklch(0.58 0.24 27); /* #e60018 */
+        --destructive-foreground: oklch(0.98 0 0);
+        --primary: oklch(0.62 0.15 160);    /* #009f68 — emerald */
+        --primary-foreground: oklch(0.15 0.02 160);
+        --ring: oklch(0.62 0.15 160);       /* #009f68 — SAME as --primary */
+      }
+      /* The 12 tokens this mock uses from src/index.css's .dark block (lines
+         90-115), copied verbatim. Selective again, in the same way: every value
+         present is exact, the block's remaining tokens are absent. --ring is a
+         different value here (0.65 vs 0.62 lightness). */
+      .dark {
+        --background: oklch(0.14 0.01 160);
+        --foreground: oklch(0.98 0.01 160);
+        --card: oklch(0.16 0.01 160);        /* #0a0f0c */
+        --muted: oklch(0.22 0.02 160);
+        --muted-foreground: oklch(0.65 0.02 160);
+        --input: oklch(0.25 0.02 160);
+        --border: oklch(0.25 0.02 160);
+        --destructive: oklch(0.55 0.22 25);  /* #d40924 */
+        --destructive-foreground: oklch(0.98 0 0);
+        --primary: oklch(0.65 0.15 160);
+        --primary-foreground: oklch(0.1 0.02 160);
+        --ring: oklch(0.65 0.15 160);        /* #00aa6f */
+      }
+      .bg-app { background-color: var(--background); }
+      .bg-card { background-color: var(--card); }
+      .bg-muted { background-color: var(--muted); }
+      .bg-destructive { background-color: var(--destructive); }
+      .bg-primary { background-color: var(--primary); }
+      .text-foreground { color: var(--foreground); }
+      .text-muted-foreground { color: var(--muted-foreground); }
+      .text-destructive { color: var(--destructive); }
+      .text-destructive-foreground { color: var(--destructive-foreground); }
+      .text-primary-foreground { color: var(--primary-foreground); }
+      .border-input { border-color: var(--input); }
+      .border-border { border-color: var(--border); }
+      .swatch-ring { background-color: var(--ring); }
+
+      /* Option A — focus-visible:outline-none focus-visible:ring-2
+         focus-visible:ring-ring. The form alert-modal.tsx:115 uses. The ring
+         sits flush against the button edge. */
+      .ring-a:focus-visible,
+      .ring-a.force-ring {
+        outline: none;
+        box-shadow: 0 0 0 2px var(--ring);
+      }
+      /* Option B — the same plus focus-visible:ring-offset-2
+         focus-visible:ring-offset-card. The form src/components/ui/button.tsx:7
+         uses (the house Button). A 2px card-coloured gap separates the ring
+         from the button. */
+      .ring-b:focus-visible,
+      .ring-b.force-ring {
+        outline: none;
+        box-shadow:
+          0 0 0 2px var(--card),
+          0 0 0 4px var(--ring);
+      }
+      /* What button.tsx ACTUALLY writes today: a bare `ring-offset-2` with no
+         offset colour, which Tailwind v4 resolves to the hard-coded #fff. Shown
+         only on the dark panel, where it is visibly wrong. */
+      .ring-b-bare:focus-visible,
+      .ring-b-bare.force-ring {
+        outline: none;
+        box-shadow:
+          0 0 0 2px #fff,
+          0 0 0 4px var(--ring);
+      }
+    </style>
+  </head>
+  <body class="bg-app text-foreground">
+    <main class="mx-auto max-w-6xl p-8 space-y-12">
+      <header class="space-y-3">
+        <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          APRAS-98 · decision 4
+        </p>
+        <h1 class="text-2xl font-semibold">Focus indicator on the slug-change dialog</h1>
+        <p class="max-w-3xl text-sm text-muted-foreground">
+          This task moves keyboard focus <em>into</em> the confirmation panel for
+          the first time. Today its two buttons have no focus style at all, so a
+          keyboard user would land on an invisible selection. Press
+          <kbd class="rounded border border-border bg-card px-1">Tab</kbd>
+          inside any panel below, or use the toggle, to see the ring.
+        </p>
+        <div class="flex flex-wrap items-center gap-4 rounded-lg border border-border bg-muted p-3 text-xs">
+          <span class="flex items-center gap-2">
+            <span class="swatch-ring inline-block size-4 rounded"></span>
+            <code>--ring</code> = <code>oklch(0.62 0.15 160)</code> ≈
+            <code>#009f68</code>
+          </span>
+          <span class="text-muted-foreground">
+            It is the brand emerald — the same value as <code>--primary</code>,
+            not a blue. Against the white panel it measures
+            <strong class="text-foreground">3.41:1</strong>, just over the 3:1
+            WCAG 1.4.11 floor for non-text indicators. Every ratio on this page
+            comes from importing <code>src/lib/contrast.ts</code>, which
+            gamut-maps rather than clipping the out-of-gamut
+            <code>--ring</code>.
+          </span>
+        </div>
+      </header>
+
+      <!-- ============ BEFORE / AFTER (not a question) ============ -->
+      <section class="space-y-4">
+        <div class="space-y-1">
+          <h2 class="text-lg font-semibold">1. Before / after</h2>
+          <p class="max-w-3xl text-sm text-muted-foreground">
+            This pair is <strong>not</strong> a choice. “Today” is the WCAG
+            2.4.7 gap this task would introduce the moment focus enters the
+            panel, so it is not an outcome the spec can ship. It is shown only
+            so the change is legible. Both panels are
+            <code>max-w-md</code>, the real panel width.
+          </p>
+        </div>
+
+        <div class="grid gap-8 md:grid-cols-2">
+          <!-- TODAY -->
+          <div class="space-y-3">
+            <div class="flex items-center gap-2">
+              <span class="rounded-full bg-muted px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                Today
+              </span>
+              <h3 class="text-sm font-semibold">No focus indicator</h3>
+            </div>
+            <p class="text-xs text-muted-foreground">
+              Tab through Cancelar and “Alterar mesmo assim”: nothing changes on
+              screen.
+            </p>
+            <div class="relative overflow-hidden rounded-xl bg-black/40 p-4">
+              <div class="w-full max-w-md rounded-xl bg-card p-6 shadow-xl">
+                <div class="flex items-start gap-3">
+                  <i data-lucide="alert-triangle" class="mt-0.5 size-6 shrink-0 text-destructive"></i>
+                  <div>
+                    <h4 class="text-base font-semibold text-foreground">
+                      Alterar o endereço do condomínio?
+                    </h4>
+                    <p class="mt-2 text-sm text-muted-foreground">
+                      O endereço mudará de /c/aprasvi para /c/apras-vila. Todos
+                      os links salvos, impressos ou compartilhados com o
+                      endereço antigo deixarão de funcionar. Não há
+                      redirecionamento.
+                    </p>
+                  </div>
+                </div>
+                <div class="mt-6 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    class="rounded-md border border-input px-4 py-2 text-sm font-medium text-foreground"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    class="rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground"
+                  >
+                    Alterar mesmo assim
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- AFTER -->
+          <div class="space-y-3">
+            <div class="flex items-center gap-2">
+              <span class="rounded-full bg-primary px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-primary-foreground">
+                After
+              </span>
+              <h3 class="text-sm font-semibold">The house ring</h3>
+            </div>
+            <p class="text-xs text-muted-foreground">
+              <code>focus-visible:outline-none focus-visible:ring-2
+              focus-visible:ring-ring</code> — drawn here in the <strong>option
+              A</strong> form (ring flush against the button), which is the
+              <em>alternative</em>: the spec's default is <strong>B</strong>, the
+              ring with a gap. See § 2, where the two are side by side and the
+              question is asked.
+            </p>
+            <div class="relative overflow-hidden rounded-xl bg-black/40 p-4">
+              <div class="w-full max-w-md rounded-xl bg-card p-6 shadow-xl">
+                <div class="flex items-start gap-3">
+                  <i data-lucide="alert-triangle" class="mt-0.5 size-6 shrink-0 text-destructive"></i>
+                  <div>
+                    <h4 class="text-base font-semibold text-foreground">
+                      Alterar o endereço do condomínio?
+                    </h4>
+                    <p class="mt-2 text-sm text-muted-foreground">
+                      O endereço mudará de /c/aprasvi para /c/apras-vila. Todos
+                      os links salvos, impressos ou compartilhados com o
+                      endereço antigo deixarão de funcionar. Não há
+                      redirecionamento.
+                    </p>
+                  </div>
+                </div>
+                <div class="mt-6 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    class="ring-a rounded-md border border-input px-4 py-2 text-sm font-medium text-foreground"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    class="ring-a rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground"
+                  >
+                    Alterar mesmo assim
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ THE ACTUAL QUESTION ============ -->
+      <section class="space-y-4 rounded-xl border-2 border-border bg-card p-6">
+        <div class="space-y-2">
+          <h2 class="text-lg font-semibold">
+            2. The open question: should the ring have a gap?
+          </h2>
+          <p class="max-w-3xl text-sm text-muted-foreground">
+            Both options below pass WCAG. The difference is whether the green
+            ring touches the button or is separated from it by a thin white gap.
+            It matters most on the red “Alterar mesmo assim” button: where green
+            meets red directly, the two measure
+            <strong class="text-foreground">1.41:1</strong> against each other,
+            so that edge of the ring all but disappears. A card-coloured gap
+            gives the ring a 3.41:1 boundary on both sides.
+          </p>
+          <p class="max-w-3xl text-sm text-muted-foreground">
+            The spec now picks <strong>B</strong>: the gap is the one that holds
+            up on the red “Alterar mesmo assim” button, which is the irreversible
+            action, and nothing in CI measures that 1.41:1 edge. <strong>B</strong>
+            is also what the house button component
+            <code>src/components/ui/button.tsx</code> uses, while
+            <strong>A</strong> is what the sibling dialog
+            <code>src/components/ui/alert-modal.tsx</code> hand-rolls.
+            Either is defensible; <strong>A or B is a complete answer.</strong>
+          </p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <button
+            id="toggle"
+            type="button"
+            class="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
+          >
+            Show both rings at once
+          </button>
+          <span class="text-xs text-muted-foreground">
+            (or just Tab into either panel)
+          </span>
+        </div>
+
+        <div class="grid gap-8 md:grid-cols-2">
+          <!-- OPTION A -->
+          <div class="space-y-3">
+            <div class="flex items-center gap-2">
+              <span class="grid size-6 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">A</span>
+              <h3 class="text-sm font-semibold">Ring flush against the button</h3>
+            <span class="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">alternative</span>
+            </div>
+            <p class="text-xs text-muted-foreground">
+              <code>focus-visible:ring-2 focus-visible:ring-ring</code> — matches
+              <code>alert-modal.tsx</code>.
+            </p>
+            <div class="rounded-xl bg-black/40 p-4">
+              <div class="w-full max-w-md rounded-xl bg-card p-6">
+                <p class="mb-4 text-sm text-muted-foreground">
+                  Alterar o endereço do condomínio?
+                </p>
+                <div class="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    class="ring-a rounded-md border border-input px-4 py-2 text-sm font-medium text-foreground"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    class="ring-a rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground"
+                  >
+                    Alterar mesmo assim
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- OPTION B -->
+          <div class="space-y-3">
+            <div class="flex items-center gap-2">
+              <span class="grid size-6 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">B</span>
+              <h3 class="text-sm font-semibold">Ring with a 2px gap</h3>
+            <span class="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary-foreground">spec default</span>
+            </div>
+            <p class="text-xs text-muted-foreground">
+              <code>… focus-visible:ring-offset-2
+              focus-visible:ring-offset-card</code> — matches
+              <code>button.tsx</code>.
+            </p>
+            <div class="rounded-xl bg-black/40 p-4">
+              <div class="w-full max-w-md rounded-xl bg-card p-6">
+                <p class="mb-4 text-sm text-muted-foreground">
+                  Alterar o endereço do condomínio?
+                </p>
+                <div class="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    class="ring-b rounded-md border border-input px-4 py-2 text-sm font-medium text-foreground"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    class="ring-b rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground"
+                  >
+                    Alterar mesmo assim
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ DARK THEME ============ -->
+      <section class="dark space-y-4 rounded-xl border border-border bg-app p-6 text-foreground">
+        <div class="space-y-2">
+          <h2 class="text-lg font-semibold">3. The same two options in dark mode</h2>
+          <p class="max-w-3xl text-sm text-muted-foreground">
+            Not a separate question — the answer to § 2 applies to both themes.
+            This panel exists because the numbers change: on the dark card
+            <code>--ring</code> is <code>oklch(0.65 0.15 160)</code> ≈
+            <code>#00aa6f</code> and measures
+            <strong class="text-foreground">6.42:1</strong> against the card
+            (<code>#0a0f0c</code>) — far clearer than light mode's 3.41:1 — while
+            against the dark destructive fill (<code>#d40924</code>) it is still
+            only <strong class="text-foreground">1.80:1</strong>. The weak edge
+            that motivates <strong>B</strong> is weak in both themes.
+          </p>
+          <p class="max-w-3xl text-sm text-muted-foreground">
+            The third panel is why the spec writes
+            <code>ring-offset-card</code> rather than copying
+            <code>button.tsx</code> as-is: a bare <code>ring-offset-2</code>
+            resolves to Tailwind v4's hard-coded <code>#fff</code>, painting a
+            white seam around the button on a dark card.
+          </p>
+        </div>
+
+        <div class="grid gap-6 md:grid-cols-3">
+          <div class="space-y-3">
+            <div class="flex items-center gap-2">
+              <span class="grid size-6 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">A</span>
+              <h3 class="text-sm font-semibold">Flush · 6.42:1 / 1.80:1</h3>
+            </div>
+            <div class="rounded-xl bg-black/40 p-4">
+              <div class="w-full rounded-xl bg-card p-5">
+                <p class="mb-4 text-sm text-muted-foreground">Alterar o endereço?</p>
+                <div class="flex flex-wrap justify-end gap-2">
+                  <button type="button" class="ring-a rounded-md border border-input px-3 py-2 text-sm font-medium text-foreground">Cancelar</button>
+                  <button type="button" class="ring-a rounded-md bg-destructive px-3 py-2 text-sm font-medium text-destructive-foreground">Alterar mesmo assim</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            <div class="flex items-center gap-2">
+              <span class="grid size-6 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">B</span>
+              <h3 class="text-sm font-semibold">Gap in <code>ring-offset-card</code></h3>
+            </div>
+            <div class="rounded-xl bg-black/40 p-4">
+              <div class="w-full rounded-xl bg-card p-5">
+                <p class="mb-4 text-sm text-muted-foreground">Alterar o endereço?</p>
+                <div class="flex flex-wrap justify-end gap-2">
+                  <button type="button" class="ring-b rounded-md border border-input px-3 py-2 text-sm font-medium text-foreground">Cancelar</button>
+                  <button type="button" class="ring-b rounded-md bg-destructive px-3 py-2 text-sm font-medium text-destructive-foreground">Alterar mesmo assim</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            <div class="flex items-center gap-2">
+              <span class="grid size-6 place-items-center rounded-full bg-muted text-xs font-bold text-muted-foreground">✕</span>
+              <h3 class="text-sm font-semibold">What <code>button.tsx</code> writes today</h3>
+            </div>
+            <div class="rounded-xl bg-black/40 p-4">
+              <div class="w-full rounded-xl bg-card p-5">
+                <p class="mb-4 text-sm text-muted-foreground">Alterar o endereço?</p>
+                <div class="flex flex-wrap justify-end gap-2">
+                  <button type="button" class="ring-b-bare rounded-md border border-input px-3 py-2 text-sm font-medium text-foreground">Cancelar</button>
+                  <button type="button" class="ring-b-bare rounded-md bg-destructive px-3 py-2 text-sm font-medium text-destructive-foreground">Alterar mesmo assim</button>
+                </div>
+              </div>
+            </div>
+            <p class="text-xs text-muted-foreground">
+              Bare <code>ring-offset-2</code> → <code>#fff</code>. Not shipped by
+              this spec; shown for contrast.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ EXIT PATHS ============ -->
+      <section class="space-y-3 rounded-xl border border-border bg-card p-6">
+        <h2 class="text-sm font-semibold">Where focus goes when the dialog closes</h2>
+        <p class="text-sm text-muted-foreground">
+          Not a visual decision — recorded here so the three exit paths are read
+          together with the panel they leave. Only the first two rows fail if
+          restoration regresses.
+        </p>
+        <table class="w-full text-left text-sm">
+          <thead class="text-xs uppercase tracking-wide text-muted-foreground">
+            <tr>
+              <th class="py-2">Exit</th>
+              <th class="py-2">Focus ends on</th>
+              <th class="py-2">Proves restoration?</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-[var(--border)]">
+            <tr>
+              <td class="py-2 font-medium">Escape</td>
+              <td class="py-2">the page's Save button</td>
+              <td class="py-2 text-muted-foreground">
+                Yes — the control that opened it, still enabled
+              </td>
+            </tr>
+            <tr>
+              <td class="py-2 font-medium">Cancelar</td>
+              <td class="py-2">the page's Save button</td>
+              <td class="py-2 text-muted-foreground">Yes — same</td>
+            </tr>
+            <tr>
+              <td class="py-2 font-medium">Alterar mesmo assim</td>
+              <td class="py-2"><code>document.body</code></td>
+              <td class="py-2 text-muted-foreground">
+                No. Save is <code>disabled</code> while the save is pending, so
+                focusing it is a no-op. Determinate, but a hook that restored
+                nothing would land here too.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+
+    <script>
+      lucide.createIcons();
+      document.getElementById("toggle").addEventListener("click", (event) => {
+        const on = event.currentTarget.dataset.on === "1";
+        event.currentTarget.dataset.on = on ? "0" : "1";
+        event.currentTarget.textContent = on
+          ? "Show both rings at once"
+          : "Hide the rings";
+        document
+          .querySelectorAll(".ring-a, .ring-b, .ring-b-bare")
+          .forEach((el) => el.classList.toggle("force-ring", !on));
+      });
+    </script>
+  </body>
+</html>
