@@ -1679,10 +1679,10 @@
       "other": "Other"
     },
     "bundles": {
-      "tasks": "Tasks and categories",
-      "reservations": "Reservations and spaces",
-      "assets": "Assets and inventory",
-      "visitors": "Visitors and gate"
+      "tasks": "Tasks",
+      "reservations": "Reservations",
+      "assets": "Assets",
+      "visitors": "Visitors"
     },
     "names": {
       "access_control": "Access control",

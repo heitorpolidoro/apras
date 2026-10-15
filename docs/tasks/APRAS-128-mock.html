@@ -10,10 +10,10 @@
 <p><b>B:</b> migration switches the remaining member OFF (both off; the tenant loses tasks).</p></div>
 <script>
 const groups=[
-{title:"Tarefas e categorias",items:[{label:"Tarefas e categorias",features:["Tarefas","Categorias"],on:true}]},
-{title:"Financeiro e patrimônio",items:[{label:"Finanças",on:true},{label:"Compras",on:true},{label:"Patrimônio e estoque",features:["Patrimônio","Estoque"],on:false}]},
-{title:"Espaços e reservas",items:[{label:"Reservas e espaços",features:["Reservas","Espaços reserváveis"],on:true}]},
-{title:"Visitantes e acesso",items:[{label:"Visitantes e portaria",features:["Visitantes","Autorizações de visita","Portaria"],on:true},{label:"Controle de acesso",on:true}]},
+{title:"Tarefas e categorias",items:[{label:"Tarefas",features:["Tarefas","Categorias"],on:true}]},
+{title:"Financeiro e patrimônio",items:[{label:"Finanças",on:true},{label:"Compras",on:true},{label:"Patrimônio",features:["Patrimônio","Estoque"],on:false}]},
+{title:"Espaços e reservas",items:[{label:"Reservas",features:["Reservas","Espaços reserváveis"],on:true}]},
+{title:"Visitantes e acesso",items:[{label:"Visitantes",features:["Visitantes","Autorizações de visita","Portaria"],on:true},{label:"Controle de acesso",on:true}]},
 {title:"Governança",items:[{label:"Assembleias",on:true},{label:"Votações",on:true}]}];
 const app=document.getElementById("app");
 groups.forEach(g=>{const f=document.createElement("fieldset");

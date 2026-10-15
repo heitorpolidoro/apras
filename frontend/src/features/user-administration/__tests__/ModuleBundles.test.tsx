@@ -74,7 +74,9 @@ describe("TenantModulesPage bundles", () => {
     const bundle = await screen.findByRole("checkbox", {
       name: bundleLabel("tasks"),
     });
-    expect(screen.queryByRole("checkbox", { name: name("tasks") })).toBeNull();
+    // One checkbox for the bundle, none per member: bundle, finance,
+    // brand_new and the core users module.
+    expect(screen.getAllByRole("checkbox")).toHaveLength(4);
     expect(
       screen.queryByRole("checkbox", { name: name("categories") }),
     ).toBeNull();
@@ -162,7 +164,12 @@ describe("SubscriptionPage bundles", () => {
       name: bundleLabel("assets"),
     });
     expect(screen.getByText("15 BRL")).toBeTruthy();
-    expect(screen.queryByRole("checkbox", { name: name("assets") })).toBeNull();
+    // One checkbox for the bundle, none per member: bundle, documents and
+    // brand_new.
+    expect(screen.getAllByRole("checkbox")).toHaveLength(3);
+    expect(
+      screen.queryByRole("checkbox", { name: name("inventory") }),
+    ).toBeNull();
     expect(screen.getByRole("checkbox", { name: "modules.names.brand_new" })).toBeTruthy();
 
     await userEvent.click(bundle);

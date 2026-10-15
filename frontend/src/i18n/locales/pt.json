@@ -1679,10 +1679,10 @@
       "other": "Outros"
     },
     "bundles": {
-      "tasks": "Tarefas e categorias",
-      "reservations": "Reservas e espaços",
-      "assets": "Patrimônio e estoque",
-      "visitors": "Visitantes e portaria"
+      "tasks": "Tarefas",
+      "reservations": "Reservas",
+      "assets": "Patrimônio",
+      "visitors": "Visitantes"
     },
     "names": {
       "access_control": "Controle de acesso",
