@@ -92,7 +92,7 @@ describe("TenantModulesPage bundles", () => {
   });
 });
 
-const t = (key: string): string => (pt.modules as Record<string, string>)[key];
+const t = (key: string): string => (pt.modules as unknown as Record<string, string>)[key];
 
 describe("SubscriptionPage bundles", () => {
   const row = (
