@@ -39,6 +39,7 @@ The cluster must be UTF-8: the migration seeds ``Condomínio Padrão``.
 """
 
 import ast
+import json
 import os
 import pathlib
 import re
@@ -77,7 +78,7 @@ _ALEMBIC_TIMEOUT = 300
 #: revision appends to :data:`EXPECTED_HISTORY` and moves
 #: :data:`HEAD_REVISION` rather than hunting for literals.
 ROOT_REVISION = "0001_initial_schema"
-HEAD_REVISION = "0007_milestone_detail_json"
+HEAD_REVISION = "0008_module_bundles_backfill"
 
 #: The whole history, oldest first. ``upgrade head`` replays it in this order
 #: and each entry's ``down_revision`` is asserted to be its predecessor, so a
@@ -88,6 +89,7 @@ EXPECTED_HISTORY = (
     "0003_tenant_invitation",
     "0005_purchase_line_items",
     "0006_tenant_brand_theme",
+    "0007_milestone_detail_json",
     HEAD_REVISION,
 )
 
@@ -1554,3 +1556,75 @@ def _module_docstring_of(module_name: str, function_name: str) -> str:
         if isinstance(node, ast.FunctionDef) and node.name == function_name:
             return ast.get_docstring(node) or ""
     raise AssertionError(f"{function_name} not found in {path}")
+
+
+# ---------------------------------------------------------------------------
+# APRAS-128: the module-bundle backfill, replayed on a real Postgres.
+# ---------------------------------------------------------------------------
+
+_BEFORE_BUNDLES = "0007_milestone_detail_json"
+
+
+def test_the_bundle_backfill_makes_a_pre_existing_split_whole(migrated_pg_engine):
+    """A split tenant, plan and courtesy list end whole (upward); a whole
+    bundle is left as it was."""
+    _reset_to(migrated_pg_engine, _BEFORE_BUNDLES)
+
+    plan_id, split_tenant, whole_tenant = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+    with migrated_pg_engine.begin() as conn:
+        for tenant_id, slug, disabled in (
+            (split_tenant, "split-tenant", ["categories", "finance"]),
+            (whole_tenant, "whole-tenant", ["tasks", "categories"]),
+        ):
+            conn.execute(
+                text(
+                    "INSERT INTO tenant (id, name, slug, is_active, created_at, "
+                    "updated_at, disabled_modules) VALUES (:id, :slug, :slug, "
+                    "true, now(), now(), CAST(:disabled AS json))"
+                ),
+                {"id": tenant_id, "slug": slug, "disabled": json.dumps(disabled)},
+            )
+        conn.execute(
+            text(
+                "INSERT INTO plan (id, name, included_modules, module_prices, "
+                "base_price, currency, is_active, created_at, updated_at) VALUES "
+                "(:id, 'P', CAST(:inc AS json), '{}', 10, 'BRL', true, now(), "
+                "now())"
+            ),
+            {"id": plan_id, "inc": json.dumps(["tasks", "assets", "inventory"])},
+        )
+        conn.execute(
+            text(
+                "INSERT INTO tenant_subscription (id, tenant_id, plan_id, "
+                "status, courtesy_modules, started_at, created_at, updated_at) "
+                "VALUES (:id, :tenant, :plan, 'ACTIVE', CAST(:cou AS json), "
+                "now(), now(), now())"
+            ),
+            {
+                "id": uuid.uuid4(),
+                "tenant": split_tenant,
+                "plan": plan_id,
+                "cou": json.dumps(["gate"]),
+            },
+        )
+
+    _run_alembic("upgrade", "head")
+
+    with migrated_pg_engine.connect() as conn:
+        disabled = {
+            row.id: row.disabled_modules
+            for row in conn.execute(
+                text("SELECT id, disabled_modules FROM tenant")
+            ).all()
+        }
+        included = conn.execute(text("SELECT included_modules FROM plan")).scalar_one()
+        courtesy = conn.execute(
+            text("SELECT courtesy_modules FROM tenant_subscription")
+        ).scalar_one()
+
+    assert disabled[split_tenant] == ["finance"]
+    assert sorted(disabled[whole_tenant]) == ["categories", "tasks"]
+    assert sorted(included) == ["assets", "categories", "inventory", "tasks"]
+    assert sorted(courtesy) == ["authorizations", "gate", "visitors"]
+
+    _reset_to(migrated_pg_engine, "head")

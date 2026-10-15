@@ -44,6 +44,8 @@ export interface Plan {
 export interface ModuleEntitlement {
   module: string;
   is_core: boolean;
+  /** Module bundle key (APRAS-128): members are always on or off together. */
+  bundle?: string | null;
   /** From `tenant.disabled_modules` — APRAS-39's truth. */
   is_active: boolean;
   in_plan: boolean;

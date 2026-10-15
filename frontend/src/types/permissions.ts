@@ -35,6 +35,8 @@ export interface ModuleState {
   /** In `CORE_MODULES`: identity, membership and the authorization
    *  vocabulary itself. The API refuses to disable these. */
   is_core: boolean;
+  /** Module bundle key (APRAS-128): members are always on or off together. */
+  bundle?: string | null;
   is_active: boolean;
 }
 

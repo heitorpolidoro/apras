@@ -4478,3 +4478,12 @@ The comment at `darkVariantCompile.test.ts:362` credited APRAS-127 for a lesson 
 
 ## [APRAS-100] Turn the brand contrast failure into a warning instead of a hard block — 2026-10-14 (QA, round 2)
 - One frontend test failed on a run that overlapped with pytest and passed on rerun, which suggests a timing-sensitive test somewhere. Its identity is unknown.
+
+## [APRAS-128] Agrupar módulos acoplados para que sejam ligados e desligados juntos — 2026-10-15
+- Expected result 4 asserts two things (no diff to deps.py/filter_by_modules, and no permission/role row changes); consider splitting.
+- Say that existing tests and `seed_demo.py` that toggle a single bundle member must be updated, since the rule now rejects them.
+- Define the plan update behaviour for existing subscribers whose plan is changed to a whole bundle (no effect expected, but state it).
+- If the operator answers B, the spec-generator should rewrite expected result 6 and the migration test criterion in place, so the contract QA reads is not split between the main text and a conditional paragraph.
+
+## [APRAS-128] Agrupar módulos acoplados para que sejam ligados e desligados juntos — 2026-10-15 (code review, round 1)
+- `SubscriptionPage.renderUnit` falls back to per-member rows when a bundle isn't fully `inPlan`. That is defensive code for a state the backend now prevents; harmless, could be dropped later.

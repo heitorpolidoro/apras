@@ -702,15 +702,38 @@ modules that a new endpoint could forget to join, and no second mechanism.
   static catalogue, identical for every caller, and the role editor needs it
   to render a permission the author does not hold as a disabled checkbox.
 
-**Companion modules** (operator documentation, not code — the 28 toggle
-independently and the incoherent configurations they allow are safe and
-reversible in one click): `assets` ↔ `inventory`; `reservations` ↔ `spaces`;
-`visitors` ↔ `authorizations` ↔ `gate` ↔ `access_control`; `tasks` →
-`categories`; `assemblies` ↔ `votes`; `lots` → `residents`, `packages`,
-`infractions`; `occurrences` → `infractions` (`APRAS-44`: the promotion source
-and the lot an infraction is always against — both couplings are one checkbox
-to fix). The `/admin/modules` checklist is grouped by these clusters, which is
-presentation, not machinery.
+**Module bundles** (`APRAS-128`, which reverted `APRAS-39`'s "the 28 toggle
+independently" for the pairs that are genuinely coupled). A bundle is a set of
+modules that is always entirely on or entirely off, for a tenant, a plan and a
+courtesy grant. `MODULE_BUNDLES` in `app/core/permissions.py` is the one
+declaration (validated at import and by `tests/test_module_bundles.py`: members
+exist, no module in two bundles, no core module, at least two members):
+`tasks` + `categories`; `reservations` + `spaces`; `assets` + `inventory`;
+`visitors` + `authorizations` + `gate`. A write whose resulting set splits a
+bundle is refused with `ModuleBundleSplitError` (400, naming the missing
+members), never expanded, so every `PUT` stays declarative: `PUT
+/tenants/{id}/modules`, `PUT /subscription/modules`, `PUT
+/tenants/{id}/subscription/courtesy` (checked on both the entitled set and the
+resulting active set) and plan create/update. `tenant.disabled_modules` stays
+the only input to permission resolution: `deps.py`, `filter_by_modules`, the
+permission strings and `role.permissions` are untouched. Each module row of
+`GET /tenants/{id}/modules` and `GET /subscription` carries `bundle` (the key,
+or `null`), and `/admin/modules` and `/subscription` render one checkbox per
+bundle. Migration `0008_module_bundles_backfill` switched any pre-existing
+split ON (upward).
+
+**Deliberately not bundled** (independent modules): `assemblies` and `votes`
+(`vote.assembly_id` is nullable, so standalone voting is supported, and
+minutes work without voting); `uploads` (cross-cutting, a one-way dependency of
+`occurrences`, `announcements`, `infractions` and `access_control`; making it
+core would change `CORE_MODULES` billing semantics, a bundle would tie it to
+four unrelated features); `access_control` (no shared FK with `visitors`).
+**One-way dependencies left out** (documented only: no mechanism, no UI
+warning): `lots` -> `residents`, `packages`, `infractions`, `reservations`,
+`visitors`; `occurrences` -> `infractions` (`APRAS-44`: the promotion source);
+`projects` -> `documents`. Turning the dependency off is legal, safe and
+reversible in one click. `MODULE_GROUPS` in the frontend stays presentation
+headings only and encodes no coupling.
 
 **The two routes**, both superuser-only (`deps.get_current_superuser`) on the
 global tenants router, so a tenant_admin acting in their own tenant gets 403.

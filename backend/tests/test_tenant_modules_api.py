@@ -152,7 +152,7 @@ def test_put_is_declarative_and_reenables(tenant_client: TestClient, superuser: 
     tenant_client.put(
         _url(TENANT_A),
         headers=_auth(superuser),
-        json={"disabled_modules": ["finance", "assets"]},
+        json={"disabled_modules": ["finance", "documents"]},
     )
 
     response = tenant_client.put(
@@ -170,12 +170,12 @@ def test_put_deduplicates_and_sorts(
     response = tenant_client.put(
         _url(TENANT_A),
         headers=_auth(superuser),
-        json={"disabled_modules": ["finance", "finance", "assets"]},
+        json={"disabled_modules": ["finance", "finance", "documents"]},
     )
 
     assert response.status_code == 200
     session.expire_all()
-    assert session.get(Tenant, TENANT_A).disabled_modules == ["assets", "finance"]
+    assert session.get(Tenant, TENANT_A).disabled_modules == ["documents", "finance"]
 
 
 def test_a_new_tenant_starts_with_every_module_active(

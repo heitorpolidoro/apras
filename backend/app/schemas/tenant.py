@@ -196,6 +196,7 @@ class ModuleStateRead(ApiModel):
 
     module: str  # "finance"
     is_core: bool  # in CORE_MODULES: cannot be disabled
+    bundle: str | None = None  # APRAS-128: module bundle key
     is_active: bool  # not in tenant.disabled_modules
 
 

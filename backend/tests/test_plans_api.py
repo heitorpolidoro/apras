@@ -51,8 +51,8 @@ def test_superuser_creates_and_lists_a_plan(tenant_client: TestClient, superuser
         json={
             "name": "Plano Completo",
             "description": "Tudo incluído",
-            "included_modules": ["finance", "assets", "finance"],
-            "module_prices": {"finance": 49.0, "assets": 19.0},
+            "included_modules": ["finance", "documents", "finance"],
+            "module_prices": {"finance": 49.0, "documents": 19.0},
             "base_price": 100.0,
         },
         headers=auth(superuser),
@@ -60,8 +60,8 @@ def test_superuser_creates_and_lists_a_plan(tenant_client: TestClient, superuser
 
     assert created.status_code == 201
     body = created.json()
-    assert body["included_modules"] == ["assets", "finance"]
-    assert list(body["module_prices"]) == ["assets", "finance"]
+    assert body["included_modules"] == ["documents", "finance"]
+    assert list(body["module_prices"]) == ["documents", "finance"]
     assert body["currency"] == "BRL"
     assert body["is_active"] is True
 
@@ -105,7 +105,7 @@ def test_plan_rejects_a_price_for_an_uncovered_module(
         PLANS,
         json={
             "name": "Plano Torto",
-            "included_modules": ["assets"],
+            "included_modules": ["documents"],
             "module_prices": {"finance": 49.0},
         },
         headers=auth(superuser),
@@ -126,8 +126,8 @@ def test_plan_rejects_a_negative_price_and_a_bad_currency(
         PLANS,
         json={
             "name": "Plano Negativo",
-            "included_modules": ["assets"],
-            "module_prices": {"assets": -1.0},
+            "included_modules": ["documents"],
+            "module_prices": {"documents": -1.0},
         },
         headers=auth(superuser),
     )
@@ -166,7 +166,7 @@ def test_patch_deactivates_a_plan_and_there_is_no_delete_route(
 ):
     created = tenant_client.post(
         PLANS,
-        json={"name": "Plano Antigo", "included_modules": ["assets"]},
+        json={"name": "Plano Antigo", "included_modules": ["documents"]},
         headers=auth(superuser),
     ).json()
 
@@ -198,7 +198,7 @@ def test_patch_revalidates_the_whole_plan(tenant_client: TestClient, superuser):
         PLANS,
         json={
             "name": "Plano Estreitado",
-            "included_modules": ["assets", "finance"],
+            "included_modules": ["documents", "finance"],
             "module_prices": {"finance": 49.0},
         },
         headers=auth(superuser),
@@ -206,7 +206,7 @@ def test_patch_revalidates_the_whole_plan(tenant_client: TestClient, superuser):
 
     narrowed = tenant_client.patch(
         f"/api/v1/plans/{created['id']}",
-        json={"included_modules": ["assets"]},
+        json={"included_modules": ["documents"]},
         headers=auth(superuser),
     )
 
@@ -249,7 +249,7 @@ def test_a_name_only_patch_does_not_rewrite_the_json_columns(
         PLANS,
         json={
             "name": "Plano Estável",
-            "included_modules": ["finance", "assets"],
+            "included_modules": ["finance", "documents"],
             "module_prices": {"finance": 49.0},
         },
         headers=auth(superuser),
@@ -258,13 +258,13 @@ def test_a_name_only_patch_does_not_rewrite_the_json_columns(
     # Written straight onto the row, bypassing the service's normalisation.
     session.expire_all()
     row = session.get(Plan, uuid.UUID(created["id"]))
-    row.included_modules = ["finance", "assets", "finance"]
+    row.included_modules = ["finance", "documents", "finance"]
     session.add(row)
     session.commit()
 
     session.expire_all()
     modules_before = list(session.get(Plan, uuid.UUID(created["id"])).included_modules)
-    assert modules_before == ["finance", "assets", "finance"]
+    assert modules_before == ["finance", "documents", "finance"]
 
     response = tenant_client.patch(
         f"/api/v1/plans/{created['id']}",
@@ -277,7 +277,7 @@ def test_a_name_only_patch_does_not_rewrite_the_json_columns(
     session.expire_all()
     row = session.get(Plan, uuid.UUID(created["id"]))
     # Byte-identical, un-normalised: the body did not send it, so it was not
-    # written. Without the fix this reads `["assets", "finance"]`.
+    # written. Without the fix this reads `["documents", "finance"]`.
     assert row.included_modules == modules_before
     assert row.module_prices == {"finance": 49.0}
 
@@ -285,7 +285,7 @@ def test_a_name_only_patch_does_not_rewrite_the_json_columns(
     # about what was omitted and never about skipping validation.
     widened = tenant_client.patch(
         f"/api/v1/plans/{created['id']}",
-        json={"included_modules": ["projects", "assets", "assets"]},
+        json={"included_modules": ["projects", "documents", "documents"]},
         headers=auth(superuser),
     )
     assert widened.status_code == 400

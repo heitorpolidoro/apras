@@ -1003,6 +1003,21 @@ class UnknownModuleError(DomainError):
         super().__init__(f"Unknown module: '{module}'")
 
 
+class ModuleBundleSplitError(DomainError):
+    """Raised when a module set holds only part of a bundle (APRAS-128).
+
+    A plain :class:`DomainError`, so it answers 400 like the other module
+    errors. ``split`` maps each bundle key to its missing members.
+    """
+
+    def __init__(self, split: dict[str, list[str]]) -> None:
+        detail = "; ".join(
+            f"bundle '{key}' is missing {', '.join(missing)}"
+            for key, missing in sorted(split.items())
+        )
+        super().__init__("Modules must be switched together: " + detail)
+
+
 class CoreModuleCannotBeDisabledError(DomainError):
     """Raised when a core module is listed as disabled (APRAS-39 §6.3).
 

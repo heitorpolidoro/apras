@@ -380,7 +380,7 @@ def test_a_grant_and_a_revoke_in_one_call_append_one_row_each(
 
     response = tenant_client.put(
         _courtesy_url(TENANT_A),
-        json={"courtesy_modules": ["assets"], "reason": "troca"},
+        json={"courtesy_modules": ["documents"], "reason": "troca"},
         headers=auth(superuser),
     )
 
@@ -585,7 +585,7 @@ def _seed_three_kinds(session: Session, tenant_client: TestClient, superuser):
 
     courtesy = tenant_client.put(
         _courtesy_url(TENANT_A),
-        json={"courtesy_modules": ["assets"], "reason": "cortesia"},
+        json={"courtesy_modules": ["documents"], "reason": "cortesia"},
         headers=auth(superuser),
     )
     assert courtesy.status_code == 200, courtesy.text
@@ -610,7 +610,7 @@ def test_the_history_route_returns_the_rows_newest_first_with_author_and_kind(
     ]
     assert rows[0]["changed_by_id"] == str(superuser.id)
     assert rows[0]["changed_by_name"] == superuser.full_name
-    assert rows[0]["modules_added"] == ["assets"]
+    assert rows[0]["modules_added"] == ["documents"]
     assert rows[0]["modules_removed"] == []
     assert rows[0]["reason"] == "cortesia"
     assert rows[1]["changed_by_name"] == tenant_admin.full_name
@@ -692,7 +692,7 @@ def test_the_history_route_shows_only_that_tenants_rows(
     )
     tenant_client.put(
         _courtesy_url(tenant_b.id),
-        json={"courtesy_modules": ["assets"], "reason": "só do B"},
+        json={"courtesy_modules": ["documents"], "reason": "só do B"},
         headers=auth(superuser),
     )
 

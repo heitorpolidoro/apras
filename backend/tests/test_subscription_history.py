@@ -84,7 +84,7 @@ def test_every_write_path_appends_exactly_one_kind(
     # COURTESY_GRANT -- one module outside the plan, activated.
     tenant_client.put(
         f"{_sub_url(TENANT_A)}/courtesy",
-        json={"courtesy_modules": ["assets"], "reason": "trial"},
+        json={"courtesy_modules": ["documents"], "reason": "trial"},
         headers=auth(superuser),
     )
     # COURTESY_REVOKE -- and taken away again.
@@ -136,7 +136,7 @@ def test_history_is_ordered_newest_first_and_names_the_actor(
 
     tenant_client.put(
         f"{_sub_url(TENANT_A)}/courtesy",
-        json={"courtesy_modules": ["assets"], "reason": "cortesia"},
+        json={"courtesy_modules": ["documents"], "reason": "cortesia"},
         headers=auth(superuser),
     )
     tenant_client.put(
@@ -187,7 +187,7 @@ def test_a_tenant_only_sees_its_own_history(
 
     tenant_client.put(
         f"{_sub_url(tenant_b.id)}/courtesy",
-        json={"courtesy_modules": ["assets"], "reason": "só do B"},
+        json={"courtesy_modules": ["documents"], "reason": "só do B"},
         headers=auth(superuser),
     )
     tenant_client.put(
@@ -335,7 +335,7 @@ def test_the_tenant_side_history_is_unpaginated_by_default(
         tenant_client.put(
             f"{_sub_url(TENANT_A)}/courtesy",
             json={
-                "courtesy_modules": ["assets"] if index % 2 == 0 else [],
+                "courtesy_modules": ["documents"] if index % 2 == 0 else [],
                 "reason": f"volta {index}",
             },
             headers=auth(superuser),
@@ -381,7 +381,7 @@ def test_the_history_order_is_deterministic_for_rows_sharing_a_timestamp(
                 id=row_id,
                 subscription_id=subscription.id,
                 kind="COURTESY_GRANT",
-                modules_added=["assets"],
+                modules_added=["documents"],
                 modules_removed=[],
                 reason=reason,
                 changed_by_id=superuser.id,

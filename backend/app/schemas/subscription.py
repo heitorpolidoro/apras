@@ -19,6 +19,8 @@ class ModuleEntitlementRead(ApiModel):
 
     module: str
     is_core: bool
+    #: Key of the module bundle (APRAS-128), None when unbundled.
+    bundle: str | None = None
     #: From `tenant.disabled_modules` -- APRAS-39's truth, and the only input
     #: to permission resolution. This task changes no line of the resolver.
     is_active: bool

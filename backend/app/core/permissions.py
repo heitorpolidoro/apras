@@ -913,6 +913,60 @@ CORE_MODULES: frozenset[str] = frozenset({"tenants", "users", "roles", "billing"
 TOGGLEABLE_MODULES: frozenset[str] = MODULES - CORE_MODULES
 
 
+#: Module bundles (APRAS-128): sets of modules that are always entirely on or
+#: entirely off -- for a tenant, a plan and a courtesy grant. Declared once,
+#: here. Not bundled on purpose: `assemblies`/`votes` (a vote may stand alone,
+#: `vote.assembly_id` is nullable, and minutes work without voting) and
+#: `uploads` (a cross-cutting module, one-way dependency of several features).
+MODULE_BUNDLES: dict[str, frozenset[str]] = {
+    "tasks": frozenset({"tasks", "categories"}),
+    "reservations": frozenset({"reservations", "spaces"}),
+    "assets": frozenset({"assets", "inventory"}),
+    "visitors": frozenset({"visitors", "authorizations", "gate"}),
+}
+
+
+_MIN_BUNDLE_SIZE = 2
+
+
+def _validate_bundles(bundles: dict[str, frozenset[str]]) -> None:
+    seen: set[str] = set()
+    for key, members in bundles.items():
+        if len(members) < _MIN_BUNDLE_SIZE:
+            raise ValueError(f"Bundle '{key}' needs at least two modules")
+        unknown = members - MODULES
+        if unknown:
+            raise ValueError(f"Bundle '{key}' names unknown modules: {sorted(unknown)}")
+        core = members & CORE_MODULES
+        if core:
+            raise ValueError(f"Bundle '{key}' contains core modules: {sorted(core)}")
+        dupes = members & seen
+        if dupes:
+            raise ValueError(f"Modules in two bundles: {sorted(dupes)}")
+        seen |= members
+
+
+_validate_bundles(MODULE_BUNDLES)
+
+
+def bundle_of(module: str) -> str | None:
+    """The key of the bundle `module` belongs to, or None."""
+    for key, members in MODULE_BUNDLES.items():
+        if module in members:
+            return key
+    return None
+
+
+def split_bundles(active: Collection[str]) -> dict[str, list[str]]:
+    """Bundles `active` holds only part of: `{bundle key: missing members}`."""
+    present = set(active)
+    return {
+        key: sorted(members - present)
+        for key, members in MODULE_BUNDLES.items()
+        if members & present and not members <= present
+    }
+
+
 def filter_by_modules(
     permissions: Iterable[str], disabled: Collection[str]
 ) -> frozenset[str]:

@@ -1,0 +1,22 @@
+<!doctype html><html><head><meta charset="utf-8"><title>APRAS-128 mock</title>
+<script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-slate-50 p-6 text-slate-800">
+<h1 class="text-xl font-semibold mb-1">/admin/modules and /subscription - bundle checkboxes</h1>
+<p class="text-sm mb-4">One checkbox per bundle. Unbundled modules look as they do today.</p>
+<div id="app" class="max-w-xl bg-white rounded border p-4 space-y-2"></div>
+<h2 class="text-lg font-semibold mt-8 mb-1">Existing split tenants (question 1)</h2>
+<div class="max-w-xl text-sm bg-white rounded border p-4">
+<p><b>A (spec default):</b> migration switches the missing member ON (tasks on, categories off becomes both on).</p>
+<p><b>B:</b> migration switches the remaining member OFF (both off; the tenant loses tasks).</p></div>
+<script>
+const items=[
+{label:"Tasks + Categories",sub:"tasks, categories",on:true},
+{label:"Reservations + Spaces",sub:"reservations, spaces",on:true},
+{label:"Assets + Inventory",sub:"assets, inventory",on:false},
+{label:"Visitors + Authorizations + Gate",sub:"visitors, authorizations, gate",on:true},
+{label:"Assemblies",sub:"assemblies",on:true},{label:"Votes",sub:"votes",on:true},
+{label:"Uploads (infrastructure)",sub:"uploads",on:true}];
+const app=document.getElementById("app");
+items.forEach(i=>{const l=document.createElement("label");l.className="flex items-center gap-3 p-2 border rounded";
+l.innerHTML=`<input type="checkbox" ${i.on?"checked":""}><span><b>${i.label}</b><br><span class="text-xs text-slate-600">${i.sub}</span></span>`;app.appendChild(l)});
+</script></body></html>

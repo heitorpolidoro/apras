@@ -31,13 +31,20 @@ from app.core import clock
 from app.core.exceptions import (
     CoreModuleNotContractableError,
     InactivePlanError,
+    ModuleBundleSplitError,
     ModuleNotEntitledError,
     SubscriptionNotFoundError,
     TenantNotFoundError,
     UnknownModuleError,
 )
 from app.core.money import ZERO, quantize_money
-from app.core.permissions import CORE_MODULES, MODULES, TOGGLEABLE_MODULES
+from app.core.permissions import (
+    CORE_MODULES,
+    MODULES,
+    TOGGLEABLE_MODULES,
+    bundle_of,
+    split_bundles,
+)
 from app.models.enums import SubscriptionChangeKind
 from app.models.plan import Plan
 from app.models.subscription import SubscriptionChange, TenantSubscription
@@ -182,6 +189,7 @@ class SubscriptionService:
                 ModuleEntitlementRead(
                     module=module,
                     is_core=is_core,
+                    bundle=bundle_of(module),
                     is_active=is_active,
                     in_plan=in_plan,
                     courtesy=courtesy,
@@ -408,6 +416,9 @@ class SubscriptionService:
         active_before = TOGGLEABLE_MODULES - set(tenant.disabled_modules)
         preserved = active_before - ent.included
         new_active = requested | preserved
+        split = split_bundles(new_active)
+        if split:
+            raise ModuleBundleSplitError(split)
 
         added = sorted(new_active - active_before)
         removed = sorted(active_before - new_active)
@@ -560,15 +571,23 @@ class SubscriptionService:
         granted = sorted(toggleable_requested - ent.courtesy)
         revoked = sorted(ent.courtesy - toggleable_requested)
 
-        subscription.courtesy_modules = sorted(requested)
-        subscription.updated_at = clock.db_now()
-        session.add(subscription)
-
         active_before = TOGGLEABLE_MODULES - set(tenant.disabled_modules)
         # Newly granted modules are activated; revoked ones are deactivated
         # unless the plan also covers them, in which case the revoke changes
         # nothing but the label.
         new_active = (active_before | set(granted)) - (set(revoked) - ent.included)
+        # APRAS-128: refuse a grant that splits a bundle, whether in what the
+        # tenant is entitled to or in what it ends up with.
+        split = split_bundles(ent.included | toggleable_requested) or split_bundles(
+            new_active
+        )
+        if split:
+            raise ModuleBundleSplitError(split)
+
+        subscription.courtesy_modules = sorted(requested)
+        subscription.updated_at = clock.db_now()
+        session.add(subscription)
+
         tenant.disabled_modules = sorted(TOGGLEABLE_MODULES - new_active)
         tenant.updated_at = clock.db_now()
         session.add(tenant)

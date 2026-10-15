@@ -5,7 +5,7 @@ import {
   useSubscription,
   useSubscriptionHistory,
 } from "../../../hooks/useSubscription";
-import { groupsCovering } from "../access/moduleGroups";
+import { groupsCovering, unitsOf } from "../access/moduleGroups";
 import type { ModuleEntitlement } from "../../../types/subscription";
 
 /**
@@ -76,9 +76,14 @@ const SubscriptionPage: React.FC = () => {
   const isChecked = (row: ModuleEntitlement): boolean =>
     edits[row.module] ?? row.is_active;
 
-  const toggle = (row: ModuleEntitlement) => {
+  /** A unit is a whole bundle or a single module (APRAS-128). */
+  const toggle = (unit: ModuleEntitlement[]) => {
+    const next = !unit.every(isChecked);
     setSaved(false);
-    setEdits((previous) => ({ ...previous, [row.module]: !isChecked(row) }));
+    setEdits((previous) => ({
+      ...previous,
+      ...Object.fromEntries(unit.map((row) => [row.module, next])),
+    }));
   };
 
   /**
@@ -110,6 +115,47 @@ const SubscriptionPage: React.FC = () => {
   };
 
   const unmanaged = data !== undefined && data.plan === null;
+  // Shared by the groups of one render, so a bundle is emitted once.
+  const emitted = new Set<string>();
+
+  const bundleOf = (module: string): string | null | undefined =>
+    known.get(module)?.bundle;
+
+  const renderUnit = (unit: ModuleEntitlement[]) => {
+    if (unit.length === 1) return renderRow(unit[0]);
+    // Defensive: the backend keeps a bundle whole in a plan, but a bundle that
+    // is not entirely contractable falls back to its members' own rows.
+    if (unmanaged || !unit.every((r) => rowStateOf(r) === "inPlan")) {
+      return unit.map(renderRow);
+    }
+    const label = unit.map((r) => t(`modules.names.${r.module}`)).join(" + ");
+    const prices = unit.map((r) => r.monthly_price);
+    const price = prices.some((p) => p !== null)
+      ? prices.reduce<number>((sum, p) => sum + (p ?? 0), 0)
+      : null;
+    return (
+      <label
+        key={unit.map((r) => r.module).join("+")}
+        className="flex items-center gap-2 text-sm"
+        htmlFor={`subscription-${unit[0].module}`}
+      >
+        <input
+          id={`subscription-${unit[0].module}`}
+          type="checkbox"
+          aria-label={label}
+          checked={unit.every(isChecked)}
+          disabled={!unit.every((r) => r.can_contract)}
+          onChange={() => toggle(unit)}
+        />
+        {label}
+        {price !== null && (
+          <span className="text-xs text-muted-foreground">
+            {price} {data?.currency}
+          </span>
+        )}
+      </label>
+    );
+  };
 
   const renderRow = (row: ModuleEntitlement) => {
     const label = t(`modules.names.${row.module}`);
@@ -134,7 +180,7 @@ const SubscriptionPage: React.FC = () => {
             aria-label={label}
             checked={isChecked(row)}
             disabled={!row.can_contract}
-            onChange={() => toggle(row)}
+            onChange={() => toggle([row])}
           />
           {label}
           {row.monthly_price !== null && (
@@ -220,10 +266,9 @@ const SubscriptionPage: React.FC = () => {
                 <legend className="text-sm font-bold text-foreground">
                   {t(`modules.groups.${group.key}`)}
                 </legend>
-                {group.modules
-                  .map((module) => known.get(module))
-                  .filter((row): row is ModuleEntitlement => row !== undefined)
-                  .map(renderRow)}
+                {unitsOf(group, bundleOf, [...known.keys()], emitted).map(
+                  (unit) => renderUnit(unit.map((m) => known.get(m)!)),
+                )}
               </fieldset>
             ))}
           </section>

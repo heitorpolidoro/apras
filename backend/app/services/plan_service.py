@@ -19,12 +19,18 @@ from app.core.exceptions import (
     CoreModuleNotContractableError,
     InvalidModulePriceError,
     InvalidPlanPriceError,
+    ModuleBundleSplitError,
     PlanAlreadyExistsError,
     PlanNotFoundError,
     UnknownModuleError,
 )
 from app.core.money import quantize_money
-from app.core.permissions import CORE_MODULES, MODULES, TOGGLEABLE_MODULES
+from app.core.permissions import (
+    CORE_MODULES,
+    MODULES,
+    TOGGLEABLE_MODULES,
+    split_bundles,
+)
 from app.models.plan import Plan
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -55,6 +61,9 @@ class PlanService:
         core = requested & CORE_MODULES
         if core:
             raise CoreModuleNotContractableError(sorted(core))
+        split = split_bundles(requested)
+        if split:
+            raise ModuleBundleSplitError(split)
         return sorted(requested & TOGGLEABLE_MODULES)
 
     @staticmethod

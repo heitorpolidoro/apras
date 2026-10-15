@@ -132,10 +132,10 @@ def test_the_invariant_holds_after_every_apras_40_write(
     before = over(session, TENANT_A, entitled)
     tenant_client.put(
         f"{_sub_url(TENANT_A)}/courtesy",
-        json={"courtesy_modules": ["assets"]},
+        json={"courtesy_modules": ["documents"]},
         headers=auth(superuser),
     )
-    widened = entitled | {"assets"}
+    widened = entitled | {"documents"}
     assert over(session, TENANT_A, widened) <= before, "I1: courtesy escalated"
     assert over(session, TENANT_A, widened) == set()
 
@@ -190,7 +190,7 @@ def test_a_tenant_side_write_preserves_courtesy_and_override_activations(
     naming neither: omission deactivates only plan-covered modules."""
     plan = make_plan(session, included=["documents", "projects"])
     subscription = subscribe(
-        session, tenant_id=TENANT_A, plan=plan, courtesy=["assets"]
+        session, tenant_id=TENANT_A, plan=plan, courtesy=["announcements"]
     )
     tenant_admin = make_tenant_admin(session)
 
@@ -199,7 +199,8 @@ def test_a_tenant_side_write_preserves_courtesy_and_override_activations(
         _raw_url(TENANT_A),
         json={
             "disabled_modules": sorted(
-                TOGGLEABLE_MODULES - {"documents", "projects", "assets", "finance"}
+                TOGGLEABLE_MODULES
+                - {"documents", "projects", "announcements", "finance"}
             )
         },
         headers=auth(superuser),
@@ -208,14 +209,14 @@ def test_a_tenant_side_write_preserves_courtesy_and_override_activations(
 
     response = tenant_client.put(
         MODULES_URL,
-        json={"active_modules": ["documents"]},
+        json={"active_modules": ["announcements", "documents"]},
         headers=auth(tenant_admin, TENANT_A),
     )
 
     assert response.status_code == 200
     body = response.json()
-    assert module_row(body, "assets")["is_active"] is True
-    assert module_row(body, "assets")["source"] == "COURTESY"
+    assert module_row(body, "announcements")["is_active"] is True
+    assert module_row(body, "announcements")["source"] == "COURTESY"
     assert module_row(body, "finance")["is_active"] is True
     assert module_row(body, "finance")["source"] == "OVERRIDE"
     # ...and the plan-covered one the body omitted *is* switched off.

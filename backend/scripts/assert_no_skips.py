@@ -75,7 +75,10 @@ MODULE_CLASSNAME = "tests.test_migrations_postgres"
 #: does not raise under sqlmodel 0.0.47. Both need a real PostgreSQL: SQLite
 #: has no distinct aware timestamp type, so neither property is observable in
 #: the rest of the suite. Re-measured with the same command above: 38.
-MIN_CASES = 38
+#:
+#: APRAS-128 raises it from 38 to 39 for the one case that replays the
+#: module-bundle backfill (`0008`) over rows written before the upgrade.
+MIN_CASES = 39
 
 
 def _verdict(collected: int, skipped: list[str]) -> list[str]:

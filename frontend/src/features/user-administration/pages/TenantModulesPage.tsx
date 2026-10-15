@@ -5,18 +5,16 @@ import {
   useSetTenantModules,
   useTenantModules,
 } from "../../../hooks/useTenantModules";
-import { groupsCovering } from "../access/moduleGroups";
+import { groupsCovering, unitsOf } from "../access/moduleGroups";
 
 /**
  * The superuser screen behind `/admin/modules` (APRAS-39 §10.3).
  *
- * One condominium `<select>` and one checkbox list of the 27 modules,
- * grouped by the companion clusters of §2.3. The grouping is **presentation,
- * not machinery**: the modules toggle independently, and turning one
- * companion off without the other is legal and safe — every endpoint of a
- * disabled module refuses, and it is reversible in one click. Modelling
- * `requires` edges would be a second authorization concept for an operator
- * error that costs one checkbox to fix.
+ * One condominium `<select>` and one checkbox list of the modules, headed by
+ * the presentation groups of §2.3. Coupled modules are **bundles** (APRAS-128):
+ * the backend sends each module's `bundle` key and the page renders one
+ * checkbox per bundle, toggling every member together. One-way dependencies
+ * are ordinary independent modules.
  *
  * Core modules render checked and `disabled`: the API refuses to disable
  * them, because a tenant without `tenants`/`users`/`roles` could not
@@ -69,9 +67,18 @@ const TenantModulesPage: React.FC = () => {
     edits[module] ??
     (data?.modules.find((row) => row.module === module)?.is_active ?? false);
 
-  const toggle = (module: string) => {
+  const bundleOf = (module: string): string | null | undefined =>
+    data?.modules.find((row) => row.module === module)?.bundle;
+
+  /** A unit is a whole bundle or a single module; it is checked when all of
+   *  its members are. */
+  const toggle = (unit: string[]) => {
+    const next = !unit.every(isActive);
     setSaved(false);
-    setEdits((previous) => ({ ...previous, [module]: !isActive(module) }));
+    setEdits((previous) => ({
+      ...previous,
+      ...Object.fromEntries(unit.map((module) => [module, next])),
+    }));
   };
 
   const save = () => {
@@ -92,6 +99,9 @@ const TenantModulesPage: React.FC = () => {
       },
     });
   };
+
+  // Shared by the groups of one render, so a bundle is emitted once.
+  const emitted = new Set<string>();
 
   return (
     <div className="max-w-4xl mx-auto p-8 flex flex-col gap-6">
@@ -140,34 +150,38 @@ const TenantModulesPage: React.FC = () => {
                 <legend className="text-sm font-bold text-foreground">
                   {t(`modules.groups.${group.key}`)}
                 </legend>
-                {group.modules
-                  .filter((module) => known.has(module))
-                  .map((module) => (
+                {unitsOf(group, bundleOf, [...known], emitted).map((unit) => {
+                  const label = unit
+                    .map((module) => t(`modules.names.${module}`))
+                    .join(" + ");
+                  const core = unit.some((module) => coreModules.has(module));
+                  return (
                     <label
-                      key={module}
+                      key={unit.join("+")}
                       className="flex items-center gap-2 text-sm"
-                      htmlFor={`module-${module}`}
+                      htmlFor={`module-${unit[0]}`}
                     >
                       <input
-                        id={`module-${module}`}
+                        id={`module-${unit[0]}`}
                         type="checkbox"
                         // The visible label carries the "core" badge as well,
                         // so the accessible name is stated explicitly here:
                         // a checkbox called "Papéis essencial" would be a
                         // worse announcement, not a better one.
-                        aria-label={t(`modules.names.${module}`)}
-                        checked={isActive(module)}
-                        disabled={coreModules.has(module)}
-                        onChange={() => toggle(module)}
+                        aria-label={label}
+                        checked={unit.every(isActive)}
+                        disabled={core}
+                        onChange={() => toggle(unit)}
                       />
-                      {t(`modules.names.${module}`)}
-                      {coreModules.has(module) && (
+                      {label}
+                      {core && (
                         <span className="text-xs uppercase text-muted-foreground border border-border rounded px-1">
                           {t("modules.coreBadge")}
                         </span>
                       )}
                     </label>
-                  ))}
+                  );
+                })}
               </fieldset>
             ))}
           </div>

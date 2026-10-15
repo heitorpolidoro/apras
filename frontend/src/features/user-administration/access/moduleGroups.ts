@@ -1,24 +1,21 @@
 /**
- * The companion clusters the module checklists are grouped by (APRAS-39 §2.3).
+ * The clusters the module checklists are headed by (APRAS-39 §2.3).
  *
- * **Presentation, not machinery.** The 28 modules toggle independently, and
- * turning one companion off without the other is legal and safe — every
- * endpoint of a disabled module refuses, and it is reversible in one click.
- * Modelling `requires` edges would be a second authorization concept for an
- * operator mistake that costs one checkbox to fix.
+ * **Presentation only.** Coupling is not encoded here: since APRAS-128 the
+ * backend declares module bundles (`MODULE_BUNDLES`) and sends each module's
+ * `bundle` key; the pages render one checkbox per bundle (see `unitsOf`).
+ * What these headings do not cover is one-way dependencies (`lots` ->
+ * residents, ...), which stay ordinary independent modules.
  *
  * One constant, two screens: `/admin/modules` (the raw operator switch) and
- * `/subscription` (the tenant's commercial surface) render the same 28 modules
- * in the same order, and a hand-written list copied into both would have to be
- * edited in both forever. Extracted in APRAS-40 round 1 (review S-1).
+ * `/subscription` (the tenant's commercial surface) render the same modules
+ * in the same order. Extracted in APRAS-40 round 1 (review S-1).
  *
  * Every consumer must still handle a module **no cluster names**: the backend
  * derives `MODULES` from the permission catalogue precisely so a module a
  * future task adds is toggleable the day its first permission exists, while
  * this list is hand-written. Both pages append an `"other"` group for the
- * remainder, so a 29th module is visible rather than silently dropped —
- * which is how `infractions` rendered before `APRAS-44` round 1 put it in
- * the cluster the spec placed it in (§3.3).
+ * remainder, so a new module is visible rather than silently dropped.
  */
 export interface ModuleGroup {
   key: string;
@@ -45,10 +42,10 @@ export const MODULE_GROUPS: readonly ModuleGroup[] = [
       "authorizations",
       "gate",
       "access_control",
-      "uploads",
     ],
   },
   { key: "governance", modules: ["assemblies", "votes"] },
+  { key: "infrastructure", modules: ["uploads"] },
 ];
 
 /**
@@ -70,4 +67,32 @@ export const groupsCovering = (
   return ungrouped.length > 0
     ? [...MODULE_GROUPS, { key: "other", modules: ungrouped }]
     : MODULE_GROUPS;
+};
+
+/**
+ * The checkbox units of one group: a bundle collapses to a single unit holding
+ * all its members, any other module is a unit of one. A bundle is emitted by
+ * the first group to reach one of its members (`emitted` is shared across the
+ * groups of one render), so it never renders twice even if the presentation
+ * headings split its members. A module whose `bundle` is null or absent is
+ * an ordinary unit of one.
+ */
+export const unitsOf = (
+  group: ModuleGroup,
+  bundleOf: (module: string) => string | null | undefined,
+  allModules: readonly string[],
+  emitted: Set<string>,
+): string[][] => {
+  const units: string[][] = [];
+  for (const module of group.modules) {
+    if (!allModules.includes(module)) continue;
+    const bundle = bundleOf(module);
+    if (!bundle) {
+      units.push([module]);
+    } else if (!emitted.has(bundle)) {
+      emitted.add(bundle);
+      units.push(allModules.filter((m) => bundleOf(m) === bundle));
+    }
+  }
+  return units;
 };

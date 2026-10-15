@@ -15,6 +15,7 @@ from app.core import clock
 from app.core.exceptions import (
     CoreModuleCannotBeDisabledError,
     InvalidSlugError,
+    ModuleBundleSplitError,
     SlugAlreadyTakenError,
     TenantAlreadyExistsError,
     TenantLogoInvalidFormatError,
@@ -24,7 +25,7 @@ from app.core.exceptions import (
     TenantNotFoundError,
     UnknownModuleError,
 )
-from app.core.permissions import CORE_MODULES, MODULES
+from app.core.permissions import CORE_MODULES, MODULES, bundle_of, split_bundles
 from app.core.slug import SLUG_MAX_LENGTH, is_valid_slug, slugify
 from app.core.tenant_context import acting_tenant_id, acting_tenant_scope
 from app.core.uploads import image_content_type_for_suffix
@@ -413,6 +414,10 @@ class TenantService:
         if core:
             raise CoreModuleCannotBeDisabledError(sorted(core))
 
+        split = split_bundles(MODULES - requested)
+        if split:
+            raise ModuleBundleSplitError(split)
+
         before = set(tenant.disabled_modules)  # APRAS-40, before the assignment
         tenant.disabled_modules = sorted(requested)
         tenant.updated_at = clock.db_now()
@@ -457,6 +462,7 @@ class TenantService:
                 ModuleStateRead(
                     module=module,
                     is_core=module in CORE_MODULES,
+                    bundle=bundle_of(module),
                     is_active=module not in disabled,
                 )
                 for module in sorted(MODULES)
