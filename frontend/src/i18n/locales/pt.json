@@ -1678,6 +1678,12 @@
       "infrastructure": "Infraestrutura",
       "other": "Outros"
     },
+    "bundles": {
+      "tasks": "Tarefas e categorias",
+      "reservations": "Reservas e espaços",
+      "assets": "Patrimônio e estoque",
+      "visitors": "Visitantes e portaria"
+    },
     "names": {
       "access_control": "Controle de acesso",
       "announcements": "Comunicados",

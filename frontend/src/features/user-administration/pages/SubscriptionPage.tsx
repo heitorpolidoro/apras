@@ -5,6 +5,7 @@ import {
   useSubscription,
   useSubscriptionHistory,
 } from "../../../hooks/useSubscription";
+import ModuleCard from "../access/ModuleCard";
 import { groupsCovering, unitsOf } from "../access/moduleGroups";
 import type { ModuleEntitlement } from "../../../types/subscription";
 
@@ -128,32 +129,30 @@ const SubscriptionPage: React.FC = () => {
     if (unmanaged || !unit.every((r) => rowStateOf(r) === "inPlan")) {
       return unit.map(renderRow);
     }
-    const label = unit.map((r) => t(`modules.names.${r.module}`)).join(" + ");
+    const features = unit.map((r) => t(`modules.names.${r.module}`));
+    const title = t(`modules.bundles.${unit[0].bundle}`, {
+      defaultValue: features.join(" + "),
+    });
     const prices = unit.map((r) => r.monthly_price);
     const price = prices.some((p) => p !== null)
       ? prices.reduce<number>((sum, p) => sum + (p ?? 0), 0)
       : null;
     return (
-      <label
+      <ModuleCard
         key={unit.map((r) => r.module).join("+")}
-        className="flex items-center gap-2 text-sm"
-        htmlFor={`subscription-${unit[0].module}`}
+        id={`subscription-${unit[0].module}`}
+        title={title}
+        features={features}
+        checked={unit.every(isChecked)}
+        disabled={!unit.every((r) => r.can_contract)}
+        onChange={() => toggle(unit)}
       >
-        <input
-          id={`subscription-${unit[0].module}`}
-          type="checkbox"
-          aria-label={label}
-          checked={unit.every(isChecked)}
-          disabled={!unit.every((r) => r.can_contract)}
-          onChange={() => toggle(unit)}
-        />
-        {label}
         {price !== null && (
           <span className="text-xs text-muted-foreground">
             {price} {data?.currency}
           </span>
         )}
-      </label>
+      </ModuleCard>
     );
   };
 
@@ -169,26 +168,21 @@ const SubscriptionPage: React.FC = () => {
     // the hint below only chose a label, so it was deleted rather than kept.
     if (state === "inPlan" && !unmanaged) {
       return (
-        <label
+        <ModuleCard
           key={row.module}
-          className="flex items-center gap-2 text-sm"
-          htmlFor={`subscription-${row.module}`}
+          id={`subscription-${row.module}`}
+          title={label}
+          features={[label]}
+          checked={isChecked(row)}
+          disabled={!row.can_contract}
+          onChange={() => toggle([row])}
         >
-          <input
-            id={`subscription-${row.module}`}
-            type="checkbox"
-            aria-label={label}
-            checked={isChecked(row)}
-            disabled={!row.can_contract}
-            onChange={() => toggle([row])}
-          />
-          {label}
           {row.monthly_price !== null && (
             <span className="text-xs text-muted-foreground">
               {row.monthly_price} {data?.currency}
             </span>
           )}
-        </label>
+        </ModuleCard>
       );
     }
 
@@ -196,7 +190,7 @@ const SubscriptionPage: React.FC = () => {
       <div
         key={row.module}
         data-testid={`subscription-row-${row.module}`}
-        className="flex items-center gap-2 text-sm text-muted-foreground"
+        className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card p-3 text-sm text-muted-foreground"
       >
         {label}
         {state === "override" && (
@@ -266,9 +260,11 @@ const SubscriptionPage: React.FC = () => {
                 <legend className="text-sm font-bold text-foreground">
                   {t(`modules.groups.${group.key}`)}
                 </legend>
-                {unitsOf(group, bundleOf, [...known.keys()], emitted).map(
-                  (unit) => renderUnit(unit.map((m) => known.get(m)!)),
-                )}
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {unitsOf(group, bundleOf, [...known.keys()], emitted).map(
+                    (unit) => renderUnit(unit.map((m) => known.get(m)!)),
+                  )}
+                </div>
               </fieldset>
             ))}
           </section>

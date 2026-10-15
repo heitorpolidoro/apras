@@ -5,6 +5,7 @@ import {
   useSetTenantModules,
   useTenantModules,
 } from "../../../hooks/useTenantModules";
+import ModuleCard from "../access/ModuleCard";
 import { groupsCovering, unitsOf } from "../access/moduleGroups";
 
 /**
@@ -150,38 +151,37 @@ const TenantModulesPage: React.FC = () => {
                 <legend className="text-sm font-bold text-foreground">
                   {t(`modules.groups.${group.key}`)}
                 </legend>
-                {unitsOf(group, bundleOf, [...known], emitted).map((unit) => {
-                  const label = unit
-                    .map((module) => t(`modules.names.${module}`))
-                    .join(" + ");
-                  const core = unit.some((module) => coreModules.has(module));
-                  return (
-                    <label
-                      key={unit.join("+")}
-                      className="flex items-center gap-2 text-sm"
-                      htmlFor={`module-${unit[0]}`}
-                    >
-                      <input
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {unitsOf(group, bundleOf, [...known], emitted).map((unit) => {
+                    const features = unit.map((module) =>
+                      t(`modules.names.${module}`),
+                    );
+                    const title =
+                      unit.length > 1
+                        ? t(`modules.bundles.${bundleOf(unit[0])}`, {
+                            defaultValue: features.join(" + "),
+                          })
+                        : features[0];
+                    const core = unit.some((module) => coreModules.has(module));
+                    return (
+                      <ModuleCard
+                        key={unit.join("+")}
                         id={`module-${unit[0]}`}
-                        type="checkbox"
-                        // The visible label carries the "core" badge as well,
-                        // so the accessible name is stated explicitly here:
-                        // a checkbox called "Papéis essencial" would be a
-                        // worse announcement, not a better one.
-                        aria-label={label}
+                        title={title}
+                        features={features}
                         checked={unit.every(isActive)}
                         disabled={core}
                         onChange={() => toggle(unit)}
-                      />
-                      {label}
-                      {core && (
-                        <span className="text-xs uppercase text-muted-foreground border border-border rounded px-1">
-                          {t("modules.coreBadge")}
-                        </span>
-                      )}
-                    </label>
-                  );
-                })}
+                      >
+                        {core && (
+                          <span className="text-xs uppercase text-muted-foreground border border-border rounded px-1">
+                            {t("modules.coreBadge")}
+                          </span>
+                        )}
+                      </ModuleCard>
+                    );
+                  })}
+                </div>
               </fieldset>
             ))}
           </div>

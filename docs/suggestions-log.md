@@ -4487,3 +4487,7 @@ The comment at `darkVariantCompile.test.ts:362` credited APRAS-127 for a lesson 
 
 ## [APRAS-128] Agrupar módulos acoplados para que sejam ligados e desligados juntos — 2026-10-15 (code review, round 1)
 - `SubscriptionPage.renderUnit` falls back to per-member rows when a bundle isn't fully `inPlan`. That is defensive code for a state the backend now prevents; harmless, could be dropped later.
+
+## [APRAS-128] Agrupar módulos acoplados para que sejam ligados e desligados juntos — 2026-10-15 (code review, round 2)
+- ModuleBundles.test.tsx asserts the feature list only for TenantModulesPage; the SubscriptionPage bundle test checks only the title. Same ModuleCard component, so low risk.
+- SubscriptionPage passes `features={[label]}` for single modules; the `features.length > 1` guard hides it, so passing `[]` or the title would be clearer. Cosmetic.

@@ -1,22 +1,26 @@
 <!doctype html><html><head><meta charset="utf-8"><title>APRAS-128 mock</title>
 <script src="https://cdn.tailwindcss.com"></script></head>
 <body class="bg-slate-50 p-6 text-slate-800">
-<h1 class="text-xl font-semibold mb-1">/admin/modules and /subscription - bundle checkboxes</h1>
-<p class="text-sm mb-4">One checkbox per bundle. Unbundled modules look as they do today.</p>
-<div id="app" class="max-w-xl bg-white rounded border p-4 space-y-2"></div>
+<h1 class="text-xl font-semibold mb-1">/admin/modules and /subscription - package cards</h1>
+<p class="text-sm mb-4">One card per package: checkbox, the package title in bold and, for a bundle, the list of features it switches on together. A single module is a card with its title only. Presentation group headings stay above the cards.</p>
+<div id="app" class="max-w-3xl space-y-6"></div>
 <h2 class="text-lg font-semibold mt-8 mb-1">Existing split tenants (question 1)</h2>
 <div class="max-w-xl text-sm bg-white rounded border p-4">
 <p><b>A (spec default):</b> migration switches the missing member ON (tasks on, categories off becomes both on).</p>
 <p><b>B:</b> migration switches the remaining member OFF (both off; the tenant loses tasks).</p></div>
 <script>
-const items=[
-{label:"Tasks + Categories",sub:"tasks, categories",on:true},
-{label:"Reservations + Spaces",sub:"reservations, spaces",on:true},
-{label:"Assets + Inventory",sub:"assets, inventory",on:false},
-{label:"Visitors + Authorizations + Gate",sub:"visitors, authorizations, gate",on:true},
-{label:"Assemblies",sub:"assemblies",on:true},{label:"Votes",sub:"votes",on:true},
-{label:"Uploads (infrastructure)",sub:"uploads",on:true}];
+const groups=[
+{title:"Tarefas e categorias",items:[{label:"Tarefas e categorias",features:["Tarefas","Categorias"],on:true}]},
+{title:"Financeiro e patrimônio",items:[{label:"Finanças",on:true},{label:"Compras",on:true},{label:"Patrimônio e estoque",features:["Patrimônio","Estoque"],on:false}]},
+{title:"Espaços e reservas",items:[{label:"Reservas e espaços",features:["Reservas","Espaços reserváveis"],on:true}]},
+{title:"Visitantes e acesso",items:[{label:"Visitantes e portaria",features:["Visitantes","Autorizações de visita","Portaria"],on:true},{label:"Controle de acesso",on:true}]},
+{title:"Governança",items:[{label:"Assembleias",on:true},{label:"Votações",on:true}]}];
 const app=document.getElementById("app");
-items.forEach(i=>{const l=document.createElement("label");l.className="flex items-center gap-3 p-2 border rounded";
-l.innerHTML=`<input type="checkbox" ${i.on?"checked":""}><span><b>${i.label}</b><br><span class="text-xs text-slate-600">${i.sub}</span></span>`;app.appendChild(l)});
+groups.forEach(g=>{const f=document.createElement("fieldset");
+f.innerHTML=`<legend class="text-sm font-bold mb-2">${g.title}</legend><div class="grid gap-2 sm:grid-cols-2"></div>`;
+const grid=f.querySelector("div");
+g.items.forEach(i=>{const l=document.createElement("label");l.className="flex items-start gap-3 rounded-lg border bg-white p-3 text-sm shadow-sm";
+const list=i.features?`<ul class="list-disc pl-4 text-xs text-slate-600">${i.features.map(x=>`<li>${x}</li>`).join("")}</ul>`:"";
+l.innerHTML=`<input type="checkbox" class="mt-0.5" ${i.on?"checked":""}><span class="flex flex-col gap-1"><b>${i.label}</b>${list}</span>`;grid.appendChild(l)});
+app.appendChild(f)});
 </script></body></html>

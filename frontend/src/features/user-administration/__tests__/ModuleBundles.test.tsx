@@ -25,8 +25,8 @@ const mockedPut = vi.mocked(apiClient.put);
 
 const name = (module: string): string =>
   (pt.modules.names as Record<string, string>)[module];
-const bundleLabel = (...modules: string[]): string =>
-  modules.map(name).join(" + ");
+const bundleLabel = (bundle: string): string =>
+  (pt.modules.bundles as Record<string, string>)[bundle];
 
 const wrap = (ui: React.ReactElement) => {
   const client = new QueryClient({
@@ -72,12 +72,17 @@ describe("TenantModulesPage bundles", () => {
     wrap(<TenantModulesPage />);
 
     const bundle = await screen.findByRole("checkbox", {
-      name: bundleLabel("tasks", "categories"),
+      name: bundleLabel("tasks"),
     });
     expect(screen.queryByRole("checkbox", { name: name("tasks") })).toBeNull();
     expect(
       screen.queryByRole("checkbox", { name: name("categories") }),
     ).toBeNull();
+    // The bundle card lists the features it switches on together.
+    const card = bundle.closest("label") as HTMLElement;
+    expect(
+      [...card.querySelectorAll("li")].map((li) => li.textContent),
+    ).toEqual([name("tasks"), name("categories")]);
     // Unbundled modules, including one no group names, still render.
     expect(screen.getByRole("checkbox", { name: name("finance") })).toBeTruthy();
     expect(screen.getByRole("checkbox", { name: "modules.names.brand_new" })).toBeTruthy();
@@ -154,7 +159,7 @@ describe("SubscriptionPage bundles", () => {
     wrap(<SubscriptionPage />);
 
     const bundle = await screen.findByRole("checkbox", {
-      name: bundleLabel("assets", "inventory"),
+      name: bundleLabel("assets"),
     });
     expect(screen.getByText("15 BRL")).toBeTruthy();
     expect(screen.queryByRole("checkbox", { name: name("assets") })).toBeNull();
