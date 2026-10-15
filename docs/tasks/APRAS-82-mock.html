@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>APRAS-82 — Botão "Baixar" do PDFViewerModal: marca do condomínio ou verde sempre?</title>
+<style>
+  :root{
+    /* Default authored theme, read verbatim from frontend/src/index.css :root */
+    --primary: oklch(0.62 0.15 160);
+    --primary-foreground: oklch(0.15 0.02 160);
+    --card: oklch(1.00 0.00 0.00);
+    --background: oklch(0.99 0.00 0.00);
+    --foreground: oklch(0.14 0.01 160);
+    --muted-foreground: oklch(0.55 0.02 160);
+    --border: oklch(0.92 0.01 160);
+    /* Tailwind v4 literals, read from node_modules/tailwindcss/theme.css */
+    --emerald-600: oklch(59.6% 0.145 163.225);
+    --emerald-700: oklch(50.8% 0.118 165.612);
+    --slate-100:#f1f5f9; --slate-200:#e2e8f0; --slate-400:#94a3b8;
+    --slate-500:#64748b; --slate-900:#0f172a; --slate-950:#020617;
+    --indigo-500:#6366f1;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:32px 24px 72px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:#f8fafc;color:var(--slate-900);line-height:1.5}
+  .wrap{max-width:1180px;margin:0 auto}
+  h1{font-size:22px;margin:0 0 4px}
+  h2{font-size:16px;margin:40px 0 12px;text-transform:uppercase;letter-spacing:.06em;color:var(--slate-500)}
+  p{margin:0 0 12px}
+  .lede{background:#fff;border:1px solid var(--slate-200);border-radius:14px;padding:20px 22px;margin-top:18px}
+  .lede strong{font-weight:700}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;background:var(--slate-100);padding:1px 5px;border-radius:5px}
+  .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:8px 0 4px}
+  .controls button{cursor:pointer;border:1px solid var(--slate-200);background:#fff;border-radius:999px;padding:8px 14px;font:inherit;font-size:13px;display:inline-flex;align-items:center;gap:8px}
+  .controls button[aria-pressed="true"]{border-color:var(--slate-900);box-shadow:0 0 0 1px var(--slate-900) inset}
+  .chip{width:14px;height:14px;border-radius:999px;display:inline-block;border:1px solid rgba(0,0,0,.15)}
+  .grid{display:grid;grid-template-columns:1fr;gap:26px;margin-top:8px}
+  .variant{background:#fff;border:1px solid var(--slate-200);border-radius:14px;overflow:hidden}
+  .variant > header{padding:14px 18px;border-bottom:1px solid var(--slate-200);display:flex;flex-wrap:wrap;gap:10px;align-items:baseline;justify-content:space-between}
+  .vlabel{font-weight:700;font-size:14px}
+  .vlabel .letter{display:inline-flex;width:22px;height:22px;border-radius:6px;background:var(--slate-900);color:#fff;align-items:center;justify-content:center;font-size:12px;margin-right:8px}
+  .vclasses{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--slate-500)}
+  .stage{background:var(--slate-950);background:color-mix(in oklab, #020617 70%, transparent);padding:22px;display:flex;justify-content:center}
+  /* --- real PDFViewerModal reproduction --- */
+  .modal{position:relative;display:flex;flex-direction:column;height:230px;width:100%;max-width:860px;background:#fff;border-radius:16px;box-shadow:0 25px 50px -12px rgba(0,0,0,.25);overflow:hidden;border:1px solid var(--slate-200)}
+  .modal-head{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid var(--slate-200)}
+  .doc{display:flex;align-items:center;gap:12px;min-width:0}
+  .doc svg.file{color:var(--indigo-500);flex:none}
+  .doc-title{display:flex;align-items:center;gap:8px}
+  .doc-title h3{font-size:16px;font-weight:700;color:var(--slate-900);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .badge{font-size:11px;font-family:ui-monospace,Menlo,monospace;border:1px solid var(--slate-200);border-radius:8px;padding:1px 7px;color:var(--slate-900)}
+  .doc p{font-size:12px;color:var(--slate-500);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .actions{display:flex;align-items:center;gap:8px}
+  .dl{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;font-size:14px;font-weight:500;border:0;cursor:pointer;transition:background-color .15s}
+  .dl-today{background:var(--emerald-600);color:#fff}
+  .dl-today:hover{background:var(--emerald-700)}
+  .dl-spec{background:var(--primary);color:var(--primary-foreground)}
+  .dl-spec:hover{background:color-mix(in oklab, var(--primary) 90%, transparent)}
+  .dl-green{background:var(--emerald-600);color:#fff}
+  .dl-green:hover{background:var(--emerald-700)}
+  .close{padding:6px;border-radius:8px;color:var(--slate-400);background:none;border:0;cursor:pointer}
+  .close:hover{color:#475569;background:var(--slate-100)}
+  .viewer{flex:1;background:var(--slate-100);margin:8px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--slate-400);font-size:12px;box-shadow:inset 0 2px 4px rgba(0,0,0,.06)}
+  .measure{padding:14px 18px;display:flex;flex-wrap:wrap;gap:18px;align-items:center;font-size:13px;border-top:1px solid var(--slate-200);background:#fcfdfe}
+  .ratio{font-family:ui-monospace,Menlo,monospace;font-weight:700;font-size:15px}
+  .pass,.fail{font-size:11px;font-weight:700;letter-spacing:.05em;padding:3px 9px;border-radius:999px}
+  .pass{background:#dcfce7;color:#14532d}
+  .fail{background:#fee2e2;color:#7f1d1d}
+  table{border-collapse:collapse;width:100%;background:#fff;border:1px solid var(--slate-200);border-radius:12px;overflow:hidden;font-size:13px}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--slate-200)}
+  th{background:var(--slate-100);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--slate-500)}
+  tr:last-child td{border-bottom:0}
+  td.mono{font-family:ui-monospace,Menlo,monospace;font-size:12px}
+  .note{background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:16px 18px;margin-top:16px;font-size:14px}
+  .rec{background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:16px 18px;margin-top:16px;font-size:14px}
+  .sw{display:inline-block;width:26px;height:14px;border-radius:4px;border:1px solid rgba(0,0,0,.15);vertical-align:-2px;margin-right:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>APRAS-82 — o botão "Baixar" do visualizador de PDF</h1>
+<p style="color:var(--slate-500);margin-top:2px">
+  Reprodução fiel do cabeçalho de
+  <code>frontend/src/features/document-management/components/PDFViewerModal.tsx</code>.
+  Todos os valores de cor são os reais (<code>oklch</code>), e todas as razões de contraste
+  foram medidas com o helper do próprio repositório (<code>frontend/src/lib/contrast.ts</code>).
+</p>
+
+<div class="lede">
+  <p><strong>O que você está decidindo (em português):</strong></p>
+  <p>
+    Hoje o botão <em>Baixar</em> do visualizador de PDF é verde fixo com texto branco — verde
+    porque "baixar deu certo", não porque o condomínio seja verde. A migração proposta faz esse
+    botão passar a seguir <strong>a cor da marca de cada condomínio</strong>: num condomínio de
+    marca azul ele fica azul, num de marca vermelha fica vermelho, e no tema padrão (verde) ele
+    continua verde, só que com <strong>texto escuro em vez de branco</strong> — foi essa a decisão
+    já tomada na APRAS-76, e é ela que conserta uma falha real de acessibilidade (o branco sobre o
+    verde de hoje mede 3,72:1, abaixo do mínimo 4,5:1 exigido).
+  </p>
+  <p style="margin-bottom:0">
+    A alternativa é <strong>manter esse botão verde em todos os condomínios</strong>, tratando o
+    verde como o significado "baixar / sucesso" e não como cor de marca. Escolher isso é uma
+    emenda à tabela da APRAS-78, não uma decisão desta tarefa — por isso a pergunta.
+    <strong>Basta responder A, B ou C.</strong>
+  </p>
+</div>
+
+<h2>Marca do condomínio (troque e olhe a opção B)</h2>
+<div class="controls" id="brands"></div>
+<p style="font-size:13px;color:var(--slate-500);margin-top:6px" id="brand-caption"></p>
+
+<div class="grid">
+
+  <section class="variant">
+    <header>
+      <div class="vlabel"><span class="letter">A</span>HOJE — verde literal, texto branco</div>
+      <div class="vclasses">bg-emerald-600 hover:bg-emerald-700 text-white</div>
+    </header>
+    <div class="stage" style="background:#020617b3">
+      <div class="modal">
+        <div class="modal-head">
+          <div class="doc">
+            <svg class="file" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+            <div style="min-width:0">
+              <div class="doc-title"><h3>Convenção do Condomínio</h3><span class="badge">v3</span></div>
+              <p>Versão consolidada aprovada na AGE de 12/03</p>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="dl dl-today" type="button">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>Baixar</span>
+            </button>
+            <button class="close" type="button" aria-label="Fechar">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="viewer">(pré-visualização do PDF)</div>
+      </div>
+    </div>
+    <div class="measure">
+      <span>Contraste medido:</span>
+      <span class="ratio">3.7194:1</span>
+      <span class="fail">REPROVA AA (&lt; 4.5:1)</span>
+      <span style="color:var(--slate-500)">branco sobre <code>oklch(59.6% 0.145 163.225)</code> — igual em todos os condomínios</span>
+    </div>
+  </section>
+
+  <section class="variant">
+    <header>
+      <div class="vlabel"><span class="letter">B</span>SPEC — segue a marca do condomínio</div>
+      <div class="vclasses">bg-primary hover:bg-primary/90 text-primary-foreground</div>
+    </header>
+    <div class="stage" style="background:#020617b3">
+      <div class="modal">
+        <div class="modal-head">
+          <div class="doc">
+            <svg class="file" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+            <div style="min-width:0">
+              <div class="doc-title"><h3>Convenção do Condomínio</h3><span class="badge">v3</span></div>
+              <p>Versão consolidada aprovada na AGE de 12/03</p>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="dl dl-spec" type="button">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>Baixar</span>
+            </button>
+            <button class="close" type="button" aria-label="Fechar">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="viewer">(pré-visualização do PDF)</div>
+      </div>
+    </div>
+    <div class="measure">
+      <span>Contraste medido:</span>
+      <span class="ratio" id="spec-ratio">5.7588:1</span>
+      <span class="pass" id="spec-verdict">PASSA AA</span>
+      <span style="color:var(--slate-500)" id="spec-detail"></span>
+    </div>
+  </section>
+
+  <section class="variant">
+    <header>
+      <div class="vlabel"><span class="letter">C</span>EMENDA — continua verde literal em todo condomínio</div>
+      <div class="vclasses">bg-emerald-600 hover:bg-emerald-700 text-white (mantido como está hoje)</div>
+    </header>
+    <div class="stage" style="background:#020617b3">
+      <div class="modal">
+        <div class="modal-head">
+          <div class="doc">
+            <svg class="file" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+            <div style="min-width:0">
+              <div class="doc-title"><h3>Convenção do Condomínio</h3><span class="badge">v3</span></div>
+              <p>Versão consolidada aprovada na AGE de 12/03</p>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="dl dl-green" type="button">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>Baixar</span>
+            </button>
+            <button class="close" type="button" aria-label="Fechar">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="viewer">(pré-visualização do PDF)</div>
+      </div>
+    </div>
+    <div class="measure">
+      <span>Contraste medido:</span>
+      <span class="ratio">3.7194:1</span>
+      <span class="fail">REPROVA AA (&lt; 4.5:1)</span>
+      <span style="color:var(--slate-500)">idêntico a A — escolher C mantém a falha de contraste de hoje</span>
+    </div>
+  </section>
+
+</div>
+
+<h2>Os números, marca a marca (opção B)</h2>
+<table>
+  <thead>
+    <tr><th>Marca do condomínio</th><th>--primary</th><th>--primary-foreground</th><th>Contraste</th><th>AA 4.5:1</th></tr>
+  </thead>
+  <tbody id="table-body"></tbody>
+</table>
+<p style="font-size:12.5px;color:var(--slate-500);margin-top:10px">
+  As linhas "condomínio …" saem de <code>backend/app/core/branding.py</code>
+  (<code>build_theme({"mode":"simple", …})</code>, esquema <em>light</em>); a linha "padrão" é o tema
+  autorado em <code>frontend/src/index.css</code>. Todas as razões foram medidas com
+  <code>contrastRatio()</code> de <code>frontend/src/lib/contrast.ts</code>.
+  Nas opções A e C a razão é sempre 3.7194:1, qualquer que seja a marca.
+</p>
+
+<div class="note">
+  <strong>Fato que muda um pouco a pergunta:</strong> o texto escuro sobre o verde
+  <em>não</em> é universal. A regra <code>_pick_foreground</code> da derivação escolhe, para cada
+  marca, entre quase-branco e quase-preto — o que der mais contraste. Marcas verdes (claras) ganham
+  texto <strong>escuro</strong>; marcas vermelha, azul e roxa (escuras) ganham texto
+  <strong>branco</strong>. Ou seja: o "dark-on-emerald" que você vê em B com o tema padrão só
+  acontece em condomínios de marca verde-clara; troque a marca acima para azul ou roxo e o botão
+  volta a ser branco sobre cor.
+</div>
+
+<div class="rec">
+  <strong>Recomendação (uma frase, e só isso):</strong> a opção B é a única das três que passa em
+  4,5:1 sem emenda à tabela da APRAS-78, e mantém o botão verde justamente nos condomínios cuja
+  marca é verde.
+</div>
+
+</div>
+
+<script>
+// Every value below was produced by the repo's own code, not re-derived here:
+// --primary/--primary-foreground by backend/app/core/branding.py build_theme(...)["light"],
+// ratios by contrastRatio() from frontend/src/lib/contrast.ts.
+const BRANDS = [
+  { id:"default", label:"Padrão APRAS (index.css)", swatch:"#009f68",
+    primary:"oklch(0.62 0.15 160)", fg:"oklch(0.15 0.02 160)", fgKind:"escuro",
+    ratio:"5.7588", pass:true,
+    caption:"Tema autorado em frontend/src/index.css — o que um condomínio sem marca própria vê hoje." },
+  { id:"green", label:"Condomínio verde #059669", swatch:"#20966c",
+    primary:"oklch(0.60 0.12 163.23)", fg:"oklch(0.15 0.02 163.23)", fgKind:"escuro",
+    ratio:"5.2705", pass:true,
+    caption:"Marca verde: a derivação escolhe texto ESCURO sobre a marca." },
+  { id:"red", label:"Condomínio vermelho #dc2626", swatch:"#df2224",
+    primary:"oklch(0.58 0.22 27.33)", fg:"oklch(0.98 0.00 0.00)", fgKind:"branco",
+    ratio:"4.5159", pass:true,
+    caption:"Marca vermelha: a derivação escolhe texto BRANCO — e o botão de baixar deixa de ser verde." },
+  { id:"blue", label:"Condomínio azul #2563eb", swatch:"#2463ef",
+    primary:"oklch(0.55 0.22 262.88)", fg:"oklch(0.98 0.00 0.00)", fgKind:"branco",
+    ratio:"4.8098", pass:true,
+    caption:"Marca azul: o botão de baixar fica azul com texto branco." },
+  { id:"purple", label:"Condomínio roxo #7c3aed", swatch:"#7945df",
+    primary:"oklch(0.54 0.22 293.01)", fg:"oklch(0.98 0.00 0.00)", fgKind:"branco",
+    ratio:"5.3007", pass:true,
+    caption:"Marca roxa: o botão de baixar fica roxo com texto branco." },
+];
+
+const root = document.documentElement;
+const controls = document.getElementById("brands");
+const caption = document.getElementById("brand-caption");
+
+function apply(brand){
+  root.style.setProperty("--primary", brand.primary);
+  root.style.setProperty("--primary-foreground", brand.fg);
+  document.getElementById("spec-ratio").textContent = brand.ratio + ":1";
+  const verdict = document.getElementById("spec-verdict");
+  verdict.textContent = brand.pass ? "PASSA AA" : "REPROVA AA";
+  verdict.className = brand.pass ? "pass" : "fail";
+  document.getElementById("spec-detail").textContent =
+    "texto " + brand.fgKind + " " + brand.fg + " sobre " + brand.primary;
+  caption.textContent = brand.caption;
+  for (const b of controls.querySelectorAll("button"))
+    b.setAttribute("aria-pressed", String(b.dataset.id === brand.id));
+}
+
+for (const brand of BRANDS){
+  const button = document.createElement("button");
+  button.type = "button";
+  button.dataset.id = brand.id;
+  button.innerHTML = '<span class="chip" style="background:' + brand.swatch + '"></span>' + brand.label;
+  button.addEventListener("click", () => apply(brand));
+  controls.appendChild(button);
+}
+
+const body = document.getElementById("table-body");
+for (const brand of BRANDS){
+  const row = document.createElement("tr");
+  row.innerHTML =
+    '<td><span class="sw" style="background:' + brand.swatch + '"></span>' + brand.label + '</td>' +
+    '<td class="mono">' + brand.primary + '</td>' +
+    '<td class="mono">' + brand.fg + ' <em>(' + brand.fgKind + ')</em></td>' +
+    '<td class="mono"><strong>' + brand.ratio + ':1</strong></td>' +
+    '<td>' + (brand.pass ? '<span class="pass">PASSA</span>' : '<span class="fail">REPROVA</span>') + '</td>';
+  body.appendChild(row);
+}
+const todayRow = document.createElement("tr");
+todayRow.innerHTML =
+  '<td colspan="3"><strong>Opções A e C</strong> — branco sobre emerald-600, em qualquer condomínio</td>' +
+  '<td class="mono"><strong>3.7194:1</strong></td><td><span class="fail">REPROVA</span></td>';
+body.appendChild(todayRow);
+
+apply(BRANDS[0]);
+</script>
+</body>
+</html>
