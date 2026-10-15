@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>APRAS-102 — cilindro de saldo e barra previsto × realizado</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+      /* The real tokens, copied from frontend/src/index.css :root so the mock
+         shows the colours the components will actually render. */
+      :root {
+        --background: oklch(0.99 0 0);
+        --foreground: oklch(0.14 0.01 160);
+        --card: oklch(1 0 0);
+        --primary: oklch(0.62 0.15 160);
+        --primary-foreground: oklch(0.15 0.02 160);
+        --primary-text: oklch(0.52 0.11 160);
+        --muted: oklch(0.96 0.01 160);
+        --muted-foreground: oklch(0.53 0.02 160);
+        --accent: oklch(0.96 0.01 160);
+        --border: oklch(0.92 0.01 160);
+        --destructive: oklch(0.58 0.24 27);
+      }
+      body {
+        background: var(--background);
+        color: var(--foreground);
+        font-family:
+          ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 0.75rem;
+      }
+      .muted {
+        color: var(--muted-foreground);
+      }
+      .opt {
+        border: 1px dashed var(--border);
+        border-radius: 0.75rem;
+        padding: 0.75rem;
+      }
+      .optlabel {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted-foreground);
+      }
+      .optlabel b {
+        display: inline-grid;
+        place-items: center;
+        width: 1.25rem;
+        height: 1.25rem;
+        border-radius: 999px;
+        background: var(--primary);
+        color: var(--primary-foreground);
+        font-size: 0.7rem;
+      }
+      input[type="range"] {
+        accent-color: var(--primary);
+        width: 100%;
+      }
+      /* --- planned vs realized bar ------------------------------------- */
+      .track {
+        position: relative;
+        height: 0.75rem;
+        border-radius: 999px;
+        background: var(--muted);
+        overflow: hidden;
+      }
+      .track > .real {
+        position: absolute;
+        inset: 0 auto 0 0;
+        background: var(--primary);
+      }
+      /* The gap between plan and reality. Ahead = a tint of the realized
+         colour (`bg-primary/30`); behind = `bg-destructive/70`, mirroring the
+         report's `#c0392b` at opacity .7. */
+      .track > .gap {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        background: color-mix(in oklch, var(--primary) 30%, transparent);
+      }
+      .track > .gap.behind {
+        background: color-mix(in oklch, var(--destructive) 70%, transparent);
+      }
+      /* `bg-foreground`. The public report paints this rule in `--card`, which
+         is near-invisible on a light card; this is the one deliberate
+         appearance divergence from the report (spec §2). */
+      .mark {
+        position: absolute;
+        top: -0.25rem;
+        bottom: -0.25rem;
+        width: 2px;
+        background: var(--foreground);
+      }
+      .behindtext {
+        display: block;
+        color: var(--destructive);
+        font-weight: 700;
+      }
+      .over {
+        color: var(--destructive);
+      }
+      .tag {
+        position: absolute;
+        transform: translateX(-50%);
+        font-size: 0.7rem;
+        white-space: nowrap;
+        text-align: center;
+      }
+      .tag b {
+        display: block;
+        font-size: 0.95rem;
+      }
+      .barwrap {
+        position: relative;
+        padding: 2.75rem 0 2.5rem;
+      }
+      .legacy-fill {
+        height: 100%;
+        background: var(--primary);
+      }
+    </style>
+  </head>
+  <body class="p-6 md:p-10">
+    <main class="mx-auto max-w-5xl space-y-8">
+      <header class="space-y-2">
+        <p class="text-xs font-bold uppercase tracking-widest muted">
+          APRAS-102 · mockup
+        </p>
+        <h1 class="text-2xl font-bold">
+          Cilindro de saldo e barra previsto × realizado na visão interna da obra
+        </h1>
+        <p class="text-sm muted max-w-3xl">
+          As duas figuras já existem no relatório público de obras (renderizadas
+          no backend). Este mock mostra como elas ficam dentro do acompanhamento
+          interno, com os mesmos tokens de tema do app. As duas perguntas
+          abertas estão marcadas <b>A</b> / <b>B</b> — responder com uma letra
+          basta.
+        </p>
+      </header>
+
+      <!-- controls ------------------------------------------------------ -->
+      <section class="card p-5 space-y-4">
+        <h2 class="font-semibold flex items-center gap-2">
+          <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>
+          Dados da obra (arraste para ver as figuras reagirem)
+        </h2>
+        <div class="grid gap-4 md:grid-cols-4">
+          <label class="space-y-1 block">
+            <span class="text-xs muted">Orçamento previsto</span>
+            <input id="total" type="range" min="0" max="1000000" step="10000" value="480000" />
+            <output id="totalOut" class="text-sm font-semibold"></output>
+          </label>
+          <label class="space-y-1 block">
+            <span class="text-xs muted">Executado</span>
+            <input id="exec" type="range" min="0" max="1000000" step="10000" value="204000" />
+            <output id="execOut" class="text-sm font-semibold"></output>
+          </label>
+          <label class="space-y-1 block">
+            <span class="text-xs muted">Avanço físico realizado (%)</span>
+            <input id="real" type="range" min="0" max="100" step="0.5" value="42.5" />
+            <output id="realOut" class="text-sm font-semibold"></output>
+          </label>
+          <label class="space-y-1 block">
+            <span class="text-xs muted">Curva prevista (planned_progress_json)</span>
+            <select id="curve" class="w-full text-sm rounded-md p-2" style="border:1px solid var(--border)">
+              <option value="baseline">3 pontos · previsto hoje = 64%</option>
+              <option value="future">todos no futuro · previsto = 0%</option>
+              <option value="null">null (obra sem cronograma)</option>
+              <option value="empty">[] (lista vazia)</option>
+              <option value="broken">1 ponto inválido (curva toda inválida)</option>
+            </select>
+          </label>
+        </div>
+        <p class="text-xs muted">
+          Valores iniciais = o projeto-fixture do baseline do backend
+          (<code>report_page_null_detail_baseline.html</code>): previsto
+          R$ 480.000,00, executado R$ 204.000,00, saldo R$ 276.000,00, 42,5%
+          executado, 58% de saldo, previsto 64% × realizado 42%.
+        </p>
+        <p class="text-xs muted">
+          Duas coisas para experimentar: arraste o “Executado” <b>acima</b> do
+          orçamento previsto — o tanque esvazia mas o número fica negativo
+          (<code>-20%</code>), exatamente como o relatório público imprime; e
+          repare que 42,5% realizado aparece como <b>42%</b>, não 43% — o
+          arredondamento é meio-para-par, como o do Python.
+        </p>
+      </section>
+
+      <!-- QUESTION 1 ---------------------------------------------------- -->
+      <section class="space-y-4">
+        <div class="space-y-1">
+          <h2 class="text-lg font-bold">
+            Pergunta 1 — Orçamento: um cartão ou dois?
+          </h2>
+          <p class="text-sm muted max-w-3xl">
+            A tela interna já tem hoje o cartão verde
+            <strong>“Acompanhamento Orçamentário”</strong>, com os mesmos
+            valores em três caixinhas. <b>A</b> mantém os dois cartões (nada é
+            removido, mas o orçamento aparece duas vezes na mesma tela).
+            <b>B</b> deixa o cilindro substituir aquele cartão. A spec hoje
+            escolhe <b>A</b>, só porque <b>B</b> também obriga a apagar 11
+            exceções antigas de cor no mesmo PR.
+          </p>
+        </div>
+
+        <div class="grid gap-5 lg:grid-cols-2">
+          <div class="opt space-y-3">
+            <span class="optlabel"><b>A</b> os dois cartões</span>
+            <!-- existing card, as it is today -->
+            <div class="card p-5 space-y-4">
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                  <i data-lucide="circle-dollar-sign" class="w-4 h-4" style="color:var(--primary-text)"></i>
+                  <h3 class="font-semibold text-sm">Acompanhamento Orçamentário</h3>
+                </div>
+                <span
+                  class="text-xs font-semibold px-2 py-1 rounded-full"
+                  style="background: var(--muted)"
+                  id="legacyBadge"
+                ></span>
+              </div>
+              <div class="w-full rounded-full h-3 overflow-hidden" style="background: var(--muted)">
+                <div id="legacyFill" class="legacy-fill" style="width: 42%"></div>
+              </div>
+              <div class="grid grid-cols-3 gap-3 text-center">
+                <div class="p-3 rounded-lg" style="background: var(--muted)">
+                  <div class="text-[0.7rem] muted">Orçamento Total</div>
+                  <div class="text-sm font-bold" id="legacyTotal"></div>
+                </div>
+                <div class="p-3 rounded-lg" style="background: var(--muted)">
+                  <div class="text-[0.7rem] muted">Total Executado</div>
+                  <div class="text-sm font-bold" id="legacyExec"></div>
+                </div>
+                <div class="p-3 rounded-lg" style="background: var(--muted)">
+                  <div class="text-[0.7rem] muted">Saldo Restante</div>
+                  <div class="text-sm font-bold" id="legacyRest"></div>
+                </div>
+              </div>
+            </div>
+            <div data-cyl-host="A"></div>
+          </div>
+
+          <div class="opt space-y-3">
+            <span class="optlabel"><b>B</b> só o cilindro</span>
+            <div data-cyl-host="B"></div>
+            <p class="text-xs muted">
+              O cartão verde de hoje deixa de existir nesta tela.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- QUESTION 2 ---------------------------------------------------- -->
+      <section class="space-y-4">
+        <div class="space-y-1">
+          <h2 class="text-lg font-bold">Pergunta 2 — O número do saldo</h2>
+          <p class="text-sm muted max-w-3xl">
+            <b>A</b> imprime o número grande <em>dentro</em> do tanque, sobre o
+            verde. <b>B</b> imprime ao lado, no branco do cartão. Os dois são
+            legíveis como estão desenhados. A diferença aparece com o orçamento
+            quase todo gasto: em <b>A</b> o número acompanha o nível do líquido,
+            então abaixo de ~8% de saldo ele desce para fora do tanque; em
+            <b>B</b> ele não se move. Arraste o “Executado” até quase o total e
+            compare os dois lado a lado. A spec hoje escolhe <b>B</b>.
+          </p>
+        </div>
+        <div class="grid gap-5 lg:grid-cols-2">
+          <div class="opt space-y-3">
+            <span class="optlabel"><b>A</b> número dentro do tanque</span>
+            <div data-cyl-host="A2"></div>
+          </div>
+          <div class="opt space-y-3">
+            <span class="optlabel"><b>B</b> número ao lado</span>
+            <div data-cyl-host="B2"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- the bar ------------------------------------------------------- -->
+      <section class="space-y-3">
+        <h2 class="text-lg font-bold">
+          Barra: avanço físico · previsto até hoje × realizado
+        </h2>
+        <p class="text-sm muted max-w-3xl">
+          Sem pergunta aberta — é a figura do relatório, trazida como está, com
+          as <b>quatro</b> partes dela: realizado, o <em>vão</em> entre previsto
+          e realizado, o marcador do previsto e as duas etiquetas. O vão carrega
+          o status: vermelho quando a obra está abaixo do previsto (como no
+          baseline do backend: previsto 64%, realizado 42%), verde claro quando
+          está adiantada. Arraste “Avanço físico realizado” acima de 64% para
+          ver a troca. Com <code>planned_progress_json</code> nulo, vazio ou
+          inválido, a barra desenha só o realizado, sem vão e sem marcador, e a
+          etiqueta “previsto” vira “—”.
+        </p>
+        <div class="card p-5">
+          <div class="text-xs muted mb-1">
+            Avanço físico · previsto até hoje × realizado
+          </div>
+          <div class="barwrap">
+            <div id="tagPlan" class="tag" style="top: 0.25rem">
+              <span class="muted">previsto</span><b id="tagPlanValue">—</b>
+              <span id="tagPlanBehind" class="behindtext text-[0.65rem]"
+                >abaixo do previsto</span
+              >
+            </div>
+            <div class="track">
+              <div id="barReal" class="real"></div>
+              <div id="barGap" class="gap"></div>
+              <div id="barMark" class="mark"></div>
+            </div>
+            <div id="tagReal" class="tag" style="bottom: 0.5rem">
+              <b id="tagRealValue"></b><span class="muted">realizado</span>
+            </div>
+          </div>
+          <div class="flex justify-between text-xs muted">
+            <span>Início</span><span>Conclusão</span>
+          </div>
+          <p class="text-xs muted mt-3">
+            Previsto conforme o cronograma físico-financeiro da empreiteira;
+            realizado conforme a última medição.
+          </p>
+        </div>
+      </section>
+
+      <footer class="text-xs muted border-t pt-4" style="border-color: var(--border)">
+        Spec: <code>docs/tasks/APRAS-102-spec.md</code>. Cores deste mock são os
+        tokens de <code>frontend/src/index.css</code>; nenhuma cor crua da
+        paleta Tailwind é usada nas figuras.
+      </footer>
+    </main>
+
+    <script>
+      const CURVES = {
+        baseline: [
+          { month: "2020-01", pct: 8 },
+          { month: "2020-02", pct: 31.5 },
+          { month: "2020-03", pct: 64 },
+        ],
+        future: [{ month: "2999-01", pct: 90 }],
+        null: null,
+        empty: [],
+        broken: [
+          { month: "2020-01", pct: 8 },
+          { month: "nope", pct: 64 },
+        ],
+      };
+
+      const brl = (n) =>
+        n.toLocaleString("pt-BR", {
+          style: "currency",
+          currency: "BRL",
+          minimumFractionDigits: 2,
+        });
+
+      /** Round-half-to-even formatting, mirroring Python's `format`.
+       *  `toFixed` rounds half away from zero: 56.5 -> "57" where Python
+       *  prints "56", and 42.5 -> "43" where the report prints "42". The two
+       *  modes differ only at an exact binary tie, so decide on the exact
+       *  decimal expansion of the double.
+       *  Non-finite values are guarded first: `NaN.toFixed(20)` has no "."
+       *  and the index arithmetic below would throw on it. The guard returns
+       *  Python's own literals for these, so the mirror holds everywhere. */
+      const formatPercent = (value, decimals) => {
+        if (Number.isNaN(value)) return "nan";
+        if (!Number.isFinite(value)) return value > 0 ? "inf" : "-inf";
+        const neg = value < 0;
+        const exact = Math.abs(value).toFixed(20);
+        const dot = exact.indexOf(".");
+        const digits = exact.replace(".", "");
+        const cut = dot - 1 + decimals; // index of the last kept digit
+        let kept = digits.slice(0, cut + 1).split("");
+        const rest = digits.slice(cut + 1);
+        const first = rest.charCodeAt(0) - 48;
+        const tail = /[1-9]/.test(rest.slice(1));
+        const lastKept = kept[cut].charCodeAt(0) - 48;
+        const roundUp =
+          first > 5 || (first === 5 && (tail || lastKept % 2 === 1));
+        if (roundUp) {
+          for (let i = cut; i >= 0; i -= 1) {
+            if (kept[i] === "9") {
+              kept[i] = "0";
+            } else {
+              kept[i] = String(kept[i].charCodeAt(0) - 48 + 1);
+              break;
+            }
+            if (i === 0) kept.unshift("1");
+          }
+        }
+        const str = kept.join("");
+        const intLen = str.length - decimals;
+        const out =
+          decimals === 0
+            ? str
+            : `${str.slice(0, intLen) || "0"}.${str.slice(intLen)}`;
+        return (neg ? "-" : "") + String(Number(out).toFixed(decimals));
+      };
+
+      /** Mirror of backend `_budget_html`'s five figures. No clamping: the
+       *  backend does not clamp, so `remainingPct` goes negative when the obra
+       *  is over budget. The clamp belongs to the component's geometry. */
+      const budgetFigures = (total, executed) => {
+        const executedPct = total > 0 ? (executed / total) * 100 : 0;
+        return {
+          total,
+          executed,
+          balance: total - executed,
+          executedPct,
+          remainingPct: 100 - executedPct,
+        };
+      };
+
+      /** Mirror of backend `planned_to_date`: latest point whose month <= the
+       *  current UTC month; 0 when all are future; null when there is no usable
+       *  curve (one bad point invalidates the whole thing). */
+      const plannedToDate = (payload, today = new Date()) => {
+        if (!Array.isArray(payload) || payload.length === 0) return null;
+        // UTC accessors only: `today` is an instant and carries no calendar.
+        const current = `${today.getUTCFullYear()}-${String(
+          today.getUTCMonth() + 1,
+        ).padStart(2, "0")}`;
+        let best = null;
+        let bestMonth = "";
+        for (const point of payload) {
+          if (!point || typeof point !== "object") return null;
+          const { month, pct } = point;
+          if (typeof month !== "string" || !/^\d{4}-\d{2}$/.test(month)) return null;
+          if (typeof pct !== "number" || Number.isNaN(pct)) return null;
+          if (month <= current && month >= bestMonth) {
+            best = pct;
+            bestMonth = month;
+          }
+        }
+        return best === null ? 0 : best;
+      };
+
+      const cylinderCard = (figures, labelInside) => {
+        // Geometry is clamped (as `_cylinder_svg` does); the printed number is
+        // the unclamped mirror of `_budget_html` (`-20%` when over budget).
+        const filled = Math.max(0, Math.min(100, figures.remainingPct));
+        const printed = formatPercent(figures.remainingPct, 0) + "%";
+        const over = figures.remainingPct < 0 ? " over" : "";
+        const top = 20,
+          bottom = 140,
+          rx = 50,
+          ry = 12;
+        const fy = bottom - ((bottom - top) * filled) / 100;
+        const labelY = Math.max(fy + 22, top + 30);
+        const svg = `
+          <svg viewBox="0 0 120 165" class="w-28 shrink-0" role="img"
+               aria-label="Saldo restante ${printed}">
+            <path d="M10 ${top} v${bottom - top} a${rx} ${ry} 0 0 0 100 0 v-${bottom - top}"
+                  fill="var(--muted)" stroke="var(--border)"/>
+            <path data-testid="cylinder-fill"
+                  d="M10 ${fy.toFixed(1)} v${(bottom - fy).toFixed(1)} a${rx} ${ry} 0 0 0 100 0 v-${(bottom - fy).toFixed(1)}"
+                  fill="var(--primary)"/>
+            <ellipse data-testid="cylinder-surface" cx="60" cy="${fy.toFixed(1)}" rx="${rx}" ry="${ry}"
+                     fill="var(--primary)" stroke="var(--primary-foreground)" stroke-width="1.2"/>
+            <ellipse cx="60" cy="${top}" rx="${rx}" ry="${ry}" fill="none" stroke="var(--border)"/>
+            ${
+              labelInside
+                ? `<text x="60" y="${labelY.toFixed(1)}" font-size="16" font-weight="700"
+                        fill="var(--primary-foreground)" text-anchor="middle">${printed}</text>`
+                : ""
+            }
+          </svg>`;
+        const row = (label, value, strong) => `
+          <div class="flex items-baseline justify-between gap-4 py-1.5"
+               style="border-bottom:1px solid var(--border)">
+            <span class="text-xs muted">${label}</span>
+            <strong class="${strong ? "text-base" : "text-sm"}">${value}</strong>
+          </div>`;
+        return `
+          <div class="card p-5 space-y-4">
+            <h3 class="font-semibold text-sm">Orçamento da obra</h3>
+            <div class="grid gap-5 sm:grid-cols-2">
+              <div>
+                ${row("orçamento previsto", brl(figures.total), true)}
+                ${row("executado", brl(figures.executed), false)}
+                ${row("saldo", brl(figures.balance), false)}
+                ${row("% executado", formatPercent(figures.executedPct, 1) + "%", false)}
+              </div>
+              <div class="flex items-center gap-4">
+                ${svg}
+                <div class="space-y-1">
+                  ${
+                    labelInside
+                      ? // Option A prints the number inside the tank, so the
+                        // caption would otherwise sit above an empty space.
+                        `<div class="text-xs muted">Saldo restante (no tanque)</div>`
+                      : `<div class="text-xs muted">Saldo restante</div>
+                         <div class="text-2xl font-extrabold${over}">${printed}</div>`
+                  }
+                  <p class="text-xs muted max-w-[16ch]">
+                    ${brl(figures.balance)} ainda disponíveis do orçamento previsto.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>`;
+      };
+
+      const render = () => {
+        const total = Number(document.getElementById("total").value);
+        const executed = Number(document.getElementById("exec").value);
+        const realized = Number(document.getElementById("real").value);
+        const curve = CURVES[document.getElementById("curve").value];
+
+        document.getElementById("totalOut").textContent = brl(total);
+        document.getElementById("execOut").textContent = brl(executed);
+        document.getElementById("realOut").textContent = realized.toFixed(1) + "%";
+
+        const figures = budgetFigures(total, executed);
+
+        // Question 1 and 2 hosts
+        document.querySelector('[data-cyl-host="A"]').innerHTML = cylinderCard(figures, false);
+        document.querySelector('[data-cyl-host="B"]').innerHTML = cylinderCard(figures, false);
+        document.querySelector('[data-cyl-host="A2"]').innerHTML = cylinderCard(figures, true);
+        document.querySelector('[data-cyl-host="B2"]').innerHTML = cylinderCard(figures, false);
+
+        // The card that exists today, for comparison in question 1.
+        document.getElementById("legacyTotal").textContent = brl(total);
+        document.getElementById("legacyExec").textContent = brl(executed);
+        document.getElementById("legacyRest").textContent = brl(figures.balance);
+        document.getElementById("legacyBadge").textContent =
+          formatPercent(figures.executedPct, 0) + "% Executado";
+        document.getElementById("legacyFill").style.width =
+          Math.min(figures.executedPct, 100).toFixed(0) + "%";
+
+        // The planned-vs-actual bar.
+        const planned = plannedToDate(curve);
+        const low = planned === null ? realized : Math.min(planned, realized);
+        const high = planned === null ? realized : Math.max(planned, realized);
+        document.getElementById("barReal").style.width = low + "%";
+        const gap = document.getElementById("barGap");
+        const mark = document.getElementById("barMark");
+        const behindText = document.getElementById("tagPlanBehind");
+        if (planned === null) {
+          // `_one_bar`'s no-curve branch: no gap, no marker, plan tag "—".
+          gap.style.display = "none";
+          mark.style.display = "none";
+          behindText.style.display = "none";
+          document.getElementById("tagPlanValue").textContent = "—";
+          document.getElementById("tagPlan").style.left = "0%";
+          document.getElementById("tagPlan").style.transform = "none";
+        } else {
+          const behind = realized < planned;
+          gap.style.display = "";
+          mark.style.display = "";
+          gap.className = behind ? "gap behind" : "gap";
+          gap.style.left = low + "%";
+          gap.style.width = high - low + "%";
+          mark.style.left = planned + "%";
+          behindText.style.display = behind ? "" : "none";
+          document.getElementById("tagPlanValue").textContent =
+            formatPercent(planned, 0) + "%";
+          document.getElementById("tagPlan").style.left = planned + "%";
+          document.getElementById("tagPlan").style.transform = "translateX(-50%)";
+        }
+        document.getElementById("tagRealValue").textContent =
+          formatPercent(realized, 0) + "%";
+        document.getElementById("tagReal").style.left = realized + "%";
+        if (window.lucide) window.lucide.createIcons();
+      };
+
+      for (const id of ["total", "exec", "real", "curve"]) {
+        document.getElementById(id).addEventListener("input", render);
+      }
+      render();
+    </script>
+  </body>
+</html>
